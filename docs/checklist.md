@@ -66,13 +66,21 @@
 
   - Explains what failed.
 
+- [x] Create native error type
+
+  - Groups an external API error code with its human-readable description.
+
+- [x] Model optional native API errors
+
+  - Allows an `EngineError` to contain native API information only when one exists.
+
 - [ ] Preserve native API errors
 
-  - Keeps GLFW and Vulkan error information available.
+  - Keeps GLFW and Vulkan error information available when failures occur.
 
-- [ ] Add GLFW error callback
+- [ ] Capture GLFW native errors
 
-  - Captures detailed GLFW failures.
+  - Preserves GLFW's native error code and description when an operation fails.
 
 - [x] Define fatal error boundary
 
@@ -386,9 +394,17 @@
 
   - Provides automated C++ tests.
 
-- [x] Test error types
+- [x] Test basic engine error behavior
 
-  - Verifies error codes and context remain intact.
+  - Verifies engine error codes, messages, and standard exception behavior.
+
+- [ ] Test native error behavior
+
+  - Verifies native error codes and descriptions remain intact.
+
+- [ ] Test optional native error context
+
+  - Verifies engine-only errors contain no native error and external failures preserve native context.
 
 - [ ] Test ownership-sensitive utilities
 
