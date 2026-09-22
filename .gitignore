@@ -1,0 +1,38 @@
+# Build directory
+build/
+bin/
+obj/
+
+# Compiled Shaders
+/shaders/*.spv
+
+# Textures
+/textures/*
+
+# Models
+/models/*
+
+# IDE / Editor files
+.vscode/
+.idea/
+.clangd
+compile_commands.json
+.cache/
+*.swp
+*.swo
+
+# Nix / Direnv
+.direnv/
+.envrc
+
+# Temporary files
+temp/
+*.log
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+Makefile
