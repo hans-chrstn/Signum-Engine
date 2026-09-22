@@ -3,6 +3,7 @@ add_library(
   STATIC
     engine/core/application.cpp
     engine/core/error/engine_error.cpp
+    engine/core/error/native_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp
 )
