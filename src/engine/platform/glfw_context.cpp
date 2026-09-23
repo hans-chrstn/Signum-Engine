@@ -9,7 +9,8 @@ namespace SNE::Engine::Platform {
         if (!glfwInit()) {
             throw Core::Error::EngineError(
                 Core::Error::Code::GlfwInitializationFailed,
-                "Failed to initialize GLFW!", Error::captureGlfwError());
+                "Failed to initialize GLFW!", Error::captureGlfwError(),
+                "Initialize GLFW");
         }
     }
 

@@ -17,7 +17,8 @@ namespace SNE::Engine::Platform {
         if (m_Window == nullptr) {
             throw Core::Error::EngineError(
                 Core::Error::Code::WindowCreationFailed,
-                "Failed to create a window!", Error::captureGlfwError());
+                "Failed to create a window!", Error::captureGlfwError(),
+                "Create Window");
         }
     }
 

@@ -95,7 +95,7 @@
 ## Phase 8 — Production Error Handling
 
 - [x] Create structured engine error type
-- [ ] Add error context
+- [x] Add error context
 - [ ] Add nested error causes
 - [ ] Add source location information
 - [ ] Add Vulkan error conversion
