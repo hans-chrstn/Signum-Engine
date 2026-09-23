@@ -34,5 +34,6 @@ clean:
     ./scripts/clean.sh
 
 all:
+    ./scripts/clean.sh
     ./scripts/check.sh
     ./scripts/test.sh asan
