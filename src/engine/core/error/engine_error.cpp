@@ -1,4 +1,5 @@
 #include "engine_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include <utility>
 
 namespace SNE::Engine::Core::Error {
@@ -17,5 +18,9 @@ namespace SNE::Engine::Core::Error {
     const std::optional<NativeError> &
     EngineError::getNativeError() const noexcept {
         return m_NativeError;
+    }
+
+    Subsystem EngineError::getSubsystem() const noexcept {
+        return getSubsystemFor(m_Code);
     }
 } // namespace SNE::Engine::Core::Error

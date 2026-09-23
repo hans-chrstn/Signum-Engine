@@ -2,6 +2,8 @@
 
 #include "error_code.hpp"
 #include "native_error.hpp"
+#include "subsystem.hpp"
+
 #include <optional>
 #include <stdexcept>
 
@@ -17,5 +19,6 @@ namespace SNE::Engine::Core::Error {
         [[nodiscard]] Code getCode() const noexcept;
         [[nodiscard]] const std::optional<NativeError> &
         getNativeError() const noexcept;
+        [[nodiscard]] Subsystem getSubsystem() const noexcept;
     };
 } // namespace SNE::Engine::Core::Error

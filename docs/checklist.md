@@ -58,7 +58,7 @@
 
   - Gives failures stable machine-readable identifiers.
 
-- [ ] Separate errors by subsystem
+- [x] Separate errors by subsystem
 
   - Distinguishes Platform, Vulkan, Renderer, Editor, and other failures.
 
@@ -426,7 +426,7 @@
 
   - Keeps verification repeatable.
 
-- [ ] Keep `just check` clean
+- [x] Keep `just check` clean
 
   - Provides the normal development verification gate.
 

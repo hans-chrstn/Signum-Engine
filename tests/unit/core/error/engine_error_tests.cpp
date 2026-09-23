@@ -1,6 +1,7 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include <catch2/catch_test_macros.hpp>
 #include <cstring>
 #include <exception>
@@ -91,4 +92,16 @@ TEST_CASE("EngineError preserves contained native error description") {
             code, "Failed to initialize GLFW!", native_error);
 
     REQUIRE(engine_error.getNativeError()->getNativeDescription() == "Test");
+}
+
+TEST_CASE("EngineError reports its subsystem") {
+    SNE::Engine::Core::Error::Code code =
+        SNE::Engine::Core::Error::Code::GlfwInitializationFailed;
+
+    SNE::Engine::Core::Error::EngineError engine_error =
+        SNE::Engine::Core::Error::EngineError(code,
+                                              "Failed to initialize GLFW!");
+
+    REQUIRE(engine_error.getSubsystem() ==
+            SNE::Engine::Core::Error::Subsystem::Platform);
 }
