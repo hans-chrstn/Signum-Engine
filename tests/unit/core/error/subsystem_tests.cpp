@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 namespace Error = SNE::Engine::Core::Error;
+constexpr std::uint8_t kUnknownCodeValue = 255;
 
 TEST_CASE("GLFW initialization errors belong to Platform") {
     REQUIRE(Error::getSubsystemFor(Error::Code::GlfwInitializationFailed) ==
@@ -23,5 +24,7 @@ TEST_CASE("Subsystem names are readable") {
 }
 
 TEST_CASE("Unknown subsystems have a fallback name") {
-    REQUIRE(Error::toString(static_cast<Error::Subsystem>(-1)) == "Unknown");
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+    REQUIRE(Error::toString(static_cast<Error::Subsystem>(kUnknownCodeValue)) ==
+            "Unknown");
 }

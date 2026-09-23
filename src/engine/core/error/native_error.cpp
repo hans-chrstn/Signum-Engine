@@ -7,11 +7,12 @@ namespace SNE::Engine::Core::Error {
         : m_NativeCode(nativeCode),
           m_NativeDescription(std::move(nativeDescription)) {}
 
-    int NativeError::getNativeCode() const noexcept {
+    auto NativeError::getNativeCode() const noexcept -> int {
         return m_NativeCode;
     }
 
-    const std::string &NativeError::getNativeDescription() const noexcept {
+    auto NativeError::getNativeDescription() const noexcept
+        -> const std::string & {
         return m_NativeDescription;
     }
 } // namespace SNE::Engine::Core::Error

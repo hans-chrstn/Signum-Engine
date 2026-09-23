@@ -6,7 +6,7 @@
 
 namespace SNE::Engine::Platform {
     GlfwContext::GlfwContext() {
-        if (!glfwInit()) {
+        if (glfwInit() == 0) {
             throw Core::Error::EngineError(
                 Core::Error::Code::GlfwInitializationFailed,
                 "Failed to initialize GLFW!", Error::captureGlfwError(),

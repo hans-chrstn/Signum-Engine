@@ -7,6 +7,7 @@
 #include <exception>
 
 namespace Error = SNE::Engine::Core::Error;
+constexpr int kTestNativeCode = 123;
 
 TEST_CASE("EngineError preserves engine error code") {
     Error::Code code = Error::Code::GlfwInitializationFailed;
@@ -48,7 +49,8 @@ TEST_CASE("EngineError without native context has no NativeError") {
 TEST_CASE("EngineError with native context has a NativeError") {
     Error::Code code = Error::Code::GlfwInitializationFailed;
 
-    Error::NativeError native_error = Error::NativeError(123, "Test");
+    Error::NativeError native_error =
+        Error::NativeError(kTestNativeCode, "Test");
 
     Error::EngineError engine_error =
         Error::EngineError(code, "Failed to initialize GLFW!", native_error);
@@ -59,25 +61,37 @@ TEST_CASE("EngineError with native context has a NativeError") {
 TEST_CASE("EngineError preserves contained native error code") {
     Error::Code code = Error::Code::GlfwInitializationFailed;
 
-    Error::NativeError native_error = Error::NativeError(123, "Test");
+    Error::NativeError native_error =
+        Error::NativeError(kTestNativeCode, "Test");
 
     Error::EngineError engine_error =
         Error::EngineError(code, "Failed to initialize GLFW!", native_error);
 
-    REQUIRE(engine_error.getNativeError().has_value());
-    REQUIRE(engine_error.getNativeError()->getNativeCode() == 123);
+    const auto &native = engine_error.getNativeError();
+
+    REQUIRE(native.has_value());
+
+    if (native.has_value()) {
+        REQUIRE(native->getNativeCode() == kTestNativeCode);
+    }
 }
 
 TEST_CASE("EngineError preserves contained native error description") {
     Error::Code code = Error::Code::GlfwInitializationFailed;
 
-    Error::NativeError native_error = Error::NativeError(123, "Test");
+    Error::NativeError native_error =
+        Error::NativeError(kTestNativeCode, "Test");
 
     Error::EngineError engine_error =
         Error::EngineError(code, "Failed to initialize GLFW!", native_error);
 
-    REQUIRE(engine_error.getNativeError().has_value());
-    REQUIRE(engine_error.getNativeError()->getNativeDescription() == "Test");
+    const auto &native = engine_error.getNativeError();
+
+    REQUIRE(native.has_value());
+
+    if (native.has_value()) {
+        REQUIRE(native->getNativeDescription() == "Test");
+    }
 }
 
 TEST_CASE("EngineError reports its subsystem") {
@@ -110,12 +124,19 @@ TEST_CASE("EngineError without operation context has an empty operation") {
 TEST_CASE("EngineError preserves native error and operation context") {
     Error::Code code = Error::Code::GlfwInitializationFailed;
 
-    Error::NativeError native_error = Error::NativeError(123, "Test");
+    Error::NativeError native_error =
+        Error::NativeError(kTestNativeCode, "Test");
 
     Error::EngineError engine_error = Error::EngineError(
         code, "Failed to initialize GLFW!", native_error, "Test Operation");
 
-    REQUIRE(engine_error.getNativeError().has_value());
-    REQUIRE(engine_error.getNativeError()->getNativeDescription() == "Test");
+    const auto &native = engine_error.getNativeError();
+
+    REQUIRE(native.has_value());
+
+    if (native.has_value()) {
+        REQUIRE(native->getNativeDescription() == "Test");
+    }
+
     REQUIRE(engine_error.getOperation() == "Test Operation");
 }

@@ -3,24 +3,29 @@
 #include <string>
 
 namespace SNE::Engine::Platform {
+    struct WindowSize {
+        int width;
+        int height;
+    };
+
     class Window {
       private:
-        int m_Width;
-        int m_Height;
+        WindowSize m_Size;
         std::string m_Title;
         GLFWwindow *m_Window = nullptr;
 
       public:
-        Window(int width, int height, const std::string &title);
+        Window(WindowSize size, std::string title);
         ~Window();
 
         Window(const Window &) = delete;
-        Window &operator=(const Window &) = delete;
+        auto operator=(const Window &) -> Window & = delete;
 
-        bool shouldClose() const;
-        void waitEvents() const;
+        [[nodiscard]] auto shouldClose() const -> bool;
 
-        GLFWwindow *getNativeWindow() const {
+        static void waitEvents();
+
+        [[nodiscard]] auto getNativeWindow() const -> GLFWwindow * {
             return m_Window;
         }
     };

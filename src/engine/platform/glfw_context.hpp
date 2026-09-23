@@ -12,6 +12,6 @@ namespace SNE::Engine::Platform {
         ~GlfwContext();
 
         GlfwContext(const GlfwContext &) = delete;
-        GlfwContext &operator=(const GlfwContext &) = delete;
+        auto operator=(const GlfwContext &) -> GlfwContext & = delete;
     };
 } // namespace SNE::Engine::Platform

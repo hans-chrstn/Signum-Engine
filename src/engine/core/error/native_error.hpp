@@ -9,7 +9,8 @@ namespace SNE::Engine::Core::Error {
 
       public:
         NativeError(int nativeCode, std::string nativeDescription);
-        [[nodiscard]] int getNativeCode() const noexcept;
-        [[nodiscard]] const std::string &getNativeDescription() const noexcept;
+        [[nodiscard]] auto getNativeCode() const noexcept -> int;
+        [[nodiscard]] auto getNativeDescription() const noexcept
+            -> const std::string &;
     };
 } // namespace SNE::Engine::Core::Error

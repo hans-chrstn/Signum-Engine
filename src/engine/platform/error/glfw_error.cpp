@@ -5,13 +5,12 @@
 #include <utility>
 
 namespace SNE::Engine::Platform::Error {
-    [[nodiscard]] Core::Error::NativeError captureGlfwError() {
+    auto captureGlfwError() -> Core::Error::NativeError {
         const char *error_description = nullptr;
         int error_code = glfwGetError(&error_description);
         std::string native_description = error_description != nullptr
                                              ? std::string(error_description)
                                              : "No description";
-        return Core::Error::NativeError(error_code,
-                                        std::move(native_description));
+        return {error_code, std::move(native_description)};
     }
 } // namespace SNE::Engine::Platform::Error

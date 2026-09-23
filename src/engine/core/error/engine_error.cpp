@@ -14,20 +14,20 @@ namespace SNE::Engine::Core::Error {
           m_NativeError(std::move(nativeError)),
           m_Operation(std::move(operation)) {}
 
-    Code EngineError::getCode() const noexcept {
+    auto EngineError::getCode() const noexcept -> Code {
         return m_Code;
     }
 
-    const std::optional<NativeError> &
-    EngineError::getNativeError() const noexcept {
+    auto EngineError::getNativeError() const noexcept
+        -> const std::optional<NativeError> & {
         return m_NativeError;
     }
 
-    Subsystem EngineError::getSubsystem() const noexcept {
+    auto EngineError::getSubsystem() const noexcept -> Subsystem {
         return getSubsystemFor(m_Code);
     }
 
-    const std::string &EngineError::getOperation() const noexcept {
+    auto EngineError::getOperation() const noexcept -> const std::string & {
         return m_Operation;
     }
 } // namespace SNE::Engine::Core::Error

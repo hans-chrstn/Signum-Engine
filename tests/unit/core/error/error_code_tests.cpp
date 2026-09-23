@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 namespace Error = SNE::Engine::Core::Error;
+constexpr std::uint8_t kUnknownCodeValue = 255;
 
 TEST_CASE("Error code names are readable") {
     Error::Code glfw_error_code = Error::Code::GlfwInitializationFailed;
@@ -12,7 +13,8 @@ TEST_CASE("Error code names are readable") {
 }
 
 TEST_CASE("Unknown error codes have a fallback name") {
-    const auto invalid_code = static_cast<Error::Code>(-1);
+    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
+    const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);
 
     REQUIRE(Error::toString(invalid_code) == "Unknown");
 }

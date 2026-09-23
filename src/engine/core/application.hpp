@@ -7,6 +7,6 @@ namespace SNE::Engine::Core {
         Platform::GlfwContext m_GlfwContext;
 
       public:
-        void run();
+        auto run() -> void;
     };
 } // namespace SNE::Engine::Core

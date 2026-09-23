@@ -1,7 +1,7 @@
 #include "error_code.hpp"
 
 namespace SNE::Engine::Core::Error {
-    std::string_view toString(Code code) noexcept {
+    auto toString(Code code) noexcept -> std::string_view {
         switch (code) {
         case Code::GlfwInitializationFailed:
             return "GlfwInitializationFailed";

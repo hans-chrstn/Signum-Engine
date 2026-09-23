@@ -2,7 +2,7 @@
 #include <exception>
 
 namespace SNE::Engine::Core::Error {
-    Subsystem getSubsystemFor(Code code) noexcept {
+    auto getSubsystemFor(Code code) noexcept -> Subsystem {
         switch (code) {
         case Code::GlfwInitializationFailed:
         case Code::WindowCreationFailed:
@@ -12,7 +12,7 @@ namespace SNE::Engine::Core::Error {
         std::terminate();
     }
 
-    std::string_view toString(Subsystem subsystem) noexcept {
+    auto toString(Subsystem subsystem) noexcept -> std::string_view {
         switch (subsystem) {
         case Subsystem::Platform:
             return "Platform";

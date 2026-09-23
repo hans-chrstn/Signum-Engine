@@ -6,6 +6,10 @@ default:
 doctor:
     ./scripts/doctor.sh
 
+tidy:
+    ./scripts/build.sh debug
+    ./scripts/tidy.sh
+
 configure preset="debug":
     ./scripts/configure.sh "{{preset}}"
 

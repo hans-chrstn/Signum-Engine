@@ -5,15 +5,15 @@
 #include <string>
 
 namespace SNE::Engine::Platform {
-    Window::Window(int width, int height, const std::string &title)
-        : m_Width(width), m_Height(height), m_Title(title) {
+    Window::Window(WindowSize size, std::string title)
+        : m_Size(size), m_Title(std::move(title)) {
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
 
-        m_Window = glfwCreateWindow(m_Width, m_Height, m_Title.c_str(), nullptr,
-                                    nullptr);
+        m_Window = glfwCreateWindow(m_Size.width, m_Size.height,
+                                    m_Title.c_str(), nullptr, nullptr);
         if (m_Window == nullptr) {
             throw Core::Error::EngineError(
                 Core::Error::Code::WindowCreationFailed,
@@ -26,11 +26,11 @@ namespace SNE::Engine::Platform {
         glfwDestroyWindow(m_Window);
     }
 
-    bool Window::shouldClose() const {
-        return glfwWindowShouldClose(m_Window);
+    auto Window::shouldClose() const -> bool {
+        return glfwWindowShouldClose(m_Window) != GLFW_FALSE;
     }
 
-    void Window::waitEvents() const {
+    void Window::waitEvents() {
         glfwWaitEvents();
     }
 } // namespace SNE::Engine::Platform

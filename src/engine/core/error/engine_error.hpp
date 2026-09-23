@@ -19,10 +19,10 @@ namespace SNE::Engine::Core::Error {
         EngineError(Code code, const char *msg, std::string operation = {});
         EngineError(Code code, const char *msg, NativeError nativeError,
                     std::string operation = {});
-        [[nodiscard]] Code getCode() const noexcept;
-        [[nodiscard]] const std::optional<NativeError> &
-        getNativeError() const noexcept;
-        [[nodiscard]] Subsystem getSubsystem() const noexcept;
-        [[nodiscard]] const std::string &getOperation() const noexcept;
+        [[nodiscard]] auto getCode() const noexcept -> Code;
+        [[nodiscard]] auto getNativeError() const noexcept
+            -> const std::optional<NativeError> &;
+        [[nodiscard]] auto getSubsystem() const noexcept -> Subsystem;
+        [[nodiscard]] auto getOperation() const noexcept -> const std::string &;
     };
 } // namespace SNE::Engine::Core::Error
