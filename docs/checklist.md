@@ -78,7 +78,7 @@
 
   - Keeps GLFW and Vulkan error information available when failures occur.
 
-- [ ] Capture GLFW native errors
+- [x] Capture GLFW native errors
 
   - Preserves GLFW's native error code and description when an operation fails.
 
@@ -398,11 +398,11 @@
 
   - Verifies engine error codes, messages, and standard exception behavior.
 
-- [ ] Test native error behavior
+- [x] Test native error behavior
 
   - Verifies native error codes and descriptions remain intact.
 
-- [ ] Test optional native error context
+- [x] Test optional native error context
 
   - Verifies engine-only errors contain no native error and external failures preserve native context.
 
