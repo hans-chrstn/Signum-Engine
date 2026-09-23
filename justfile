@@ -10,6 +10,10 @@ tidy:
     ./scripts/build.sh debug
     ./scripts/tidy.sh
 
+memcheck:
+    ./scripts/build.sh debug
+    ./scripts/memcheck.sh
+
 configure preset="debug":
     ./scripts/configure.sh "{{preset}}"
 
