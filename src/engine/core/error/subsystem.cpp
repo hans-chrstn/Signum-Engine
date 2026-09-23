@@ -11,4 +11,20 @@ namespace SNE::Engine::Core::Error {
 
         std::terminate();
     }
+
+    std::string_view toString(Subsystem subsystem) noexcept {
+        switch (subsystem) {
+        case Subsystem::Platform:
+            return "Platform";
+        case Subsystem::Core:
+            return "Core";
+        case Subsystem::Editor:
+            return "Editor";
+        case Subsystem::Renderer:
+            return "Renderer";
+        case Subsystem::Vulkan:
+            return "Vulkan";
+        }
+        return "Unknown";
+    }
 } // namespace SNE::Engine::Core::Error

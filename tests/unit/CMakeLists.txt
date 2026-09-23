@@ -1,6 +1,7 @@
 add_executable(
   signum_unit_tests
   core/error/engine_error_tests.cpp
+  core/error/error_code_tests.cpp
   core/error/native_error_tests.cpp
   core/error/subsystem_tests.cpp
 )
