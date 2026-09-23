@@ -1,4 +1,5 @@
 #include "engine_error.hpp"
+#include <utility>
 
 namespace SNE::Engine::Core::Error {
     EngineError::EngineError(Code code, const char *msg)
