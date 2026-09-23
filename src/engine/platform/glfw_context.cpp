@@ -1,6 +1,7 @@
 #include "glfw_context.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "error/glfw_error.hpp"
 #include <GLFW/glfw3.h>
 
 namespace SNE::Engine::Platform {
@@ -8,7 +9,7 @@ namespace SNE::Engine::Platform {
         if (!glfwInit()) {
             throw Core::Error::EngineError(
                 Core::Error::Code::GlfwInitializationFailed,
-                "Failed to initialize GLFW!");
+                "Failed to initialize GLFW!", Error::captureGlfwError());
         }
     }
 

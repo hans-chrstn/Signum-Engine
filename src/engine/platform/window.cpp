@@ -1,6 +1,8 @@
 #include "window.hpp"
 #include "engine/core/error/engine_error.hpp"
+#include "error/glfw_error.hpp"
 #include <GLFW/glfw3.h>
+#include <string>
 
 namespace SNE::Engine::Platform {
     Window::Window(int width, int height, const std::string &title)
@@ -15,7 +17,7 @@ namespace SNE::Engine::Platform {
         if (m_Window == nullptr) {
             throw Core::Error::EngineError(
                 Core::Error::Code::WindowCreationFailed,
-                "Failed to create a window!");
+                "Failed to create a window!", Error::captureGlfwError());
         }
     }
 
