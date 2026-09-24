@@ -303,7 +303,7 @@
 - [ ] Define exception policy
 - [ ] Add assertion policy
 - [ ] Separate programmer errors from runtime failures
-- [ ] Add fatal error reporting
+- [x] Add fatal error reporting
 - [ ] Add graceful fatal shutdown
 - [ ] Prevent duplicate error reporting
 
@@ -331,7 +331,7 @@
 
 - [x] Keep `EngineError` independent from terminal output
 - [x] Keep formatting independent from reporting
-- [ ] Keep fatal reporting at defined boundary
+- [x] Keep fatal reporting at defined boundary
 - [ ] Keep recoverable failures non-fatal
 
 ---
