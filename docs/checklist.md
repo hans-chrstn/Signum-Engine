@@ -56,7 +56,7 @@
 - [x] Add operation context
 - [x] Add source location
 - [x] Define initial fatal boundary
-- [ ] Preserve Vulkan native errors
+- [x] Preserve Vulkan native errors
 - [x] Define recoverable error representation
 - [ ] Define exception policy
 - [ ] Define result-value policy
@@ -103,8 +103,8 @@
 
 ### Implement
 
-- [ ] Create Vulkan instance
-- [ ] Get required GLFW Vulkan extensions
+- [x] Create Vulkan instance
+- [x] Get required GLFW Vulkan extensions
 - [ ] Validate required extensions
 - [ ] Enable validation layers
 - [ ] Create debug messenger
