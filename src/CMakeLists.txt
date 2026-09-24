@@ -7,6 +7,7 @@ add_library(
     engine/core/error/error_code.cpp
     engine/core/error/subsystem.cpp
     engine/core/error/diagnostic_formatter.cpp
+    engine/core/error/diagnostic_writer.cpp
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp

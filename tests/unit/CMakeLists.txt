@@ -4,6 +4,7 @@ add_executable(
   core/error/error_code_tests.cpp
   core/error/native_error_tests.cpp
   core/error/diagnostic_formatter_tests.cpp
+  core/error/diagnostic_writer_tests.cpp
   core/error/subsystem_tests.cpp
 )
 
