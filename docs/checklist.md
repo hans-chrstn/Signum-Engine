@@ -57,7 +57,7 @@
 - [x] Add source location
 - [x] Define initial fatal boundary
 - [ ] Preserve Vulkan native errors
-- [ ] Define recoverable error representation
+- [x] Define recoverable error representation
 - [ ] Define exception policy
 - [ ] Define result-value policy
 - [ ] Avoid generic catch-all handling that discards context
@@ -299,12 +299,12 @@
 - [x] Add current GLFW error conversion
 - [ ] Add Vulkan error conversion
 - [ ] Add nested causes only if needed
-- [ ] Define recoverable result type policy
+- [x] Define recoverable result type policy
 - [ ] Define exception policy
 - [ ] Add assertion policy
 - [ ] Separate programmer errors from runtime failures
 - [x] Add fatal error reporting
-- [ ] Add graceful fatal shutdown
+- [x] Add graceful fatal shutdown
 - [ ] Prevent duplicate error reporting
 
 ### Learn
