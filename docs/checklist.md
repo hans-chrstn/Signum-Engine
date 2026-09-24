@@ -97,7 +97,8 @@
 - [x] Create structured engine error type
 - [x] Add error context
 - [ ] Add nested error causes
-- [ ] Add source location information
+- [x] Add source location information
+- [x] Add diagnostic formatter
 - [ ] Add Vulkan error conversion
 - [ ] Add platform error conversion
 - [ ] Distinguish native API origins

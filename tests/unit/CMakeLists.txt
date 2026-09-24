@@ -3,6 +3,7 @@ add_executable(
   core/error/engine_error_tests.cpp
   core/error/error_code_tests.cpp
   core/error/native_error_tests.cpp
+  core/error/diagnostic_formatter_tests.cpp
   core/error/subsystem_tests.cpp
 )
 
@@ -10,12 +11,12 @@ target_link_libraries(
   signum_unit_tests
   PRIVATE
     signum_engine
-    Catch2::Catch2WithMain
+    GTest::gtest_main
 )
 
-include(Catch)
+include(GoogleTest)
 
-catch_discover_tests(
+gtest_discover_tests(
   signum_unit_tests
   TEST_PREFIX "unit::"
   PROPERTIES

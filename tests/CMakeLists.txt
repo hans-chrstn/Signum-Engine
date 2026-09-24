@@ -1,3 +1,3 @@
-find_package(Catch2 3 CONFIG REQUIRED)
+find_package(GTest REQUIRED)
 
 add_subdirectory(unit)

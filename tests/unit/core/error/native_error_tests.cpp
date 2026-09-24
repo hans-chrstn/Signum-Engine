@@ -1,19 +1,19 @@
 #include "engine/core/error/native_error.hpp"
-#include <catch2/catch_test_macros.hpp>
+#include <gtest/gtest.h>
 
 namespace Error = SNE::Engine::Core::Error;
 constexpr int kTestNativeCode = 123;
 
-TEST_CASE("NativeError preserves native error code") {
+TEST(NativeErrorTests, PreservesNativeErrorCode) {
     Error::NativeError native_error =
         Error::NativeError(kTestNativeCode, "Test");
 
-    REQUIRE(native_error.getNativeCode() == kTestNativeCode);
+    EXPECT_EQ(native_error.getNativeCode(), kTestNativeCode);
 }
 
-TEST_CASE("NativeError preserves native error description") {
+TEST(NativeErrorTests, PreservesNativeErrorDescription) {
     Error::NativeError native_error =
         Error::NativeError(kTestNativeCode, "Test");
 
-    REQUIRE(native_error.getNativeDescription() == "Test");
+    EXPECT_EQ(native_error.getNativeDescription(), "Test");
 }

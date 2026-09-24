@@ -1,30 +1,32 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
-#include <catch2/catch_test_macros.hpp>
+#include <cstdint>
+#include <gtest/gtest.h>
 
 namespace Error = SNE::Engine::Core::Error;
-constexpr std::uint8_t kUnknownCodeValue = 255;
+constexpr std::uint8_t kUnknownSubsystemValue = 255;
 
-TEST_CASE("GLFW initialization errors belong to Platform") {
-    REQUIRE(Error::getSubsystemFor(Error::Code::GlfwInitializationFailed) ==
-            Error::Subsystem::Platform);
+TEST(SubsystemTests, GlfwErrorsBelongToPlatform) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::GlfwInitializationFailed),
+              Error::Subsystem::Platform);
 }
 
-TEST_CASE("Window creation errors belong to Platform") {
-    REQUIRE(Error::getSubsystemFor(Error::Code::WindowCreationFailed) ==
-            Error::Subsystem::Platform);
+TEST(SubsystemTests, WindowCreationErrorsBelongToPlatform) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::WindowCreationFailed),
+              Error::Subsystem::Platform);
 }
 
-TEST_CASE("Subsystem names are readable") {
-    REQUIRE(Error::toString(Error::Subsystem::Platform) == "Platform");
-    REQUIRE(Error::toString(Error::Subsystem::Core) == "Core");
-    REQUIRE(Error::toString(Error::Subsystem::Editor) == "Editor");
-    REQUIRE(Error::toString(Error::Subsystem::Renderer) == "Renderer");
-    REQUIRE(Error::toString(Error::Subsystem::Vulkan) == "Vulkan");
+TEST(SubsystemTests, SubsystemsHaveReadableNames) {
+    EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
+    EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");
+    EXPECT_EQ(Error::toString(Error::Subsystem::Editor), "Editor");
+    EXPECT_EQ(Error::toString(Error::Subsystem::Renderer), "Renderer");
+    EXPECT_EQ(Error::toString(Error::Subsystem::Vulkan), "Vulkan");
 }
 
-TEST_CASE("Unknown subsystems have a fallback name") {
+TEST(SubsystemTests, UnknownSubsystemHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
-    REQUIRE(Error::toString(static_cast<Error::Subsystem>(kUnknownCodeValue)) ==
-            "Unknown");
+    EXPECT_EQ(
+        Error::toString(static_cast<Error::Subsystem>(kUnknownSubsystemValue)),
+        "Unknown");
 }
