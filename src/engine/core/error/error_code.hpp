@@ -5,7 +5,9 @@
 namespace SNE::Engine::Core::Error {
     enum class Code : std::uint8_t {
         GlfwInitializationFailed,
-        WindowCreationFailed
+        WindowCreationFailed,
+        VulkanRequiredExtensionsUnavailable,
+        VulkanInstanceCreationFailed,
     };
 
     [[nodiscard]] auto toString(Code code) noexcept -> std::string_view;

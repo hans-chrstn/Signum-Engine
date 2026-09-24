@@ -110,7 +110,7 @@
 - [ ] Create debug messenger
 - [ ] Create window surface
 - [ ] Preserve `VkResult`
-- [ ] Add Vulkan error conversion
+- [x] Add Vulkan error conversion
 
 ### Test
 
@@ -297,7 +297,7 @@
 - [x] Format file and line
 - [x] Format function name
 - [x] Add current GLFW error conversion
-- [ ] Add Vulkan error conversion
+- [x] Add Vulkan error conversion
 - [ ] Add nested causes only if needed
 - [x] Define recoverable result type policy
 - [ ] Define exception policy

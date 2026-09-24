@@ -6,6 +6,7 @@ add_executable(
   core/error/diagnostic_formatter_tests.cpp
   core/error/diagnostic_writer_tests.cpp
   core/error/subsystem_tests.cpp
+  renderer/vulkan/vulkan_result_tests.cpp
 )
 
 target_link_libraries(

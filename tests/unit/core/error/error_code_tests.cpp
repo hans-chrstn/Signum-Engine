@@ -5,12 +5,24 @@
 namespace Error = SNE::Engine::Core::Error;
 constexpr std::uint8_t kUnknownCodeValue = 255;
 
-TEST(ErrorCodeTests, ErrorCodesHaveReadableNames) {
-    Error::Code glfw_error_code = Error::Code::GlfwInitializationFailed;
-    EXPECT_EQ(Error::toString(glfw_error_code), "GlfwInitializationFailed");
+TEST(ErrorCodeTests, GlfwInitializationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::GlfwInitializationFailed),
+              "GlfwInitializationFailed");
+}
 
-    Error::Code window_error_code = Error::Code::WindowCreationFailed;
-    EXPECT_EQ(Error::toString(window_error_code), "WindowCreationFailed");
+TEST(ErrorCodeTests, WindowCreationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::WindowCreationFailed),
+              "WindowCreationFailed");
+}
+
+TEST(ErrorCodeTests, VulkanRequiredExtensionsErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanRequiredExtensionsUnavailable),
+              "VulkanRequiredExtensionsUnavailable");
+}
+
+TEST(ErrorCodeTests, VulkanInstanceCreationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanInstanceCreationFailed),
+              "VulkanInstanceCreationFailed");
 }
 
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {

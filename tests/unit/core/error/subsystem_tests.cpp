@@ -16,6 +16,17 @@ TEST(SubsystemTests, WindowCreationErrorsBelongToPlatform) {
               Error::Subsystem::Platform);
 }
 
+TEST(SubsystemTests, VulkanRequiredExtensionErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(
+                  Error::Code::VulkanRequiredExtensionsUnavailable),
+              Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanInstanceCreationErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::VulkanInstanceCreationFailed),
+              Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

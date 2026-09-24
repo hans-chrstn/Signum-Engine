@@ -7,6 +7,10 @@ namespace SNE::Engine::Core::Error {
             return "GlfwInitializationFailed";
         case Code::WindowCreationFailed:
             return "WindowCreationFailed";
+        case Code::VulkanRequiredExtensionsUnavailable:
+            return "VulkanRequiredExtensionsUnavailable";
+        case Code::VulkanInstanceCreationFailed:
+            return "VulkanInstanceCreationFailed";
         }
         return "Unknown";
     }

@@ -7,6 +7,9 @@ namespace SNE::Engine::Core::Error {
         case Code::GlfwInitializationFailed:
         case Code::WindowCreationFailed:
             return Subsystem::Platform;
+        case Code::VulkanRequiredExtensionsUnavailable:
+        case Code::VulkanInstanceCreationFailed:
+            return Subsystem::Vulkan;
         }
 
         std::terminate();
