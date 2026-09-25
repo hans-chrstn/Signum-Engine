@@ -14,6 +14,9 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     constexpr const char *kValidationLayerName = "VK_LAYER_KHRONOS_validation";
 
+    // Instance creation succeeds before debug-messenger creation. If the latter
+    // fails, release the already-created Vulkan instance before propagating the
+    // exception so construction remains leak-free.
     VulkanInstance::VulkanInstance() {
         createInstance();
 
@@ -28,7 +31,6 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto VulkanInstance::createInstance() -> void {
         const bool layer_support = checkValidationLayerSupport();
-
         if (!layer_support) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanValidationLayerUnavailable,
@@ -45,6 +47,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         application_info.apiVersion = VK_API_VERSION_1_4;
 
         const std::vector<const char *> extensions = getRequiredExtensions();
+        const bool extension_support =
+            checkRequiredExtensionSupport(extensions);
+        if (!extension_support) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanExtensionSupportUnavailable,
+                "One or more required Vulkan instance extensions are "
+                "unavailable.",
+                "Check Vulkan Extension Support");
+        }
 
         const VkDebugUtilsMessengerCreateInfoEXT debug_create_info =
             makeDebugMessengerCreateInfo();
@@ -57,6 +68,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             static_cast<std::uint32_t>(extensions.size());
         instance_create_info.ppEnabledLayerNames = &kValidationLayerName;
         instance_create_info.enabledLayerCount = 1;
+
+        // Chain the debug-messenger configuration into instance creation so
+        // validation messages can be captured during vkCreateInstance and
+        // vkDestroyInstance as well as during the normal instance lifetime.
         instance_create_info.pNext = &debug_create_info;
 
         const VkResult result =
@@ -72,6 +87,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
+    // Vulkan enumeration is a two-call operation, and the available layer count
+    // may change between calls. Retry the complete enumeration when Vulkan
+    // reports VK_INCOMPLETE.
     auto VulkanInstance::checkValidationLayerSupport() -> bool {
         std::vector<VkLayerProperties> available_layers;
 
@@ -137,14 +155,76 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         std::vector<const char *> required_extensions;
 
-        // i{} starts 0
         for (std::uint32_t i{}; i < glfw_extension_count; ++i) {
             required_extensions.push_back(glfw_extensions[i]);
         }
 
+        // The debug-utils extension is required for the validation debug
+        // messenger created by this class.
         required_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
         return required_extensions;
+    }
+
+    auto VulkanInstance::checkRequiredExtensionSupport(
+        const std::vector<const char *> &required_extensions) -> bool {
+
+        std::vector<VkExtensionProperties> available_extensions;
+        while (true) {
+            std::uint32_t extension_count{};
+            const VkResult count_result =
+                vkEnumerateInstanceExtensionProperties(
+                    nullptr, &extension_count, nullptr);
+            if (count_result != VK_SUCCESS) {
+                throw Core::Error::EngineError(
+                    Core::Error::Code::VulkanExtensionEnumerationFailed,
+                    "Failed to enumerate Vulkan extension properties",
+                    Core::Error::NativeError(
+                        static_cast<int>(count_result),
+                        std::string(toString(count_result))),
+                    "Enumerate Vulkan Instance Extensions");
+            }
+
+            available_extensions.resize(extension_count);
+
+            const VkResult extension_result =
+                vkEnumerateInstanceExtensionProperties(
+                    nullptr, &extension_count, available_extensions.data());
+
+            if (extension_result == VK_SUCCESS) {
+                available_extensions.resize(extension_count);
+                break;
+            }
+
+            if (extension_result == VK_INCOMPLETE) {
+                continue;
+            }
+
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanExtensionEnumerationFailed,
+                "Failed to enumerate Vulkan extension properties",
+                Core::Error::NativeError(
+                    static_cast<int>(extension_result),
+                    std::string(toString(extension_result))),
+                "Enumerate Vulkan Instance Extensions");
+        }
+
+        for (const char *required_extension : required_extensions) {
+            bool found = false;
+            for (const VkExtensionProperties &extension :
+                 available_extensions) {
+                if (std::strcmp(required_extension, extension.extensionName) ==
+                    0) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return false;
+            }
+        }
+        return true;
     }
 
     auto VulkanInstance::makeDebugMessengerCreateInfo()
@@ -172,6 +252,8 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const auto create_debug_messenger =
             reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+                // VK_EXT_debug_utils commands are extension functions and must
+                // be resolved from the created Vulkan instance before use.
                 vkGetInstanceProcAddr(m_Instance,
                                       "vkCreateDebugUtilsMessengerEXT"));
 
@@ -215,6 +297,8 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const auto destroy_debug_messenger =
             reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+                // Resolve the extension destruction function from the owning
+                // instance.
                 vkGetInstanceProcAddr(m_Instance,
                                       "vkDestroyDebugUtilsMessengerEXT"));
 

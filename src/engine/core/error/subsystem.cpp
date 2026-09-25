@@ -13,6 +13,8 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanValidationLayerUnavailable:
         case Code::VulkanDebugMessengerFunctionUnavailable:
         case Code::VulkanDebugMessengerCreationFailed:
+        case Code::VulkanExtensionEnumerationFailed:
+        case Code::VulkanExtensionSupportUnavailable:
             return Subsystem::Vulkan;
         }
 

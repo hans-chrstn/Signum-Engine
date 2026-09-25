@@ -8,6 +8,9 @@ namespace SNE::Engine::Platform {
     Window::Window(WindowSize size, std::string title)
         : m_Size(size), m_Title(std::move(title)) {
 
+        // Signum renders through Vulkan, so GLFW must not create an OpenGL or
+        // OpenGL ES
+        // context for this window.
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);

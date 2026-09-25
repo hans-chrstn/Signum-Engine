@@ -47,6 +47,17 @@ TEST(ErrorCodeTests, VulkanDebugMessengerCreationErrorCodeHasReadableName) {
               "VulkanDebugMessengerCreationFailed");
 }
 
+TEST(ErrorCodeTests, VulkanExtensionEnumerationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanExtensionEnumerationFailed),
+              "VulkanExtensionEnumerationFailed");
+}
+
+TEST(ErrorCodeTests,
+     VulkanExtensionSupportUnavailableErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanExtensionSupportUnavailable),
+              "VulkanExtensionSupportUnavailable");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);

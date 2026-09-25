@@ -19,6 +19,10 @@ namespace SNE::Engine::Core::Error {
             return "VulkanDebugMessengerFunctionUnavailable";
         case Code::VulkanDebugMessengerCreationFailed:
             return "VulkanDebugMessengerCreationFailed";
+        case Code::VulkanExtensionEnumerationFailed:
+            return "VulkanExtensionEnumerationFailed";
+        case Code::VulkanExtensionSupportUnavailable:
+            return "VulkanExtensionSupportUnavailable";
         }
         return "Unknown";
     }

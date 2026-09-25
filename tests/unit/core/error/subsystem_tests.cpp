@@ -51,6 +51,18 @@ TEST(SubsystemTests, VulkanDebugMessengerCreationErrorsBelongToVulkan) {
         Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanExtensionEnumerationErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanExtensionEnumerationFailed),
+        Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanExtensionSupportUnavailableErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanExtensionSupportUnavailable),
+        Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

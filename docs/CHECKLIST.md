@@ -105,7 +105,7 @@
 
 - [x] Create Vulkan instance
 - [x] Get required GLFW Vulkan extensions
-- [ ] Validate required extensions
+- [x] Validate required extensions
 - [x] Enable validation layers
 - [x] Create debug messenger
 - [ ] Create window surface
