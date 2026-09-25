@@ -15,6 +15,7 @@ add_library(
     engine/renderer/vulkan/vulkan_instance.cpp
     engine/renderer/vulkan/vulkan_surface.cpp
     engine/renderer/vulkan/vulkan_result.cpp
+    engine/renderer/vulkan/vulkan_device_discovery.cpp
 )
 
 target_include_directories(

@@ -139,7 +139,7 @@
 
 ### Learn
 
-- [ ] physical devices
+- [x] physical devices
 - [ ] logical devices
 - [ ] queue families
 - [ ] queues
@@ -148,7 +148,7 @@
 
 ### Implement
 
-- [ ] Enumerate physical devices
+- [x] Enumerate physical devices
 - [ ] Inspect device capabilities
 - [ ] Find queue families
 - [ ] Check required device extensions

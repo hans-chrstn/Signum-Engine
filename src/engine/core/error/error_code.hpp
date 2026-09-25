@@ -39,6 +39,8 @@ namespace SNE::Engine::Core::Error {
         VulkanApiVersionUnsupported,
         /** Creation of the Vulkan surface failed. */
         VulkanSurfaceCreationFailed,
+        /** Enumeration of available Vulkan instance physical devices failed. */
+        VulkanPhysicalDeviceEnumerationFailed,
     };
 
     /**

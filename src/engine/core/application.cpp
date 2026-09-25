@@ -8,7 +8,6 @@ namespace {
 }
 
 namespace SNE::Engine::Core {
-
     Application::Application()
         : m_Window(kInitialWindowSize, "Signum Editor"),
           m_VulkanSurface(m_VulkanInstance.nativeHandle(),
