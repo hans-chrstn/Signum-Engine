@@ -143,13 +143,13 @@
 - [ ] logical devices
 - [ ] queue families
 - [ ] queues
-- [ ] device capabilities
+- [x] device capabilities
 - [ ] feature negotiation
 
 ### Implement
 
 - [x] Enumerate physical devices
-- [ ] Inspect device capabilities
+- [x] Inspect device capabilities
 - [ ] Find queue families
 - [ ] Check required device extensions
 - [ ] Separate required and optional capabilities
