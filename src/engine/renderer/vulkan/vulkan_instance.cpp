@@ -2,6 +2,7 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "vulkan_extension_support.hpp"
 #include "vulkan_result.hpp"
 #include <GLFW/glfw3.h>
 #include <cstring>
@@ -218,22 +219,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Enumerate Vulkan Instance Extensions");
         }
 
-        for (const char *required_extension : required_extensions) {
-            bool found = false;
-            for (const VkExtensionProperties &extension :
-                 available_extensions) {
-                if (std::strcmp(required_extension, extension.extensionName) ==
-                    0) {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found) {
-                return false;
-            }
-        }
-        return true;
+        return hasRequiredExtensions(required_extensions, available_extensions);
     }
 
     auto VulkanInstance::makeDebugMessengerCreateInfo()

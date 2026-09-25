@@ -100,7 +100,7 @@
 - [x] debug callbacks
 - [x] Vulkan API versioning
 - [x] loader-supported version vs application-required version
-- [ ] surfaces
+- [x] surfaces
 - [x] `VkResult`
 
 ### Implement
@@ -113,23 +113,25 @@
 - [x] Query supported Vulkan instance API version
 - [x] Define required Vulkan API version
 - [x] Reject unsupported Vulkan API versions
-- [ ] Create window surface
+- [x] Create window surface
 - [x] Preserve `VkResult`
 - [x] Add Vulkan error conversion
+- [x] Add RAII Vulkan surface ownership
 
 ### Test
 
-- [ ] Test extension-selection logic
-- [ ] Test missing-extension behavior
+- [x] Test extension-selection logic
+- [x] Test missing-extension behavior
 - [x] Verify validation output
-- [ ] Verify Vulkan lifetime order
-- [ ] Verify Vulkan shutdown
+- [x] Verify Vulkan lifetime order
+- [x] Verify Vulkan shutdown
 
 ### Architecture
 
 - [x] Keep Vulkan inside renderer/backend code
 - [ ] Avoid exposing Vulkan types to normal game APIs
 - [x] Keep Vulkan initialization out of gameplay code
+- [x] Keep Vulkan instance and surface ownership in separate RAII components
 
 ---
 

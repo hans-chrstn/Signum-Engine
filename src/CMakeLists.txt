@@ -11,9 +11,10 @@ add_library(
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp
+    engine/renderer/vulkan/vulkan_extension_support.cpp
     engine/renderer/vulkan/vulkan_instance.cpp
-    engine/renderer/vulkan/vulkan_result.cpp
     engine/renderer/vulkan/vulkan_surface.cpp
+    engine/renderer/vulkan/vulkan_result.cpp
 )
 
 target_include_directories(
