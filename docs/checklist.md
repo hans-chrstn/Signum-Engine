@@ -94,37 +94,37 @@
 
 ### Learn
 
-- [ ] Vulkan instances
-- [ ] Vulkan extensions
-- [ ] Vulkan layers
-- [ ] debug callbacks
+- [x] Vulkan instances
+- [x] Vulkan extensions
+- [x] Vulkan layers
+- [x] debug callbacks
 - [ ] surfaces
-- [ ] `VkResult`
+- [x] `VkResult`
 
 ### Implement
 
 - [x] Create Vulkan instance
 - [x] Get required GLFW Vulkan extensions
 - [ ] Validate required extensions
-- [ ] Enable validation layers
-- [ ] Create debug messenger
+- [x] Enable validation layers
+- [x] Create debug messenger
 - [ ] Create window surface
-- [ ] Preserve `VkResult`
+- [x] Preserve `VkResult`
 - [x] Add Vulkan error conversion
 
 ### Test
 
 - [ ] Test extension-selection logic
 - [ ] Test missing-extension behavior
-- [ ] Verify validation output
+- [x] Verify validation output
 - [ ] Verify Vulkan lifetime order
 - [ ] Verify Vulkan shutdown
 
 ### Architecture
 
-- [ ] Keep Vulkan inside renderer/backend code
+- [x] Keep Vulkan inside renderer/backend code
 - [ ] Avoid exposing Vulkan types to normal game APIs
-- [ ] Keep Vulkan initialization out of gameplay code
+- [x] Keep Vulkan initialization out of gameplay code
 
 ---
 

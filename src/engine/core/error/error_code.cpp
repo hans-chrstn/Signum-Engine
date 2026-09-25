@@ -11,6 +11,14 @@ namespace SNE::Engine::Core::Error {
             return "VulkanRequiredExtensionsUnavailable";
         case Code::VulkanInstanceCreationFailed:
             return "VulkanInstanceCreationFailed";
+        case Code::VulkanLayerEnumerationFailed:
+            return "VulkanLayerEnumerationFailed";
+        case Code::VulkanValidationLayerUnavailable:
+            return "VulkanValidationLayerUnavailable";
+        case Code::VulkanDebugMessengerFunctionUnavailable:
+            return "VulkanDebugMessengerFunctionUnavailable";
+        case Code::VulkanDebugMessengerCreationFailed:
+            return "VulkanDebugMessengerCreationFailed";
         }
         return "Unknown";
     }

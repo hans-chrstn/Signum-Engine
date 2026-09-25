@@ -27,6 +27,30 @@ TEST(SubsystemTests, VulkanInstanceCreationErrorsBelongToVulkan) {
               Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanLayerEnumerationErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::VulkanLayerEnumerationFailed),
+              Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanValidationLayerUnavailableErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanValidationLayerUnavailable),
+        Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests,
+     VulkanDebugMessengerFunctionUnavailableErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(
+                  Error::Code::VulkanDebugMessengerFunctionUnavailable),
+              Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanDebugMessengerCreationErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanDebugMessengerCreationFailed),
+        Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

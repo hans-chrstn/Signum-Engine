@@ -8,6 +8,10 @@ namespace SNE::Engine::Core::Error {
         WindowCreationFailed,
         VulkanRequiredExtensionsUnavailable,
         VulkanInstanceCreationFailed,
+        VulkanLayerEnumerationFailed,
+        VulkanValidationLayerUnavailable,
+        VulkanDebugMessengerFunctionUnavailable,
+        VulkanDebugMessengerCreationFailed,
     };
 
     [[nodiscard]] auto toString(Code code) noexcept -> std::string_view;

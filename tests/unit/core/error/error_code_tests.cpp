@@ -25,6 +25,28 @@ TEST(ErrorCodeTests, VulkanInstanceCreationErrorCodeHasReadableName) {
               "VulkanInstanceCreationFailed");
 }
 
+TEST(ErrorCodeTests, VulkanLayerEnumerationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanLayerEnumerationFailed),
+              "VulkanLayerEnumerationFailed");
+}
+
+TEST(ErrorCodeTests, VulkanValidationLayerUnavailableErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanValidationLayerUnavailable),
+              "VulkanValidationLayerUnavailable");
+}
+
+TEST(ErrorCodeTests,
+     VulkanDebugMessengerFunctionUnavailableErrorCodeHasReadableName) {
+    EXPECT_EQ(
+        Error::toString(Error::Code::VulkanDebugMessengerFunctionUnavailable),
+        "VulkanDebugMessengerFunctionUnavailable");
+}
+
+TEST(ErrorCodeTests, VulkanDebugMessengerCreationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanDebugMessengerCreationFailed),
+              "VulkanDebugMessengerCreationFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);

@@ -9,6 +9,10 @@ namespace SNE::Engine::Core::Error {
             return Subsystem::Platform;
         case Code::VulkanRequiredExtensionsUnavailable:
         case Code::VulkanInstanceCreationFailed:
+        case Code::VulkanLayerEnumerationFailed:
+        case Code::VulkanValidationLayerUnavailable:
+        case Code::VulkanDebugMessengerFunctionUnavailable:
+        case Code::VulkanDebugMessengerCreationFailed:
             return Subsystem::Vulkan;
         }
 
