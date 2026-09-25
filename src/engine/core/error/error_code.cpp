@@ -27,6 +27,8 @@ namespace SNE::Engine::Core::Error {
             return "VulkanApiVersionQueryFailed";
         case Code::VulkanApiVersionUnsupported:
             return "VulkanApiVersionUnsupported";
+        case Code::VulkanSurfaceCreationFailed:
+            return "VulkanSurfaceCreationFailed";
         }
         return "Unknown";
     }

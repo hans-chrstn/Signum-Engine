@@ -17,12 +17,6 @@ if [[ ! -f build/debug/compile_commands.json ]]; then
     exit 1
 fi
 
-mapfile -d '' sources < <(
-    find src tests -type f -name '*.cpp' -print0
-)
-
-if (( ${#sources[@]} == 0 )); then
-    exit 0
-fi
-
-clang-tidy --quiet -p build/debug "${sources[@]}"
+find src tests -type f -name '*.cpp' -print0 |
+    xargs -0 -n 1 -P "$(nproc)" \
+        clang-tidy --quiet -p build/debug

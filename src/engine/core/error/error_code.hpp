@@ -37,6 +37,8 @@ namespace SNE::Engine::Core::Error {
         VulkanApiVersionQueryFailed,
         /** Available Vulkan instance version is unsupported. */
         VulkanApiVersionUnsupported,
+        /** Creation of the Vulkan surface failed. */
+        VulkanSurfaceCreationFailed,
     };
 
     /**

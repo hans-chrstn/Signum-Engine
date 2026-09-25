@@ -17,6 +17,7 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanExtensionSupportUnavailable:
         case Code::VulkanApiVersionQueryFailed:
         case Code::VulkanApiVersionUnsupported:
+        case Code::VulkanSurfaceCreationFailed:
             return Subsystem::Vulkan;
         }
 

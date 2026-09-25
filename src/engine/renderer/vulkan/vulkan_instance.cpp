@@ -335,6 +335,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         return version;
     }
 
+    auto VulkanInstance::nativeHandle() const -> VkInstance {
+        return m_Instance;
+    }
+
     VulkanInstance::~VulkanInstance() {
         destroyDebugMessenger();
         vkDestroyInstance(m_Instance, nullptr);

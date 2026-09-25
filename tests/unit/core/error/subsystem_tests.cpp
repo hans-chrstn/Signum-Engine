@@ -73,6 +73,11 @@ TEST(SubsystemTests, VulkanApiVersionUnsupportedErrorsBelongToVulkan) {
               Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanSurfaceCreationErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::VulkanSurfaceCreationFailed),
+              Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

@@ -1,14 +1,21 @@
 #include "application.hpp"
-#include "engine/platform/window.hpp"
+
+namespace {
+    constexpr SNE::Engine::Platform::WindowSize kInitialWindowSize{
+        .width = 600,
+        .height = 400,
+    };
+}
 
 namespace SNE::Engine::Core {
-    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    void Application::run() {
-        constexpr Platform::WindowSize initialWindowSize{.width = 600,
-                                                         .height = 400};
-        Platform::Window window(initialWindowSize, "Engine");
 
-        while (!window.shouldClose()) {
+    Application::Application()
+        : m_Window(kInitialWindowSize, "Signum Editor"),
+          m_VulkanSurface(m_VulkanInstance.nativeHandle(),
+                          m_Window.nativeHandle()) {}
+
+    void Application::run() {
+        while (!m_Window.shouldClose()) {
             Platform::Window::waitEvents();
         }
     }

@@ -13,6 +13,7 @@ add_library(
     engine/platform/window.cpp
     engine/renderer/vulkan/vulkan_instance.cpp
     engine/renderer/vulkan/vulkan_result.cpp
+    engine/renderer/vulkan/vulkan_surface.cpp
 )
 
 target_include_directories(

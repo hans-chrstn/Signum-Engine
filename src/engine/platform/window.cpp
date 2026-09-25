@@ -36,4 +36,8 @@ namespace SNE::Engine::Platform {
     void Window::waitEvents() {
         glfwWaitEvents();
     }
+
+    auto Window::nativeHandle() const -> GLFWwindow * {
+        return m_Window;
+    }
 } // namespace SNE::Engine::Platform

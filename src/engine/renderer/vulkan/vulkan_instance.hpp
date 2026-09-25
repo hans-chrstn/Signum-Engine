@@ -48,8 +48,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Creates the engine's Vulkan instance and debug messenger.
          *
          * @throws Core::Error::EngineError if validation-layer discovery,
-         * required-extension discovery or validation, Vulkan instance creation,
-         * or debug-messenger creation fails.
+         * required-extension discovery or validation, API-version discovery or
+         * validation, Vulkan instance creation, or debug-messenger creation
+         * fails.
          */
         VulkanInstance();
 
@@ -62,5 +63,15 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         VulkanInstance(const VulkanInstance &) = delete;
         auto operator=(const VulkanInstance &) -> VulkanInstance & = delete;
+
+        /**
+         * @brief Returns the underlying Vulkan instance handle.
+         *
+         * The returned handle is non-owning and remains valid only while this
+         * VulkanInstance object remains alive.
+         *
+         * @return Vulkan instance handle owned by this object.
+         */
+        [[nodiscard]] auto nativeHandle() const -> VkInstance;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

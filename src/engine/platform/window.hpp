@@ -69,8 +69,6 @@ namespace SNE::Engine::Platform {
          *
          * @return Pointer to the GLFW window owned by this object.
          */
-        [[nodiscard]] auto getNativeWindow() const -> GLFWwindow * {
-            return m_Window;
-        }
+        [[nodiscard]] auto nativeHandle() const -> GLFWwindow *;
     };
 } // namespace SNE::Engine::Platform
