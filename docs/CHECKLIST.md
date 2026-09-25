@@ -146,6 +146,7 @@
 - [ ] Find queue families
 - [ ] Check required device extensions
 - [ ] Separate required and optional capabilities
+- [ ] Discover optional hardware ray-tracing capabilities without requiring them
 - [ ] Select physical device
 - [ ] Create logical device
 - [ ] Retrieve graphics queue
@@ -162,6 +163,8 @@
 
 - [ ] Separate capability discovery from device-selection policy
 - [ ] Keep hardware policy independent from gameplay
+- [ ] Keep optional GPU capabilities opt-in
+- [ ] Do not make renderer startup depend on hardware ray tracing
 
 ---
 
@@ -212,6 +215,7 @@
 - [ ] synchronization
 - [ ] frame ownership
 - [ ] acquire-submit-present flow
+- [ ] dynamic rendering
 
 ### Implement
 
@@ -219,6 +223,7 @@
 - [ ] Create command buffers
 - [ ] Create synchronization objects
 - [ ] Implement frame loop
+- [ ] Use Vulkan dynamic rendering
 - [ ] Poll platform events
 - [ ] Clear screen
 - [ ] Render triangle
@@ -236,6 +241,7 @@
 
 - [ ] Keep rendering loop independent from gameplay
 - [ ] Keep synchronization details inside rendering subsystem
+- [ ] Prefer dynamic rendering over legacy render-pass/framebuffer objects unless a concrete compatibility need requires them
 
 ---
 
@@ -248,8 +254,13 @@
 - [ ] buffers
 - [ ] textures
 - [ ] descriptors
+- [ ] descriptor/binding models
+- [ ] materials
+- [ ] shader and pipeline variants
+- [ ] compute pipelines
 - [ ] staging
 - [ ] GPU resource lifetime
+- [ ] GPU resource dependency tracking
 
 ### Implement
 
@@ -259,16 +270,25 @@
 - [ ] Add index buffers
 - [ ] Add uniform/storage buffers
 - [ ] Add textures
+- [ ] Add descriptor/binding infrastructure
+- [ ] Add reusable shader/pipeline variant infrastructure
+- [ ] Add compute-pipeline support when a real workload requires it
+- [ ] Add material parameter/binding foundation
 - [ ] Add depth buffering
 - [ ] Render multiple objects
 - [ ] Separate scene data from GPU resources
 - [ ] Define rendering-facing data contracts
 - [ ] Define GPU resource ownership
 - [ ] Define GPU lifetime ordering
+- [ ] Track GPU resource dependencies
+- [ ] Expose resource lifetime/dependency data needed by render-graph scheduling
+- [ ] Add deferred resource retirement when real frame-lifetime needs require it
 
 ### Test
 
 - [ ] Test pure resource descriptions
+- [ ] Test shader/pipeline/binding descriptions without optional rendering modules
+- [ ] Test material parameter/binding behavior without effect-specific assumptions
 - [ ] Test partial creation failures
 - [ ] Verify destruction ordering
 - [ ] Run Vulkan validation
@@ -278,6 +298,9 @@
 
 - [ ] Keep runtime object identity separate from GPU resource identity
 - [ ] Avoid raw Vulkan ownership in game entities
+- [ ] Keep resource, shader, pipeline, binding, and material mechanisms independent from optional rendering features
+- [ ] Keep core GPU resource APIs usable by built-in and developer-defined render features
+- [ ] Avoid baking PBR, shadow, terrain, water, ray-tracing-effect, or other optional-feature semantics into renderer-core resource types
 
 ---
 
@@ -468,6 +491,10 @@
 - [ ] backend abstraction
 - [ ] renderer handles
 - [ ] renderer resource descriptions
+- [ ] render graphs/frame graphs
+- [ ] render-feature architecture
+- [ ] render-pass registration
+- [ ] material abstraction
 - [ ] abstraction overhead
 
 ### Design
@@ -476,6 +503,19 @@
 - [ ] Define backend-independent resource descriptions
 - [ ] Define renderer resource handles
 - [ ] Define renderer ownership model
+- [ ] Define renderer-core versus render-feature boundary
+- [ ] Define render graph/frame graph contracts
+- [ ] Define render-graph resource declaration, access, and dependency contracts
+- [ ] Define render-feature lifecycle and registration contract
+- [ ] Define render-feature dependency and ordering declarations
+- [ ] Define custom render-pass registration contract
+- [ ] Define material-system boundary
+- [ ] Define custom shader/material extension contracts
+- [ ] Define optional render-feature enable/disable/configuration model
+- [ ] Define built-in render-feature replacement and extension contract
+- [ ] Define public mechanisms shared by built-in and developer-defined render features
+- [ ] Define no-meaningful-overhead policy for disabled optional features
+- [ ] Define hardware ray-tracing infrastructure boundary separately from ray-traced effects
 - [ ] Define Vulkan escape-hatch policy
 
 ### Implement
@@ -483,18 +523,39 @@
 - [ ] Move normal rendering callers away from raw Vulkan
 - [ ] Keep Vulkan as first backend
 - [ ] Avoid premature additional graphics backends
+- [ ] Add render graph/frame graph core when multi-pass scheduling requires it
+- [ ] Integrate GPU resource lifetime/dependency tracking with the render graph
+- [ ] Add render-feature registry when a real feature requires it
+- [ ] Add public custom render-feature registration path
+- [ ] Add public custom render-pass registration path
+- [ ] Add public feature enable/disable/configuration path
+- [ ] Expose shader, pipeline, descriptor/binding, and material extension mechanisms through renderer APIs
 - [ ] Keep abstraction measurable
 
 ### Test
 
 - [ ] Test resource descriptions
 - [ ] Verify public renderer API avoids unnecessary Vulkan types
+- [ ] Verify renderer-core builds without optional rendering modules
+- [ ] Disable optional render features without breaking unrelated rendering
+- [ ] Compose multiple render features through the render graph
+- [ ] Test developer-defined render feature through public renderer mechanisms
+- [ ] Verify built-in and custom render features use the same registration and resource contracts
+- [ ] Verify built-in render features have no privileged private-core path unavailable to custom features
+- [ ] Verify replacing one render-feature implementation does not require unrelated renderer changes
 - [ ] Benchmark abstraction where useful
 
 ### Architecture
 
+- [ ] Engine provides mechanisms, built-in modules provide implementations, developers provide specialization
+- [ ] Keep renderer-core focused on reusable mechanisms rather than specific rendering effects
+- [ ] Keep renderer-core independent from optional rendering modules
+- [ ] Require optional rendering modules to depend on renderer-core, never the reverse
+- [ ] Give built-in render features no privileged architectural shortcuts unavailable to custom features
+- [ ] Allow built-in rendering modules to be enabled, disabled, configured, replaced, and extended
 - [ ] Keep game rendering API independent from Vulkan
 - [ ] Keep explicit low-level backend access for advanced extensions
+- [ ] Keep unused optional render features uninitialized and unallocated
 
 ---
 
@@ -735,6 +796,7 @@
 - [ ] Define importer interface
 - [ ] Define asset metadata
 - [ ] Define dependency tracking
+- [ ] Define shader/material asset dependencies without coupling assets to built-in render features
 - [ ] Define cache versioning
 
 ### Implement
@@ -745,6 +807,7 @@
 - [ ] Add asset load
 - [ ] Add asset unload
 - [ ] Add dependency tracking
+- [ ] Support custom shader/material assets through generic asset/resource mechanisms
 - [ ] Add reload path
 - [ ] Add asset diagnostics
 
@@ -754,7 +817,14 @@
 - [ ] Test invalid assets
 - [ ] Test asset identity
 - [ ] Test dependencies
+- [ ] Test custom shader/material asset dependencies
+- [ ] Test shader/material assets with built-in rendering modules disabled
 - [ ] Test reload
+
+### Architecture
+
+- [ ] Keep shader/material asset formats independent from ownership by any built-in render feature
+- [ ] Let built-in and custom render features consume the same asset/resource mechanisms
 
 ---
 
@@ -776,7 +846,13 @@
 - [ ] Define module dependency direction
 - [ ] Define project module boundary
 - [ ] Define optional module lifecycle
+- [ ] Define optional rendering-module lifecycle
+- [ ] Define built-in rendering features as optional modules rather than renderer-core services
 - [ ] Define module dependency declarations
+- [ ] Define render-feature module dependency declarations
+- [ ] Define module enable/disable configuration
+- [ ] Define replacement/override contract for built-in rendering modules
+- [ ] Define replacement selection and precedence rules
 - [ ] Define startup/shutdown contract
 - [ ] Define interface versioning
 - [ ] Define ABI policy
@@ -785,6 +861,9 @@
 
 - [ ] Split justified subsystems into CMake targets
 - [ ] Add minimal module lifecycle
+- [ ] Load optional rendering module through normal module mechanisms when justified
+- [ ] Register a built-in render feature through the same public path available to custom modules
+- [ ] Support per-project enable/disable of optional rendering modules
 - [ ] Load test module
 - [ ] Reject incompatible module versions
 
@@ -794,12 +873,20 @@
 - [ ] Test invalid module
 - [ ] Test version mismatch
 - [ ] Test dependency ordering
+- [ ] Test renderer-core with all optional rendering modules disabled
+- [ ] Test disabled rendering module does not initialize or allocate feature resources
+- [ ] Test multiple optional rendering modules coexist through normal registration paths
+- [ ] Test custom rendering module uses the same lifecycle and registration path as built-in modules
+- [ ] Test replacement rendering module without modifying unrelated renderer systems
 - [ ] Test module shutdown
 
 ### Architecture
 
 - [ ] Avoid promising stable C++ ABI prematurely
 - [ ] Avoid exposing unstable internals across module boundaries
+- [ ] Keep renderer-core free of dependencies on optional rendering modules
+- [ ] Require built-in rendering modules to use the same module and extension contracts available to external modules
+- [ ] Keep optional rendering-module startup, shutdown, configuration, and replacement outside renderer-core special cases
 
 ---
 
@@ -819,6 +906,9 @@
 - [ ] Hide platform boilerplate
 - [ ] Hide unnecessary threading boilerplate
 - [ ] Preserve advanced extension access
+- [ ] Allow project-defined shaders and materials
+- [ ] Allow project-defined render features and render passes through public renderer mechanisms
+- [ ] Allow projects to enable, disable, and configure optional rendering modules without Vulkan-facing code
 
 ### Implement
 
@@ -826,6 +916,7 @@
 - [ ] Expose runtime APIs
 - [ ] Add project-defined component example
 - [ ] Add project-defined system example
+- [ ] Add project-defined render feature example when renderer extension API exists
 - [ ] Run project without modifying engine core
 
 ### Test
@@ -834,6 +925,8 @@
 - [ ] Run project-defined behavior
 - [ ] Verify project does not need Vulkan calls
 - [ ] Verify project does not need GLFW calls
+- [ ] Verify project-defined render feature does not require renderer-core modification
+- [ ] Verify project-defined render feature can use the same render graph, resource, shader, pipeline, binding, and material mechanisms as built-in features
 - [ ] Verify project runs without scripting runtime
 
 ---
@@ -944,6 +1037,8 @@
 - [ ] Profile component iteration
 - [ ] Profile asset loading
 - [ ] Profile renderer submission
+- [ ] Establish renderer-core baseline with optional rendering features disabled
+- [ ] Add per-render-feature CPU/GPU/resource counters when feature modules exist
 
 ### Optimize When Measured
 
@@ -953,6 +1048,10 @@
 - [ ] SIMD
 - [ ] task batching
 - [ ] asynchronous pipelines
+- [ ] indirect rendering
+- [ ] GPU-driven rendering
+- [ ] resource indexing/bindless techniques
+- [ ] renderer multithreading
 - [ ] GPU work
 
 ### Test
@@ -960,6 +1059,8 @@
 - [ ] Track benchmark regressions
 - [ ] Record optimization baselines
 - [ ] Verify optimized behavior remains correct
+- [ ] Measure CPU, GPU, memory, and resource overhead of disabled optional rendering features
+- [ ] Verify disabled optional rendering features remain at the renderer-core baseline within defined tolerances
 
 ---
 
@@ -996,9 +1097,7 @@
 
 ---
 
-## Phase 25 — Physics
-
-### Design
+## Phase 25 — Physics### Design
 
 - [ ] Define physics abstraction
 - [ ] Keep physics backend replaceable
@@ -1347,6 +1446,11 @@
 - [ ] Stress streaming
 - [ ] Test shutdown during streaming
 
+### Architecture
+
+- [ ] Keep streaming infrastructure independent from terrain, water, cloud, and other optional render-feature modules
+- [ ] Let optional large-world rendering modules consume generic streaming APIs rather than own streaming-core policy
+
 ---
 
 ## Phase 37 — Procedural Generation Capabilities
@@ -1377,30 +1481,67 @@
 
 ---
 
-## Phase 38 — Advanced Rendering
+## Phase 38 — Optional Rendering Feature Modules
 
-### Implement as Needed
+### Hardware Ray-Tracing Infrastructure
 
-- [ ] compute workloads
-- [ ] indirect rendering
-- [ ] GPU-driven rendering
-- [ ] resource indexing/bindless techniques
-- [ ] material system
-- [ ] shadows
-- [ ] post-processing
-- [ ] HDR
-- [ ] temporal effects
-- [ ] visibility systems
-- [ ] renderer multithreading
-- [ ] optional ray tracing
-- [ ] renderer extension API
+- [ ] Add optional acceleration-structure resource support
+- [ ] Add optional ray-tracing pipeline support
+- [ ] Add optional shader-binding-table support
+- [ ] Add optional ray-tracing command/resource integration
+- [ ] Integrate hardware ray-tracing resources with renderer-core lifetime/dependency tracking
+- [ ] Integrate hardware ray-tracing work with render graph/frame graph
+
+### Built-In Feature Modules
+
+- [ ] Add optional PBR module
+- [ ] Add optional shadow module
+- [ ] Add optional parallax-mapping module
+- [ ] Add optional SSS module
+- [ ] Add optional SSGI module
+- [ ] Add optional reflection module
+- [ ] Add optional dynamic cubemap/reflection-probe module
+- [ ] Add optional post-processing module
+- [ ] Add optional HDR module
+- [ ] Add optional temporal-effects module
+- [ ] Add optional visibility module
+
+### Ray-Traced Feature Modules
+
+- [ ] Add optional ray-traced shadow module
+- [ ] Add optional ray-traced reflection module
+- [ ] Add optional ray-traced GI module
+
+### Environment Feature Modules
+
+- [ ] Add optional terrain-rendering module
+- [ ] Add optional water-rendering module
+- [ ] Add optional wetness module
+- [ ] Add optional volumetric-cloud module
+- [ ] Add optional terrain/cloud-shadow module
 
 ### Test
 
-- [ ] Profile each major feature
-- [ ] Verify GPU synchronization
-- [ ] Track GPU memory
-- [ ] Track frame-time regressions
+- [ ] Profile each major feature module
+- [ ] Verify GPU synchronization for composed feature modules
+- [ ] Track GPU memory per feature module
+- [ ] Track frame-time regressions per feature module
+- [ ] Disable each optional rendering feature without breaking unrelated rendering
+- [ ] Compose multiple built-in and custom render features through the render graph
+- [ ] Verify built-in features use only public renderer mechanisms available to custom features
+- [ ] Compare CPU, GPU, memory, and resource use with each optional feature disabled
+- [ ] Replace one built-in implementation without modifying unrelated renderer systems
+- [ ] Verify render-graph resource dependencies and lifetimes across multiple features
+- [ ] Verify ray-tracing infrastructure can exist without enabling any ray-traced effect module
+
+### Architecture
+
+- [ ] Keep every feature in this phase optional
+- [ ] Keep PBR, shadows, SSS, SSGI, reflections, terrain, water, wetness, clouds, and ray-traced effects outside renderer-core
+- [ ] Keep hardware ray-tracing infrastructure independent from specific ray-traced effects
+- [ ] Allow developers to enable, disable, configure, replace, and extend built-in rendering modules
+- [ ] Allow developers to implement equivalent or new features through the same public renderer mechanisms
+- [ ] Avoid initializing or allocating resources for unused optional rendering modules
 
 ---
 
@@ -1467,6 +1608,7 @@
 - [ ] Add asset-loading profiling
 - [ ] Add memory profiling
 - [ ] Add renderer statistics
+- [ ] Add per-render-feature CPU/GPU/resource statistics
 - [ ] Add editor profiling views
 
 ### Optimize From Measurements
@@ -1491,6 +1633,10 @@
 - [ ] Measure throughput
 - [ ] Measure peak memory
 - [ ] Stress concurrency
+- [ ] Verify unused optional rendering features impose no meaningful CPU/GPU/resource overhead
+- [ ] Compare renderer-core baseline against enabled feature modules
+- [ ] Measure feature activation/deactivation cost
+- [ ] Track per-feature CPU, GPU, memory, descriptor, and resource usage
 
 ---
 
@@ -1543,6 +1689,15 @@
 
 ## Long-Term Architecture
 
+### Rendering Principles
+
+- [ ] Engine provides mechanisms, built-in modules provide implementations, developers provide specialization
+- [ ] Renderer-core does not depend on optional rendering modules
+- [ ] Built-in rendering modules use the same public mechanisms available to developer-defined features
+- [ ] Optional rendering modules can be enabled, disabled, configured, replaced, and extended
+- [ ] Unused optional rendering modules impose no meaningful CPU, GPU, memory, descriptor, or resource overhead
+- [ ] Replacing one rendering implementation does not require modifying unrelated renderer systems
+
 ### Engine Internals
 
 - [ ] Core
@@ -1555,6 +1710,14 @@
 - [ ] Diagnostics
 - [ ] Asset infrastructure
 - [ ] Renderer backend/RHI
+- [ ] Shader/pipeline infrastructure
+- [ ] Descriptor/binding infrastructure
+- [ ] Material infrastructure
+- [ ] Render graph/frame graph
+- [ ] Render-feature registration infrastructure
+- [ ] Custom render-pass registration infrastructure
+- [ ] GPU resource lifetime/dependency tracking
+- [ ] Hardware ray-tracing infrastructure
 
 ### Runtime APIs
 
@@ -1582,6 +1745,10 @@
 - [ ] Custom asset types
 - [ ] Custom importers
 - [ ] Renderer extensions
+- [ ] Custom render features
+- [ ] Custom render passes
+- [ ] Custom shaders/materials
+- [ ] Replaceable rendering modules
 - [ ] Editor extensions
 - [ ] Custom tools
 
