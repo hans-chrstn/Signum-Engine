@@ -98,6 +98,8 @@
 - [x] Vulkan extensions
 - [x] Vulkan layers
 - [x] debug callbacks
+- [x] Vulkan API versioning
+- [x] loader-supported version vs application-required version
 - [ ] surfaces
 - [x] `VkResult`
 
@@ -108,6 +110,9 @@
 - [x] Validate required extensions
 - [x] Enable validation layers
 - [x] Create debug messenger
+- [x] Query supported Vulkan instance API version
+- [x] Define required Vulkan API version
+- [x] Reject unsupported Vulkan API versions
 - [ ] Create window surface
 - [x] Preserve `VkResult`
 - [x] Add Vulkan error conversion
