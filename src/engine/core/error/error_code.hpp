@@ -32,7 +32,11 @@ namespace SNE::Engine::Core::Error {
         VulkanExtensionEnumerationFailed,
         /** A Vulkan instance extension required by the engine is unavailable.
          */
-        VulkanExtensionSupportUnavailable
+        VulkanExtensionSupportUnavailable,
+        /** Query of available Vulkan instance versions failed. */
+        VulkanApiVersionQueryFailed,
+        /** Available Vulkan instance version is unsupported. */
+        VulkanApiVersionUnsupported,
     };
 
     /**

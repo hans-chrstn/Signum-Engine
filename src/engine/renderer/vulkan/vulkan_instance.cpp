@@ -4,7 +4,6 @@
 #include "engine/core/error/native_error.hpp"
 #include "vulkan_result.hpp"
 #include <GLFW/glfw3.h>
-#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -13,6 +12,7 @@
 namespace SNE::Engine::Renderer::Vulkan {
 
     constexpr const char *kValidationLayerName = "VK_LAYER_KHRONOS_validation";
+    constexpr std::uint32_t kRequiredApiVersion = VK_API_VERSION_1_4;
 
     // Instance creation succeeds before debug-messenger creation. If the latter
     // fails, release the already-created Vulkan instance before propagating the
@@ -44,7 +44,16 @@ namespace SNE::Engine::Renderer::Vulkan {
         application_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
         application_info.pEngineName = "Signum Engine";
         application_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
-        application_info.apiVersion = VK_API_VERSION_1_4;
+
+        const std::uint32_t supported_api_version = querySupportedApiVersion();
+        if (supported_api_version < kRequiredApiVersion) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanApiVersionUnsupported,
+                "The Vulkan loader does not support Signum's required API "
+                "version",
+                "Validate Vulkan Instance API Version");
+        }
+        application_info.apiVersion = kRequiredApiVersion;
 
         const std::vector<const char *> extensions = getRequiredExtensions();
         const bool extension_support =
@@ -307,6 +316,23 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         m_DebugMessenger = VK_NULL_HANDLE;
+    }
+
+    auto VulkanInstance::querySupportedApiVersion() -> std::uint32_t {
+        std::uint32_t version{};
+        const VkResult result = vkEnumerateInstanceVersion(&version);
+
+        if (result != VK_SUCCESS) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanApiVersionQueryFailed,
+                "Failed to query the Vulkan loader's supported instance API "
+                "version",
+                Core::Error::NativeError(static_cast<int>(result),
+                                         std::string(toString(result))),
+                "Query Vulkan Instance API Version");
+        }
+
+        return version;
     }
 
     VulkanInstance::~VulkanInstance() {

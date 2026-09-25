@@ -58,6 +58,16 @@ TEST(ErrorCodeTests,
               "VulkanExtensionSupportUnavailable");
 }
 
+TEST(ErrorCodeTests, VulkanApiVersionQueryErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanExtensionSupportUnavailable),
+              "VulkanExtensionSupportUnavailable");
+}
+
+TEST(ErrorCodeTests, VulkanApiVersionUnsupportedErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanApiVersionUnsupported),
+              "VulkanApiVersionUnsupported");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);

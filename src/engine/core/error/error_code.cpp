@@ -23,6 +23,10 @@ namespace SNE::Engine::Core::Error {
             return "VulkanExtensionEnumerationFailed";
         case Code::VulkanExtensionSupportUnavailable:
             return "VulkanExtensionSupportUnavailable";
+        case Code::VulkanApiVersionQueryFailed:
+            return "VulkanApiVersionQueryFailed";
+        case Code::VulkanApiVersionUnsupported:
+            return "VulkanApiVersionUnsupported";
         }
         return "Unknown";
     }
