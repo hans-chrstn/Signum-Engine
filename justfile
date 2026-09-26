@@ -21,7 +21,13 @@ build preset="debug":
     ./scripts/build.sh "{{preset}}"
 
 test preset="debug":
-    ./scripts/test.sh "{{preset}}"
+    ./scripts/test.sh "{{preset}}" all
+
+test-unit preset="debug":
+    ./scripts/test.sh "{{preset}}" unit
+
+test-integration preset="debug":
+    ./scripts/test.sh "{{preset}}" integration
 
 run preset="debug":
     ./scripts/run.sh "{{preset}}"
@@ -33,7 +39,7 @@ check:
     ./scripts/check.sh
 
 asan:
-    ./scripts/test.sh asan
+    ./scripts/test.sh asan all
 
 release:
     ./scripts/build.sh release

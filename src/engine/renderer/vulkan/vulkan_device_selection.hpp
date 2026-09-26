@@ -1,3 +1,5 @@
+#pragma once
+
 #include "engine/renderer/vulkan/vulkan_queue_families.hpp"
 #include <optional>
 #include <vector>

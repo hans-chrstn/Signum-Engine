@@ -153,7 +153,7 @@
 - [x] Find queue families
 - [x] Check required device extensions
 - [x] Separate required and optional capabilities
-- [ ] Discover optional hardware ray-tracing capabilities without requiring them
+- [x] Discover optional hardware ray-tracing capabilities without requiring them
 - [ ] Select physical device
 - [ ] Create logical device
 - [ ] Retrieve graphics queue

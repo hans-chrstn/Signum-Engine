@@ -1,4 +1,6 @@
 #pragma once
+
+#include <vector>
 #include <vulkan/vulkan.h>
 namespace SNE::Engine::Renderer::Vulkan {
     /**
@@ -65,15 +67,46 @@ namespace SNE::Engine::Renderer::Vulkan {
         -> VkPhysicalDeviceFeatures;
 
     /**
-     * @brief Queries the core capabilities of a Vulkan physical device.
+     * @brief Queries optional hardware capabilities supported by a Vulkan
+     * physical device.
      *
-     * Collects the physical device's descriptive properties and supported core
-     * features into a single capability snapshot.
+     * Discovers optional Vulkan features that Signum may use when available but
+     * does not require for physical-device suitability or renderer startup.
+     *
+     * Combines Vulkan feature support with the supplied device-extension
+     * information to determine whether optional capabilities such as
+     * acceleration structures, ray-tracing pipelines, and ray queries are
+     * usable.
+     *
+     * @param device Physical device whose optional capabilities are queried.
+     * @param extension_properties Device extensions previously discovered for
+     * the physical device.
+     *
+     * @return Optional capabilities supported by the physical device.
+     */
+    [[nodiscard]] auto queryOptionalDeviceCapabilities(
+        VkPhysicalDevice device,
+        const std::vector<VkExtensionProperties> &extension_properties)
+        -> OptionalDeviceCapabilities;
+
+    /**
+     * @brief Queries the capabilities of a Vulkan physical device.
+     *
+     * Collects the physical device's descriptive properties, supported core
+     * features, and optional hardware capabilities into a single capability
+     * snapshot.
+     *
+     * Reuses the supplied device-extension properties when determining optional
+     * capability support.
      *
      * @param device Physical device whose capabilities are queried.
+     * @param extension_properties Device extensions previously discovered for
+     * the physical device.
      *
      * @return Capability information reported for the physical device.
      */
-    [[nodiscard]] auto queryPhysicalDeviceCapabilities(VkPhysicalDevice device)
+    [[nodiscard]] auto queryPhysicalDeviceCapabilities(
+        VkPhysicalDevice device,
+        const std::vector<VkExtensionProperties> &extension_properties)
         -> PhysicalDeviceCapabilities;
 } // namespace SNE::Engine::Renderer::Vulkan
