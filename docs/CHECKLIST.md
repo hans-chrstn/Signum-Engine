@@ -168,7 +168,7 @@
 
 ### Architecture
 
-- [ ] Separate capability discovery from device-selection policy
+- [x] Separate capability discovery from device-selection policy
 - [ ] Keep hardware policy independent from gameplay
 - [ ] Keep optional GPU capabilities opt-in
 - [ ] Do not make renderer startup depend on hardware ray tracing
