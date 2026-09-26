@@ -84,6 +84,12 @@ TEST(SubsystemTests, VulkanPhysicalDeviceEnumerationErrorsBelongToVulkan) {
               Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanSurfaceSupportQueryErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanSurfaceSupportQueryFailed),
+        Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

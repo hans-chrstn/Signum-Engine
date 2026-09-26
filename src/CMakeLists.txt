@@ -17,6 +17,7 @@ add_library(
     engine/renderer/vulkan/vulkan_result.cpp
     engine/renderer/vulkan/vulkan_device_discovery.cpp
     engine/renderer/vulkan/vulkan_device_capabilities.cpp
+    engine/renderer/vulkan/vulkan_queue_families.cpp
 )
 
 target_include_directories(

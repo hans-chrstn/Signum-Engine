@@ -19,6 +19,7 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanApiVersionUnsupported:
         case Code::VulkanSurfaceCreationFailed:
         case Code::VulkanPhysicalDeviceEnumerationFailed:
+        case Code::VulkanSurfaceSupportQueryFailed:
             return Subsystem::Vulkan;
         }
 

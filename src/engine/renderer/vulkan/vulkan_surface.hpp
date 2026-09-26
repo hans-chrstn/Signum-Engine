@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 struct GLFWwindow;
 
@@ -41,5 +42,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         ~VulkanSurface();
         VulkanSurface(const VulkanSurface &) = delete;
         auto operator=(const VulkanSurface &) -> VulkanSurface & = delete;
+
+        /**
+         * @brief Returns the underlying Vulkan surface handle.
+         *
+         * The returned handle is non-owning and remains valid only while this
+         * VulkanSurface object remains alive.
+         *
+         * @return Vulkan surface handle owned by this object.
+         */
+        [[nodiscard]] auto nativeHandle() const -> VkSurfaceKHR;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

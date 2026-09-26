@@ -24,4 +24,8 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanSurface::~VulkanSurface() {
         vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
     }
+
+    auto VulkanSurface::nativeHandle() const -> VkSurfaceKHR {
+        return m_Surface;
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

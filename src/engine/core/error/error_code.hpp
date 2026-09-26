@@ -41,6 +41,8 @@ namespace SNE::Engine::Core::Error {
         VulkanSurfaceCreationFailed,
         /** Enumeration of available Vulkan instance physical devices failed. */
         VulkanPhysicalDeviceEnumerationFailed,
+        /** Query of Vulkan surface support failed. */
+        VulkanSurfaceSupportQueryFailed,
     };
 
     /**

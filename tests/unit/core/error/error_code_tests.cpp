@@ -79,6 +79,11 @@ TEST(ErrorCodeTests, VulkanPhysicalDeviceEnumerationErrorCodeHasReadableName) {
         "VulkanPhysicalDeviceEnumerationFailed");
 }
 
+TEST(ErrorCodeTests, VulkanSurfaceSupportQueryErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanSurfaceSupportQueryFailed),
+              "VulkanSurfaceSupportQueryFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);

@@ -141,7 +141,7 @@
 
 - [x] physical devices
 - [ ] logical devices
-- [ ] queue families
+- [x] queue families
 - [ ] queues
 - [x] device capabilities
 - [ ] feature negotiation
