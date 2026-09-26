@@ -150,7 +150,7 @@
 
 - [x] Enumerate physical devices
 - [x] Inspect device capabilities
-- [ ] Find queue families
+- [x] Find queue families
 - [ ] Check required device extensions
 - [ ] Separate required and optional capabilities
 - [ ] Discover optional hardware ray-tracing capabilities without requiring them
@@ -163,7 +163,7 @@
 ### Test
 
 - [ ] Test device-selection logic
-- [ ] Test queue-family selection
+- [x] Test queue-family selection
 - [ ] Test unsupported-device behavior
 
 ### Architecture
