@@ -1,5 +1,4 @@
 #include "native_error.hpp"
-#include <string>
 #include <utility>
 
 namespace SNE::Engine::Core::Error {

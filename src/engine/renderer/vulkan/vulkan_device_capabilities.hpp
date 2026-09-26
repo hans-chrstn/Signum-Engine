@@ -2,16 +2,40 @@
 #include <vulkan/vulkan.h>
 namespace SNE::Engine::Renderer::Vulkan {
     /**
+     * @brief Stores optional capabilities reported for a Vulkan physical
+     * device.
+     *
+     * Represents hardware features that Signum may use when available but does
+     * not require for renderer startup or physical-device suitability.
+     *
+     * Unsupported optional capabilities must not cause an otherwise suitable
+     * physical device to be rejected.
+     */
+    struct OptionalDeviceCapabilities {
+        /** Whether acceleration-structure functionality is supported. */
+        bool acceleration_structures_supported = false;
+        /** Whether Vulkan ray-tracing pipeline functionality is supported. */
+        bool ray_tracing_pipeline_supported = false;
+        /** Whether Vulkan ray-query functionality is supported. */
+        bool ray_query_supported = false;
+    };
+
+    /**
      * @brief Stores capability information reported for a Vulkan physical
      * device.
      *
-     * Groups the core properties and supported features queried from a physical
-     * device so later systems can inspect device characteristics without
-     * performing the Vulkan queries again.
+     * Groups the core properties, supported features, and optional capabilities
+     * discovered for a physical device so later systems can inspect device
+     * characteristics without repeating Vulkan capability queries.
      */
     struct PhysicalDeviceCapabilities {
+        /** Descriptive properties reported by the physical device. */
         VkPhysicalDeviceProperties properties{};
+        /** Core Vulkan features supported by the physical device. */
         VkPhysicalDeviceFeatures features{};
+        /** Optional hardware capabilities discovered for the physical device.
+         */
+        OptionalDeviceCapabilities optional_capabilities;
     };
 
     /**

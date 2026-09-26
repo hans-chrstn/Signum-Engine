@@ -1,8 +1,6 @@
 #include "window.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "error/glfw_error.hpp"
-#include <GLFW/glfw3.h>
-#include <string>
 
 namespace SNE::Engine::Platform {
     Window::Window(WindowSize size, std::string title)

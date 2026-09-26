@@ -3,10 +3,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "vulkan_result.hpp"
-#include <cstdint>
-#include <optional>
 #include <string>
-#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto queryQueueFamilyProperties(VkPhysicalDevice device)

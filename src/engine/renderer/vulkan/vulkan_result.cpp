@@ -1,5 +1,4 @@
 #include "vulkan_result.hpp"
-#include <string_view>
 
 namespace SNE::Engine::Renderer::Vulkan {
 
