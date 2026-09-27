@@ -45,6 +45,8 @@ namespace SNE::Engine::Core::Error {
         VulkanSurfaceSupportQueryFailed,
         /** Suitable Vulkan physical device could not be obtained. */
         VulkanSuitablePhysicalDeviceUnavailable,
+        /** Creation of the Vulkan device failed. */
+        VulkanDeviceCreationFailed,
     };
 
     /**

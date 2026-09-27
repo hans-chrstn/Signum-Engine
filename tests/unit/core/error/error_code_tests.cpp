@@ -59,8 +59,8 @@ TEST(ErrorCodeTests,
 }
 
 TEST(ErrorCodeTests, VulkanApiVersionQueryErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanExtensionSupportUnavailable),
-              "VulkanExtensionSupportUnavailable");
+    EXPECT_EQ(Error::toString(Error::Code::VulkanApiVersionQueryFailed),
+              "VulkanApiVersionQueryFailed");
 }
 
 TEST(ErrorCodeTests, VulkanApiVersionUnsupportedErrorCodeHasReadableName) {
@@ -88,6 +88,11 @@ TEST(ErrorCodeTests, VulkanSuitablePhysicalDeviceErrorCodeHasReadableName) {
     EXPECT_EQ(
         Error::toString(Error::Code::VulkanSuitablePhysicalDeviceUnavailable),
         "VulkanSuitablePhysicalDeviceUnavailable");
+}
+
+TEST(ErrorCodeTests, VulkanDeviceCreationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanDeviceCreationFailed),
+              "VulkanDeviceCreationFailed");
 }
 
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {

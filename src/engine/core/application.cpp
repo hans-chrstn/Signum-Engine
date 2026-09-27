@@ -1,7 +1,9 @@
 #include "application.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
+#include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
+#include "engine/renderer/vulkan/vulkan_queue_requests.hpp"
 #include <optional>
 #include <utility>
 #include <vector>
@@ -43,9 +45,12 @@ namespace SNE::Engine::Core {
         : m_Window(kInitialWindowSize, "Signum Editor"),
           m_VulkanSurface(m_VulkanInstance.nativeHandle(),
                           m_Window.nativeHandle()),
-          m_PhysicalDeviceCandidate(
-              selectRequiredPhysicalDevice(m_VulkanInstance.nativeHandle(),
-                                           m_VulkanSurface.nativeHandle())) {}
+          m_PhysicalDeviceCandidate(selectRequiredPhysicalDevice(
+              m_VulkanInstance.nativeHandle(), m_VulkanSurface.nativeHandle())),
+          m_VulkanDevice(m_PhysicalDeviceCandidate.handle,
+                         Vulkan::deriveUniqueQueueFamilyRequests(
+                             m_PhysicalDeviceCandidate.queue_family_indices),
+                         Vulkan::LogicalDeviceFeatureConfiguration{}) {}
 
     void Application::run() {
         while (!m_Window.shouldClose()) {

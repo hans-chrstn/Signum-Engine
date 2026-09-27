@@ -2,6 +2,7 @@
 
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/vulkan/vulkan_device.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
 #include "engine/renderer/vulkan/vulkan_surface.hpp"
@@ -22,14 +23,16 @@ namespace SNE::Engine::Core {
         Renderer::Vulkan::VulkanInstance m_VulkanInstance;
         Renderer::Vulkan::VulkanSurface m_VulkanSurface;
         Renderer::Vulkan::PhysicalDeviceCandidate m_PhysicalDeviceCandidate;
+        Renderer::Vulkan::VulkanDevice m_VulkanDevice;
 
       public:
         /**
          * @brief Constructs the application and its engine-wide resources.
          *
          * Initializes the platform context, creates the primary application
-         * window, establishes the Vulkan instance, and creates the Vulkan
-         * presentation surface associated with the window.
+         * window, establishes the Vulkan instance and presentation surface,
+         * selects a suitable physical device, and creates the Vulkan logical
+         * device.
          *
          * @throws Error::EngineError if a required platform, window, or Vulkan
          * resource cannot be initialized.

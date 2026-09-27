@@ -140,7 +140,7 @@
 ### Learn
 
 - [x] physical devices
-- [ ] logical devices
+- [x] logical devices
 - [x] queue families
 - [ ] queues
 - [x] device capabilities
@@ -160,8 +160,8 @@
 - [x] Enforce required Vulkan API version for the loader and physical devices
 - [x] Define logical-device feature configuration
 - [x] Derive unique queue-family requests
-- [ ] Create RAII VulkanDevice owner
-- [ ] Create logical device
+- [x] Create RAII VulkanDevice owner
+- [x] Create logical device
 - [ ] Retrieve graphics queue
 - [ ] Retrieve presentation queue
 - [ ] Report unsupported hardware
@@ -182,7 +182,7 @@
 - [x] Separate supported capabilities from enabled device features
 - [x] Keep queue-family request planning separate from device creation
 - [x] Centralize required device extensions as shared backend policy
-- [ ] Keep VkDevice ownership explicit and RAII-managed
+- [x] Keep VkDevice ownership explicit and RAII-managed
 - [ ] Keep hardware policy independent from gameplay
 - [ ] Keep optional GPU capabilities opt-in
 - [ ] Do not make renderer startup depend on hardware ray tracing
