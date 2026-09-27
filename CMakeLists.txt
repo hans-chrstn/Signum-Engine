@@ -45,6 +45,15 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   )
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_compile_options(
+    signum_project_options
+    INTERFACE
+      -Wdocumentation
+      -Wdocumentation-pedantic
+  )
+endif()
+
 if(SIGNUM_ENABLE_SANITIZERS)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(
