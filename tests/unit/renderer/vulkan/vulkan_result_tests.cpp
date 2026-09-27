@@ -1,12 +1,19 @@
 #include "engine/renderer/vulkan/vulkan_result.hpp"
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <ostream>
 #include <string_view>
 
 struct VulkanResultTestCase {
     VkResult result;
     std::string_view expected_name;
 };
+
+auto PrintTo(const VulkanResultTestCase &test_case, std::ostream *stream)
+    -> void {
+    *stream << "{ result = " << static_cast<std::int32_t>(test_case.result)
+            << ", expected_name = " << test_case.expected_name << " }";
+}
 
 class VulkanResultTests : public testing::TestWithParam<VulkanResultTestCase> {
 };

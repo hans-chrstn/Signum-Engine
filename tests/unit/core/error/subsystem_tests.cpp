@@ -90,6 +90,12 @@ TEST(SubsystemTests, VulkanSurfaceSupportQueryErrorsBelongToVulkan) {
         Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanSuitablePhysicalDeviceErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(
+                  Error::Code::VulkanSuitablePhysicalDeviceUnavailable),
+              Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");
