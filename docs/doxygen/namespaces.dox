@@ -1,0 +1,91 @@
+/**
+ * @namespace SNE
+ * @brief Defines the top-level namespace for Signum Engine.
+ *
+ * Contains all engine systems, platform abstractions, rendering backends, and
+ * supporting infrastructure implemented by Signum Engine.
+ */
+
+/**
+ * @namespace SNE::Engine
+ * @brief Contains the core runtime systems of Signum Engine.
+ *
+ * Organizes the engine's application lifecycle, platform integration,
+ * rendering infrastructure, diagnostics, and other runtime subsystems beneath
+ * a shared engine-level namespace.
+ */
+
+/**
+ * @namespace SNE::Engine::Core
+ * @brief Contains engine-wide runtime coordination and core infrastructure.
+ *
+ * Provides systems responsible for coordinating the top-level engine lifetime
+ * and other functionality shared across engine subsystems.
+ *
+ * Core systems should remain independent of backend-specific implementation
+ * details except where they coordinate explicitly owned engine resources.
+ */
+
+/**
+ * @namespace SNE::Engine::Core::Error
+ * @brief Provides Signum Engine's structured error and diagnostic system.
+ *
+ * Defines engine error codes, subsystem classification, native API error
+ * information, structured EngineError exceptions, and diagnostic formatting
+ * and output facilities used across engine subsystems.
+ *
+ * The namespace provides the common error representation into which lower-level
+ * platform and rendering APIs can translate their native failure information.
+ */
+
+/**
+ * @namespace SNE::Engine::Platform
+ * @brief Provides platform and window-system integration for Signum Engine.
+ *
+ * Contains abstractions over platform-facing libraries and resources, including
+ * process-wide GLFW lifetime management, native window ownership, event
+ * processing, and related platform functionality.
+ *
+ * Platform resources are kept separate from renderer-specific systems so the
+ * engine's windowing and operating-system integration remain independently
+ * structured.
+ */
+
+/**
+ * @namespace SNE::Engine::Platform::Error
+ * @brief Provides platform-specific error integration for Signum Engine.
+ *
+ * Contains adapters that capture failures reported by platform libraries and
+ * translate them into the engine's shared error representation.
+ *
+ * Platform-specific error handling belongs here when it interprets or converts
+ * native platform-library error state rather than defining engine-wide error
+ * policy.
+ */
+
+/**
+ * @namespace SNE::Engine::Renderer
+ * @brief Contains rendering systems and graphics-backend infrastructure.
+ *
+ * Organizes renderer-facing abstractions and backend implementations used to
+ * establish and operate Signum Engine's graphics systems.
+ *
+ * Backend-specific APIs are contained in nested namespaces so higher-level
+ * renderer architecture can remain separated from implementation details of a
+ * particular graphics API.
+ */
+
+/**
+ * @namespace SNE::Engine::Renderer::Vulkan
+ * @brief Contains the Vulkan rendering backend for Signum Engine.
+ *
+ * Provides Vulkan instance and surface ownership, physical-device discovery
+ * and selection, device capability inspection, queue-family discovery and
+ * planning, logical-device creation, extension policy, Vulkan result handling,
+ * and related backend infrastructure.
+ *
+ * The Vulkan backend separates hardware capability discovery from engine
+ * policy and resource creation so supported hardware capabilities, selected
+ * features, queue requirements, and owned Vulkan resources remain distinct
+ * architectural concerns.
+ */
