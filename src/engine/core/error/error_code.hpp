@@ -48,6 +48,8 @@ namespace SNE::Engine::Core::Error {
         VulkanSuitablePhysicalDeviceUnavailable,
         /** Creation of the Vulkan device failed. */
         VulkanDeviceCreationFailed,
+        /** Query of available Vulkan swapchain support failed. */
+        VulkanSwapchainSupportQueryFailed,
     };
 
     /**

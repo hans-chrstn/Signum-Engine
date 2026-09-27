@@ -22,6 +22,7 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanSurfaceSupportQueryFailed:
         case Code::VulkanSuitablePhysicalDeviceUnavailable:
         case Code::VulkanDeviceCreationFailed:
+        case Code::VulkanSwapchainSupportQueryFailed:
             return Subsystem::Vulkan;
         }
 

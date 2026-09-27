@@ -101,6 +101,12 @@ TEST(SubsystemTests, VulkanDeviceCreationErrorsBelongToVulkan) {
               Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanSwapchainSupportQueryErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanSwapchainSupportQueryFailed),
+        Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

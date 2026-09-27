@@ -22,6 +22,7 @@ add_library(
     engine/renderer/vulkan/vulkan_device_selection.cpp
     engine/renderer/vulkan/vulkan_queue_requests.cpp
     engine/renderer/vulkan/vulkan_device.cpp
+    engine/renderer/vulkan/vulkan_swapchain_support.cpp
 )
 
 target_include_directories(

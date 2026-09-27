@@ -193,7 +193,7 @@
 
 ### Learn
 
-- [ ] swapchains
+- [x] swapchains
 - [ ] surface formats
 - [ ] presentation modes
 - [ ] image views
@@ -201,7 +201,7 @@
 
 ### Implement
 
-- [ ] Query swapchain support
+- [x] Query swapchain support
 - [ ] Select surface format
 - [ ] Select presentation mode
 - [ ] Select swap extent

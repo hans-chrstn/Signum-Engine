@@ -37,6 +37,8 @@ namespace SNE::Engine::Core::Error {
             return "VulkanSuitablePhysicalDeviceUnavailable";
         case Code::VulkanDeviceCreationFailed:
             return "VulkanDeviceCreationFailed";
+        case Code::VulkanSwapchainSupportQueryFailed:
+            return "VulkanSwapchainSupportQueryFailed";
         }
         return "Unknown";
     }

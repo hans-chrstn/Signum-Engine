@@ -95,6 +95,11 @@ TEST(ErrorCodeTests, VulkanDeviceCreationErrorCodeHasReadableName) {
               "VulkanDeviceCreationFailed");
 }
 
+TEST(ErrorCodeTests, VulkanSwapchainSupportQueryErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanSwapchainSupportQueryFailed),
+              "VulkanSwapchainSupportQueryFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);
