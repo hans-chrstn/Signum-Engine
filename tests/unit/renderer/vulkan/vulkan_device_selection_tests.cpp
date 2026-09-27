@@ -1,3 +1,5 @@
+#include "engine/renderer/vulkan/vulkan_api_version.hpp"
+#include "engine/renderer/vulkan/vulkan_device_capabilities.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/vulkan_queue_families.hpp"
 #include <cstdint>
@@ -7,6 +9,15 @@
 #include <vulkan/vulkan.h>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
+
+namespace {
+    [[nodiscard]] auto makePhysicalDeviceCapabilities(std::uint32_t api_version)
+        -> Vulkan::PhysicalDeviceCapabilities {
+        Vulkan::PhysicalDeviceCapabilities capabilities{};
+        capabilities.properties.apiVersion = api_version;
+        return capabilities;
+    }
+} // namespace
 
 TEST(VulkanDeviceSelectionTests,
      ReturnsTrueWhenRequiredDeviceExtensionsAreAvailable) {
@@ -69,8 +80,9 @@ TEST(VulkanDeviceSelectionTests,
         swapchain_extension,
     };
 
-    EXPECT_TRUE(Vulkan::isPhysicalDeviceSuitable(queue_family_indices,
-                                                 available_extensions));
+    EXPECT_TRUE(Vulkan::isPhysicalDeviceSuitable(
+        queue_family_indices, available_extensions,
+        makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)));
 }
 
 TEST(VulkanDeviceSelectionTests, ReturnsFalseWhenGraphicsQueueFamilyIsMissing) {
@@ -86,8 +98,9 @@ TEST(VulkanDeviceSelectionTests, ReturnsFalseWhenGraphicsQueueFamilyIsMissing) {
         swapchain_extension,
     };
 
-    EXPECT_FALSE(Vulkan::isPhysicalDeviceSuitable(queue_family_indices,
-                                                  available_extensions));
+    EXPECT_FALSE(Vulkan::isPhysicalDeviceSuitable(
+        queue_family_indices, available_extensions,
+        makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)));
 }
 
 TEST(VulkanDeviceSelectionTests,
@@ -104,8 +117,9 @@ TEST(VulkanDeviceSelectionTests,
         swapchain_extension,
     };
 
-    EXPECT_FALSE(Vulkan::isPhysicalDeviceSuitable(queue_family_indices,
-                                                  available_extensions));
+    EXPECT_FALSE(Vulkan::isPhysicalDeviceSuitable(
+        queue_family_indices, available_extensions,
+        makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)));
 }
 
 TEST(VulkanDeviceSelectionTests,
@@ -116,8 +130,9 @@ TEST(VulkanDeviceSelectionTests,
 
     const std::vector<VkExtensionProperties> available_extensions{};
 
-    EXPECT_FALSE(Vulkan::isPhysicalDeviceSuitable(queue_family_indices,
-                                                  available_extensions));
+    EXPECT_FALSE(Vulkan::isPhysicalDeviceSuitable(
+        queue_family_indices, available_extensions,
+        makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)));
 }
 
 TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
@@ -138,7 +153,8 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
                 .presentation_family = std::uint32_t{0},
             },
         .available_extensions = available_extensions,
-    };
+        .capabilities =
+            makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)};
 
     const Vulkan::PhysicalDeviceCandidate second_device{
         .handle = VK_NULL_HANDLE,
@@ -148,7 +164,8 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
                 .presentation_family = std::uint32_t{1},
             },
         .available_extensions = available_extensions,
-    };
+        .capabilities =
+            makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)};
 
     const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
         first_device,
@@ -199,7 +216,8 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
                 .presentation_family = std::uint32_t{0},
             },
         .available_extensions = swapchain_extensions,
-    };
+        .capabilities =
+            makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)};
 
     const Vulkan::PhysicalDeviceCandidate unsuitable_device{
         .handle = VK_NULL_HANDLE,
@@ -209,7 +227,8 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
                 .presentation_family = std::uint32_t{1},
             },
         .available_extensions = unrelated_extensions,
-    };
+        .capabilities =
+            makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)};
 
     const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
         unsuitable_device,
@@ -251,7 +270,8 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
                 .presentation_family = std::uint32_t{0},
             },
         .available_extensions = unrelated_extensions,
-    };
+        .capabilities =
+            makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)};
 
     const Vulkan::PhysicalDeviceCandidate second_unsuitable_device{
         .handle = VK_NULL_HANDLE,
@@ -261,11 +281,44 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
                 .presentation_family = std::uint32_t{1},
             },
         .available_extensions = unrelated_extensions,
-    };
+        .capabilities =
+            makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion)};
 
     const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
         first_unsuitable_device,
         second_unsuitable_device,
+    };
+
+    const std::optional<Vulkan::PhysicalDeviceCandidate> selected =
+        Vulkan::selectPhysicalDevice(candidates);
+
+    EXPECT_FALSE(selected.has_value());
+}
+
+TEST(VulkanDeviceSelectionTests,
+     ReturnsNulloptWhenApiVersionIsBelowRequiredVersion) {
+    const VkExtensionProperties swapchain_extension{
+        .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = std::uint32_t{0},
+    };
+
+    const std::vector<VkExtensionProperties> swapchain_extensions{
+        swapchain_extension,
+    };
+
+    const Vulkan::PhysicalDeviceCandidate unsuitable_device{
+        .handle = VK_NULL_HANDLE,
+        .queue_family_indices =
+            {
+                .graphics_family = std::uint32_t{0},
+                .presentation_family = std::uint32_t{0},
+            },
+        .available_extensions = swapchain_extensions,
+        .capabilities =
+            makePhysicalDeviceCapabilities(VK_MAKE_API_VERSION(0, 1, 3, 999))};
+
+    const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
+        unsuitable_device,
     };
 
     const std::optional<Vulkan::PhysicalDeviceCandidate> selected =

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/renderer/vulkan/vulkan_device_capabilities.hpp"
 #include "engine/renderer/vulkan/vulkan_queue_families.hpp"
 #include <optional>
 #include <vector>
@@ -10,8 +11,8 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @brief Represents a physical device being evaluated for renderer use.
      *
      * Groups the Vulkan physical-device handle with the discovered queue-family
-     * indices and device-extension properties required by physical-device
-     * suitability and selection policy.
+     * indices, device-extension properties, and capability information required
+     * by physical-device suitability and selection policy.
      *
      * The structure does not own the Vulkan physical device. The handle remains
      * valid only while the Vulkan instance that provided it remains valid.
@@ -23,6 +24,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         QueueFamilyIndices queue_family_indices;
         /** Device extensions reported as available by the physical device. */
         std::vector<VkExtensionProperties> available_extensions;
+        /** Capabilities reported by the physical device. */
+        PhysicalDeviceCapabilities capabilities;
     };
 
     /**
@@ -42,26 +45,29 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @brief Determines whether discovered physical-device capabilities satisfy
      *        the renderer's mandatory requirements.
      *
-     * Evaluates queue-family availability and required device-extension
-     * support.
+     * Evaluates required queue-family availability, device-extension support,
+     * and Vulkan API-version support for a physical device.
      *
      * @param queue_family_indices Queue-family indices discovered for the
      * device.
      * @param available_extensions Device extensions reported by the device.
+     * @param capabilities Capability information discovered for the device.
      *
      * @return true if the device satisfies all mandatory renderer requirements;
      *         otherwise false.
      */
     [[nodiscard]] auto isPhysicalDeviceSuitable(
         const QueueFamilyIndices &queue_family_indices,
-        const std::vector<VkExtensionProperties> &available_extensions) -> bool;
+        const std::vector<VkExtensionProperties> &available_extensions,
+        const PhysicalDeviceCapabilities &capabilities) -> bool;
 
     /**
      * @brief Selects a suitable physical device candidate for renderer use.
      *
      * Evaluates the supplied physical-device candidates using the renderer's
      * physical-device suitability policy and returns the first candidate that
-     * satisfies the required queue-family and device-extension requirements.
+     * satisfies the required queue-family, device-extension, and Vulkan
+     * API-version requirements.
      *
      * This function does not enumerate physical devices or query Vulkan device
      * capabilities. Candidate creation and capability discovery are expected

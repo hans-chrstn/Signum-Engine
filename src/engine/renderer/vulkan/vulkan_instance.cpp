@@ -2,6 +2,7 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "vulkan_api_version.hpp"
 #include "vulkan_extension_support.hpp"
 #include "vulkan_result.hpp"
 #include <GLFW/glfw3.h>
@@ -12,7 +13,6 @@
 namespace SNE::Engine::Renderer::Vulkan {
 
     constexpr const char *kValidationLayerName = "VK_LAYER_KHRONOS_validation";
-    constexpr std::uint32_t kRequiredApiVersion = VK_API_VERSION_1_4;
 
     // Instance creation succeeds before debug-messenger creation. If the latter
     // fails, release the already-created Vulkan instance before propagating the

@@ -157,6 +157,7 @@
 - [x] Separate required and optional capabilities
 - [x] Discover optional hardware ray-tracing capabilities without requiring them
 - [x] Select physical device
+- [x] Enforce required Vulkan API version for the loader and physical devices
 - [ ] Define logical-device feature configuration
 - [ ] Derive unique queue-family requests
 - [ ] Create RAII VulkanDevice owner
@@ -169,6 +170,7 @@
 
 - [x] Test device-selection logic
 - [x] Test queue-family selection
+- [x] Test Vulkan API-version policy and physical-device rejection below the required version
 - [ ] Test shared graphics/presentation queue-family request planning
 - [ ] Test distinct graphics/presentation queue-family request planning
 - [ ] Test unsupported-device behavior
@@ -176,6 +178,7 @@
 ### Architecture
 
 - [x] Separate capability discovery from device-selection policy
+- [x] Centralize the required Vulkan API version as shared backend policy
 - [ ] Separate supported capabilities from enabled device features
 - [ ] Keep queue-family request planning separate from device creation
 - [ ] Keep VkDevice ownership explicit and RAII-managed
