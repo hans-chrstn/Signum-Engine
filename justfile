@@ -6,6 +6,12 @@ default:
 doctor:
     ./scripts/doctor.sh
 
+docs:
+    ./scripts/docs.sh
+
+docs-open:
+    xdg-open build/docs/doxygen/html/index.html
+
 tidy:
     ./scripts/build.sh debug
     ./scripts/tidy.sh
