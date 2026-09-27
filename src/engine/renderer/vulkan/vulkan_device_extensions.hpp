@@ -22,4 +22,15 @@ namespace SNE::Engine::Renderer::Vulkan {
      */
     [[nodiscard]] auto queryDeviceExtensionProperties(VkPhysicalDevice device)
         -> std::vector<VkExtensionProperties>;
+
+    /**
+     * @brief Returns the Vulkan device extensions required by Signum.
+     *
+     * Provides the shared device-extension policy used when validating physical
+     * devices and when enabling extensions during logical-device creation.
+     *
+     * @return Required Vulkan device-extension names.
+     */
+    [[nodiscard]] auto requiredDeviceExtensions()
+        -> const std::vector<const char *> &;
 } // namespace SNE::Engine::Renderer::Vulkan

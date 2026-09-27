@@ -8,16 +8,11 @@
 #include <utility>
 #include <vector>
 
-namespace {
-    const std::vector<const char *> kRequiredDeviceExtensions{
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-}
-
 namespace SNE::Engine::Renderer::Vulkan {
     auto supportsRequiredDeviceExtensions(
         const std::vector<VkExtensionProperties> &available_extensions)
         -> bool {
-        return hasRequiredExtensions(kRequiredDeviceExtensions,
+        return hasRequiredExtensions(requiredDeviceExtensions(),
                                      available_extensions);
     }
 

@@ -5,6 +5,12 @@
 #include "engine/renderer/vulkan/vulkan_result.hpp"
 #include <cstdint>
 #include <string>
+#include <vector>
+
+namespace {
+    const std::vector<const char *> kRequiredDeviceExtensions{
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+}
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto queryDeviceExtensionProperties(VkPhysicalDevice device)
@@ -53,5 +59,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         return extension_properties;
+    }
+
+    auto requiredDeviceExtensions() -> const std::vector<const char *> & {
+        return kRequiredDeviceExtensions;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

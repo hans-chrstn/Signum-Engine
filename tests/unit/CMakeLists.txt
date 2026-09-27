@@ -11,6 +11,7 @@ add_executable(
   renderer/vulkan/vulkan_queue_families_tests.cpp
   renderer/vulkan/vulkan_device_selection_tests.cpp
   renderer/vulkan/vulkan_api_version_tests.cpp
+  renderer/vulkan/vulkan_queue_requests_tests.cpp
 )
 
 target_link_libraries(

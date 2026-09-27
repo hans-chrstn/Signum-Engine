@@ -20,6 +20,8 @@ add_library(
     engine/renderer/vulkan/vulkan_queue_families.cpp
     engine/renderer/vulkan/vulkan_device_extensions.cpp
     engine/renderer/vulkan/vulkan_device_selection.cpp
+    engine/renderer/vulkan/vulkan_queue_requests.cpp
+    engine/renderer/vulkan/vulkan_device.cpp
 )
 
 target_include_directories(

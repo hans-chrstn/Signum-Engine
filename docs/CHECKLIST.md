@@ -145,8 +145,8 @@
 - [ ] queues
 - [x] device capabilities
 - [ ] feature negotiation
-- [ ] supported features versus enabled features
-- [ ] queue-family sharing versus distinct queue families
+- [x] supported features versus enabled features
+- [x] queue-family sharing versus distinct queue families
 
 ### Implement
 
@@ -158,8 +158,8 @@
 - [x] Discover optional hardware ray-tracing capabilities without requiring them
 - [x] Select physical device
 - [x] Enforce required Vulkan API version for the loader and physical devices
-- [ ] Define logical-device feature configuration
-- [ ] Derive unique queue-family requests
+- [x] Define logical-device feature configuration
+- [x] Derive unique queue-family requests
 - [ ] Create RAII VulkanDevice owner
 - [ ] Create logical device
 - [ ] Retrieve graphics queue
@@ -171,16 +171,17 @@
 - [x] Test device-selection logic
 - [x] Test queue-family selection
 - [x] Test Vulkan API-version policy and physical-device rejection below the required version
-- [ ] Test shared graphics/presentation queue-family request planning
-- [ ] Test distinct graphics/presentation queue-family request planning
+- [x] Test shared graphics/presentation queue-family request planning
+- [x] Test distinct graphics/presentation queue-family request planning
 - [ ] Test unsupported-device behavior
 
 ### Architecture
 
 - [x] Separate capability discovery from device-selection policy
 - [x] Centralize the required Vulkan API version as shared backend policy
-- [ ] Separate supported capabilities from enabled device features
-- [ ] Keep queue-family request planning separate from device creation
+- [x] Separate supported capabilities from enabled device features
+- [x] Keep queue-family request planning separate from device creation
+- [x] Centralize required device extensions as shared backend policy
 - [ ] Keep VkDevice ownership explicit and RAII-managed
 - [ ] Keep hardware policy independent from gameplay
 - [ ] Keep optional GPU capabilities opt-in
