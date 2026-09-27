@@ -145,6 +145,8 @@
 - [ ] queues
 - [x] device capabilities
 - [ ] feature negotiation
+- [ ] supported features versus enabled features
+- [ ] queue-family sharing versus distinct queue families
 
 ### Implement
 
@@ -155,6 +157,9 @@
 - [x] Separate required and optional capabilities
 - [x] Discover optional hardware ray-tracing capabilities without requiring them
 - [x] Select physical device
+- [ ] Define logical-device feature configuration
+- [ ] Derive unique queue-family requests
+- [ ] Create RAII VulkanDevice owner
 - [ ] Create logical device
 - [ ] Retrieve graphics queue
 - [ ] Retrieve presentation queue
@@ -164,11 +169,16 @@
 
 - [x] Test device-selection logic
 - [x] Test queue-family selection
+- [ ] Test shared graphics/presentation queue-family request planning
+- [ ] Test distinct graphics/presentation queue-family request planning
 - [ ] Test unsupported-device behavior
 
 ### Architecture
 
 - [x] Separate capability discovery from device-selection policy
+- [ ] Separate supported capabilities from enabled device features
+- [ ] Keep queue-family request planning separate from device creation
+- [ ] Keep VkDevice ownership explicit and RAII-managed
 - [ ] Keep hardware policy independent from gameplay
 - [ ] Keep optional GPU capabilities opt-in
 - [ ] Do not make renderer startup depend on hardware ray tracing
