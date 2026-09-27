@@ -1,5 +1,9 @@
 #include "vulkan_device_selection.hpp"
+#include "engine/renderer/vulkan/vulkan_device_extensions.hpp"
 #include "engine/renderer/vulkan/vulkan_extension_support.hpp"
+#include "engine/renderer/vulkan/vulkan_queue_families.hpp"
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -37,5 +41,36 @@ namespace SNE::Engine::Renderer::Vulkan {
             }
         }
         return std::nullopt;
+    }
+
+    auto
+    createPhysicalDeviceCandidates(const std::vector<VkPhysicalDevice> &devices,
+                                   VkSurfaceKHR surface)
+        -> std::vector<PhysicalDeviceCandidate> {
+
+        std::vector<PhysicalDeviceCandidate> candidates{};
+
+        candidates.reserve(devices.size());
+
+        for (const VkPhysicalDevice &device : devices) {
+            std::vector<VkExtensionProperties> extension_properties =
+                queryDeviceExtensionProperties(device);
+
+            std::vector<VkQueueFamilyProperties> queue_family_properties =
+                queryQueueFamilyProperties(device);
+
+            QueueFamilyIndices queue_family_indices = findQueueFamilyIndices(
+                device, surface, queue_family_properties);
+
+            PhysicalDeviceCandidate candidate{
+                .handle = device,
+                .queue_family_indices = queue_family_indices,
+                .available_extensions = std::move(extension_properties),
+            };
+
+            candidates.push_back(std::move(candidate));
+        }
+
+        return candidates;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

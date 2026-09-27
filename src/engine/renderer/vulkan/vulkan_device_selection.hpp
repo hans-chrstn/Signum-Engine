@@ -56,7 +56,49 @@ namespace SNE::Engine::Renderer::Vulkan {
         const QueueFamilyIndices &queue_family_indices,
         const std::vector<VkExtensionProperties> &available_extensions) -> bool;
 
+    /**
+     * @brief Selects a suitable physical device candidate for renderer use.
+     *
+     * Evaluates the supplied physical-device candidates using the renderer's
+     * physical-device suitability policy and returns the first candidate that
+     * satisfies the required queue-family and device-extension requirements.
+     *
+     * This function does not enumerate physical devices or query Vulkan device
+     * capabilities. Candidate creation and capability discovery are expected
+     * to occur before selection.
+     *
+     * @param device_candidates Physical-device candidates previously created
+     *                           from Vulkan physical-device discovery.
+     *
+     * @return The selected physical-device candidate when a suitable device is
+     *         available; otherwise std::nullopt.
+     */
     [[nodiscard]] auto selectPhysicalDevice(
         const std::vector<PhysicalDeviceCandidate> &device_candidates)
         -> std::optional<PhysicalDeviceCandidate>;
+
+    /**
+     * @brief Creates physical-device candidates from discovered Vulkan devices.
+     *
+     * Queries queue-family information and available device-extension
+     * properties for each discovered physical device and constructs
+     * PhysicalDeviceCandidate structures used by physical-device selection.
+     *
+     * This function does not determine whether a device is suitable.
+     * Suitability evaluation is performed separately by the physical-device
+     * selection policy.
+     *
+     * @param devices Physical devices discovered from the Vulkan instance.
+     * @param surface Vulkan surface used to evaluate presentation queue
+     * support.
+     *
+     * @return Physical-device candidates containing the discovered information
+     *         required for selection.
+     *
+     * @throws Core::Error::EngineError if required Vulkan queries fail.
+     */
+    [[nodiscard]] auto
+    createPhysicalDeviceCandidates(const std::vector<VkPhysicalDevice> &devices,
+                                   VkSurfaceKHR surface)
+        -> std::vector<PhysicalDeviceCandidate>;
 } // namespace SNE::Engine::Renderer::Vulkan

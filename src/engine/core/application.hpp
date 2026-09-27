@@ -1,6 +1,8 @@
 #pragma once
+
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/vulkan/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
 #include "engine/renderer/vulkan/vulkan_surface.hpp"
 
@@ -19,6 +21,7 @@ namespace SNE::Engine::Core {
         Platform::Window m_Window;
         Renderer::Vulkan::VulkanInstance m_VulkanInstance;
         Renderer::Vulkan::VulkanSurface m_VulkanSurface;
+        Renderer::Vulkan::PhysicalDeviceCandidate m_PhysicalDeviceCandidate;
 
       public:
         /**

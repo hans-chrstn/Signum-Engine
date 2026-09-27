@@ -33,6 +33,8 @@ namespace SNE::Engine::Core::Error {
             return "VulkanPhysicalDeviceEnumerationFailed";
         case Code::VulkanSurfaceSupportQueryFailed:
             return "VulkanSurfaceSupportQueryFailed";
+        case Code::VulkanSuitablePhysicalDeviceUnavailable:
+            return "VulkanSuitablePhysicalDeviceUnavailable";
         }
         return "Unknown";
     }

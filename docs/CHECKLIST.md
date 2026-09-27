@@ -154,7 +154,7 @@
 - [x] Check required device extensions
 - [x] Separate required and optional capabilities
 - [x] Discover optional hardware ray-tracing capabilities without requiring them
-- [ ] Select physical device
+- [x] Select physical device
 - [ ] Create logical device
 - [ ] Retrieve graphics queue
 - [ ] Retrieve presentation queue
