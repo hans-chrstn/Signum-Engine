@@ -28,7 +28,7 @@ namespace SNE::Engine::Core::Error {
         VulkanDebugMessengerFunctionUnavailable,
         /** Creation of the Vulkan debug messenger failed. */
         VulkanDebugMessengerCreationFailed,
-        /** Enumeration of available Vulkan instance extensions failed. */
+        /** Enumeration of available Vulkan extensions failed. */
         VulkanExtensionEnumerationFailed,
         /** A Vulkan instance extension required by the engine is unavailable.
          */
@@ -39,7 +39,8 @@ namespace SNE::Engine::Core::Error {
         VulkanApiVersionUnsupported,
         /** Creation of the Vulkan surface failed. */
         VulkanSurfaceCreationFailed,
-        /** Enumeration of available Vulkan instance physical devices failed. */
+        /** Enumeration of physical devices available to the Vulkan instance
+           failed. */
         VulkanPhysicalDeviceEnumerationFailed,
         /** Query of Vulkan surface support failed. */
         VulkanSurfaceSupportQueryFailed,

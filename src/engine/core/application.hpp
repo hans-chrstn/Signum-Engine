@@ -31,8 +31,8 @@ namespace SNE::Engine::Core {
          *
          * Initializes the platform context, creates the primary application
          * window, establishes the Vulkan instance and presentation surface,
-         * selects a suitable physical device, and creates the Vulkan logical
-         * device.
+         * selects a suitable physical device, creates the Vulkan logical
+         * device, and retrieves the graphics and presentation queues.
          *
          * @throws Error::EngineError if a required platform, window, or Vulkan
          * resource cannot be initialized.

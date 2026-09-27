@@ -5,14 +5,27 @@
 #include "vulkan_device_extensions.hpp"
 #include "vulkan_result.hpp"
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanDevice::VulkanDevice(
         VkPhysicalDevice physical_device,
+        const QueueFamilyIndices &queue_family_indices,
         const std::vector<QueueFamilyRequest> &queue_family_requests,
         const LogicalDeviceFeatureConfiguration &logical_device_configuration) {
         std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
+
+        if (!queue_family_indices.graphics_family.has_value() ||
+            !queue_family_indices.presentation_family.has_value()) {
+            // TODO: Replace with custom logic-error diagnostic policy.
+            throw std::logic_error("VulkanDevice requires graphics and "
+                                   "presentation queue families");
+        }
+        const std::uint32_t graphics_family =
+            queue_family_indices.graphics_family.value();
+        const std::uint32_t presentation_family =
+            queue_family_indices.presentation_family.value();
         queue_create_infos.reserve(queue_family_requests.size());
 
         const float queue_priority = 1.0F;
@@ -52,6 +65,12 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(result))),
                 "Create Vulkan Device");
         }
+
+        vkGetDeviceQueue(m_Device, graphics_family, std::uint32_t{0},
+                         &m_GraphicsQueue);
+
+        vkGetDeviceQueue(m_Device, presentation_family, std::uint32_t{0},
+                         &m_PresentationQueue);
     }
 
     VulkanDevice::~VulkanDevice() noexcept {
@@ -60,7 +79,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
-    auto VulkanDevice::nativeHandle() const -> VkDevice {
+    auto VulkanDevice::nativeHandle() const noexcept -> VkDevice {
         return m_Device;
+    }
+
+    auto VulkanDevice::graphicsQueue() const noexcept -> VkQueue {
+        return m_GraphicsQueue;
+    }
+
+    auto VulkanDevice::presentationQueue() const noexcept -> VkQueue {
+        return m_PresentationQueue;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

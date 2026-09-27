@@ -1,5 +1,6 @@
 #pragma once
 #include "vulkan_device_features.hpp"
+#include "vulkan_queue_families.hpp"
 #include "vulkan_queue_requests.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -22,6 +23,12 @@ namespace SNE::Engine::Renderer::Vulkan {
       private:
         /** Vulkan logical-device handle owned by this object. */
         VkDevice m_Device{VK_NULL_HANDLE};
+        /** Non-owning graphics queue handle retrieved from the logical device.
+         */
+        VkQueue m_GraphicsQueue{VK_NULL_HANDLE};
+        /** Non-owning presentation queue handle retrieved from the logical
+         * device. */
+        VkQueue m_PresentationQueue{VK_NULL_HANDLE};
 
       public:
         /**
@@ -33,16 +40,21 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @param physical_device Physical device from which the logical device
          * is created.
+         * @param queue_family_indices Graphics and presentation queue-family
+         * indices used to retrieve their corresponding queues.
          * @param queue_family_requests Unique queue families from which queues
          * are requested.
          * @param logical_device_configuration Core Vulkan features selected for
          * logical-device creation.
          *
+         * @throws std::logic_error if required graphics or presentation
+         * queue-family indices are missing.
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * logical device.
          */
         VulkanDevice(
             VkPhysicalDevice physical_device,
+            const QueueFamilyIndices &queue_family_indices,
             const std::vector<QueueFamilyRequest> &queue_family_requests,
             const LogicalDeviceFeatureConfiguration
                 &logical_device_configuration);
@@ -64,6 +76,27 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @return Vulkan logical-device handle owned by this object.
          */
-        [[nodiscard]] auto nativeHandle() const -> VkDevice;
+        [[nodiscard]] auto nativeHandle() const noexcept -> VkDevice;
+
+        /**
+         * @brief Returns the graphics queue associated with the logical device.
+         *
+         * The returned handle is non-owning and remains valid only while this
+         * VulkanDevice object remains alive.
+         *
+         * @return Graphics queue retrieved from the logical device.
+         */
+        [[nodiscard]] auto graphicsQueue() const noexcept -> VkQueue;
+
+        /**
+         * @brief Returns the presentation queue associated with the logical
+         * device.
+         *
+         * The returned handle is non-owning and remains valid only while this
+         * VulkanDevice object remains alive.
+         *
+         * @return Presentation queue retrieved from the logical device.
+         */
+        [[nodiscard]] auto presentationQueue() const noexcept -> VkQueue;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

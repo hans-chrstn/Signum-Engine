@@ -17,7 +17,9 @@ namespace SNE::Engine::Renderer::Vulkan {
      * that capability.
      */
     struct QueueFamilyIndices {
+        /** Graphics-capable queue-family index when available. */
         std::optional<std::uint32_t> graphics_family;
+        /** Presentation-capable queue-family index when available. */
         std::optional<std::uint32_t> presentation_family;
     };
 

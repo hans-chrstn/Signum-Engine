@@ -1,10 +1,5 @@
 #pragma once
 
-/**
- *
- * Manages the GLFW library lifetime
- *
- */
 namespace SNE::Engine::Platform {
     /**
      * @brief Owns the process-wide GLFW library lifetime.

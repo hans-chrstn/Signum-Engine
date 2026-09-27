@@ -76,7 +76,7 @@ namespace SNE::Engine::Renderer::Vulkan {
      * Combines Vulkan feature support with the supplied device-extension
      * information to determine whether optional capabilities such as
      * acceleration structures, ray-tracing pipelines, and ray queries are
-     * usable.
+     * reported as supported.
      *
      * @param device Physical device whose optional capabilities are queried.
      * @param extension_properties Device extensions previously discovered for

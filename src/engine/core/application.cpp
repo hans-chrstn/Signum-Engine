@@ -48,6 +48,7 @@ namespace SNE::Engine::Core {
           m_PhysicalDeviceCandidate(selectRequiredPhysicalDevice(
               m_VulkanInstance.nativeHandle(), m_VulkanSurface.nativeHandle())),
           m_VulkanDevice(m_PhysicalDeviceCandidate.handle,
+                         m_PhysicalDeviceCandidate.queue_family_indices,
                          Vulkan::deriveUniqueQueueFamilyRequests(
                              m_PhysicalDeviceCandidate.queue_family_indices),
                          Vulkan::LogicalDeviceFeatureConfiguration{}) {}

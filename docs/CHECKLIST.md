@@ -142,7 +142,7 @@
 - [x] physical devices
 - [x] logical devices
 - [x] queue families
-- [ ] queues
+- [x] queues
 - [x] device capabilities
 - [ ] feature negotiation
 - [x] supported features versus enabled features
@@ -162,9 +162,9 @@
 - [x] Derive unique queue-family requests
 - [x] Create RAII VulkanDevice owner
 - [x] Create logical device
-- [ ] Retrieve graphics queue
-- [ ] Retrieve presentation queue
-- [ ] Report unsupported hardware
+- [x] Retrieve graphics queue
+- [x] Retrieve presentation queue
+- [ ] Report detailed unsupported-device rejection reasons
 
 ### Test
 
@@ -173,7 +173,7 @@
 - [x] Test Vulkan API-version policy and physical-device rejection below the required version
 - [x] Test shared graphics/presentation queue-family request planning
 - [x] Test distinct graphics/presentation queue-family request planning
-- [ ] Test unsupported-device behavior
+- [x] Test unsupported-device behavior
 
 ### Architecture
 
@@ -183,9 +183,9 @@
 - [x] Keep queue-family request planning separate from device creation
 - [x] Centralize required device extensions as shared backend policy
 - [x] Keep VkDevice ownership explicit and RAII-managed
-- [ ] Keep hardware policy independent from gameplay
-- [ ] Keep optional GPU capabilities opt-in
-- [ ] Do not make renderer startup depend on hardware ray tracing
+- [x] Keep hardware policy independent from gameplay
+- [x] Keep optional GPU capabilities opt-in
+- [x] Do not make renderer startup depend on hardware ray tracing
 
 ---
 

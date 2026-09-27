@@ -86,9 +86,10 @@ namespace SNE::Engine::Renderer::Vulkan {
     /**
      * @brief Creates physical-device candidates from discovered Vulkan devices.
      *
-     * Queries queue-family information and available device-extension
-     * properties for each discovered physical device and constructs
-     * PhysicalDeviceCandidate structures used by physical-device selection.
+     * Queries queue-family information and available device-extension and
+     * physical-device capabilities properties for each discovered device and
+     * constructs PhysicalDeviceCandidate structures used by physical-device
+     * selection.
      *
      * This function does not determine whether a device is suitable.
      * Suitability evaluation is performed separately by the physical-device
