@@ -213,8 +213,10 @@
 - [x] Support IMMEDIATE selection with safe fallback
 - [x] Account for FIFO_LATEST_READY in presentation-mode policy
 - [x] Select swap extent
-- [ ] Create swapchain
-- [ ] Create image views
+- [x] Create swapchain
+- [x] Select swapchain image count
+- [x] Select composite-alpha mode
+- [x] Create image views
 - [ ] Handle out-of-date swapchain
 - [ ] Handle suboptimal swapchain
 - [ ] Handle minimized windows
@@ -230,6 +232,8 @@
 - [x] Test presentation-mode fallback behavior
 - [x] Test FIFO_LATEST_READY selection policy
 - [x] Test extent selection
+- [x] Test swapchain image-count selection
+- [x] Test composite-alpha selection
 - [ ] Resize repeatedly
 - [ ] Minimize and restore repeatedly
 
@@ -2653,4 +2657,4 @@
 - [x] Vulkan instance foundation
 - [x] GPU device foundation
 - [x] Swapchain support discovery
-- [ ] Surface-format selection
+- [x] Surface-format selection

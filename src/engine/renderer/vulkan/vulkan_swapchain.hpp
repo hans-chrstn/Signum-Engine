@@ -3,26 +3,30 @@
 #include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "vulkan_queue_families.hpp"
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
-     * @brief Owns a Vulkan swapchain used for presentation.
+     * @brief Owns a Vulkan swapchain and its presentation image views.
      *
      * Creates and manages the lifetime of a VkSwapchainKHR associated with a
      * Vulkan presentation surface. Swapchain configuration is selected from the
      * capabilities, surface formats, and presentation modes currently reported
      * for the physical-device and surface combination.
      *
+     * The swapchain-provided VkImage handles are non-owning. Image views
+     * created for those images are owned by this object.
+     *
      * The logical device and Vulkan surface supplied during construction are
      * borrowed dependencies and must remain valid for the lifetime of this
      * object.
      *
-     * Destruction releases the owned VkSwapchainKHR. The logical device,
-     * physical device, and surface are not owned by this object.
+     * Destruction releases the owned VkImageView handles before releasing the
+     * owned VkSwapchainKHR. The logical device, physical device, surface, and
+     * swapchain-provided images are not owned by this object.
      *
-     * The type is non-copyable because it exclusively owns a Vulkan swapchain
-     * handle.
+     * The type is non-copyable because it owns Vulkan resource handles.
      */
     class VulkanSwapchain {
       private:
@@ -30,6 +34,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkDevice m_Device{VK_NULL_HANDLE};
         /** Vulkan swapchain handle owned by this object. */
         VkSwapchainKHR m_Swapchain{VK_NULL_HANDLE};
+        /** Non-owning handles to the presentable images provided by the
+         * swapchain. */
+        std::vector<VkImage> m_Images;
+        /** Vulkan image views owned for the swapchain's presentable images. */
+        std::vector<VkImageView> m_ImageViews;
         /** Surface format selected for the swapchain images. */
         VkSurfaceFormatKHR m_SurfaceFormat{};
         /** Extent selected for the swapchain images. */
@@ -37,12 +46,15 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan swapchain for a presentation surface.
+         * @brief Creates a Vulkan swapchain and its presentation image views.
          *
          * Queries current swapchain support for the physical-device and surface
          * combination, selects the surface format, presentation mode, image
          * extent, image count, composite-alpha mode, and image-sharing
          * behavior, and creates the resulting Vulkan swapchain.
+         *
+         * Enumerates the images provided by the created swapchain and creates
+         * one two-dimensional color image view for each swapchain image.
          *
          * The logical device and surface are borrowed and must remain valid for
          * the lifetime of this object.
@@ -66,7 +78,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * queue-family indices are missing or no recognized supported
          * composite-alpha mode can be selected.
          * @throws Core::Error::EngineError if swapchain support cannot be
-         * queried or Vulkan fails to create the swapchain.
+         * queried, swapchain creation fails, swapchain images cannot be
+         * enumerated, or an image view cannot be created.
          */
         VulkanSwapchain(VkPhysicalDevice physical_device,
                         VkDevice logical_device, VkSurfaceKHR surface,
@@ -76,10 +89,13 @@ namespace SNE::Engine::Renderer::Vulkan {
                         bool fifo_latest_ready_enabled);
 
         /**
-         * @brief Destroys the owned Vulkan swapchain.
+         * @brief Destroys the owned Vulkan image views and swapchain.
          *
-         * Releases the VkSwapchainKHR using the logical device supplied during
-         * construction.
+         * Releases all owned VkImageView handles before releasing the
+         * VkSwapchainKHR using the logical device supplied during construction.
+         *
+         * Swapchain-provided VkImage handles are not destroyed directly because
+         * their lifetime is owned by the swapchain.
          */
         ~VulkanSwapchain() noexcept;
 

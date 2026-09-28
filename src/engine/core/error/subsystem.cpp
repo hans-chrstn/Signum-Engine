@@ -24,6 +24,8 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanDeviceCreationFailed:
         case Code::VulkanSwapchainSupportQueryFailed:
         case Code::VulkanSwapchainCreationFailed:
+        case Code::VulkanSwapchainImageEnumerationFailed:
+        case Code::VulkanSwapchainImageViewCreationFailed:
             return Subsystem::Vulkan;
         }
 

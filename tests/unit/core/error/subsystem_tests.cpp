@@ -113,6 +113,18 @@ TEST(SubsystemTests, VulkanSwapchainCreationErrorsBelongToVulkan) {
         Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanSwapchainImageEnumerationErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(
+                  Error::Code::VulkanSwapchainImageEnumerationFailed),
+              Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanSwapchainImageViewCreationErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(
+                  Error::Code::VulkanSwapchainImageViewCreationFailed),
+              Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

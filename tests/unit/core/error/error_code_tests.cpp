@@ -105,6 +105,18 @@ TEST(ErrorCodeTests, VulkanSwapchainCreationErrorCodeHasReadableName) {
               "VulkanSwapchainCreationFailed");
 }
 
+TEST(ErrorCodeTests, VulkanSwapchainImageEnumerationErrorCodeHasReadableName) {
+    EXPECT_EQ(
+        Error::toString(Error::Code::VulkanSwapchainImageEnumerationFailed),
+        "VulkanSwapchainImageEnumerationFailed");
+}
+
+TEST(ErrorCodeTests, VulkanSwapchainImageViewCreationErrorCodeHasReadableName) {
+    EXPECT_EQ(
+        Error::toString(Error::Code::VulkanSwapchainImageViewCreationFailed),
+        "VulkanSwapchainImageViewCreationFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);

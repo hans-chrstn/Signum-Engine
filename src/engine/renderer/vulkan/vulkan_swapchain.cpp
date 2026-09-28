@@ -90,12 +90,111 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(result))),
                 "Create Vulkan Swapchain");
         }
+
+        try {
+            while (true) {
+                std::uint32_t swapchain_image_count{};
+                const VkResult swapchain_image_count_result =
+                    vkGetSwapchainImagesKHR(m_Device, m_Swapchain,
+                                            &swapchain_image_count, nullptr);
+
+                if (swapchain_image_count_result != VK_SUCCESS) {
+                    throw Core::Error::EngineError(
+                        Core::Error::Code::
+                            VulkanSwapchainImageEnumerationFailed,
+                        "Vulkan swapchain image enumeration failed",
+                        Core::Error::NativeError(
+                            static_cast<int>(swapchain_image_count_result),
+                            std::string(
+                                toString(swapchain_image_count_result))),
+                        "Enumerate Vulkan Swapchain Images");
+                }
+
+                m_Images.resize(swapchain_image_count);
+
+                const VkResult swapchain_images_result =
+                    vkGetSwapchainImagesKHR(m_Device, m_Swapchain,
+                                            &swapchain_image_count,
+                                            m_Images.data());
+
+                if (swapchain_images_result == VK_SUCCESS) {
+                    m_Images.resize(swapchain_image_count);
+                    break;
+                }
+
+                if (swapchain_images_result == VK_INCOMPLETE) {
+                    continue;
+                }
+
+                throw Core::Error::EngineError(
+                    Core::Error::Code::VulkanSwapchainImageEnumerationFailed,
+                    "Vulkan swapchain image enumeration failed",
+                    Core::Error::NativeError(
+                        static_cast<int>(swapchain_images_result),
+                        std::string(toString(swapchain_images_result))),
+                    "Enumerate Vulkan Swapchain Images");
+            }
+
+            m_ImageViews.reserve(m_Images.size());
+
+            for (std::size_t i{}; i < m_Images.size(); ++i) {
+                VkImageViewCreateInfo image_view_create_info{};
+                image_view_create_info.sType =
+                    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+                image_view_create_info.image = m_Images[i];
+                image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                image_view_create_info.format = m_SurfaceFormat.format;
+                image_view_create_info.subresourceRange = {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel = 0U,
+                    .levelCount = 1U,
+                    .baseArrayLayer = 0U,
+                    .layerCount = 1U,
+                };
+                image_view_create_info.components = {
+                    .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                    .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+                };
+
+                VkImageView temporary_image_view{};
+
+                const VkResult image_view_result =
+                    vkCreateImageView(m_Device, &image_view_create_info,
+                                      nullptr, &temporary_image_view);
+
+                if (image_view_result != VK_SUCCESS) {
+                    throw Core::Error::EngineError(
+                        Core::Error::Code::
+                            VulkanSwapchainImageViewCreationFailed,
+                        "Vulkan swapchain image view creation failed",
+                        Core::Error::NativeError(
+                            static_cast<int>(image_view_result),
+                            std::string(toString(image_view_result))),
+                        "Create Vulkan Image Views");
+                }
+
+                m_ImageViews.push_back(temporary_image_view);
+            }
+        } catch (...) {
+            for (const VkImageView &image_view : m_ImageViews) {
+                vkDestroyImageView(m_Device, image_view, nullptr);
+            }
+            vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+            m_Swapchain = VK_NULL_HANDLE;
+            throw;
+        }
     }
 
     VulkanSwapchain::~VulkanSwapchain() noexcept {
         if (m_Swapchain != VK_NULL_HANDLE) {
+            for (const VkImageView &image_view : m_ImageViews) {
+                vkDestroyImageView(m_Device, image_view, nullptr);
+            }
             vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
         }
+        m_Swapchain = VK_NULL_HANDLE;
     }
 
     auto VulkanSwapchain::nativeHandle() const noexcept -> VkSwapchainKHR {

@@ -41,6 +41,10 @@ namespace SNE::Engine::Core::Error {
             return "VulkanSwapchainSupportQueryFailed";
         case Code::VulkanSwapchainCreationFailed:
             return "VulkanSwapchainCreationFailed";
+        case Code::VulkanSwapchainImageEnumerationFailed:
+            return "VulkanSwapchainImageEnumerationFailed";
+        case Code::VulkanSwapchainImageViewCreationFailed:
+            return "VulkanSwapchainImageViewCreationFailed";
         }
         return "Unknown";
     }
