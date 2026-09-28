@@ -422,6 +422,67 @@
 
 ---
 
+## Phase 9.5 — Developer Diagnostics UI
+
+### Learn
+
+- [ ] immediate-mode debug UI concepts
+- [ ] frame-time measurement
+- [ ] rolling performance graphs
+- [ ] debug-overlay ownership
+- [ ] CPU/GPU metric boundaries
+
+### Design
+
+- [ ] Keep developer UI separate from engine systems
+- [ ] Make developer UI consume diagnostics and metrics
+- [ ] Avoid engine subsystems depending directly on Dear ImGui
+- [ ] Keep developer UI removable from production builds
+- [ ] Define debug-metric lifetime and ownership
+- [ ] Keep profiler data independent from visualization
+
+### Implement
+
+- [ ] Integrate Dear ImGui for developer tooling
+- [ ] Add developer UI root
+- [ ] Add show/hide developer UI toggle
+- [ ] Add frame-time display
+- [ ] Add FPS display
+- [ ] Add rolling frame-time graph
+- [ ] Add Vulkan device information panel
+- [ ] Add Vulkan API/version information
+- [ ] Add swapchain information panel
+- [ ] Add renderer statistics panel
+- [ ] Add log viewer
+- [ ] Display Vulkan validation messages
+- [ ] Display engine diagnostics
+- [ ] Add basic memory/resource counters
+- [ ] Add basic frame counters
+- [ ] Add debug visualization toggle infrastructure
+
+### Test
+
+- [ ] Launch with developer UI enabled
+- [ ] Launch with developer UI disabled
+- [ ] Toggle developer UI at runtime
+- [ ] Verify diagnostics appear in log viewer
+- [ ] Verify frame metrics update correctly
+- [ ] Verify developer UI does not own engine diagnostic data
+- [ ] Verify engine can build without developer UI
+- [ ] Verify developer UI shutdown is clean
+
+### Architecture
+
+- [ ] Keep Dear ImGui behind developer-tooling boundaries
+- [ ] Keep profiling data independent from Dear ImGui
+- [ ] Keep logging independent from developer UI
+- [ ] Keep renderer independent from developer UI
+- [ ] Keep developer UI out of game-facing APIs
+- [ ] Allow future editor UI to consume the same diagnostics data
+- [ ] Allow future profiler views to replace temporary ImGui views
+
+---
+
 ## Phase 10 — Testing and Debugging Foundation
 
 ### Implement
