@@ -1,9 +1,11 @@
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/vulkan_swapchain_selection.hpp"
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <vector>
 #include <vulkan/vulkan.h>
 
+namespace Platform = SNE::Engine::Platform;
 namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = Renderer::Vulkan;
 
@@ -268,4 +270,164 @@ TEST(VulkanSwapchainSelectionTests,
                   Renderer::PresentationPreference::LatestReadyVSync,
                   presentation_modes, false),
               VK_PRESENT_MODE_FIFO_KHR);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapExtentReturnsCurrentExtentWhenSurfaceSpecifiesExtent) {
+    constexpr VkExtent2D expected_extent{
+        .width = 1280U,
+        .height = 720U,
+    };
+
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.currentExtent = expected_extent;
+
+    constexpr Platform::FramebufferSize framebuffer_size{
+        .width = 1920,
+        .height = 1080,
+    };
+
+    const VkExtent2D selected_extent =
+        Vulkan::selectSwapExtent(capabilities, framebuffer_size);
+
+    EXPECT_EQ(selected_extent.width, expected_extent.width);
+    EXPECT_EQ(selected_extent.height, expected_extent.height);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapExtentReturnsFramebufferExtentWhenWithinSupportedRange) {
+    constexpr VkExtent2D undefined_current_extent{
+        .width = UINT32_MAX,
+        .height = UINT32_MAX,
+    };
+
+    constexpr VkExtent2D minimum_extent{
+        .width = 640U,
+        .height = 480U,
+    };
+
+    constexpr VkExtent2D maximum_extent{
+        .width = 1920U,
+        .height = 1080U,
+    };
+
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.currentExtent = undefined_current_extent;
+    capabilities.minImageExtent = minimum_extent;
+    capabilities.maxImageExtent = maximum_extent;
+
+    constexpr Platform::FramebufferSize framebuffer_size{
+        .width = 1280,
+        .height = 800,
+    };
+
+    const VkExtent2D selected_extent =
+        Vulkan::selectSwapExtent(capabilities, framebuffer_size);
+
+    EXPECT_EQ(selected_extent.width,
+              static_cast<std::uint32_t>(framebuffer_size.width));
+    EXPECT_EQ(selected_extent.height,
+              static_cast<std::uint32_t>(framebuffer_size.height));
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapExtentClampsFramebufferExtentToMinimum) {
+    constexpr VkExtent2D undefined_current_extent{
+        .width = UINT32_MAX,
+        .height = UINT32_MAX,
+    };
+
+    constexpr VkExtent2D minimum_extent{
+        .width = 640U,
+        .height = 480U,
+    };
+
+    constexpr VkExtent2D maximum_extent{
+        .width = 1920U,
+        .height = 1080U,
+    };
+
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.currentExtent = undefined_current_extent;
+    capabilities.minImageExtent = minimum_extent;
+    capabilities.maxImageExtent = maximum_extent;
+
+    constexpr Platform::FramebufferSize framebuffer_size{
+        .width = 480,
+        .height = 360,
+    };
+
+    const VkExtent2D selected_extent =
+        Vulkan::selectSwapExtent(capabilities, framebuffer_size);
+
+    EXPECT_EQ(selected_extent.width, minimum_extent.width);
+    EXPECT_EQ(selected_extent.height, minimum_extent.height);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapExtentClampsFramebufferExtentToMaximum) {
+    constexpr VkExtent2D undefined_current_extent{
+        .width = UINT32_MAX,
+        .height = UINT32_MAX,
+    };
+
+    constexpr VkExtent2D minimum_extent{
+        .width = 640U,
+        .height = 480U,
+    };
+
+    constexpr VkExtent2D maximum_extent{
+        .width = 1920U,
+        .height = 1080U,
+    };
+
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.currentExtent = undefined_current_extent;
+    capabilities.minImageExtent = minimum_extent;
+    capabilities.maxImageExtent = maximum_extent;
+
+    constexpr Platform::FramebufferSize framebuffer_size{
+        .width = 2560,
+        .height = 1440,
+    };
+
+    const VkExtent2D selected_extent =
+        Vulkan::selectSwapExtent(capabilities, framebuffer_size);
+
+    EXPECT_EQ(selected_extent.width, maximum_extent.width);
+    EXPECT_EQ(selected_extent.height, maximum_extent.height);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapExtentClampsWidthAndHeightIndependently) {
+    constexpr VkExtent2D undefined_current_extent{
+        .width = UINT32_MAX,
+        .height = UINT32_MAX,
+    };
+
+    constexpr VkExtent2D minimum_extent{
+        .width = 640U,
+        .height = 480U,
+    };
+
+    constexpr VkExtent2D maximum_extent{
+        .width = 1920U,
+        .height = 1080U,
+    };
+
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.currentExtent = undefined_current_extent;
+    capabilities.minImageExtent = minimum_extent;
+    capabilities.maxImageExtent = maximum_extent;
+
+    constexpr Platform::FramebufferSize framebuffer_size{
+        .width = 2560,
+        .height = 360,
+    };
+
+    const VkExtent2D selected_extent =
+        Vulkan::selectSwapExtent(capabilities, framebuffer_size);
+
+    EXPECT_EQ(selected_extent.width, maximum_extent.width);
+    EXPECT_EQ(selected_extent.height, minimum_extent.height);
 }

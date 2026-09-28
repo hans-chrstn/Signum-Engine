@@ -12,6 +12,17 @@ namespace SNE::Engine::Platform {
     };
 
     /**
+     * @brief Specifies the dimensions of a window framebuffer in pixels.
+     *
+     * Framebuffer dimensions may differ from logical window dimensions on
+     * high-DPI displays and may change during the lifetime of the window.
+     */
+    struct FramebufferSize {
+        int width;
+        int height;
+    };
+
+    /**
      * @brief Owns a GLFW window used by the engine.
      *
      * Window manages the lifetime of its underlying GLFWwindow using RAII.
@@ -70,5 +81,15 @@ namespace SNE::Engine::Platform {
          * @return Pointer to the GLFW window owned by this object.
          */
         [[nodiscard]] auto nativeHandle() const -> GLFWwindow *;
+
+        /**
+         * @brief Returns the current framebuffer dimensions of the window.
+         *
+         * The returned dimensions describe the drawable framebuffer size in
+         * pixels and may differ from the logical window dimensions.
+         *
+         * @return Current framebuffer dimensions in pixels.
+         */
+        [[nodiscard]] auto framebufferSize() const -> FramebufferSize;
     };
 } // namespace SNE::Engine::Platform

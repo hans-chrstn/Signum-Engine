@@ -1,5 +1,6 @@
 #include "vulkan_swapchain_selection.hpp"
 #include <algorithm>
+#include <cstdint>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -69,5 +70,24 @@ namespace SNE::Engine::Renderer::Vulkan {
             return VK_PRESENT_MODE_FIFO_KHR;
         }
         return VK_PRESENT_MODE_FIFO_KHR;
+    }
+
+    auto selectSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities,
+                          const Platform::FramebufferSize &framebuffer_size)
+        -> VkExtent2D {
+        if (capabilities.currentExtent.width != UINT32_MAX) {
+            return capabilities.currentExtent;
+        }
+
+        return {
+            .width =
+                std::clamp(static_cast<std::uint32_t>(framebuffer_size.width),
+                           capabilities.minImageExtent.width,
+                           capabilities.maxImageExtent.width),
+            .height =
+                std::clamp(static_cast<std::uint32_t>(framebuffer_size.height),
+                           capabilities.minImageExtent.height,
+                           capabilities.maxImageExtent.height),
+        };
     }
 } // namespace SNE::Engine::Renderer::Vulkan

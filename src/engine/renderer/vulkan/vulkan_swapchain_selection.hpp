@@ -1,9 +1,9 @@
 #pragma once
 
+#include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
@@ -71,4 +71,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         PresentationPreference presentation_preference,
         const std::vector<VkPresentModeKHR> &presentation_modes,
         bool fifo_latest_ready_enabled) -> VkPresentModeKHR;
+
+    /**
+     * @brief Selects the swapchain image extent for the Vulkan surface.
+     *
+     * Uses the surface's required current extent when one is specified.
+     * Otherwise, selects an extent from the current framebuffer dimensions and
+     * constrains it to the minimum and maximum extents supported by the
+     * surface.
+     *
+     * @param capabilities Surface capabilities reported for the Vulkan surface.
+     * @param framebuffer_size Current framebuffer dimensions in pixels.
+     *
+     * @return Extent selected for swapchain images.
+     */
+    [[nodiscard]] auto
+    selectSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities,
+                     const Platform::FramebufferSize &framebuffer_size)
+        -> VkExtent2D;
 } // namespace SNE::Engine::Renderer::Vulkan

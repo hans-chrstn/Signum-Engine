@@ -212,7 +212,7 @@
 - [x] Support FIFO_RELAXED selection with FIFO fallback
 - [x] Support IMMEDIATE selection with safe fallback
 - [x] Account for FIFO_LATEST_READY in presentation-mode policy
-- [ ] Select swap extent
+- [x] Select swap extent
 - [ ] Create swapchain
 - [ ] Create image views
 - [ ] Handle out-of-date swapchain
@@ -229,7 +229,7 @@
 - [x] Test tearing-enabled presentation-mode selection
 - [x] Test presentation-mode fallback behavior
 - [x] Test FIFO_LATEST_READY selection policy
-- [ ] Test extent selection
+- [x] Test extent selection
 - [ ] Resize repeatedly
 - [ ] Minimize and restore repeatedly
 

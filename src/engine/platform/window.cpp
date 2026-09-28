@@ -38,4 +38,16 @@ namespace SNE::Engine::Platform {
     auto Window::nativeHandle() const -> GLFWwindow * {
         return m_Window;
     }
+
+    auto Window::framebufferSize() const -> FramebufferSize {
+        int width{};
+        int height{};
+
+        glfwGetFramebufferSize(m_Window, &width, &height);
+
+        return FramebufferSize{
+            .width = width,
+            .height = height,
+        };
+    }
 } // namespace SNE::Engine::Platform
