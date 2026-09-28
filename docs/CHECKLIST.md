@@ -227,6 +227,152 @@
 
 ---
 
+## Phase 5.5 — Foundation and Runtime Hardening
+
+### Learn
+
+- [ ] programmer errors versus runtime failures
+- [ ] assertions and contract violations
+- [ ] development versus production diagnostics
+- [ ] Vulkan feature chains
+- [ ] Vulkan `pNext` composition
+- [ ] application configuration
+- [ ] continuous integration fundamentals
+- [ ] integration-test environment requirements
+
+### Error and Contract Foundation
+
+- [ ] Define programmer-contract failure policy
+- [ ] Define runtime-failure policy
+- [ ] Define assertion policy
+- [ ] Separate programmer errors from runtime/environment failures
+- [ ] Replace temporary `std::logic_error` handling in `VulkanDevice`
+- [ ] Remove unnecessary narrow storage from engine error codes
+- [ ] Preserve structured diagnostics for runtime failures
+- [ ] Prevent programmer errors from masquerading as hardware failures
+
+### Application Configuration
+
+- [ ] Define minimal application configuration
+- [ ] Move application name out of Vulkan implementation
+- [ ] Move initial window settings out of hard-coded engine initialization
+- [ ] Define development-diagnostic configuration
+- [ ] Define validation-layer configuration
+- [ ] Define Vulkan debug-messenger configuration
+- [ ] Keep configuration requirement-driven
+- [ ] Avoid global configuration registries
+
+### Vulkan Validation Configuration
+
+- [ ] Require validation for normal development configurations
+- [ ] Allow validation to be disabled for production
+- [ ] Do not require validation layers for production startup
+- [ ] Enable debug-utils only when needed
+- [ ] Preserve validation reporting during instance creation and destruction
+- [ ] Verify startup with validation enabled
+- [ ] Verify startup with validation disabled
+
+### Vulkan Feature Configuration
+
+- [ ] Replace legacy logical-device feature enablement model
+- [ ] Introduce `VkPhysicalDeviceFeatures2` configuration
+- [ ] Define owned feature-chain lifetime
+- [ ] Support Vulkan-version feature structures when needed
+- [ ] Support optional extension feature structures when needed
+- [ ] Preserve supported-versus-requested-versus-enabled distinction
+- [ ] Keep optional hardware features optional
+- [ ] Avoid enabling unsupported or unused features
+
+### Logical-Device Contracts
+
+- [ ] Define `VulkanDevice` constructor preconditions
+- [ ] Validate required graphics queue-family availability
+- [ ] Validate required presentation queue-family availability
+- [ ] Ensure queue requests contain required queue families
+- [ ] Ensure queue request generation cannot produce duplicates
+- [ ] Keep queue-request derivation pure and testable
+- [ ] Document queue-handle ownership
+- [ ] Keep retrieved queues non-owning
+
+### Runtime Lifecycle Audit
+
+- [ ] Audit current RAII owners
+- [ ] Verify destruction ordering
+- [ ] Verify borrowed dependencies are documented
+- [ ] Verify partial-construction cleanup
+- [ ] Add null-handle guards where they improve real lifecycle safety
+- [ ] Avoid checks that merely hide programmer errors
+- [ ] Verify native-handle accessors remain non-owning
+- [ ] Verify swapchain recreation uses current surface state
+
+### Integration-Test Foundation
+
+- [ ] Define Vulkan integration-test environment requirements
+- [ ] Query loader API support before requiring Vulkan 1.4
+- [ ] Skip unsupported Vulkan environments cleanly
+- [ ] Skip hardware tests when no physical device is available
+- [ ] Distinguish unsupported environment from test failure
+- [ ] Keep deterministic policy in unit tests
+- [ ] Keep driver/runtime behavior in integration tests
+
+### Continuous Integration
+
+- [ ] Add GitHub Actions
+- [ ] Run clean Debug build
+- [ ] Run formatting checks
+- [ ] Run unit tests
+- [ ] Run Clang-Tidy
+- [ ] Run ASan/UBSan unit tests
+- [ ] Generate Doxygen
+- [ ] Treat project warnings as errors in CI
+- [ ] Keep hardware-dependent integration testing separate
+- [ ] Reuse normal `just` workflows from CI where practical
+
+### Development Platform Policy
+
+- [ ] Document Linux as the current primary development platform
+- [ ] Document required compiler and build tools
+- [ ] Document Vulkan development requirements
+- [ ] Document validation-layer requirements
+- [ ] Keep CMake portable where inexpensive
+- [ ] Avoid promising unsupported platform workflows prematurely
+
+### Documentation
+
+- [ ] Reconcile checklist with repository state
+- [ ] Distinguish implemented from verified functionality
+- [ ] Distinguish automated from manual verification where useful
+- [ ] Remove stale TODOs after policies replace them
+- [ ] Update Doxygen for changed configuration and ownership contracts
+
+### Test
+
+- [ ] Run clean Debug build
+- [ ] Run unit tests
+- [ ] Run supported integration tests
+- [ ] Run ASan/UBSan
+- [ ] Run Valgrind
+- [ ] Run Clang-Tidy
+- [ ] Run formatting checks
+- [ ] Generate Doxygen without new project warnings
+- [ ] Launch with validation enabled
+- [ ] Launch with validation disabled
+- [ ] Verify clean startup and shutdown
+
+### Architecture
+
+- [ ] Preserve explicit RAII ownership
+- [ ] Preserve discovery-versus-policy separation
+- [ ] Preserve supported-versus-enabled feature separation
+- [ ] Keep Vulkan inside the Vulkan backend
+- [ ] Keep diagnostics independent from output sinks
+- [ ] Keep developer tooling removable from production
+- [ ] Keep configuration small and explicit
+- [ ] Avoid speculative interfaces
+- [ ] Avoid premature subsystem splitting
+
+---
+
 ## Phase 6 — Basic Rendering
 
 ### Learn
@@ -266,6 +412,74 @@
 
 ---
 
+## Phase 6.5 — GPU Memory, Transfers, and Lifetime
+
+### Learn
+
+- [ ] Vulkan memory heaps
+- [ ] Vulkan memory types
+- [ ] host-visible memory
+- [ ] device-local memory
+- [ ] coherent versus non-coherent memory
+- [ ] memory requirements and alignment
+- [ ] suballocation
+- [ ] dedicated allocations
+- [ ] staging transfers
+- [ ] upload paths
+- [ ] readback paths
+- [ ] deferred destruction
+- [ ] memory budgets
+
+### Design
+
+- [ ] Define GPU allocation responsibilities
+- [ ] Define buffer-memory ownership
+- [ ] Define image-memory ownership
+- [ ] Define upload-memory policy
+- [ ] Define readback-memory policy
+- [ ] Define persistent-mapping policy
+- [ ] Define resource-retirement policy
+- [ ] Define allocation diagnostics
+- [ ] Keep allocation implementation replaceable
+- [ ] Avoid exposing allocator implementation to normal renderer callers
+
+### Implement
+
+- [ ] Add GPU memory allocation foundation
+- [ ] Add memory-type selection
+- [ ] Support buffer allocation
+- [ ] Support image allocation
+- [ ] Add staging-upload path
+- [ ] Add mapped-upload path where appropriate
+- [ ] Add readback path when needed
+- [ ] Add alignment handling
+- [ ] Add memory-budget queries when supported
+- [ ] Add basic allocation statistics
+- [ ] Add deferred resource retirement when frame lifetime requires it
+
+### Test
+
+- [ ] Test memory-type selection
+- [ ] Test alignment calculations
+- [ ] Test buffer allocation lifecycle
+- [ ] Test image allocation lifecycle
+- [ ] Test upload correctness
+- [ ] Test partial allocation failure
+- [ ] Test deferred retirement
+- [ ] Run Vulkan validation
+- [ ] Run sanitizers
+
+### Architecture
+
+- [ ] Separate GPU resource identity from memory allocation
+- [ ] Keep allocation backend-specific
+- [ ] Keep future streaming requirements possible
+- [ ] Keep future memory-budget enforcement possible
+- [ ] Keep future specialized allocator experiments possible
+- [ ] Do not build a complex allocator before measurements justify it
+
+---
+
 ## Phase 7 — Rendering Resource Foundation
 
 ### Learn
@@ -279,7 +493,6 @@
 - [ ] materials
 - [ ] shader and pipeline variants
 - [ ] compute pipelines
-- [ ] staging
 - [ ] GPU resource lifetime
 - [ ] GPU resource dependency tracking
 
@@ -302,8 +515,7 @@
 - [ ] Define GPU resource ownership
 - [ ] Define GPU lifetime ordering
 - [ ] Track GPU resource dependencies
-- [ ] Expose resource lifetime/dependency data needed by render-graph scheduling
-- [ ] Add deferred resource retirement when real frame-lifetime needs require it
+- [ ] Expose resource lifetime/dependency data needed by later frame scheduling
 
 ### Test
 
@@ -318,6 +530,7 @@
 ### Architecture
 
 - [ ] Keep runtime object identity separate from GPU resource identity
+- [ ] Keep GPU allocation details behind Phase 6.5 memory mechanisms
 - [ ] Avoid raw Vulkan ownership in game entities
 - [ ] Keep resource, shader, pipeline, binding, and material mechanisms independent from optional rendering features
 - [ ] Keep core GPU resource APIs usable by built-in and developer-defined render features
@@ -344,12 +557,12 @@
 - [x] Add Vulkan error conversion
 - [ ] Add nested causes only if needed
 - [x] Define recoverable result type policy
-- [ ] Define exception policy
-- [ ] Add assertion policy
-- [ ] Separate programmer errors from runtime failures
+- [ ] Enforce the Phase 5.5 exception policy across subsystems
+- [ ] Enforce the Phase 5.5 assertion/contract policy across subsystems
 - [x] Add fatal error reporting
 - [x] Add graceful fatal shutdown
 - [ ] Prevent duplicate error reporting
+- [ ] Audit recoverable failures for accidental fatal handling
 
 ### Learn
 
@@ -358,8 +571,8 @@
 - [x] exception boundaries
 - [x] source-location diagnostics
 - [ ] fatal reporting
-- [ ] assertion semantics
 - [ ] explicit result types
+- [ ] nested error causes when justified
 
 ### Test
 
@@ -370,6 +583,9 @@
 - [x] Test source location formatting
 - [ ] Test fatal reporter
 - [ ] Test recoverable result behavior
+- [ ] Test programmer-contract failure behavior where testable
+- [ ] Test runtime failure propagation through the fatal boundary
+- [ ] Test duplicate-report prevention
 
 ### Architecture
 
@@ -377,6 +593,7 @@
 - [x] Keep formatting independent from reporting
 - [x] Keep fatal reporting at defined boundary
 - [ ] Keep recoverable failures non-fatal
+- [ ] Keep programmer-contract failures distinct from runtime/environment failures
 
 ---
 
@@ -496,8 +713,10 @@
 - [x] Add Valgrind workflow
 - [x] Add Clang-Tidy
 - [x] Treat project warnings as errors
-- [ ] Add integration-test structure
+- [x] Add integration-test structure
 - [ ] Add benchmark target
+- [ ] Add reusable benchmark helpers
+- [ ] Define benchmark result-recording convention
 
 ### Learn
 
@@ -524,6 +743,13 @@
 - [ ] Debug a deliberately failing test
 - [ ] Inspect a thrown exception with debugger
 - [ ] Establish initial benchmark baseline
+
+### Architecture
+
+- [ ] Keep deterministic logic in unit tests
+- [ ] Keep driver/OS/hardware behavior in integration tests
+- [ ] Keep benchmarks separate from correctness tests
+- [ ] Make performance comparisons reproducible enough to guide later optimization
 
 ---
 
@@ -573,21 +799,19 @@
 - [ ] backend abstraction
 - [ ] renderer handles
 - [ ] renderer resource descriptions
-- [ ] render graphs/frame graphs
 - [ ] render-feature architecture
 - [ ] render-pass registration
 - [ ] material abstraction
 - [ ] abstraction overhead
+- [ ] low-level backend escape hatches
 
 ### Design
 
 - [ ] Define minimum renderer API
 - [ ] Define backend-independent resource descriptions
-- [ ] Define renderer resource handles
+- [ ] Define renderer resource-handle requirements
 - [ ] Define renderer ownership model
 - [ ] Define renderer-core versus render-feature boundary
-- [ ] Define render graph/frame graph contracts
-- [ ] Define render-graph resource declaration, access, and dependency contracts
 - [ ] Define render-feature lifecycle and registration contract
 - [ ] Define render-feature dependency and ordering declarations
 - [ ] Define custom render-pass registration contract
@@ -599,19 +823,19 @@
 - [ ] Define no-meaningful-overhead policy for disabled optional features
 - [ ] Define hardware ray-tracing infrastructure boundary separately from ray-traced effects
 - [ ] Define Vulkan escape-hatch policy
+- [ ] Avoid forcing future backends into an artificial lowest common denominator
 
 ### Implement
 
 - [ ] Move normal rendering callers away from raw Vulkan
 - [ ] Keep Vulkan as first backend
 - [ ] Avoid premature additional graphics backends
-- [ ] Add render graph/frame graph core when multi-pass scheduling requires it
-- [ ] Integrate GPU resource lifetime/dependency tracking with the render graph
 - [ ] Add render-feature registry when a real feature requires it
 - [ ] Add public custom render-feature registration path
 - [ ] Add public custom render-pass registration path
 - [ ] Add public feature enable/disable/configuration path
 - [ ] Expose shader, pipeline, descriptor/binding, and material extension mechanisms through renderer APIs
+- [ ] Preserve explicit low-level Vulkan access for advanced extensions
 - [ ] Keep abstraction measurable
 
 ### Test
@@ -620,7 +844,6 @@
 - [ ] Verify public renderer API avoids unnecessary Vulkan types
 - [ ] Verify renderer-core builds without optional rendering modules
 - [ ] Disable optional render features without breaking unrelated rendering
-- [ ] Compose multiple render features through the render graph
 - [ ] Test developer-defined render feature through public renderer mechanisms
 - [ ] Verify built-in and custom render features use the same registration and resource contracts
 - [ ] Verify built-in render features have no privileged private-core path unavailable to custom features
@@ -638,6 +861,7 @@
 - [ ] Keep game rendering API independent from Vulkan
 - [ ] Keep explicit low-level backend access for advanced extensions
 - [ ] Keep unused optional render features uninitialized and unallocated
+- [ ] Leave frame-graph scheduling and graph compilation to Phase 13.5
 
 ---
 
@@ -669,6 +893,68 @@
 - [ ] Test destroyed resources
 - [ ] Test reused IDs
 - [ ] Test stale generations if used
+
+---
+
+## Phase 13.5 — Render Graph and Frame Scheduling
+
+### Learn
+
+- [ ] render graphs
+- [ ] directed acyclic graphs
+- [ ] resource dependencies
+- [ ] resource states
+- [ ] synchronization planning
+- [ ] transient resources
+- [ ] pass ordering
+- [ ] pass culling
+- [ ] queue scheduling
+- [ ] resource aliasing concepts
+
+### Design
+
+- [ ] Define render-pass declaration contract
+- [ ] Define resource read/write declarations
+- [ ] Define pass dependencies
+- [ ] Define graph compilation
+- [ ] Define resource lifetime analysis
+- [ ] Define synchronization-generation boundary
+- [ ] Define transient-resource ownership
+- [ ] Define external-resource import/export
+- [ ] Define render-feature registration against the graph
+- [ ] Keep graph policy independent from individual effects
+
+### Implement
+
+- [ ] Add graph representation
+- [ ] Add pass registration
+- [ ] Add resource declarations
+- [ ] Add dependency resolution
+- [ ] Add deterministic pass ordering
+- [ ] Detect dependency cycles
+- [ ] Add lifetime analysis
+- [ ] Add synchronization planning
+- [ ] Add transient-resource support when required
+- [ ] Add pass culling when justified
+- [ ] Add queue scheduling when multiple queue types are actually used
+
+### Test
+
+- [ ] Test dependency ordering
+- [ ] Test independent passes
+- [ ] Test cycle detection
+- [ ] Test read/write dependencies
+- [ ] Test lifetime calculations
+- [ ] Test transient-resource lifetime
+- [ ] Test synchronization planning
+- [ ] Test unused-pass removal when implemented
+
+### Architecture
+
+- [ ] Built-in and external render features use the same graph contracts
+- [ ] Render graph depends on renderer mechanisms, not individual effects
+- [ ] Do not encode PBR, shadows, terrain, or other feature semantics into graph core
+- [ ] Keep synchronization details inside renderer/backend layers
 
 ---
 
@@ -858,6 +1144,55 @@
 
 ---
 
+## Phase 17.5 — Filesystem and Project Path Foundation
+
+### Learn
+
+- [ ] physical paths
+- [ ] normalized paths
+- [ ] project roots
+- [ ] engine roots
+- [ ] source-asset paths
+- [ ] filesystem error handling
+
+### Design
+
+- [ ] Define engine root
+- [ ] Define project root
+- [ ] Define source-asset root
+- [ ] Define generated/cache root
+- [ ] Define normalized path rules
+- [ ] Separate physical path from asset identity
+- [ ] Keep platform filesystem details behind filesystem utilities
+
+### Implement
+
+- [ ] Add basic file reads
+- [ ] Add basic file writes
+- [ ] Add path normalization
+- [ ] Add project-relative path handling
+- [ ] Add engine-relative path handling
+- [ ] Add source-asset path handling
+- [ ] Add cache/output paths
+- [ ] Add filesystem diagnostics
+
+### Test
+
+- [ ] Test normalization
+- [ ] Test missing files
+- [ ] Test invalid paths
+- [ ] Test project-relative paths
+- [ ] Test engine-relative paths
+- [ ] Test traversal and root-boundary rules
+
+### Architecture
+
+- [ ] Give Phase 18 stable file/path semantics
+- [ ] Do not implement mounts or a full virtual filesystem yet
+- [ ] Do not equate asset identity with filesystem path
+
+---
+
 ## Phase 18 — Asset and Resource System
 
 ### Learn
@@ -910,7 +1245,69 @@
 
 ---
 
-## Phase 19 — Module Architecture
+## Phase 18.5 — Asset Cooking and Runtime Formats
+
+### Learn
+
+- [ ] asset cooking
+- [ ] source versus cooked data
+- [ ] content hashing
+- [ ] cache invalidation
+- [ ] format versioning
+- [ ] binary layout
+- [ ] compression
+- [ ] platform-specific cooking
+
+### Design
+
+- [ ] Define cooked-resource contract
+- [ ] Define cooked-format versioning
+- [ ] Define importer-version tracking
+- [ ] Define content hashes
+- [ ] Define deterministic cooking requirements
+- [ ] Define dependency fingerprints
+- [ ] Define cache invalidation rules
+- [ ] Keep source decoders separate from runtime formats
+- [ ] Define platform-specific cooked variants where justified
+
+### Implement
+
+- [ ] Add cooking pipeline
+- [ ] Add cooked-resource cache
+- [ ] Add deterministic cache keys
+- [ ] Add first cooked texture representation
+- [ ] Add first cooked mesh representation when mesh resources exist
+- [ ] Add resource-format version checks
+- [ ] Add rebuild path for stale cooked data
+
+### Source-Format Policy
+
+- [ ] Use mature decoders for source formats where appropriate
+- [ ] Keep `stb_image` or replacement decoder inside importer boundaries
+- [ ] Do not make PNG/JPEG decoding part of runtime resource architecture
+- [ ] Prefer Signum cooked textures at runtime
+- [ ] Do not rewrite commodity codecs without a measured reason
+
+### Test
+
+- [ ] Test deterministic cooking
+- [ ] Test cache hits
+- [ ] Test cache invalidation
+- [ ] Test importer-version changes
+- [ ] Test corrupted cooked resources
+- [ ] Test unsupported format versions
+- [ ] Test source-file changes rebuild dependent resources
+
+### Architecture
+
+- [ ] Source formats are editor/import concerns
+- [ ] Runtime formats are Signum-controlled
+- [ ] Runtime resource layout may evolve independently from source file format
+- [ ] Custom Signum formats target runtime requirements rather than novelty
+
+---
+
+## Phase 19 — Module and Build Architecture
 
 ### Learn
 
@@ -918,6 +1315,7 @@
 - [ ] shared libraries
 - [ ] dynamic loading
 - [ ] symbol visibility
+- [ ] target dependency graphs
 - [ ] C++ ABI limitations
 - [ ] C ABI boundaries
 - [ ] version negotiation
@@ -926,6 +1324,7 @@
 
 - [ ] Define engine module responsibilities
 - [ ] Define module dependency direction
+- [ ] Define CMake target dependency direction
 - [ ] Define project module boundary
 - [ ] Define optional module lifecycle
 - [ ] Define optional rendering-module lifecycle
@@ -938,10 +1337,16 @@
 - [ ] Define startup/shutdown contract
 - [ ] Define interface versioning
 - [ ] Define ABI policy
+- [ ] Preserve editor/runtime/headless executable separation
+- [ ] Keep backend targets replaceable without making every subsystem an interface
 
 ### Implement
 
 - [ ] Split justified subsystems into CMake targets
+- [ ] Separate platform/backend targets when real consumers justify it
+- [ ] Separate renderer backend from higher-level renderer when justified
+- [ ] Keep editor-only dependencies out of runtime targets
+- [ ] Preserve headless-compatible reusable targets
 - [ ] Add minimal module lifecycle
 - [ ] Load optional rendering module through normal module mechanisms when justified
 - [ ] Register a built-in render feature through the same public path available to custom modules
@@ -955,6 +1360,9 @@
 - [ ] Test invalid module
 - [ ] Test version mismatch
 - [ ] Test dependency ordering
+- [ ] Test CMake target dependency direction
+- [ ] Verify runtime target does not link editor-only dependencies
+- [ ] Verify reusable targets can support headless tooling
 - [ ] Test renderer-core with all optional rendering modules disabled
 - [ ] Test disabled rendering module does not initialize or allocate feature resources
 - [ ] Test multiple optional rendering modules coexist through normal registration paths
@@ -966,6 +1374,8 @@
 
 - [ ] Avoid promising stable C++ ABI prematurely
 - [ ] Avoid exposing unstable internals across module boundaries
+- [ ] Avoid excessive micro-libraries
+- [ ] Split targets only when ownership, dependencies, or consumers justify the boundary
 - [ ] Keep renderer-core free of dependencies on optional rendering modules
 - [ ] Require built-in rendering modules to use the same module and extension contracts available to external modules
 - [ ] Keep optional rendering-module startup, shutdown, configuration, and replacement outside renderer-core special cases
@@ -1146,57 +1556,102 @@
 
 ---
 
-## Phase 24 — Filesystem and Virtual Paths
+## Phase 24 — Virtual Filesystem and Mount Architecture
 
 ### Learn
 
-- [ ] filesystem abstraction
-- [ ] path normalization
 - [ ] virtual paths
-- [ ] mount concepts
+- [ ] mount tables
+- [ ] mount priority
+- [ ] packaged resources
+- [ ] archive/container access
+- [ ] read-only mounts
+- [ ] overlays
 
 ### Design
 
-- [ ] Define project paths
-- [ ] Define engine paths
-- [ ] Define asset paths
-- [ ] Define normalized path rules
-- [ ] Separate physical paths from logical asset identity
+- [ ] Build on Phase 17.5 normalized physical-path rules
+- [ ] Define virtual path syntax
+- [ ] Define mount lifecycle
+- [ ] Define mount priority
+- [ ] Define duplicate-path behavior
+- [ ] Define read-only and writable mounts
+- [ ] Define packaged-resource access
+- [ ] Define project/engine mount conventions
+- [ ] Preserve physical-path escape hatch for tooling
+- [ ] Keep logical asset identity independent from mount location
 
 ### Implement
 
-- [ ] Add filesystem service
-- [ ] Add file read/write helpers
-- [ ] Add path normalization
-- [ ] Add virtual/project paths where useful
+- [ ] Add mount table
+- [ ] Add virtual-to-physical resolution
+- [ ] Add read-only mounts
+- [ ] Add writable mounts where justified
+- [ ] Add mount priorities
+- [ ] Add packaged/archive mount when needed
+- [ ] Integrate asset loading through virtual paths where beneficial
 
 ### Test
 
-- [ ] Test path normalization
-- [ ] Test missing files
-- [ ] Test invalid paths
-- [ ] Test project-relative paths
+- [ ] Test mount resolution
+- [ ] Test mount priority
+- [ ] Test duplicate paths
+- [ ] Test missing resources
+- [ ] Test read-only behavior
+- [ ] Test unmount lifecycle
+- [ ] Test project and engine mounts
+
+### Architecture
+
+- [ ] Do not make virtual paths mandatory for every engine user
+- [ ] Keep asset identity separate from both physical and virtual paths
+- [ ] Keep mount behavior out of gameplay-specific concepts
 
 ---
 
 ## Phase 25 — Physics
 
+### Learn
+
+- [ ] rigid-body simulation architecture
+- [ ] collision shapes
+- [ ] broad phase
+- [ ] narrow phase
+- [ ] constraints
+- [ ] fixed-step simulation
+- [ ] physics queries
+- [ ] backend capability boundaries
+
 ### Design
 
-- [ ] Define physics abstraction
+- [ ] Define Signum physics API before exposing backend types
 - [ ] Keep physics backend replaceable
 - [ ] Define physics ownership
+- [ ] Define physics-resource identity
+- [ ] Define simulation ownership
 - [ ] Define physics/world synchronization
+- [ ] Define fixed-step interaction
+- [ ] Define backend capability reporting
 - [ ] Keep gameplay collision responses project-defined
+- [ ] Keep specialized large-world simulation possible
+
+### Initial Backend
+
+- [ ] Evaluate Jolt against current requirements
+- [ ] Use Jolt as initial backend if requirements still fit
+- [ ] Keep Jolt types behind backend implementation boundaries
+- [ ] Avoid designing gameplay around Jolt-specific behavior
+- [ ] Measure representative physics workloads before considering replacement
 
 ### Implement
 
-- [ ] Select backend when requirements are known
 - [ ] Add physics world
 - [ ] Add body representation
 - [ ] Add collision shapes
 - [ ] Add queries
 - [ ] Add events
+- [ ] Connect fixed-step simulation
+- [ ] Connect world synchronization through Signum-facing contracts
 
 ### Test
 
@@ -1204,44 +1659,108 @@
 - [ ] Test collision
 - [ ] Test queries
 - [ ] Test synchronization
+- [ ] Test fixed-step behavior
+- [ ] Test backend shutdown
+- [ ] Verify gameplay-facing code does not require Jolt types
+
+### Future Evolution
+
+- [ ] Allow specialized procedural-collision systems
+- [ ] Allow large-world physics specialization
+- [ ] Allow experimental solver or broad-phase research without rewriting gameplay APIs
+- [ ] Replace general-purpose backend pieces only when measurements justify it
 
 ---
 
 ## Phase 26 — Audio
 
+### Learn
+
+- [ ] audio devices and contexts
+- [ ] buffers and streaming
+- [ ] voices/sources
+- [ ] listeners
+- [ ] spatial audio
+- [ ] attenuation
+- [ ] HRTF concepts
+- [ ] mixing and DSP boundaries
+
 ### Design
 
-- [ ] Define audio resource model
+- [ ] Define Signum audio resource model
 - [ ] Define playback API
 - [ ] Define audio ownership
+- [ ] Define audio-device ownership
+- [ ] Define voices/sources
+- [ ] Define listener model
 - [ ] Define spatial-audio API
+- [ ] Define streaming-audio model
+- [ ] Define backend capability reporting
 - [ ] Keep backend replaceable
+- [ ] Keep native audio handles out of game-facing APIs
+
+### Initial Backend
+
+- [ ] Evaluate OpenAL Soft against current requirements
+- [ ] Use OpenAL Soft as initial backend if requirements still fit
+- [ ] Keep OpenAL types inside backend implementation
+- [ ] Keep audio resources independent from OpenAL buffer identity
+- [ ] Keep future custom mixer/DSP work possible
 
 ### Implement
 
 - [ ] Add audio backend
 - [ ] Add audio resources
 - [ ] Add playback
+- [ ] Add streaming playback when required
 - [ ] Add spatial audio
+- [ ] Add listener state
 - [ ] Add volume categories
+- [ ] Integrate source-audio import/cooking with the asset pipeline
 
 ### Test
 
 - [ ] Test missing audio device
 - [ ] Test missing resource
 - [ ] Test playback lifecycle
+- [ ] Test streaming lifecycle
+- [ ] Test spatial-source lifecycle
+- [ ] Verify gameplay-facing code does not require OpenAL types
+
+### Future Evolution
+
+- [ ] Support custom DSP when justified
+- [ ] Support custom acoustic simulation when justified
+- [ ] Support alternative backend without changing gameplay-facing API
+- [ ] Keep mature OS/device infrastructure when replacing it offers no measurable benefit
 
 ---
 
 ## Phase 27 — Runtime UI
 
+### Learn
+
+- [ ] retained-mode UI concepts
+- [ ] layout systems
+- [ ] text shaping/rendering requirements
+- [ ] input routing
+- [ ] focus and navigation
+- [ ] UI rendering pipelines
+
 ### Design
 
+- [ ] Build runtime UI as a Signum-owned system
 - [ ] Separate runtime UI from editor UI
+- [ ] Separate runtime UI from Phase 9.5 Dear ImGui developer tooling
 - [ ] Define UI ownership
 - [ ] Define input integration
 - [ ] Define rendering integration
+- [ ] Define backend-independent widget state
+- [ ] Define layout independently from rendering backend
 - [ ] Keep runtime UI optional
+- [ ] Keep input routing independent from GLFW
+- [ ] Keep rendering integration independent from Vulkan-specific UI types
+- [ ] Do not make Dear ImGui the runtime UI architecture
 
 ### Implement
 
@@ -1251,12 +1770,22 @@
 - [ ] Add text
 - [ ] Add images
 - [ ] Add input handling
+- [ ] Add focus/navigation foundation where required
 
 ### Test
 
 - [ ] Test layout
 - [ ] Test input
 - [ ] Test lifecycle
+- [ ] Test focus/navigation behavior when implemented
+- [ ] Verify runtime UI can be disabled
+- [ ] Verify runtime UI does not depend on Dear ImGui
+
+### Architecture
+
+- [ ] Keep runtime widget state independent from renderer backend
+- [ ] Keep runtime UI data reusable by future editor tooling where appropriate
+- [ ] Avoid coupling game-facing UI to editor-only systems
 
 ---
 
@@ -1314,17 +1843,30 @@
 - [ ] Add status bar
 - [ ] Add editor command abstraction
 
+### Dear ImGui Migration Policy
+
+- [ ] Allow Dear ImGui developer panels during editor bootstrap
+- [ ] Keep editor models independent from Dear ImGui
+- [ ] Keep inspector/hierarchy/project state independent from widget implementation
+- [ ] Allow editor panels to migrate incrementally to Signum UI
+- [ ] Avoid a single all-at-once UI rewrite
+- [ ] Preserve Phase 9.5 tooling during migration
+- [ ] Remove individual Dear ImGui dependencies only when replacement functionality exists
+
 ### Test
 
 - [ ] Launch editor
 - [ ] Close editor cleanly
 - [ ] Verify runtime library does not require editor
 - [ ] Verify editor displays diagnostics
+- [ ] Verify editor data/model behavior is not owned by Dear ImGui state
 
 ### Architecture
 
 - [ ] Make editor consume engine/tooling APIs
 - [ ] Avoid arbitrary access to private engine internals
+- [ ] Keep editor state separate from presentation/widget implementation
+- [ ] Keep editor-only dependencies out of game/runtime targets
 
 ---
 
@@ -1443,15 +1985,25 @@
 
 ---
 
-## Phase 34 — Headless Runtime and Tools
+## Phase 34 — Headless Runtime and Tool Frontends
+
+### Design
+
+- [ ] Separate reusable engine startup from windowed application startup
+- [ ] Define headless frontend requirements
+- [ ] Define tooling frontend requirements
+- [ ] Define renderer-without-presentation requirements
+- [ ] Reuse Phase 5.5 application configuration instead of creating separate startup systems
 
 ### Implement
 
 - [ ] Run reusable engine systems without window creation
 - [ ] Run reusable engine systems without Vulkan where possible
+- [ ] Allow renderer initialization without a presentation surface when supported
 - [ ] Add tooling executable
 - [ ] Add project validation commands
 - [ ] Add asset processing commands
+- [ ] Add headless asset cooking
 - [ ] Add benchmark commands
 - [ ] Add structured CLI diagnostics
 - [ ] Add meaningful exit codes
@@ -1462,6 +2014,68 @@
 - [ ] Test tooling failures
 - [ ] Test exit codes
 - [ ] Verify tools reuse engine modules
+- [ ] Verify tools do not pull editor-only dependencies
+- [ ] Verify non-rendering tools do not require Vulkan
+- [ ] Verify renderer-only tooling does not require a presentation window where supported
+
+### Architecture
+
+- [ ] Keep frontend type separate from reusable engine subsystems
+- [ ] Keep window ownership optional for reusable tools
+- [ ] Preserve one shared diagnostics/error infrastructure
+
+---
+
+## Phase 34.5 — Large-World Spatial Foundation
+
+### Learn
+
+- [ ] floating-point precision at large coordinates
+- [ ] local versus global coordinates
+- [ ] floating origins
+- [ ] hierarchical coordinate spaces
+- [ ] reference frames
+- [ ] double-precision world coordinates
+- [ ] local high-precision simulation regions
+
+### Design
+
+- [ ] Define world-coordinate representation
+- [ ] Define local-coordinate representation
+- [ ] Define world-to-local conversion
+- [ ] Define reference-frame ownership
+- [ ] Define origin-shift policy if used
+- [ ] Define transform-hierarchy interaction
+- [ ] Define renderer coordinate contract
+- [ ] Define physics coordinate contract
+- [ ] Define networking coordinate contract
+- [ ] Avoid assuming one flat coordinate space
+
+### Implement
+
+- [ ] Add global spatial representation when required
+- [ ] Add local simulation/rendering coordinates
+- [ ] Add reference-frame transforms
+- [ ] Add origin shifting if selected
+- [ ] Preserve stable object identity across reference-frame changes
+- [ ] Integrate with physics when large-world physics requires it
+
+### Test
+
+- [ ] Test large coordinate values
+- [ ] Test world/local conversion
+- [ ] Test reference-frame transitions
+- [ ] Test origin shifts
+- [ ] Test transform stability
+- [ ] Test renderer precision
+- [ ] Test physics stability
+
+### Architecture
+
+- [ ] Keep large-world coordinates independent from streaming
+- [ ] Keep procedural generation independent from absolute coordinate representation
+- [ ] Do not make planets a core engine primitive
+- [ ] Support ordinary small worlds without large-world overhead
 
 ---
 
@@ -1476,6 +2090,7 @@
 - [ ] latency
 - [ ] packet loss
 - [ ] network security basics
+- [ ] networked coordinate/reference-frame representation
 
 ### Design
 
@@ -1484,6 +2099,11 @@
 - [ ] Avoid assuming every project replicates entities
 - [ ] Define generic messages
 - [ ] Define connection lifecycle
+- [ ] Define replication identity separately from local object addresses
+- [ ] Define serialization boundary for network messages
+- [ ] Use Phase 34.5 world/reference-frame contracts for large-world positions
+- [ ] Avoid assuming one flat single-precision coordinate space
+- [ ] Keep transport replaceable independently from replication policy
 
 ### Implement
 
@@ -1491,6 +2111,7 @@
 - [ ] Add connections
 - [ ] Add messages
 - [ ] Add optional replication support
+- [ ] Add reference-frame-aware spatial replication only when a project requires it
 
 ### Test
 
@@ -1499,6 +2120,14 @@
 - [ ] Malformed packet tests
 - [ ] Latency simulation
 - [ ] Packet-loss simulation
+- [ ] Test spatial replication across reference-frame/origin changes when implemented
+
+### Architecture
+
+- [ ] Keep networking out of projects that do not use it
+- [ ] Keep transport details out of gameplay state
+- [ ] Keep large-world coordinate encoding consistent with Phase 34.5
+- [ ] Avoid coupling networking to one ECS storage implementation
 
 ---
 
@@ -1510,8 +2139,11 @@
 - [ ] Define loading priorities
 - [ ] Define memory budgets
 - [ ] Define cancellation
+- [ ] Define spatial streaming inputs using Phase 34.5 coordinate/reference-frame contracts
 - [ ] Keep spatial streaming optional
 - [ ] Avoid requiring chunk-based worlds
+- [ ] Keep resource streaming independent from world partition strategy
+- [ ] Define residency decisions separately from procedural generation
 
 ### Implement
 
@@ -1521,6 +2153,8 @@
 - [ ] Add streaming priorities
 - [ ] Add streaming cancellation
 - [ ] Add memory-budget enforcement
+- [ ] Add spatial streaming integration when a real large-world workload exists
+- [ ] Integrate GPU residency budgets with Phase 6.5 memory information where appropriate
 
 ### Test
 
@@ -1529,11 +2163,16 @@
 - [ ] Test memory limits
 - [ ] Stress streaming
 - [ ] Test shutdown during streaming
+- [ ] Test streaming across large-world reference-frame transitions when applicable
+- [ ] Test that non-spatial resources can use the same generic streaming infrastructure
 
 ### Architecture
 
 - [ ] Keep streaming infrastructure independent from terrain, water, cloud, and other optional render-feature modules
 - [ ] Let optional large-world rendering modules consume generic streaming APIs rather than own streaming-core policy
+- [ ] Keep streaming separate from coordinate representation
+- [ ] Keep streaming separate from procedural-generation algorithms
+- [ ] Keep ordinary small projects free from large-world streaming requirements
 
 ---
 
@@ -1724,6 +2363,97 @@
 
 ---
 
+## Phase 41.5 — Experimental Systems and Backend Evolution
+
+### Learn
+
+- [ ] experimental-design methodology
+- [ ] workload characterization
+- [ ] A/B benchmarking
+- [ ] statistical performance comparison
+- [ ] hardware-specific optimization tradeoffs
+- [ ] maintainability versus performance tradeoffs
+
+### Baseline
+
+- [ ] Record existing implementation performance
+- [ ] Define representative workloads
+- [ ] Define CPU measurements
+- [ ] Define GPU measurements
+- [ ] Define memory measurements
+- [ ] Define latency measurements
+- [ ] Define scaling measurements
+- [ ] Define correctness criteria
+
+### Experimental Renderer Work
+
+- [ ] Evaluate newer GPU-driven techniques
+- [ ] Evaluate visibility alternatives
+- [ ] Evaluate bindless/resource-indexing strategies
+- [ ] Evaluate descriptor-management alternatives
+- [ ] Evaluate specialized geometry pipelines
+- [ ] Evaluate asynchronous compute workloads
+- [ ] Evaluate resource-residency strategies
+- [ ] Evaluate custom GPU allocation strategies
+- [ ] Keep experiments interchangeable with baselines
+
+### Experimental Physics Work
+
+- [ ] Profile Jolt-backed workloads
+- [ ] Identify workload-specific limitations
+- [ ] Prototype specialized Signum physics where justified
+- [ ] Evaluate procedural-collision specialization
+- [ ] Evaluate large-world broad-phase specialization
+- [ ] Evaluate large-scale/reference-frame simulation
+- [ ] Replace general-purpose physics components only when evidence supports it
+
+### Experimental Audio Work
+
+- [ ] Profile current audio backend
+- [ ] Identify DSP or mixing limitations
+- [ ] Prototype custom mixer when justified
+- [ ] Prototype custom acoustic systems when justified
+- [ ] Retain OS/device backend when replacing it provides no benefit
+
+### Experimental Asset Work
+
+- [ ] Profile decoding
+- [ ] Profile cooking
+- [ ] Profile runtime asset loading
+- [ ] Evaluate custom compression/layout where useful
+- [ ] Evaluate streaming-oriented runtime formats
+- [ ] Keep commodity source decoders unless replacement has measurable value
+
+### UI Evolution
+
+- [ ] Profile Signum UI
+- [ ] Identify remaining Dear ImGui dependencies
+- [ ] Migrate remaining editor tooling when Signum UI provides equivalent capability
+- [ ] Keep developer tooling usable during migration
+- [ ] Remove Dear ImGui only when no longer needed
+
+### Replacement Rules
+
+- [ ] Keep baseline implementation available during experiments
+- [ ] Verify behavioral equivalence where required
+- [ ] Benchmark before and after
+- [ ] Measure regression on weaker hardware
+- [ ] Measure memory cost
+- [ ] Measure complexity and maintenance cost
+- [ ] Prefer specialized coexistence when full replacement is unnecessary
+- [ ] Replace a dependency only when the new implementation has a concrete advantage
+- [ ] Document why each replacement exists
+
+### Architecture
+
+- [ ] Third-party implementation must not define Signum architecture
+- [ ] Experimental backends use normal Signum boundaries
+- [ ] Baseline and experimental implementations can coexist
+- [ ] Custom technology must remain measurable
+- [ ] Avoid custom implementations whose only advantage is being custom
+
+---
+
 ## Phase 42 — Production Hardening
 
 ### Correctness
@@ -1781,18 +2511,22 @@
 - [ ] Optional rendering modules can be enabled, disabled, configured, replaced, and extended
 - [ ] Unused optional rendering modules impose no meaningful CPU, GPU, memory, descriptor, or resource overhead
 - [ ] Replacing one rendering implementation does not require modifying unrelated renderer systems
+- [ ] Experimental rendering techniques remain measurable against a baseline
 
 ### Engine Internals
 
 - [ ] Core
 - [ ] Platform
 - [ ] Memory
+- [ ] GPU memory and transfer infrastructure
 - [ ] Job system
 - [ ] Filesystem
+- [ ] Virtual filesystem/mount infrastructure
 - [ ] Logging
 - [ ] Errors
 - [ ] Diagnostics
 - [ ] Asset infrastructure
+- [ ] Asset cooking/runtime formats
 - [ ] Renderer backend/RHI
 - [ ] Shader/pipeline infrastructure
 - [ ] Descriptor/binding infrastructure
@@ -1802,6 +2536,7 @@
 - [ ] Custom render-pass registration infrastructure
 - [ ] GPU resource lifetime/dependency tracking
 - [ ] Hardware ray-tracing infrastructure
+- [ ] Large-world spatial/reference-frame infrastructure
 
 ### Runtime APIs
 
@@ -1820,6 +2555,16 @@
 - [ ] Events
 - [ ] Serialization
 - [ ] Optional networking
+
+### Replaceable / Experimental Backends
+
+- [ ] Renderer implementation boundaries
+- [ ] Physics backend
+- [ ] Audio backend
+- [ ] Source-asset decoders/importers
+- [ ] Developer/editor UI implementation
+- [ ] Baseline implementations remain available while experimental alternatives are measured
+- [ ] Replace implementations only for concrete capability, performance, scalability, or maintenance benefits
 
 ### Extension APIs
 
@@ -1878,9 +2623,13 @@
 - [x] ASan/UBSan test workflow
 - [x] Clang-Tidy workflow
 - [x] Valgrind workflow
-- [ ] Fatal error reporting
-- [ ] Graceful fatal shutdown
-- [ ] Recoverable error policy
-- [ ] Exception policy
+- [x] Fatal error reporting
+- [x] Graceful fatal shutdown
+- [x] Recoverable error policy
+- [ ] Exception/programmer-error policy
 - [ ] Verify clean application shutdown
-- [ ] Vulkan instance foundation
+- [x] Vulkan instance foundation
+- [x] GPU device foundation
+- [x] Swapchain support discovery
+- [ ] Surface-format selection
+
