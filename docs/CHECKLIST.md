@@ -202,7 +202,7 @@
 ### Implement
 
 - [x] Query swapchain support
-- [ ] Select surface format
+- [x] Select surface format
 - [ ] Select presentation mode
 - [ ] Select swap extent
 - [ ] Create swapchain
@@ -214,7 +214,7 @@
 
 ### Test
 
-- [ ] Test format selection
+- [x] Test format selection
 - [ ] Test presentation-mode selection
 - [ ] Test extent selection
 - [ ] Resize repeatedly
@@ -2632,4 +2632,3 @@
 - [x] GPU device foundation
 - [x] Swapchain support discovery
 - [ ] Surface-format selection
-
