@@ -194,10 +194,10 @@
 ### Learn
 
 - [x] swapchains
-- [ ] surface formats
-- [ ] presentation modes
-- [ ] presentation preference versus Vulkan presentation mode
-- [ ] FIFO_LATEST_READY behavior and capability requirements
+- [x] surface formats
+- [x] presentation modes
+- [x] presentation preference versus Vulkan presentation mode
+- [x] FIFO_LATEST_READY behavior and capability requirements
 - [ ] image views
 - [ ] swapchain recreation
 
@@ -205,14 +205,13 @@
 
 - [x] Query swapchain support
 - [x] Select surface format
-- [ ] Define presentation preference policy
-- [ ] Select presentation mode
-- [ ] Support FIFO selection
-- [ ] Support MAILBOX selection with FIFO fallback
-- [ ] Support FIFO_RELAXED selection with FIFO fallback
-- [ ] Support IMMEDIATE selection with safe fallback
-- [ ] Account for FIFO_LATEST_READY in presentation-mode policy
-- [ ] Select presentation mode
+- [x] Define presentation preference policy
+- [x] Select presentation mode
+- [x] Support FIFO selection
+- [x] Support MAILBOX selection with FIFO fallback
+- [x] Support FIFO_RELAXED selection with FIFO fallback
+- [x] Support IMMEDIATE selection with safe fallback
+- [x] Account for FIFO_LATEST_READY in presentation-mode policy
 - [ ] Select swap extent
 - [ ] Create swapchain
 - [ ] Create image views
@@ -224,23 +223,22 @@
 ### Test
 
 - [x] Test format selection
-- [ ] Test VSync presentation-mode selection
-- [ ] Test low-latency presentation-mode selection
-- [ ] Test adaptive presentation-mode selection
-- [ ] Test tearing-enabled presentation-mode selection
-- [ ] Test presentation-mode fallback behavior
-- [ ] Test FIFO_LATEST_READY selection policy
-- [ ] Test presentation-mode selection
+- [x] Test VSync presentation-mode selection
+- [x] Test low-latency presentation-mode selection
+- [x] Test adaptive presentation-mode selection
+- [x] Test tearing-enabled presentation-mode selection
+- [x] Test presentation-mode fallback behavior
+- [x] Test FIFO_LATEST_READY selection policy
 - [ ] Test extent selection
 - [ ] Resize repeatedly
 - [ ] Minimize and restore repeatedly
 
 ### Architecture
 
-- [ ] Keep presentation backend-specific
+- [x] Keep presentation backend-specific
 - [ ] Keep swapchain details out of game-facing APIs
-- [ ] Keep presentation preference independent from Vulkan presentation-mode enums
-- [ ] Keep presentation-mode capability separate from presentation policy
+- [x] Keep presentation preference independent from Vulkan presentation-mode enums
+- [x] Keep presentation-mode capability separate from presentation policy
 
 ---
 
