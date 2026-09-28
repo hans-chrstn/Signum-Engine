@@ -196,6 +196,8 @@
 - [x] swapchains
 - [ ] surface formats
 - [ ] presentation modes
+- [ ] presentation preference versus Vulkan presentation mode
+- [ ] FIFO_LATEST_READY behavior and capability requirements
 - [ ] image views
 - [ ] swapchain recreation
 
@@ -203,6 +205,13 @@
 
 - [x] Query swapchain support
 - [x] Select surface format
+- [ ] Define presentation preference policy
+- [ ] Select presentation mode
+- [ ] Support FIFO selection
+- [ ] Support MAILBOX selection with FIFO fallback
+- [ ] Support FIFO_RELAXED selection with FIFO fallback
+- [ ] Support IMMEDIATE selection with safe fallback
+- [ ] Account for FIFO_LATEST_READY in presentation-mode policy
 - [ ] Select presentation mode
 - [ ] Select swap extent
 - [ ] Create swapchain
@@ -215,6 +224,12 @@
 ### Test
 
 - [x] Test format selection
+- [ ] Test VSync presentation-mode selection
+- [ ] Test low-latency presentation-mode selection
+- [ ] Test adaptive presentation-mode selection
+- [ ] Test tearing-enabled presentation-mode selection
+- [ ] Test presentation-mode fallback behavior
+- [ ] Test FIFO_LATEST_READY selection policy
 - [ ] Test presentation-mode selection
 - [ ] Test extent selection
 - [ ] Resize repeatedly
@@ -224,6 +239,8 @@
 
 - [ ] Keep presentation backend-specific
 - [ ] Keep swapchain details out of game-facing APIs
+- [ ] Keep presentation preference independent from Vulkan presentation-mode enums
+- [ ] Keep presentation-mode capability separate from presentation policy
 
 ---
 
@@ -282,6 +299,10 @@
 - [ ] Preserve supported-versus-requested-versus-enabled distinction
 - [ ] Keep optional hardware features optional
 - [ ] Avoid enabling unsupported or unused features
+- [ ] Discover `VK_KHR_present_mode_fifo_latest_ready` support
+- [ ] Discover `presentModeFifoLatestReady` feature support
+- [ ] Enable FIFO_LATEST_READY feature only when requested and supported
+- [ ] Integrate FIFO_LATEST_READY with the logical-device feature chain
 
 ### Logical-Device Contracts
 
@@ -354,6 +375,9 @@
 - [ ] Run Valgrind
 - [ ] Run Clang-Tidy
 - [ ] Run formatting checks
+- [ ] Test FIFO_LATEST_READY capability negotiation
+- [ ] Verify startup when FIFO_LATEST_READY is unsupported
+- [ ] Verify FIFO_LATEST_READY remains optional
 - [ ] Generate Doxygen without new project warnings
 - [ ] Launch with validation enabled
 - [ ] Launch with validation disabled
