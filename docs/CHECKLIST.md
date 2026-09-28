@@ -1179,7 +1179,9 @@
 
 ---
 
-## Phase 25 — Physics### Design
+## Phase 25 — Physics
+
+### Design
 
 - [ ] Define physics abstraction
 - [ ] Keep physics backend replaceable
