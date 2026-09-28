@@ -6,6 +6,7 @@
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
 #include "engine/renderer/vulkan/vulkan_surface.hpp"
+#include "engine/renderer/vulkan/vulkan_swapchain.hpp"
 
 namespace SNE::Engine::Core {
     /**
@@ -24,6 +25,7 @@ namespace SNE::Engine::Core {
         Renderer::Vulkan::VulkanSurface m_VulkanSurface;
         Renderer::Vulkan::PhysicalDeviceCandidate m_PhysicalDeviceCandidate;
         Renderer::Vulkan::VulkanDevice m_VulkanDevice;
+        Renderer::Vulkan::VulkanSwapchain m_VulkanSwapchain;
 
       public:
         /**
@@ -32,10 +34,13 @@ namespace SNE::Engine::Core {
          * Initializes the platform context, creates the primary application
          * window, establishes the Vulkan instance and presentation surface,
          * selects a suitable physical device, creates the Vulkan logical
-         * device, and retrieves the graphics and presentation queues.
+         * device, retrieves the graphics and presentation queues, and creates
+         * the initial presentation swapchain.
          *
          * @throws Error::EngineError if a required platform, window, or Vulkan
          * resource cannot be initialized.
+         * @throws std::logic_error if an internal Vulkan initialization
+         * invariant required for swapchain creation is violated.
          */
         Application();
 

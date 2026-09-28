@@ -1,7 +1,6 @@
 #include "engine/renderer/vulkan/vulkan_queue_families.hpp"
 #include <gtest/gtest.h>
 #include <vector>
-#include <vulkan/vulkan_core.h>
 
 TEST(VulkanQueueFamilyTests, FindGraphicsQueueFamilyReturnsFirstMatchingIndex) {
     VkQueueFamilyProperties test_property{};

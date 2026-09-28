@@ -1,9 +1,12 @@
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/vulkan_swapchain_selection.hpp"
 #include <cstdint>
+#include <exception>
 #include <gtest/gtest.h>
+#include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 namespace Platform = SNE::Engine::Platform;
 namespace Renderer = SNE::Engine::Renderer;
@@ -430,4 +433,85 @@ TEST(VulkanSwapchainSelectionTests,
 
     EXPECT_EQ(selected_extent.width, maximum_extent.width);
     EXPECT_EQ(selected_extent.height, minimum_extent.height);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapchainImageCountReturnsMinimumPlusOneWhenSupported) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.minImageCount = 2U;
+    capabilities.maxImageCount = 3U;
+
+    const std::uint32_t selected =
+        Vulkan::selectSwapchainImageCount(capabilities);
+    EXPECT_EQ(selected, capabilities.minImageCount + 1U);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapchainImageCountClampsToMaximumWhenPreferredCountExceedsMaximum) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.minImageCount = 2U;
+    capabilities.maxImageCount = 2U;
+
+    const std::uint32_t selected =
+        Vulkan::selectSwapchainImageCount(capabilities);
+    EXPECT_EQ(selected, capabilities.maxImageCount);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapchainImageCountReturnsMinimumPlusOneWhenMaximumIsUnbounded) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.minImageCount = 3U;
+    capabilities.maxImageCount = 0U;
+
+    const std::uint32_t selected =
+        Vulkan::selectSwapchainImageCount(capabilities);
+    EXPECT_EQ(selected, capabilities.minImageCount + 1U);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectCompositeAlphaReturnsOpaqueWhenSupported) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.supportedCompositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+
+    EXPECT_EQ(Vulkan::selectCompositeAlpha(capabilities),
+              VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectCompositeAlphaReturnsPreMultipliedWhenOpaqueUnavailable) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.supportedCompositeAlpha =
+        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+
+    EXPECT_EQ(Vulkan::selectCompositeAlpha(capabilities),
+              VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR);
+}
+
+TEST(
+    VulkanSwapchainSelectionTests,
+    SelectCompositeAlphaReturnsPostMultipliedWhenHigherPriorityModesUnavailable) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.supportedCompositeAlpha =
+        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
+
+    EXPECT_EQ(Vulkan::selectCompositeAlpha(capabilities),
+              VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectCompositeAlphaReturnsInheritWhenOnlyInheritSupported) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.supportedCompositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+
+    EXPECT_EQ(Vulkan::selectCompositeAlpha(capabilities),
+              VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR);
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectCompositeAlphaThrowsWhenNoRecognizedModeIsSupported) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.supportedCompositeAlpha = 0U;
+
+    EXPECT_THROW(static_cast<void>(Vulkan::selectCompositeAlpha(capabilities)),
+                 std::logic_error);
 }

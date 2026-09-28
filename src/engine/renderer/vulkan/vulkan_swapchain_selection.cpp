@@ -1,6 +1,7 @@
 #include "vulkan_swapchain_selection.hpp"
 #include <algorithm>
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -89,5 +90,44 @@ namespace SNE::Engine::Renderer::Vulkan {
                            capabilities.minImageExtent.height,
                            capabilities.maxImageExtent.height),
         };
+    }
+
+    auto selectSwapchainImageCount(const VkSurfaceCapabilitiesKHR &capabilities)
+        -> std::uint32_t {
+        const std::uint32_t preferred_count = capabilities.minImageCount + 1U;
+        // A maximum of zero means the surface imposes no explicit image-count
+        // limit.
+        if (capabilities.maxImageCount != 0U &&
+            capabilities.maxImageCount < preferred_count) {
+            return capabilities.maxImageCount;
+        }
+
+        return preferred_count;
+    }
+
+    auto selectCompositeAlpha(const VkSurfaceCapabilitiesKHR &capabilities)
+        -> VkCompositeAlphaFlagBitsKHR {
+        if ((capabilities.supportedCompositeAlpha &
+             VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR) != 0U) {
+            return VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        }
+
+        if ((capabilities.supportedCompositeAlpha &
+             VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR) != 0U) {
+            return VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+        }
+
+        if ((capabilities.supportedCompositeAlpha &
+             VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR) != 0U) {
+            return VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
+        }
+
+        if ((capabilities.supportedCompositeAlpha &
+             VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR) != 0U) {
+            return VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+        }
+
+        throw std::logic_error("VulkanSwapchain could not select a supported "
+                               "composite-alpha mode");
     }
 } // namespace SNE::Engine::Renderer::Vulkan

@@ -24,6 +24,7 @@ add_library(
     engine/renderer/vulkan/vulkan_device.cpp
     engine/renderer/vulkan/vulkan_swapchain_support.cpp
     engine/renderer/vulkan/vulkan_swapchain_selection.cpp
+    engine/renderer/vulkan/vulkan_swapchain.cpp
 )
 
 target_include_directories(

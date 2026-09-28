@@ -39,6 +39,8 @@ namespace SNE::Engine::Core::Error {
             return "VulkanDeviceCreationFailed";
         case Code::VulkanSwapchainSupportQueryFailed:
             return "VulkanSwapchainSupportQueryFailed";
+        case Code::VulkanSwapchainCreationFailed:
+            return "VulkanSwapchainCreationFailed";
         }
         return "Unknown";
     }

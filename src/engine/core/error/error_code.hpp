@@ -50,6 +50,8 @@ namespace SNE::Engine::Core::Error {
         VulkanDeviceCreationFailed,
         /** Query of available Vulkan swapchain support failed. */
         VulkanSwapchainSupportQueryFailed,
+        /** Creation of the Vulkan swapchain failed. */
+        VulkanSwapchainCreationFailed,
     };
 
     /**

@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "engine/core/error/engine_error.hpp"
+#include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
@@ -51,7 +52,13 @@ namespace SNE::Engine::Core {
                          m_PhysicalDeviceCandidate.queue_family_indices,
                          Vulkan::deriveUniqueQueueFamilyRequests(
                              m_PhysicalDeviceCandidate.queue_family_indices),
-                         Vulkan::LogicalDeviceFeatureConfiguration{}) {}
+                         Vulkan::LogicalDeviceFeatureConfiguration{}),
+          m_VulkanSwapchain(m_PhysicalDeviceCandidate.handle,
+                            m_VulkanDevice.nativeHandle(),
+                            m_VulkanSurface.nativeHandle(),
+                            m_PhysicalDeviceCandidate.queue_family_indices,
+                            m_Window.framebufferSize(),
+                            Renderer::PresentationPreference::VSync, false) {}
 
     void Application::run() {
         while (!m_Window.shouldClose()) {

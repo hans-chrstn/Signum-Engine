@@ -2,6 +2,7 @@
 
 #include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include <cstdint>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -89,4 +90,39 @@ namespace SNE::Engine::Renderer::Vulkan {
     selectSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities,
                      const Platform::FramebufferSize &framebuffer_size)
         -> VkExtent2D;
+
+    /**
+     * @brief Selects the number of images to request for the Vulkan swapchain.
+     *
+     * Prefers one more image than the minimum required by the surface to
+     * provide additional buffering when supported. If the surface defines a
+     * maximum image count, the selected count is constrained to that maximum.
+     *
+     * A maximum image count of zero indicates that the surface does not impose
+     * an explicit upper limit.
+     *
+     * @param capabilities Surface capabilities reported for the Vulkan surface.
+     *
+     * @return Number of swapchain images to request during swapchain creation.
+     */
+    [[nodiscard]] auto
+    selectSwapchainImageCount(const VkSurfaceCapabilitiesKHR &capabilities)
+        -> std::uint32_t;
+
+    /**
+     * @brief Selects the composite-alpha mode for the Vulkan swapchain.
+     *
+     * Prefers opaque composition when supported by the surface and otherwise
+     * selects another supported composite-alpha mode.
+     *
+     * @param capabilities Surface capabilities reported for the Vulkan surface.
+     *
+     * @return Composite-alpha mode selected for swapchain creation.
+     *
+     * @throws std::logic_error if no recognized composite-alpha mode is
+     * reported as supported.
+     */
+    [[nodiscard]] auto
+    selectCompositeAlpha(const VkSurfaceCapabilitiesKHR &capabilities)
+        -> VkCompositeAlphaFlagBitsKHR;
 } // namespace SNE::Engine::Renderer::Vulkan
