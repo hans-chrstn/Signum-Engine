@@ -113,14 +113,14 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @brief Selects the composite-alpha mode for the Vulkan swapchain.
      *
      * Prefers opaque composition when supported by the surface and otherwise
-     * selects another supported composite-alpha mode.
+     * selects another recognized supported composite-alpha mode.
      *
      * @param capabilities Surface capabilities reported for the Vulkan surface.
      *
      * @return Composite-alpha mode selected for swapchain creation.
      *
-     * @throws std::logic_error if no recognized composite-alpha mode is
-     * reported as supported.
+     * @note An assertion failure is reported if the supplied capabilities
+     * contain no recognized supported composite-alpha mode.
      */
     [[nodiscard]] auto
     selectCompositeAlpha(const VkSurfaceCapabilitiesKHR &capabilities)

@@ -1,11 +1,13 @@
 #include "vulkan_device.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "vulkan_device_extensions.hpp"
 #include "vulkan_result.hpp"
 #include <cstdint>
-#include <stdexcept>
 #include <string>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -14,14 +16,17 @@ namespace SNE::Engine::Renderer::Vulkan {
         const QueueFamilyIndices &queue_family_indices,
         const std::vector<QueueFamilyRequest> &queue_family_requests,
         const LogicalDeviceFeatureConfiguration &logical_device_configuration) {
-        std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
 
         if (!queue_family_indices.graphics_family.has_value() ||
             !queue_family_indices.presentation_family.has_value()) {
-            // TODO: Replace with custom logic-error diagnostic policy.
-            throw std::logic_error("VulkanDevice requires graphics and "
-                                   "presentation queue families");
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanDevice requires graphics and presentation queue "
+                "families");
         }
+
+        std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
         const std::uint32_t graphics_family =
             queue_family_indices.graphics_family.value();
         const std::uint32_t presentation_family =

@@ -1,12 +1,9 @@
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/vulkan_swapchain_selection.hpp"
 #include <cstdint>
-#include <exception>
 #include <gtest/gtest.h>
-#include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
 
 namespace Platform = SNE::Engine::Platform;
 namespace Renderer = SNE::Engine::Renderer;
@@ -508,10 +505,11 @@ TEST(VulkanSwapchainSelectionTests,
 }
 
 TEST(VulkanSwapchainSelectionTests,
-     SelectCompositeAlphaThrowsWhenNoRecognizedModeIsSupported) {
+     SelectCompositeAlphaFailsWhenNoRecognizedModeIsSupported) {
     VkSurfaceCapabilitiesKHR capabilities{};
     capabilities.supportedCompositeAlpha = 0U;
 
-    EXPECT_THROW(static_cast<void>(Vulkan::selectCompositeAlpha(capabilities)),
-                 std::logic_error);
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::selectCompositeAlpha(capabilities)),
+        "VulkanSwapchain could not select a supported composite-alpha mode");
 }

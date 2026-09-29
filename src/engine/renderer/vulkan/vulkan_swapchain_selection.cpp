@@ -1,7 +1,9 @@
 #include "vulkan_swapchain_selection.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include <algorithm>
 #include <cstdint>
-#include <stdexcept>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -127,7 +129,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             return VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
         }
 
-        throw std::logic_error("VulkanSwapchain could not select a supported "
-                               "composite-alpha mode");
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Invariant,
+            Core::Error::Subsystem::Vulkan,
+            "VulkanSwapchain could not select a supported composite-alpha "
+            "mode");
     }
 } // namespace SNE::Engine::Renderer::Vulkan

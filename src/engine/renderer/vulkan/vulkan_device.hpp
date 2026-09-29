@@ -47,8 +47,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param logical_device_configuration Core Vulkan features selected for
          * logical-device creation.
          *
-         * @throws std::logic_error if required graphics or presentation
-         * queue-family indices are missing.
+         * @pre queue_family_indices contains both graphics and presentation
+         * queue-family indices.
+         *
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * logical device.
          */

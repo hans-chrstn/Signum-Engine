@@ -74,9 +74,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param fifo_latest_ready_enabled Whether FIFO latest-ready
          * presentation is enabled on the logical device.
          *
-         * @throws std::logic_error if required graphics or presentation
-         * queue-family indices are missing or no recognized supported
-         * composite-alpha mode can be selected.
+         * @pre queue_family_indices contains both graphics and presentation
+         * queue-family indices.
+         *
          * @throws Core::Error::EngineError if swapchain support cannot be
          * queried, swapchain creation fails, swapchain images cannot be
          * enumerated, or an image view cannot be created.

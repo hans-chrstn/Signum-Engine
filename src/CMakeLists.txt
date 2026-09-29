@@ -8,6 +8,11 @@ add_library(
     engine/core/error/subsystem.cpp
     engine/core/error/diagnostic_formatter.cpp
     engine/core/error/diagnostic_writer.cpp
+    engine/core/assert/assertion_type.cpp
+    engine/core/assert/assertion_failure.cpp
+    engine/core/assert/assertion_formatter.cpp
+    engine/core/assert/assertion_writer.cpp
+    engine/core/assert/assertion_handler.cpp
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp

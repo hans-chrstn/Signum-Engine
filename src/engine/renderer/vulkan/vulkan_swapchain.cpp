@@ -1,13 +1,15 @@
 #include "vulkan_swapchain.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "vulkan_result.hpp"
 #include "vulkan_swapchain_selection.hpp"
 #include "vulkan_swapchain_support.hpp"
 #include <array>
 #include <cstdint>
-#include <stdexcept>
 #include <string>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -18,6 +20,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         PresentationPreference presentation_preference,
         bool fifo_latest_ready_enabled)
         : m_Device(logical_device) {
+        if (!queue_family_indices.graphics_family.has_value() ||
+            !queue_family_indices.presentation_family.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanSwapchain requires graphics and presentation queue "
+                "families");
+        }
+
         const SwapchainSupportDetails swapchain_support =
             querySwapchainSupport(physical_device, surface);
 
@@ -34,12 +45,6 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const std::uint32_t selected_swapchain_image_count =
             selectSwapchainImageCount(swapchain_support.surface_capabilities);
-
-        if (!queue_family_indices.graphics_family.has_value() ||
-            !queue_family_indices.presentation_family.has_value()) {
-            throw std::logic_error("VulkanSwapchain requires graphics and "
-                                   "presentation queue families");
-        }
 
         const std::uint32_t queue_graphics_index =
             queue_family_indices.graphics_family.value();

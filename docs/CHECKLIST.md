@@ -198,7 +198,7 @@
 - [x] presentation modes
 - [x] presentation preference versus Vulkan presentation mode
 - [x] FIFO_LATEST_READY behavior and capability requirements
-- [ ] image views
+- [x] image views
 - [ ] swapchain recreation
 
 ### Implement
@@ -250,8 +250,8 @@
 
 ### Learn
 
-- [ ] programmer errors versus runtime failures
-- [ ] assertions and contract violations
+- [x] programmer errors versus runtime failures
+- [x] assertions and contract violations
 - [ ] development versus production diagnostics
 - [ ] Vulkan feature chains
 - [ ] Vulkan `pNext` composition
@@ -261,14 +261,14 @@
 
 ### Error and Contract Foundation
 
-- [ ] Define programmer-contract failure policy
-- [ ] Define runtime-failure policy
-- [ ] Define assertion policy
-- [ ] Separate programmer errors from runtime/environment failures
-- [ ] Replace temporary `std::logic_error` handling in `VulkanDevice`
+- [x] Define programmer-contract failure policy
+- [x] Define runtime-failure policy
+- [x] Define assertion policy
+- [x] Separate programmer errors from runtime/environment failures
+- [x] Replace temporary `std::logic_error` handling in `VulkanDevice`
 - [ ] Remove unnecessary narrow storage from engine error codes
-- [ ] Preserve structured diagnostics for runtime failures
-- [ ] Prevent programmer errors from masquerading as hardware failures
+- [x] Preserve structured diagnostics for runtime failures
+- [x] Prevent programmer errors from masquerading as hardware failures
 
 ### Application Configuration
 
@@ -308,14 +308,14 @@
 
 ### Logical-Device Contracts
 
-- [ ] Define `VulkanDevice` constructor preconditions
-- [ ] Validate required graphics queue-family availability
-- [ ] Validate required presentation queue-family availability
+- [x] Define `VulkanDevice` constructor preconditions
+- [x] Validate required graphics queue-family availability
+- [x] Validate required presentation queue-family availability
 - [ ] Ensure queue requests contain required queue families
-- [ ] Ensure queue request generation cannot produce duplicates
-- [ ] Keep queue-request derivation pure and testable
-- [ ] Document queue-handle ownership
-- [ ] Keep retrieved queues non-owning
+- [x] Ensure queue request generation cannot produce duplicates
+- [x] Keep queue-request derivation pure and testable
+- [x] Document queue-handle ownership
+- [x] Keep retrieved queues non-owning
 
 ### Runtime Lifecycle Audit
 
@@ -326,7 +326,7 @@
 - [ ] Add null-handle guards where they improve real lifecycle safety
 - [ ] Avoid checks that merely hide programmer errors
 - [ ] Verify native-handle accessors remain non-owning
-- [ ] Verify swapchain recreation uses current surface state
+- [x] Verify swapchain recreation uses current surface state
 
 ### Integration-Test Foundation
 
@@ -365,18 +365,18 @@
 - [ ] Reconcile checklist with repository state
 - [ ] Distinguish implemented from verified functionality
 - [ ] Distinguish automated from manual verification where useful
-- [ ] Remove stale TODOs after policies replace them
-- [ ] Update Doxygen for changed configuration and ownership contracts
+- [x] Remove stale TODOs after policies replace them
+- [x] Update Doxygen for changed configuration and ownership contracts
 
 ### Test
 
-- [ ] Run clean Debug build
-- [ ] Run unit tests
-- [ ] Run supported integration tests
-- [ ] Run ASan/UBSan
-- [ ] Run Valgrind
-- [ ] Run Clang-Tidy
-- [ ] Run formatting checks
+- [x] Run clean Debug build
+- [x] Run unit tests
+- [x] Run supported integration tests
+- [x] Run ASan/UBSan
+- [x] Run Valgrind
+- [x] Run Clang-Tidy
+- [x] Run formatting checks
 - [ ] Test FIFO_LATEST_READY capability negotiation
 - [ ] Verify startup when FIFO_LATEST_READY is unsupported
 - [ ] Verify FIFO_LATEST_READY remains optional

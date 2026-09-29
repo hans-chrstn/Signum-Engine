@@ -39,8 +39,6 @@ namespace SNE::Engine::Core {
          *
          * @throws Error::EngineError if a required platform, window, or Vulkan
          * resource cannot be initialized.
-         * @throws std::logic_error if an internal Vulkan initialization
-         * invariant required for swapchain creation is violated.
          */
         Application();
 

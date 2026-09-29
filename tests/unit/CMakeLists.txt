@@ -6,6 +6,11 @@ add_executable(
   core/error/diagnostic_formatter_tests.cpp
   core/error/diagnostic_writer_tests.cpp
   core/error/subsystem_tests.cpp
+  core/assert/assertion_type_tests.cpp
+  core/assert/assertion_failure_tests.cpp
+  core/assert/assertion_formatter_tests.cpp
+  core/assert/assertion_writer_tests.cpp
+  core/assert/assertion_handler_tests.cpp
   renderer/vulkan/vulkan_result_tests.cpp
   renderer/vulkan/vulkan_extension_support_tests.cpp
   renderer/vulkan/vulkan_queue_families_tests.cpp
@@ -13,6 +18,8 @@ add_executable(
   renderer/vulkan/vulkan_api_version_tests.cpp
   renderer/vulkan/vulkan_queue_requests_tests.cpp
   renderer/vulkan/vulkan_swapchain_selection_tests.cpp
+  renderer/vulkan/vulkan_device_tests.cpp
+  renderer/vulkan/vulkan_swapchain_tests.cpp
 )
 
 target_link_libraries(
