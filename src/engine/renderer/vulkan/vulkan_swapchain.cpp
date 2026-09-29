@@ -5,6 +5,8 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/platform/window.hpp"
+#include "vulkan_queue_families.hpp"
 #include "vulkan_result.hpp"
 #include "vulkan_swapchain_selection.hpp"
 #include "vulkan_swapchain_support.hpp"

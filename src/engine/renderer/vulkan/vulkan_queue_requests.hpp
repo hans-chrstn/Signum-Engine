@@ -1,10 +1,11 @@
 #pragma once
 
-#include "vulkan_queue_families.hpp"
 #include <cstdint>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    struct QueueFamilyIndices;
+
     /**
      * @brief Describes a queue family requested for logical-device creation.
      *

@@ -1,3 +1,4 @@
+#include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/vulkan_swapchain_selection.hpp"
 #include <cstdint>

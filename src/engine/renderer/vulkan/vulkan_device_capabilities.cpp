@@ -38,18 +38,32 @@ namespace SNE::Engine::Renderer::Vulkan {
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
         acceleration_feature.pNext = &ray_tracing_pipeline_feature;
 
+        VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR
+            fifo_latest_ready_feature{};
+        fifo_latest_ready_feature.sType =
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_MODE_FIFO_LATEST_READY_FEATURES_KHR;
+        fifo_latest_ready_feature.pNext = &acceleration_feature;
+
         VkPhysicalDeviceFeatures2 features{};
         features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-        features.pNext = &acceleration_feature;
+        features.pNext = &fifo_latest_ready_feature;
 
         vkGetPhysicalDeviceFeatures2(device, &features);
 
+        bool has_fifo_latest_ready_extension_support = false;
         bool has_acceleration_structure_support = false;
         bool has_ray_tracing_pipeline_support = false;
         bool has_ray_query_support = false;
 
         for (const VkExtensionProperties &extension_property :
              extension_properties) {
+            if (std::strcmp(
+                    extension_property.extensionName,
+                    VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME) ==
+                0) {
+                has_fifo_latest_ready_extension_support = true;
+            }
+
             if (std::strcmp(extension_property.extensionName,
                             VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) ==
                 0) {
@@ -82,7 +96,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             .ray_query_supported =
                 acceleration_structures_supported && has_ray_query_support &&
                 static_cast<bool>(ray_query_feature.rayQuery),
-        };
+            .fifo_latest_ready_extension_supported =
+                has_fifo_latest_ready_extension_support,
+            .fifo_latest_ready_feature_supported = static_cast<bool>(
+                fifo_latest_ready_feature.presentModeFifoLatestReady)};
 
         return result;
     }

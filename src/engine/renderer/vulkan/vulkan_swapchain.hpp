@@ -1,12 +1,16 @@
 #pragma once
 
-#include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
-#include "vulkan_queue_families.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 
+namespace SNE::Engine::Platform {
+    struct FramebufferSize;
+}
+
 namespace SNE::Engine::Renderer::Vulkan {
+    struct QueueFamilyIndices;
+
     /**
      * @brief Owns a Vulkan swapchain and its presentation image views.
      *

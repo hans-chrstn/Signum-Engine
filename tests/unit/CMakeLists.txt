@@ -20,6 +20,7 @@ add_executable(
   renderer/vulkan/vulkan_swapchain_selection_tests.cpp
   renderer/vulkan/vulkan_device_tests.cpp
   renderer/vulkan/vulkan_swapchain_tests.cpp
+  renderer/vulkan/vulkan_device_features_tests.cpp
 )
 
 target_link_libraries(

@@ -1,4 +1,5 @@
 #include "vulkan_queue_requests.hpp"
+#include "vulkan_queue_families.hpp"
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {

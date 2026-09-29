@@ -2,10 +2,13 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
-#include "engine/renderer/vulkan/vulkan_result.hpp"
+#include "vulkan_device_features.hpp"
+#include "vulkan_result.hpp"
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace {
     const std::vector<const char *> kRequiredDeviceExtensions{
@@ -63,5 +66,21 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto requiredDeviceExtensions() -> const std::vector<const char *> & {
         return kRequiredDeviceExtensions;
+    }
+
+    auto deriveEnabledDeviceExtensions(
+        const LogicalDeviceFeatureConfiguration &configuration)
+        -> std::vector<const char *> {
+        std::vector<const char *> extensions = requiredDeviceExtensions();
+
+        extensions.reserve(extensions.size() + 1);
+
+        if (configuration.fifo_latest_ready_feature
+                .presentModeFifoLatestReady == VK_TRUE) {
+            extensions.push_back(
+                VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME);
+        }
+
+        return extensions;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

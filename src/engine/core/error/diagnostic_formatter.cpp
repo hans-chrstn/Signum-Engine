@@ -1,4 +1,5 @@
 #include "diagnostic_formatter.hpp"
+#include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include <sstream>

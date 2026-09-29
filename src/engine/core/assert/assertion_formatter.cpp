@@ -1,5 +1,6 @@
 #include "assertion_formatter.hpp"
-#include "engine/core/assert/assertion_type.hpp"
+#include "assertion_failure.hpp"
+#include "assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include <source_location>
 #include <sstream>

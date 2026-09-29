@@ -6,9 +6,13 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "vulkan_device_extensions.hpp"
+#include "vulkan_device_features.hpp"
+#include "vulkan_queue_families.hpp"
 #include "vulkan_result.hpp"
+#include <algorithm>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanDevice::VulkanDevice(
@@ -26,11 +30,32 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "families");
         }
 
-        std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
         const std::uint32_t graphics_family =
             queue_family_indices.graphics_family.value();
         const std::uint32_t presentation_family =
             queue_family_indices.presentation_family.value();
+
+        const bool has_graphics_request = std::ranges::any_of(
+            queue_family_requests,
+            [graphics_family](const QueueFamilyRequest &request) -> bool {
+                return request.family_index == graphics_family;
+            });
+
+        const bool has_presentation_request = std::ranges::any_of(
+            queue_family_requests,
+            [presentation_family](const QueueFamilyRequest &request) -> bool {
+                return request.family_index == presentation_family;
+            });
+
+        if (!has_graphics_request || !has_presentation_request) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanDevice requires queue requests for graphics and "
+                "presentation families");
+        }
+
+        std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
         queue_create_infos.reserve(queue_family_requests.size());
 
         const float queue_priority = 1.0F;
@@ -46,9 +71,19 @@ namespace SNE::Engine::Renderer::Vulkan {
             queue_create_infos.push_back(queue_create_info);
         }
 
+        LogicalDeviceFeatureConfiguration creation_features =
+            logical_device_configuration;
+        creation_features.feature_chain_root.pNext = nullptr;
+        creation_features.fifo_latest_ready_feature.pNext = nullptr;
+        if (creation_features.fifo_latest_ready_feature
+                .presentModeFifoLatestReady == VK_TRUE) {
+            creation_features.feature_chain_root.pNext =
+                &creation_features.fifo_latest_ready_feature;
+        }
+
         VkDeviceCreateInfo device_create_info{};
-        const std::vector<const char *> &extensions =
-            requiredDeviceExtensions();
+        const std::vector<const char *> extensions =
+            deriveEnabledDeviceExtensions(logical_device_configuration);
         device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         device_create_info.queueCreateInfoCount =
             static_cast<std::uint32_t>(queue_create_infos.size());
@@ -56,8 +91,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         device_create_info.enabledExtensionCount =
             static_cast<std::uint32_t>(extensions.size());
         device_create_info.ppEnabledExtensionNames = extensions.data();
-        device_create_info.pEnabledFeatures =
-            &logical_device_configuration.core_features;
+        device_create_info.pNext = &creation_features.feature_chain_root;
+        device_create_info.pEnabledFeatures = nullptr;
 
         const VkResult result = vkCreateDevice(
             physical_device, &device_create_info, nullptr, &m_Device);

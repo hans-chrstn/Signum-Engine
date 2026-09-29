@@ -1,23 +1,25 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
-     * @brief Owns the engine's Vulkan instance and instance-level debug
-     * messenger.
+     * @brief Owns the engine's Vulkan instance and optional debug messenger.
      *
-     * Construction validates the required instance configuration, creates the
-     * Vulkan instance, and establishes the debug messenger used by the
-     * validation system.
+     * Construction validates the required instance configuration and creates
+     * the Vulkan instance. When development diagnostics are enabled, Vulkan
+     * validation, debug-utils support, and the instance-level debug messenger
+     * are also enabled.
      *
-     * The Vulkan instance uses the instance extensions required by GLFW
-     * together with the Vulkan debug-utils extension.
+     * The Vulkan instance always enables the instance extensions required by
+     * the platform. Diagnostic extensions and layers are enabled only when
+     * requested by application policy.
      *
-     * Destruction releases the debug messenger before destroying the Vulkan
-     * instance.
+     * Destruction releases the debug messenger when present before destroying
+     * the Vulkan instance.
      *
      * The type is non-copyable because it exclusively owns Vulkan handles.
      */
@@ -25,9 +27,11 @@ namespace SNE::Engine::Renderer::Vulkan {
       private:
         VkInstance m_Instance{VK_NULL_HANDLE};
         VkDebugUtilsMessengerEXT m_DebugMessenger{VK_NULL_HANDLE};
-        auto createInstance() -> void;
+        auto createInstance(const std::string &application_name,
+                            bool development_diagnostics_enabled) -> void;
         [[nodiscard]] static auto checkValidationLayerSupport() -> bool;
-        [[nodiscard]] static auto getRequiredExtensions()
+        [[nodiscard]] static auto
+        getRequiredExtensions(bool development_diagnostics_enabled)
             -> std::vector<const char *>;
         auto setupDebugMessenger() -> void;
         static VKAPI_ATTR VkBool32 VKAPI_CALL
@@ -45,14 +49,25 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates the engine's Vulkan instance and debug messenger.
+         * @brief Creates the engine's Vulkan instance and optional debug
+         * messenger.
          *
-         * @throws Core::Error::EngineError if validation-layer discovery,
-         * required-extension discovery or validation, API-version discovery or
-         * validation, Vulkan instance creation, or debug-messenger creation
-         * fails.
+         * Uses the supplied application name when populating Vulkan application
+         * metadata during instance creation. Development diagnostics control
+         * whether Vulkan validation support, debug-utils functionality, and the
+         * instance-level debug messenger are enabled.
+         *
+         * @param application_name Name reported to Vulkan for the application.
+         * @param development_diagnostics_enabled Whether development-oriented
+         * Vulkan diagnostics should be enabled.
+         *
+         * @throws Core::Error::EngineError if required instance configuration,
+         *         extension discovery or validation, API-version discovery or
+         *         validation, Vulkan instance creation, or enabled diagnostic
+         *         setup fails.
          */
-        VulkanInstance();
+        explicit VulkanInstance(const std::string &application_name,
+                                bool development_diagnostics_enabled);
 
         /**
          * @brief Releases the Vulkan resources owned by this object.

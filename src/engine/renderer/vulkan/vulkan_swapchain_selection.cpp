@@ -2,6 +2,7 @@
 #include "engine/core/assert/assertion_handler.hpp"
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/platform/window.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <vector>

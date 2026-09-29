@@ -1,8 +1,10 @@
 #pragma once
 
+#include "application_configuration.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/vulkan/vulkan_device.hpp"
+#include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
 #include "engine/renderer/vulkan/vulkan_surface.hpp"
@@ -19,11 +21,14 @@ namespace SNE::Engine::Core {
      */
     class Application {
       private:
+        ApplicationConfiguration m_Configuration;
         Platform::GlfwContext m_GlfwContext;
         Platform::Window m_Window;
         Renderer::Vulkan::VulkanInstance m_VulkanInstance;
         Renderer::Vulkan::VulkanSurface m_VulkanSurface;
         Renderer::Vulkan::PhysicalDeviceCandidate m_PhysicalDeviceCandidate;
+        Renderer::Vulkan::LogicalDeviceFeatureConfiguration
+            m_LogicalDeviceFeatureConfiguration;
         Renderer::Vulkan::VulkanDevice m_VulkanDevice;
         Renderer::Vulkan::VulkanSwapchain m_VulkanSwapchain;
 
@@ -31,16 +36,21 @@ namespace SNE::Engine::Core {
         /**
          * @brief Constructs the application and its engine-wide resources.
          *
-         * Initializes the platform context, creates the primary application
-         * window, establishes the Vulkan instance and presentation surface,
-         * selects a suitable physical device, creates the Vulkan logical
-         * device, retrieves the graphics and presentation queues, and creates
-         * the initial presentation swapchain.
+         * Stores the supplied application configuration, initializes the
+         * platform context, creates the primary application window, establishes
+         * the Vulkan instance and presentation surface, selects a suitable
+         * physical device, creates the Vulkan logical device, retrieves the
+         * graphics and presentation queues, and creates the initial
+         * presentation swapchain.
+         *
+         * @param configuration Top-level configuration controlling application
+         * startup policy. The default value uses Signum's standard application
+         * settings.
          *
          * @throws Error::EngineError if a required platform, window, or Vulkan
-         * resource cannot be initialized.
+         *         resource cannot be initialized.
          */
-        Application();
+        explicit Application(ApplicationConfiguration configuration = {});
 
         /**
          * @brief Runs the application's primary event loop.

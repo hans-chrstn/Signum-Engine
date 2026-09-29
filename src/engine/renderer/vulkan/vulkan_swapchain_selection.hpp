@@ -1,10 +1,13 @@
 #pragma once
 
-#include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include <cstdint>
 #include <vector>
 #include <vulkan/vulkan.h>
+
+namespace SNE::Engine::Platform {
+    struct FramebufferSize;
+}
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**

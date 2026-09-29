@@ -1,9 +1,9 @@
 #pragma once
 
-#include "engine_error.hpp"
-#include <ostream>
+#include <iosfwd>
 
 namespace SNE::Engine::Core::Error {
+    class EngineError;
     /**
      * @brief Writes an engine error as a formatted diagnostic.
      *

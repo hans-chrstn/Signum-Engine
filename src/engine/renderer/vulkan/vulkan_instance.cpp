@@ -17,11 +17,14 @@ namespace SNE::Engine::Renderer::Vulkan {
     // Instance creation succeeds before debug-messenger creation. If the latter
     // fails, release the already-created Vulkan instance before propagating the
     // exception so construction remains leak-free.
-    VulkanInstance::VulkanInstance() {
-        createInstance();
+    VulkanInstance::VulkanInstance(const std::string &application_name,
+                                   bool development_diagnostics_enabled) {
+        createInstance(application_name, development_diagnostics_enabled);
 
         try {
-            setupDebugMessenger();
+            if (development_diagnostics_enabled) {
+                setupDebugMessenger();
+            }
         } catch (...) {
             vkDestroyInstance(m_Instance, nullptr);
             m_Instance = VK_NULL_HANDLE;
@@ -29,18 +32,21 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
-    auto VulkanInstance::createInstance() -> void {
-        const bool layer_support = checkValidationLayerSupport();
-        if (!layer_support) {
-            throw Core::Error::EngineError(
-                Core::Error::Code::VulkanValidationLayerUnavailable,
-                "Vulkan instance has no validation layer support",
-                "Check Vulkan Validation Layer Support");
+    auto VulkanInstance::createInstance(const std::string &application_name,
+                                        bool development_diagnostics_enabled)
+        -> void {
+        if (development_diagnostics_enabled) {
+            const bool layer_support = checkValidationLayerSupport();
+            if (!layer_support) {
+                throw Core::Error::EngineError(
+                    Core::Error::Code::VulkanValidationLayerUnavailable,
+                    "Vulkan instance has no validation layer support",
+                    "Check Vulkan Validation Layer Support");
+            }
         }
-
         VkApplicationInfo application_info{};
         application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        application_info.pApplicationName = "Signum Editor";
+        application_info.pApplicationName = application_name.c_str();
         application_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
         application_info.pEngineName = "Signum Engine";
         application_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
@@ -55,7 +61,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
         application_info.apiVersion = kRequiredApiVersion;
 
-        const std::vector<const char *> extensions = getRequiredExtensions();
+        const std::vector<const char *> extensions =
+            getRequiredExtensions(development_diagnostics_enabled);
         const bool extension_support =
             checkRequiredExtensionSupport(extensions);
         if (!extension_support) {
@@ -75,13 +82,20 @@ namespace SNE::Engine::Renderer::Vulkan {
         instance_create_info.ppEnabledExtensionNames = extensions.data();
         instance_create_info.enabledExtensionCount =
             static_cast<std::uint32_t>(extensions.size());
-        instance_create_info.ppEnabledLayerNames = &kValidationLayerName;
-        instance_create_info.enabledLayerCount = 1;
 
-        // Chain the debug-messenger configuration into instance creation so
-        // validation messages can be captured during vkCreateInstance and
-        // vkDestroyInstance as well as during the normal instance lifetime.
-        instance_create_info.pNext = &debug_create_info;
+        if (development_diagnostics_enabled) {
+            instance_create_info.ppEnabledLayerNames = &kValidationLayerName;
+            instance_create_info.enabledLayerCount = 1;
+
+            // Chain the debug-messenger configuration into instance creation so
+            // validation messages can be captured during vkCreateInstance and
+            // vkDestroyInstance as well as during the normal instance lifetime.
+            instance_create_info.pNext = &debug_create_info;
+        } else {
+            instance_create_info.ppEnabledLayerNames = nullptr;
+            instance_create_info.enabledLayerCount = 0;
+            instance_create_info.pNext = nullptr;
+        }
 
         const VkResult result =
             vkCreateInstance(&instance_create_info, nullptr, &m_Instance);
@@ -150,7 +164,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         return false;
     }
 
-    auto VulkanInstance::getRequiredExtensions() -> std::vector<const char *> {
+    auto
+    VulkanInstance::getRequiredExtensions(bool development_diagnostics_enabled)
+        -> std::vector<const char *> {
         std::uint32_t glfw_extension_count{};
         const char **glfw_extensions =
             glfwGetRequiredInstanceExtensions(&glfw_extension_count);
@@ -168,9 +184,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             required_extensions.push_back(glfw_extensions[i]);
         }
 
-        // The debug-utils extension is required for the validation debug
-        // messenger created by this class.
-        required_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        if (development_diagnostics_enabled) {
+            required_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
 
         return required_extensions;
     }

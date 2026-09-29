@@ -1,8 +1,9 @@
 #pragma once
-#include "assertion_failure.hpp"
+
 #include <string>
 
 namespace SNE::Engine::Core::Assertion {
+    class AssertionFailure;
     /**
      * @brief Formats an assertion failure as a human-readable diagnostic
      * report.

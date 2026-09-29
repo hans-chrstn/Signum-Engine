@@ -1,6 +1,5 @@
 #include "application.hpp"
 #include "engine/core/error/engine_error.hpp"
-#include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
@@ -13,11 +12,6 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Error = SNE::Engine::Core::Error;
 
 namespace {
-    constexpr SNE::Engine::Platform::WindowSize kInitialWindowSize{
-        .width = 600,
-        .height = 400,
-    };
-
     [[nodiscard]] auto selectRequiredPhysicalDevice(VkInstance instance,
                                                     VkSurfaceKHR surface)
         -> Vulkan::PhysicalDeviceCandidate {
@@ -42,23 +36,34 @@ namespace {
 } // namespace
 
 namespace SNE::Engine::Core {
-    Application::Application()
-        : m_Window(kInitialWindowSize, "Signum Editor"),
+    Application::Application(ApplicationConfiguration configuration)
+        : m_Configuration(std::move(configuration)),
+          m_Window(m_Configuration.initial_window_size,
+                   m_Configuration.application_name),
+          m_VulkanInstance(m_Configuration.application_name,
+                           m_Configuration.development_diagnostics_enabled),
           m_VulkanSurface(m_VulkanInstance.nativeHandle(),
                           m_Window.nativeHandle()),
           m_PhysicalDeviceCandidate(selectRequiredPhysicalDevice(
               m_VulkanInstance.nativeHandle(), m_VulkanSurface.nativeHandle())),
+          m_LogicalDeviceFeatureConfiguration(
+              Vulkan::deriveLogicalDeviceFeatureConfiguration(
+                  Vulkan::deriveLogicalDeviceFeatureRequest(
+                      m_Configuration.presentation_preference),
+                  m_PhysicalDeviceCandidate.capabilities)),
           m_VulkanDevice(m_PhysicalDeviceCandidate.handle,
                          m_PhysicalDeviceCandidate.queue_family_indices,
                          Vulkan::deriveUniqueQueueFamilyRequests(
                              m_PhysicalDeviceCandidate.queue_family_indices),
-                         Vulkan::LogicalDeviceFeatureConfiguration{}),
-          m_VulkanSwapchain(m_PhysicalDeviceCandidate.handle,
-                            m_VulkanDevice.nativeHandle(),
-                            m_VulkanSurface.nativeHandle(),
-                            m_PhysicalDeviceCandidate.queue_family_indices,
-                            m_Window.framebufferSize(),
-                            Renderer::PresentationPreference::VSync, false) {}
+                         m_LogicalDeviceFeatureConfiguration),
+          m_VulkanSwapchain(
+              m_PhysicalDeviceCandidate.handle, m_VulkanDevice.nativeHandle(),
+              m_VulkanSurface.nativeHandle(),
+              m_PhysicalDeviceCandidate.queue_family_indices,
+              m_Window.framebufferSize(),
+              m_Configuration.presentation_preference,
+              m_LogicalDeviceFeatureConfiguration.fifo_latest_ready_feature
+                      .presentModeFifoLatestReady == VK_TRUE) {}
 
     void Application::run() {
         while (!m_Window.shouldClose()) {

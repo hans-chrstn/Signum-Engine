@@ -20,6 +20,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         bool ray_tracing_pipeline_supported = false;
         /** Whether Vulkan ray-query functionality is supported. */
         bool ray_query_supported = false;
+        /** Whether the FIFO latest-ready device extension is supported. */
+        bool fifo_latest_ready_extension_supported = false;
+        /** Whether FIFO latest-ready presentation is supported by the device.
+         */
+        bool fifo_latest_ready_feature_supported = false;
     };
 
     /**
@@ -74,9 +79,9 @@ namespace SNE::Engine::Renderer::Vulkan {
      * does not require for physical-device suitability or renderer startup.
      *
      * Combines Vulkan feature support with the supplied device-extension
-     * information to determine whether optional capabilities such as
-     * acceleration structures, ray-tracing pipelines, and ray queries are
-     * reported as supported.
+     * information to determine whether optional capabilities such as FIFO
+     * latest-ready presentation, acceleration structures, ray-tracing
+     * pipelines, and ray queries are reported as supported.
      *
      * @param device Physical device whose optional capabilities are queried.
      * @param extension_properties Device extensions previously discovered for

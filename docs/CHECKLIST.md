@@ -252,10 +252,10 @@
 
 - [x] programmer errors versus runtime failures
 - [x] assertions and contract violations
-- [ ] development versus production diagnostics
-- [ ] Vulkan feature chains
-- [ ] Vulkan `pNext` composition
-- [ ] application configuration
+- [x] development versus production diagnostics
+- [x] Vulkan feature chains
+- [x] Vulkan `pNext` composition
+- [x] application configuration
 - [ ] continuous integration fundamentals
 - [ ] integration-test environment requirements
 
@@ -272,46 +272,46 @@
 
 ### Application Configuration
 
-- [ ] Define minimal application configuration
-- [ ] Move application name out of Vulkan implementation
-- [ ] Move initial window settings out of hard-coded engine initialization
-- [ ] Define development-diagnostic configuration
-- [ ] Define validation-layer configuration
-- [ ] Define Vulkan debug-messenger configuration
-- [ ] Keep configuration requirement-driven
-- [ ] Avoid global configuration registries
+- [x] Define minimal application configuration
+- [x] Move application name out of Vulkan implementation
+- [x] Move initial window settings out of hard-coded engine initialization
+- [x] Define development-diagnostic configuration
+- [x] Define validation-layer configuration
+- [x] Define Vulkan debug-messenger configuration
+- [x] Keep configuration requirement-driven
+- [x] Avoid global configuration registries
 
 ### Vulkan Validation Configuration
 
-- [ ] Require validation for normal development configurations
-- [ ] Allow validation to be disabled for production
-- [ ] Do not require validation layers for production startup
-- [ ] Enable debug-utils only when needed
-- [ ] Preserve validation reporting during instance creation and destruction
-- [ ] Verify startup with validation enabled
-- [ ] Verify startup with validation disabled
+- [x] Require validation for normal development configurations
+- [x] Allow validation to be disabled for production
+- [x] Do not require validation layers for production startup
+- [x] Enable debug-utils only when needed
+- [x] Preserve validation reporting during instance creation and destruction
+- [x] Verify startup with validation enabled
+- [x] Verify startup with validation disabled
 
 ### Vulkan Feature Configuration
 
-- [ ] Replace legacy logical-device feature enablement model
-- [ ] Introduce `VkPhysicalDeviceFeatures2` configuration
-- [ ] Define owned feature-chain lifetime
+- [x] Replace legacy logical-device feature enablement model
+- [x] Introduce `VkPhysicalDeviceFeatures2` configuration
+- [x] Define owned feature-chain lifetime
 - [ ] Support Vulkan-version feature structures when needed
-- [ ] Support optional extension feature structures when needed
-- [ ] Preserve supported-versus-requested-versus-enabled distinction
-- [ ] Keep optional hardware features optional
-- [ ] Avoid enabling unsupported or unused features
-- [ ] Discover `VK_KHR_present_mode_fifo_latest_ready` support
-- [ ] Discover `presentModeFifoLatestReady` feature support
-- [ ] Enable FIFO_LATEST_READY feature only when requested and supported
-- [ ] Integrate FIFO_LATEST_READY with the logical-device feature chain
+- [x] Support optional extension feature structures when needed
+- [x] Preserve supported-versus-requested-versus-enabled distinction
+- [x] Keep optional hardware features optional
+- [x] Avoid enabling unsupported or unused features
+- [x] Discover `VK_KHR_present_mode_fifo_latest_ready` support
+- [x] Discover `presentModeFifoLatestReady` feature support
+- [x] Enable FIFO_LATEST_READY feature only when requested and supported
+- [x] Integrate FIFO_LATEST_READY with the logical-device feature chain
 
 ### Logical-Device Contracts
 
 - [x] Define `VulkanDevice` constructor preconditions
 - [x] Validate required graphics queue-family availability
 - [x] Validate required presentation queue-family availability
-- [ ] Ensure queue requests contain required queue families
+- [x] Ensure queue requests contain required queue families
 - [x] Ensure queue request generation cannot produce duplicates
 - [x] Keep queue-request derivation pure and testable
 - [x] Document queue-handle ownership
@@ -335,7 +335,7 @@
 - [ ] Skip unsupported Vulkan environments cleanly
 - [ ] Skip hardware tests when no physical device is available
 - [ ] Distinguish unsupported environment from test failure
-- [ ] Keep deterministic policy in unit tests
+- [x] Keep deterministic policy in unit tests
 - [ ] Keep driver/runtime behavior in integration tests
 
 ### Continuous Integration
@@ -377,25 +377,25 @@
 - [x] Run Valgrind
 - [x] Run Clang-Tidy
 - [x] Run formatting checks
-- [ ] Test FIFO_LATEST_READY capability negotiation
+- [x] Test FIFO_LATEST_READY capability negotiation
 - [ ] Verify startup when FIFO_LATEST_READY is unsupported
-- [ ] Verify FIFO_LATEST_READY remains optional
+- [x] Verify FIFO_LATEST_READY remains optional
 - [ ] Generate Doxygen without new project warnings
-- [ ] Launch with validation enabled
-- [ ] Launch with validation disabled
-- [ ] Verify clean startup and shutdown
+- [x] Launch with validation enabled
+- [x] Launch with validation disabled
+- [x] Verify clean startup and shutdown
 
 ### Architecture
 
 - [ ] Preserve explicit RAII ownership
-- [ ] Preserve discovery-versus-policy separation
-- [ ] Preserve supported-versus-enabled feature separation
+- [x] Preserve discovery-versus-policy separation
+- [x] Preserve supported-versus-enabled feature separation
 - [ ] Keep Vulkan inside the Vulkan backend
 - [ ] Keep diagnostics independent from output sinks
-- [ ] Keep developer tooling removable from production
-- [ ] Keep configuration small and explicit
-- [ ] Avoid speculative interfaces
-- [ ] Avoid premature subsystem splitting
+- [x] Keep developer tooling removable from production
+- [x] Keep configuration small and explicit
+- [x] Avoid speculative interfaces
+- [x] Avoid premature subsystem splitting
 
 ---
 

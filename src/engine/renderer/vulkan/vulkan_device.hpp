@@ -1,11 +1,12 @@
 #pragma once
-#include "vulkan_device_features.hpp"
-#include "vulkan_queue_families.hpp"
 #include "vulkan_queue_requests.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    struct QueueFamilyIndices;
+    struct LogicalDeviceFeatureConfiguration;
+
     /**
      * @brief Owns the engine's Vulkan logical device.
      *
@@ -36,7 +37,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * Creates one queue from each requested queue family, enables the
          * Vulkan device extensions required by Signum, and enables the supplied
-         * core feature configuration.
+         * logical-device feature configuration.
          *
          * @param physical_device Physical device from which the logical device
          * is created.
@@ -44,11 +45,13 @@ namespace SNE::Engine::Renderer::Vulkan {
          * indices used to retrieve their corresponding queues.
          * @param queue_family_requests Unique queue families from which queues
          * are requested.
-         * @param logical_device_configuration Core Vulkan features selected for
-         * logical-device creation.
+         * @param logical_device_configuration Vulkan features selected for
+         *                                     logical-device creation.
          *
          * @pre queue_family_indices contains both graphics and presentation
-         * queue-family indices.
+         *      queue-family indices.
+         * @pre queue_family_requests contains requests for both the graphics
+         * and presentation queue families identified by queue_family_indices.
          *
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * logical device.

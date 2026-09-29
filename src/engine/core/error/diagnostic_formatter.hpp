@@ -1,8 +1,8 @@
 #pragma once
-#include "engine/core/error/engine_error.hpp"
 #include <string>
 
 namespace SNE::Engine::Core::Error {
+    class EngineError;
     /**
      * @brief Formats an engine error as a human-readable diagnostic report.
      *
