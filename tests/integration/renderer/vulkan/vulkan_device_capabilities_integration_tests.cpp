@@ -1,6 +1,8 @@
+#include "engine/renderer/vulkan/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/vulkan_device_capabilities.hpp"
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/vulkan_device_extensions.hpp"
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -17,9 +19,22 @@ class VulkanDeviceCapabilitiesIntegrationTests : public ::testing::Test {
 };
 
 auto VulkanDeviceCapabilitiesIntegrationTests::SetUp() -> void {
+    std::uint32_t supported_api_version{};
+    const VkResult api_result =
+        vkEnumerateInstanceVersion(&supported_api_version);
+
+    if (api_result != VK_SUCCESS) {
+        FAIL() << "Failed to query Vulkan loader API version";
+    }
+
+    if (!Vulkan::supportsRequiredApiVersion(supported_api_version)) {
+        GTEST_SKIP() << "Vulkan loader does not support Signum's required API "
+                        "version";
+    }
+
     VkApplicationInfo application_info{};
     application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    application_info.apiVersion = VK_API_VERSION_1_4;
+    application_info.apiVersion = Vulkan::kRequiredApiVersion;
 
     VkInstanceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CC: clang
+  CXX: clang++
+  CXXFLAGS: -Werror
+
+jobs:
+  quality:
+    name: Build, Unit Tests, Static Analysis, and Docs
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            clang \
+            clang-format \
+            clang-tidy \
+            cmake \
+            doxygen \
+            just \
+            libglfw3-dev \
+            libgtest-dev \
+            libvulkan-dev \
+            ninja-build
+
+      - name: Show Clang toolchain versions
+        run: |
+          clang++ --version
+          clang-format --version
+          clang-tidy --version
+
+      - name: Verify development environment
+        run: just doctor
+
+      - name: Check formatting
+        run: ./scripts/format-check.sh
+
+      - name: Clean Debug build
+        run: |
+          just clean
+          just build debug
+
+      - name: Run unit tests
+        run: just test-unit debug
+
+      - name: Run Clang-Tidy
+        run: just tidy
+
+      - name: Build with AddressSanitizer and UndefinedBehaviorSanitizer
+        run: just build asan
+
+      - name: Run sanitized unit tests
+        run: ctest --preset asan -L "^unit$"
+
+      - name: Generate Doxygen documentation
+        run: just docs

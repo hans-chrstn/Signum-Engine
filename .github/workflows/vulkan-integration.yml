@@ -1,0 +1,49 @@
+name: Vulkan Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vulkan-integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CC: clang
+  CXX: clang++
+  CXXFLAGS: -Werror
+
+jobs:
+  vulkan-integration:
+    name: Vulkan Runtime Integration Tests
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            clang \
+            cmake \
+            just \
+            libglfw3-dev \
+            libgtest-dev \
+            libvulkan-dev \
+            mesa-vulkan-drivers \
+            ninja-build
+
+      - name: Verify development environment
+        run: just doctor
+
+      - name: Run Vulkan integration tests
+        run: just test-integration debug

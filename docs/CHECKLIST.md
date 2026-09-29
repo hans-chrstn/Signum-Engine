@@ -266,7 +266,7 @@
 - [x] Define assertion policy
 - [x] Separate programmer errors from runtime/environment failures
 - [x] Replace temporary `std::logic_error` handling in `VulkanDevice`
-- [ ] Remove unnecessary narrow storage from engine error codes
+- [x] Verify engine error-code underlying storage is appropriate
 - [x] Preserve structured diagnostics for runtime failures
 - [x] Prevent programmer errors from masquerading as hardware failures
 
@@ -319,37 +319,37 @@
 
 ### Runtime Lifecycle Audit
 
-- [ ] Audit current RAII owners
-- [ ] Verify destruction ordering
-- [ ] Verify borrowed dependencies are documented
-- [ ] Verify partial-construction cleanup
-- [ ] Add null-handle guards where they improve real lifecycle safety
-- [ ] Avoid checks that merely hide programmer errors
-- [ ] Verify native-handle accessors remain non-owning
+- [x] Audit current RAII owners
+- [x] Verify destruction ordering
+- [x] Verify borrowed dependencies are documented
+- [x] Verify partial-construction cleanup
+- [x] Add null-handle guards where they improve real lifecycle safety
+- [x] Avoid checks that merely hide programmer errors
+- [x] Verify native-handle accessors remain non-owning
 - [x] Verify swapchain recreation uses current surface state
 
 ### Integration-Test Foundation
 
 - [ ] Define Vulkan integration-test environment requirements
-- [ ] Query loader API support before requiring Vulkan 1.4
-- [ ] Skip unsupported Vulkan environments cleanly
-- [ ] Skip hardware tests when no physical device is available
-- [ ] Distinguish unsupported environment from test failure
+- [x] Query loader API support before requiring Vulkan 1.4
+- [x] Skip unsupported Vulkan environments cleanly
+- [x] Skip hardware tests when no physical device is available
+- [x] Distinguish unsupported environment from test failure
 - [x] Keep deterministic policy in unit tests
-- [ ] Keep driver/runtime behavior in integration tests
+- [x] Keep driver/runtime behavior in integration tests
 
 ### Continuous Integration
 
-- [ ] Add GitHub Actions
-- [ ] Run clean Debug build
-- [ ] Run formatting checks
-- [ ] Run unit tests
-- [ ] Run Clang-Tidy
-- [ ] Run ASan/UBSan unit tests
-- [ ] Generate Doxygen
-- [ ] Treat project warnings as errors in CI
-- [ ] Keep hardware-dependent integration testing separate
-- [ ] Reuse normal `just` workflows from CI where practical
+- [x] Add GitHub Actions
+- [x] Run clean Debug build
+- [x] Run formatting checks
+- [x] Run unit tests
+- [x] Run Clang-Tidy
+- [x] Run ASan/UBSan unit tests
+- [x] Generate Doxygen
+- [x] Treat project warnings as errors in CI
+- [x] Keep hardware-dependent integration testing separate
+- [x] Reuse normal `just` workflows from CI where practical
 
 ### Development Platform Policy
 
@@ -387,7 +387,7 @@
 
 ### Architecture
 
-- [ ] Preserve explicit RAII ownership
+- [x] Preserve explicit RAII ownership
 - [x] Preserve discovery-versus-policy separation
 - [x] Preserve supported-versus-enabled feature separation
 - [ ] Keep Vulkan inside the Vulkan backend
