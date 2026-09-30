@@ -256,117 +256,34 @@
 - [x] Vulkan feature chains
 - [x] Vulkan `pNext` composition
 - [x] application configuration
-- [ ] continuous integration fundamentals
-- [ ] integration-test environment requirements
+- [x] continuous integration fundamentals
+- [x] integration-test environment requirements
 
-### Error and Contract Foundation
+### Implement
 
-- [x] Define programmer-contract failure policy
-- [x] Define runtime-failure policy
-- [x] Define assertion policy
-- [x] Separate programmer errors from runtime/environment failures
+- [x] Add assertion and contract handling
+- [x] Separate programmer errors from runtime failures
 - [x] Replace temporary `std::logic_error` handling in `VulkanDevice`
-- [x] Verify engine error-code underlying storage is appropriate
-- [x] Preserve structured diagnostics for runtime failures
-- [x] Prevent programmer errors from masquerading as hardware failures
-
-### Application Configuration
-
-- [x] Define minimal application configuration
-- [x] Move application name out of Vulkan implementation
-- [x] Move initial window settings out of hard-coded engine initialization
-- [x] Define development-diagnostic configuration
-- [x] Define validation-layer configuration
-- [x] Define Vulkan debug-messenger configuration
-- [x] Keep configuration requirement-driven
-- [x] Avoid global configuration registries
-
-### Vulkan Validation Configuration
-
-- [x] Require validation for normal development configurations
-- [x] Allow validation to be disabled for production
-- [x] Do not require validation layers for production startup
-- [x] Enable debug-utils only when needed
-- [x] Preserve validation reporting during instance creation and destruction
-- [x] Verify startup with validation enabled
-- [x] Verify startup with validation disabled
-
-### Vulkan Feature Configuration
-
-- [x] Replace legacy logical-device feature enablement model
-- [x] Introduce `VkPhysicalDeviceFeatures2` configuration
-- [x] Define owned feature-chain lifetime
-- [ ] Support Vulkan-version feature structures when needed
-- [x] Support optional extension feature structures when needed
-- [x] Preserve supported-versus-requested-versus-enabled distinction
-- [x] Keep optional hardware features optional
-- [x] Avoid enabling unsupported or unused features
-- [x] Discover `VK_KHR_present_mode_fifo_latest_ready` support
-- [x] Discover `presentModeFifoLatestReady` feature support
-- [x] Enable FIFO_LATEST_READY feature only when requested and supported
-- [x] Integrate FIFO_LATEST_READY with the logical-device feature chain
-
-### Logical-Device Contracts
-
-- [x] Define `VulkanDevice` constructor preconditions
-- [x] Validate required graphics queue-family availability
-- [x] Validate required presentation queue-family availability
-- [x] Ensure queue requests contain required queue families
-- [x] Ensure queue request generation cannot produce duplicates
-- [x] Keep queue-request derivation pure and testable
-- [x] Document queue-handle ownership
-- [x] Keep retrieved queues non-owning
-
-### Runtime Lifecycle Audit
-
-- [x] Audit current RAII owners
-- [x] Verify destruction ordering
-- [x] Verify borrowed dependencies are documented
-- [x] Verify partial-construction cleanup
-- [x] Add null-handle guards where they improve real lifecycle safety
-- [x] Avoid checks that merely hide programmer errors
-- [x] Verify native-handle accessors remain non-owning
-- [x] Verify swapchain recreation uses current surface state
-
-### Integration-Test Foundation
-
-- [ ] Define Vulkan integration-test environment requirements
-- [x] Query loader API support before requiring Vulkan 1.4
-- [x] Skip unsupported Vulkan environments cleanly
-- [x] Skip hardware tests when no physical device is available
-- [x] Distinguish unsupported environment from test failure
-- [x] Keep deterministic policy in unit tests
-- [x] Keep driver/runtime behavior in integration tests
-
-### Continuous Integration
-
-- [x] Add GitHub Actions
-- [x] Run clean Debug build
-- [x] Run formatting checks
-- [x] Run unit tests
-- [x] Run Clang-Tidy
-- [x] Run ASan/UBSan unit tests
-- [x] Generate Doxygen
-- [x] Treat project warnings as errors in CI
-- [x] Keep hardware-dependent integration testing separate
-- [x] Reuse normal `just` workflows from CI where practical
-
-### Development Platform Policy
-
-- [ ] Document Linux as the current primary development platform
-- [ ] Document required compiler and build tools
-- [ ] Document Vulkan development requirements
-- [ ] Document validation-layer requirements
-- [ ] Keep CMake portable where inexpensive
-- [ ] Avoid promising unsupported platform workflows prematurely
-
-### Documentation
-
-- [ ] Reconcile checklist with repository state
-- [ ] Distinguish implemented from verified functionality
-- [ ] Distinguish automated from manual verification where useful
-- [x] Remove stale TODOs after policies replace them
-- [x] Update Doxygen for changed configuration and ownership contracts
+- [x] Add application configuration
+- [x] Make application name configurable
+- [x] Make initial window size configurable
+- [x] Make presentation preference configurable
+- [x] Make development diagnostics configurable
+- [x] Allow Vulkan validation to be disabled
+- [x] Enable debug-utils only when diagnostics require it
+- [x] Replace legacy logical-device feature enablement
+- [x] Add `VkPhysicalDeviceFeatures2` feature configuration
+- [x] Add optional Vulkan feature-chain support
+- [x] Discover FIFO_LATEST_READY extension support
+- [x] Discover FIFO_LATEST_READY feature support
+- [x] Enable FIFO_LATEST_READY only when requested and supported
+- [x] Enable optional device extensions from selected features
+- [x] Add logical-device queue-family preconditions
+- [x] Validate required queue requests
+- [x] Keep queue requests unique
+- [x] Document Vulkan resource ownership and borrowed handles
+- [x] Add Vulkan integration-test environment handling
+- [x] Add GitHub Actions CI
 
 ### Test
 
@@ -378,23 +295,25 @@
 - [x] Run Clang-Tidy
 - [x] Run formatting checks
 - [x] Test FIFO_LATEST_READY capability negotiation
-- [ ] Verify startup when FIFO_LATEST_READY is unsupported
 - [x] Verify FIFO_LATEST_READY remains optional
-- [ ] Generate Doxygen without new project warnings
-- [x] Launch with validation enabled
-- [x] Launch with validation disabled
+- [ ] Verify startup without FIFO_LATEST_READY support
+- [x] Verify validation-enabled startup
+- [x] Verify validation-disabled startup
 - [x] Verify clean startup and shutdown
+- [ ] Generate Doxygen without new project warnings
+- [x] Verify CI build and test workflows
 
 ### Architecture
 
 - [x] Preserve explicit RAII ownership
-- [x] Preserve discovery-versus-policy separation
-- [x] Preserve supported-versus-enabled feature separation
-- [ ] Keep Vulkan inside the Vulkan backend
-- [ ] Keep diagnostics independent from output sinks
-- [x] Keep developer tooling removable from production
+- [x] Keep capability discovery separate from policy
+- [x] Keep supported features separate from enabled features
+- [x] Keep optional Vulkan features optional
+- [x] Keep queue-request planning separate from device creation
 - [x] Keep configuration small and explicit
-- [x] Avoid speculative interfaces
+- [x] Keep development diagnostics removable from production
+- [x] Avoid global configuration state
+- [x] Avoid speculative abstractions
 - [x] Avoid premature subsystem splitting
 
 ---

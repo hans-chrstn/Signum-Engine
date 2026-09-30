@@ -2,6 +2,7 @@
 build/
 bin/
 obj/
+**/**/result
 
 # Compiled Shaders
 /shaders/*.spv
