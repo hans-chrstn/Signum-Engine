@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/renderer/presentation_preference.hpp"
+#include <span>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -135,5 +136,29 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @return Extent selected during swapchain creation.
          */
         [[nodiscard]] auto extent() const noexcept -> VkExtent2D;
+
+        /**
+         * @brief Returns a read-only view of the swapchain images.
+         *
+         * The returned span is non-owning and remains valid only while this
+         * VulkanSwapchain owns the underlying image collection.
+         *
+         * The VkImage handles are provided by the Vulkan swapchain and are not
+         * destroyed directly by this object.
+         *
+         * @return Read-only view of the swapchain image handles.
+         */
+        [[nodiscard]] auto images() const noexcept -> std::span<const VkImage>;
+
+        /**
+         * @brief Returns a read-only view of the swapchain image views.
+         *
+         * The returned span is non-owning and remains valid only while this
+         * VulkanSwapchain owns the underlying image views.
+         *
+         * @return Read-only view of the swapchain image-view handles.
+         */
+        [[nodiscard]] auto imageViews() const noexcept
+            -> std::span<const VkImageView>;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

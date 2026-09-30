@@ -12,6 +12,7 @@
 #include "vulkan_swapchain_support.hpp"
 #include <array>
 #include <cstdint>
+#include <span>
 #include <string>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -215,5 +216,14 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto VulkanSwapchain::extent() const noexcept -> VkExtent2D {
         return m_Extent;
+    }
+
+    auto VulkanSwapchain::images() const noexcept -> std::span<const VkImage> {
+        return m_Images;
+    }
+
+    auto VulkanSwapchain::imageViews() const noexcept
+        -> std::span<const VkImageView> {
+        return m_ImageViews;
     }
 } // namespace SNE::Engine::Renderer::Vulkan
