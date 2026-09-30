@@ -1,16 +1,17 @@
 #include "window.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "error/glfw_error.hpp"
+#include <GLFW/glfw3.h>
+#include <utility>
 
 namespace SNE::Engine::Platform {
     Window::Window(WindowSize size, std::string title)
         : m_Size(size), m_Title(std::move(title)) {
 
         // Signum renders through Vulkan, so GLFW must not create an OpenGL or
-        // OpenGL ES
-        // context for this window.
+        // OpenGL ES context for this window.
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
 
         m_Window = glfwCreateWindow(m_Size.width, m_Size.height,
@@ -49,5 +50,9 @@ namespace SNE::Engine::Platform {
             .width = width,
             .height = height,
         };
+    }
+
+    auto Window::pollEvents() -> void {
+        glfwPollEvents();
     }
 } // namespace SNE::Engine::Platform

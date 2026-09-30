@@ -12,7 +12,7 @@ namespace SNE::Engine::Core {
 
     void Application::run() {
         while (!m_Window.shouldClose()) {
-            Platform::Window::waitEvents();
+            Platform::Window::pollEvents();
         }
     }
 } // namespace SNE::Engine::Core

@@ -95,5 +95,10 @@ namespace SNE::Engine::Platform {
          * @return Current framebuffer dimensions in pixels.
          */
         [[nodiscard]] auto framebufferSize() const -> FramebufferSize;
+
+        /**
+         * @brief Processes pending platform events without blocking.
+         */
+        static void pollEvents();
     };
 } // namespace SNE::Engine::Platform

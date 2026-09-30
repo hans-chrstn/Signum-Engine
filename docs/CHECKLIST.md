@@ -340,12 +340,12 @@
 - [x] Define per-frame resource ownership before adding synchronization
 - [ ] Keep command-buffer lifetime tied to its command pool
 - [x] Define a scalable command-pool ownership model
-- [ ] Define swapchain image and image-view access needed by rendering
-- [ ] Expose borrowed swapchain resource views without transferring ownership
+- [x] Define swapchain image and image-view access needed by rendering
+- [x] Expose borrowed swapchain resource views without transferring ownership
 - [ ] Preserve selected physical-device queue-family invariants
 - [ ] Document the selected-device type-safety limitation for later cleanup
-- [ ] Remove hardcoded non-resizable window policy before swapchain recreation work
-- [ ] Prepare the application loop for non-blocking rendering
+- [x] Remove hardcoded non-resizable window policy before swapchain recreation work
+- [x] Prepare the application loop for non-blocking rendering
 - [ ] Keep queue-request structures extensible for future compute and transfer queues
 - [ ] Keep logical-device feature negotiation extensible for additional feature chains
 
@@ -378,7 +378,7 @@
 - [ ] Allow future graphics, compute, and transfer command pools
 - [ ] Keep command-pool ownership independent from command-buffer recording policy
 - [ ] Keep swapchain ownership separate from frame ownership
-- [ ] Keep swapchain resource access non-owning
+- [x] Keep swapchain resource access non-owning
 - [ ] Keep physical-device discovery separate from selected-device guarantees
 - [x] Keep supported capabilities separate from requested and enabled features
 - [x] Keep queue planning separate from logical-device creation
