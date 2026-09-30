@@ -17,23 +17,14 @@
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanDevice::VulkanDevice(
         VkPhysicalDevice physical_device,
-        const QueueFamilyIndices &queue_family_indices,
+        const SelectedQueueFamilyIndices &queue_family_indices,
         const std::vector<QueueFamilyRequest> &queue_family_requests,
         const LogicalDeviceFeatureConfiguration &logical_device_configuration) {
 
-        if (!queue_family_indices.graphics_family.has_value() ||
-            !queue_family_indices.presentation_family.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanDevice requires graphics and presentation queue "
-                "families");
-        }
-
         const std::uint32_t graphics_family =
-            queue_family_indices.graphics_family.value();
+            queue_family_indices.graphics_family;
         const std::uint32_t presentation_family =
-            queue_family_indices.presentation_family.value();
+            queue_family_indices.presentation_family;
 
         const bool has_graphics_request = std::ranges::any_of(
             queue_family_requests,

@@ -34,7 +34,7 @@ namespace SNE::Engine::Renderer::Vulkan {
       private:
         VulkanInstance m_Instance;
         VulkanSurface m_Surface;
-        PhysicalDeviceCandidate m_PhysicalDeviceCandidate;
+        SelectedPhysicalDevice m_PhysicalDevice;
         LogicalDeviceFeatureConfiguration m_LogicalDeviceFeatureConfiguration;
         VulkanDevice m_Device;
         VulkanSwapchain m_Swapchain;

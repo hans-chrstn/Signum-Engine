@@ -78,6 +78,7 @@ TEST(VulkanDeviceSelectionTests,
         .extensionName = "VK_TEST",
         .specVersion = std::uint32_t{0},
     };
+
     const VkExtensionProperties swapchain_extension{
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         .specVersion = std::uint32_t{0},
@@ -102,7 +103,7 @@ TEST(VulkanDeviceSelectionTests,
 TEST(VulkanDeviceSelectionTests,
      ReturnsTrueWhenSwapchainSupportHasFormatsAndPresentationModes) {
     EXPECT_TRUE(
-        Vulkan::hasAdequateSwapchainSupport(makeAdequateSwapchainSupport()));
+        Vulkan::hasRequiredSwapchainSupport(makeAdequateSwapchainSupport()));
 }
 
 TEST(VulkanDeviceSelectionTests,
@@ -117,7 +118,7 @@ TEST(VulkanDeviceSelectionTests,
     };
 
     EXPECT_FALSE(
-        Vulkan::hasAdequateSwapchainSupport(swapchain_support_details));
+        Vulkan::hasRequiredSwapchainSupport(swapchain_support_details));
 }
 
 TEST(VulkanDeviceSelectionTests,
@@ -137,7 +138,7 @@ TEST(VulkanDeviceSelectionTests,
     };
 
     EXPECT_FALSE(
-        Vulkan::hasAdequateSwapchainSupport(swapchain_support_details));
+        Vulkan::hasRequiredSwapchainSupport(swapchain_support_details));
 }
 
 TEST(VulkanDeviceSelectionTests,
@@ -148,7 +149,7 @@ TEST(VulkanDeviceSelectionTests,
     };
 
     EXPECT_FALSE(
-        Vulkan::hasAdequateSwapchainSupport(swapchain_support_details));
+        Vulkan::hasRequiredSwapchainSupport(swapchain_support_details));
 }
 
 TEST(VulkanDeviceSelectionTests,
@@ -267,7 +268,7 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
         swapchain_extension,
     };
 
-    const Vulkan::PhysicalDeviceCandidate first_device{
+    const Vulkan::DiscoveredPhysicalDevice first_device{
         .handle = VK_NULL_HANDLE,
         .queue_family_indices =
             {
@@ -280,7 +281,7 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
         .swapchain_support = makeAdequateSwapchainSupport(),
     };
 
-    const Vulkan::PhysicalDeviceCandidate second_device{
+    const Vulkan::DiscoveredPhysicalDevice second_device{
         .handle = VK_NULL_HANDLE,
         .queue_family_indices =
             {
@@ -293,26 +294,26 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
         .swapchain_support = makeAdequateSwapchainSupport(),
     };
 
-    const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
+    const std::vector<Vulkan::DiscoveredPhysicalDevice> discovered_devices{
         first_device,
         second_device,
     };
 
-    const std::optional<Vulkan::PhysicalDeviceCandidate> selected =
-        Vulkan::selectPhysicalDevice(candidates);
+    const std::optional<Vulkan::SelectedPhysicalDevice> selected =
+        Vulkan::selectPhysicalDevice(discovered_devices);
 
     if (!selected.has_value()) {
         FAIL() << "Expected a physical device to be selected";
         return;
     }
 
-    const Vulkan::PhysicalDeviceCandidate &selected_device = selected.value();
+    const Vulkan::SelectedPhysicalDevice &selected_device = selected.value();
 
     EXPECT_EQ(selected_device.queue_family_indices.graphics_family,
-              std::optional<std::uint32_t>{0});
+              std::uint32_t{0});
 
     EXPECT_EQ(selected_device.queue_family_indices.presentation_family,
-              std::optional<std::uint32_t>{0});
+              std::uint32_t{0});
 }
 
 TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
@@ -334,7 +335,7 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
         unrelated_extension,
     };
 
-    const Vulkan::PhysicalDeviceCandidate suitable_device{
+    const Vulkan::DiscoveredPhysicalDevice suitable_device{
         .handle = VK_NULL_HANDLE,
         .queue_family_indices =
             {
@@ -347,7 +348,7 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
         .swapchain_support = makeAdequateSwapchainSupport(),
     };
 
-    const Vulkan::PhysicalDeviceCandidate unsuitable_device{
+    const Vulkan::DiscoveredPhysicalDevice unsuitable_device{
         .handle = VK_NULL_HANDLE,
         .queue_family_indices =
             {
@@ -360,26 +361,26 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
         .swapchain_support = makeAdequateSwapchainSupport(),
     };
 
-    const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
+    const std::vector<Vulkan::DiscoveredPhysicalDevice> discovered_devices{
         unsuitable_device,
         suitable_device,
     };
 
-    const std::optional<Vulkan::PhysicalDeviceCandidate> selected =
-        Vulkan::selectPhysicalDevice(candidates);
+    const std::optional<Vulkan::SelectedPhysicalDevice> selected =
+        Vulkan::selectPhysicalDevice(discovered_devices);
 
     if (!selected.has_value()) {
         FAIL() << "Expected a physical device to be selected";
         return;
     }
 
-    const Vulkan::PhysicalDeviceCandidate &selected_device = selected.value();
+    const Vulkan::SelectedPhysicalDevice &selected_device = selected.value();
 
     EXPECT_EQ(selected_device.queue_family_indices.graphics_family,
-              std::optional<std::uint32_t>{0});
+              std::uint32_t{0});
 
     EXPECT_EQ(selected_device.queue_family_indices.presentation_family,
-              std::optional<std::uint32_t>{0});
+              std::uint32_t{0});
 }
 
 TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
@@ -392,7 +393,7 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
         unrelated_extension,
     };
 
-    const Vulkan::PhysicalDeviceCandidate first_unsuitable_device{
+    const Vulkan::DiscoveredPhysicalDevice first_unsuitable_device{
         .handle = VK_NULL_HANDLE,
         .queue_family_indices =
             {
@@ -405,7 +406,7 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
         .swapchain_support = makeAdequateSwapchainSupport(),
     };
 
-    const Vulkan::PhysicalDeviceCandidate second_unsuitable_device{
+    const Vulkan::DiscoveredPhysicalDevice second_unsuitable_device{
         .handle = VK_NULL_HANDLE,
         .queue_family_indices =
             {
@@ -418,13 +419,13 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
         .swapchain_support = makeAdequateSwapchainSupport(),
     };
 
-    const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
+    const std::vector<Vulkan::DiscoveredPhysicalDevice> discovered_devices{
         first_unsuitable_device,
         second_unsuitable_device,
     };
 
-    const std::optional<Vulkan::PhysicalDeviceCandidate> selected =
-        Vulkan::selectPhysicalDevice(candidates);
+    const std::optional<Vulkan::SelectedPhysicalDevice> selected =
+        Vulkan::selectPhysicalDevice(discovered_devices);
 
     EXPECT_FALSE(selected.has_value());
 }
@@ -440,7 +441,7 @@ TEST(VulkanDeviceSelectionTests,
         swapchain_extension,
     };
 
-    const Vulkan::PhysicalDeviceCandidate unsuitable_device{
+    const Vulkan::DiscoveredPhysicalDevice unsuitable_device{
         .handle = VK_NULL_HANDLE,
         .queue_family_indices =
             {
@@ -453,21 +454,22 @@ TEST(VulkanDeviceSelectionTests,
         .swapchain_support = makeAdequateSwapchainSupport(),
     };
 
-    const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
+    const std::vector<Vulkan::DiscoveredPhysicalDevice> discovered_devices{
         unsuitable_device,
     };
 
-    const std::optional<Vulkan::PhysicalDeviceCandidate> selected =
-        Vulkan::selectPhysicalDevice(candidates);
+    const std::optional<Vulkan::SelectedPhysicalDevice> selected =
+        Vulkan::selectPhysicalDevice(discovered_devices);
 
     EXPECT_FALSE(selected.has_value());
 }
 
-TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenCandidateListIsEmpty) {
-    const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{};
+TEST(VulkanDeviceSelectionTests,
+     ReturnsNulloptWhenDiscoveredDeviceListIsEmpty) {
+    const std::vector<Vulkan::DiscoveredPhysicalDevice> discovered_devices{};
 
-    const std::optional<Vulkan::PhysicalDeviceCandidate> selected =
-        Vulkan::selectPhysicalDevice(candidates);
+    const std::optional<Vulkan::SelectedPhysicalDevice> selected =
+        Vulkan::selectPhysicalDevice(discovered_devices);
 
     EXPECT_FALSE(selected.has_value());
 }

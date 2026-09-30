@@ -4,7 +4,7 @@
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
-    struct QueueFamilyIndices;
+    struct SelectedQueueFamilyIndices;
     struct LogicalDeviceFeatureConfiguration;
 
     /**
@@ -48,17 +48,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param logical_device_configuration Vulkan features selected for
          *                                     logical-device creation.
          *
-         * @pre queue_family_indices contains both graphics and presentation
-         *      queue-family indices.
-         * @pre queue_family_requests contains requests for both the graphics
-         * and presentation queue families identified by queue_family_indices.
-         *
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * logical device.
          */
         VulkanDevice(
             VkPhysicalDevice physical_device,
-            const QueueFamilyIndices &queue_family_indices,
+            const SelectedQueueFamilyIndices &queue_family_indices,
             const std::vector<QueueFamilyRequest> &queue_family_requests,
             const LogicalDeviceFeatureConfiguration
                 &logical_device_configuration);

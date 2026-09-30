@@ -4,12 +4,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <vector>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 TEST(VulkanQueueRequestsTests,
      ReturnsSingleRequestWhenGraphicsAndPresentationShareQueueFamily) {
-    const Vulkan::QueueFamilyIndices queue_family_indices{
+    const Vulkan::SelectedQueueFamilyIndices queue_family_indices{
         .graphics_family = std::uint32_t{0},
         .presentation_family = std::uint32_t{0},
     };
@@ -24,7 +25,7 @@ TEST(VulkanQueueRequestsTests,
 TEST(
     VulkanQueueRequestsTests,
     ReturnsDistinctRequestsWhenGraphicsAndPresentationUseDifferentQueueFamilies) {
-    const Vulkan::QueueFamilyIndices queue_family_indices{
+    const Vulkan::SelectedQueueFamilyIndices queue_family_indices{
         .graphics_family = std::uint32_t{0},
         .presentation_family = std::uint32_t{1},
     };

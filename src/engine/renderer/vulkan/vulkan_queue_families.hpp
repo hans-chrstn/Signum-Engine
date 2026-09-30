@@ -7,10 +7,10 @@
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
-     * @brief Stores queue-family indices selected for rendering and
+     * @brief Stores queue-family indices discovered for rendering and
      * presentation.
      *
-     * Contains the queue-family indices discovered for graphics operations and
+     * Contains queue-family indices discovered for graphics operations and
      * presentation to a Vulkan surface.
      *
      * A missing value indicates that no suitable queue family was found for
@@ -21,6 +21,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<std::uint32_t> graphics_family;
         /** Presentation-capable queue-family index when available. */
         std::optional<std::uint32_t> presentation_family;
+    };
+
+    /**
+     * @brief Stores queue-family indices guaranteed for renderer use.
+     *
+     * Represents the graphics and presentation queue families of a physical
+     * device that has already satisfied the renderer's queue-family
+     * requirements.
+     *
+     * Unlike QueueFamilyIndices, these values are not optional because
+     * physical-device selection has already established that both required
+     * queue families exist.
+     */
+    struct SelectedQueueFamilyIndices {
+        std::uint32_t graphics_family;
+        std::uint32_t presentation_family;
     };
 
     /**

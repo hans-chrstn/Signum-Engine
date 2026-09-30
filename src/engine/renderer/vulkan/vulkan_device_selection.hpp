@@ -18,8 +18,13 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * The structure does not own the Vulkan physical device. The handle remains
      * valid only while the Vulkan instance that provided it remains valid.
+     *
+     * @note Queue-family indices remain optional because this type represents
+     * discovered physical-device state. Successful physical-device selection
+     * converts a suitable discovered device into SelectedPhysicalDevice, where
+     * required queue-family guarantees are represented explicitly.
      */
-    struct PhysicalDeviceCandidate {
+    struct DiscoveredPhysicalDevice {
         /** Non-owning handle to the Vulkan physical device. */
         VkPhysicalDevice handle;
         /** Queue-family indices discovered for the physical device. */
@@ -30,6 +35,30 @@ namespace SNE::Engine::Renderer::Vulkan {
         PhysicalDeviceCapabilities capabilities;
         /** Swapchain support reported for the physical device and surface. */
         SwapchainSupportDetails swapchain_support;
+    };
+
+    /**
+     * @brief Represents a physical device validated and selected for renderer
+     * use.
+     *
+     * Stores the Vulkan physical-device handle, required queue-family indices,
+     * and capability information needed after physical-device selection.
+     *
+     * The queue-family indices are guaranteed to contain the graphics and
+     * presentation families required by the renderer because this type is
+     * created only after the corresponding discovered physical device satisfies
+     * the renderer's suitability policy.
+     *
+     * The structure does not own the Vulkan physical device. The handle remains
+     * valid only while the Vulkan instance that provided it remains valid.
+     */
+    struct SelectedPhysicalDevice {
+        /** Non-owning handle to the selected Vulkan physical device. */
+        VkPhysicalDevice handle;
+        /** Required queue-family indices guaranteed by device selection. */
+        SelectedQueueFamilyIndices queue_family_indices;
+        /** Capabilities reported by the selected physical device. */
+        PhysicalDeviceCapabilities capabilities;
     };
 
     /**
@@ -49,7 +78,7 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @brief Determines whether swapchain support satisfies the renderer's
      *        presentation requirements.
      *
-     * A physical device has adequate swapchain support when at least one
+     * A physical device has required swapchain support when at least one
      * surface format and at least one presentation mode are available for the
      * associated Vulkan surface.
      *
@@ -59,7 +88,7 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @return true if at least one surface format and presentation mode are
      *         available; otherwise false.
      */
-    [[nodiscard]] auto hasAdequateSwapchainSupport(
+    [[nodiscard]] auto hasRequiredSwapchainSupport(
         const SwapchainSupportDetails &swapchain_support) -> bool;
 
     /**
@@ -67,7 +96,7 @@ namespace SNE::Engine::Renderer::Vulkan {
      *        the renderer's mandatory requirements.
      *
      * Evaluates required queue-family availability, device-extension support,
-     * Vulkan API-version support, and adequate swapchain support for a physical
+     * Vulkan API-version support, and required swapchain support for a physical
      * device.
      *
      * @param queue_family_indices Queue-family indices discovered for the
@@ -87,50 +116,50 @@ namespace SNE::Engine::Renderer::Vulkan {
         const SwapchainSupportDetails &swapchain_support) -> bool;
 
     /**
-     * @brief Selects a suitable physical device candidate for renderer use.
+     * @brief Selects a suitable discovered physical device for renderer use.
      *
-     * Evaluates the supplied physical-device candidates using the renderer's
-     * physical-device suitability policy and returns the first candidate that
-     * satisfies the required queue-family, device-extension, Vulkan
-     * API-version, and swapchain-support requirements.
+     * Evaluates the supplied discovered physical devices using the renderer's
+     * suitability policy and returns selected physical-device state whose
+     * required runtime invariants have been established.
      *
      * This function does not enumerate physical devices or query Vulkan device
-     * capabilities. Candidate creation and capability discovery are expected
-     * to occur before selection.
+     * capabilities. Physical-device inspection is expected to occur before
+     * selection.
      *
-     * @param device_candidates Physical-device candidates previously created
-     *                           from Vulkan physical-device discovery.
+     * @param discovered_devices Physical devices previously inspected for
+     * renderer-relevant capabilities.
      *
-     * @return The selected physical-device candidate when a suitable device is
-     *         available; otherwise std::nullopt.
+     * @return Selected physical-device state when a suitable device is
+     * available; otherwise std::nullopt.
      */
     [[nodiscard]] auto selectPhysicalDevice(
-        const std::vector<PhysicalDeviceCandidate> &device_candidates)
-        -> std::optional<PhysicalDeviceCandidate>;
+        const std::vector<DiscoveredPhysicalDevice> &discovered_devices)
+        -> std::optional<SelectedPhysicalDevice>;
 
     /**
-     * @brief Creates physical-device candidates from discovered Vulkan devices.
+     * @brief Inspects discovered Vulkan physical devices for renderer use.
      *
      * Queries queue-family information, available device extensions,
-     * physical-device capabilities, and swapchain support for each discovered
-     * device and constructs PhysicalDeviceCandidate structures used by
-     * physical-device selection.
+     * physical-device capabilities, and swapchain support for each Vulkan
+     * physical device and constructs DiscoveredPhysicalDevice structures used
+     * by physical-device selection.
      *
      * This function does not determine whether a device is suitable.
      * Suitability evaluation is performed separately by the physical-device
      * selection policy.
      *
-     * @param devices Physical devices discovered from the Vulkan instance.
+     * @param devices Physical-device handles enumerated from the Vulkan
+     * instance.
      * @param surface Vulkan surface used to evaluate presentation support and
      * discover swapchain capabilities.
      *
-     * @return Physical-device candidates containing the discovered information
-     *         required for selection.
+     * @return Inspected physical devices containing the information required
+     * for selection.
      *
      * @throws Core::Error::EngineError if required Vulkan queries fail.
      */
     [[nodiscard]] auto
-    createPhysicalDeviceCandidates(const std::vector<VkPhysicalDevice> &devices,
-                                   VkSurfaceKHR surface)
-        -> std::vector<PhysicalDeviceCandidate>;
+    inspectPhysicalDevices(const std::vector<VkPhysicalDevice> &devices,
+                           VkSurfaceKHR surface)
+        -> std::vector<DiscoveredPhysicalDevice>;
 } // namespace SNE::Engine::Renderer::Vulkan

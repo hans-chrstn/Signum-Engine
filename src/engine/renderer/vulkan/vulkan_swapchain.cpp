@@ -18,20 +18,12 @@
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanSwapchain::VulkanSwapchain(
         VkPhysicalDevice physical_device, VkDevice logical_device,
-        VkSurfaceKHR surface, const QueueFamilyIndices &queue_family_indices,
+        VkSurfaceKHR surface,
+        const SelectedQueueFamilyIndices &queue_family_indices,
         const Platform::FramebufferSize &framebuffer_size,
         PresentationPreference presentation_preference,
         bool fifo_latest_ready_enabled)
         : m_Device(logical_device) {
-        if (!queue_family_indices.graphics_family.has_value() ||
-            !queue_family_indices.presentation_family.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanSwapchain requires graphics and presentation queue "
-                "families");
-        }
-
         const SwapchainSupportDetails swapchain_support =
             querySwapchainSupport(physical_device, surface);
 
@@ -50,9 +42,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             selectSwapchainImageCount(swapchain_support.surface_capabilities);
 
         const std::uint32_t queue_graphics_index =
-            queue_family_indices.graphics_family.value();
+            queue_family_indices.graphics_family;
         const std::uint32_t queue_presentation_index =
-            queue_family_indices.presentation_family.value();
+            queue_family_indices.presentation_family;
 
         const std::array<std::uint32_t, 2> queue_family{
             {queue_graphics_index, queue_presentation_index},

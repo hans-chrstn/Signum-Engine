@@ -10,7 +10,7 @@
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
-    auto hasAdequateSwapchainSupport(
+    auto hasRequiredSwapchainSupport(
         const SwapchainSupportDetails &swapchain_support) -> bool {
         return !swapchain_support.available_surface_formats.empty() &&
                !swapchain_support.available_presentation_modes.empty();
@@ -28,37 +28,54 @@ namespace SNE::Engine::Renderer::Vulkan {
         const std::vector<VkExtensionProperties> &available_extensions,
         const PhysicalDeviceCapabilities &capabilities,
         const SwapchainSupportDetails &swapchain_support) -> bool {
-
         return queue_family_indices.graphics_family.has_value() &&
                queue_family_indices.presentation_family.has_value() &&
                supportsRequiredDeviceExtensions(available_extensions) &&
                supportsRequiredApiVersion(capabilities.properties.apiVersion) &&
-               hasAdequateSwapchainSupport(swapchain_support);
+               hasRequiredSwapchainSupport(swapchain_support);
     }
 
     auto selectPhysicalDevice(
-        const std::vector<PhysicalDeviceCandidate> &device_candidates)
-        -> std::optional<PhysicalDeviceCandidate> {
-        for (const PhysicalDeviceCandidate &device_candidate :
-             device_candidates) {
-            if (isPhysicalDeviceSuitable(device_candidate.queue_family_indices,
-                                         device_candidate.available_extensions,
-                                         device_candidate.capabilities,
-                                         device_candidate.swapchain_support)) {
-                return device_candidate;
+        const std::vector<DiscoveredPhysicalDevice> &discovered_devices)
+        -> std::optional<SelectedPhysicalDevice> {
+        for (const DiscoveredPhysicalDevice &device : discovered_devices) {
+            const std::optional<std::uint32_t> &graphics_family =
+                device.queue_family_indices.graphics_family;
+
+            const std::optional<std::uint32_t> &presentation_family =
+                device.queue_family_indices.presentation_family;
+
+            if (!graphics_family.has_value() ||
+                !presentation_family.has_value()) {
+                continue;
             }
+
+            if (!isPhysicalDeviceSuitable(
+                    device.queue_family_indices, device.available_extensions,
+                    device.capabilities, device.swapchain_support)) {
+                continue;
+            }
+
+            return SelectedPhysicalDevice{
+                .handle = device.handle,
+                .queue_family_indices =
+                    {
+                        .graphics_family = graphics_family.value(),
+                        .presentation_family = presentation_family.value(),
+                    },
+                .capabilities = device.capabilities,
+            };
         }
+
         return std::nullopt;
     }
 
-    auto
-    createPhysicalDeviceCandidates(const std::vector<VkPhysicalDevice> &devices,
-                                   VkSurfaceKHR surface)
-        -> std::vector<PhysicalDeviceCandidate> {
+    auto inspectPhysicalDevices(const std::vector<VkPhysicalDevice> &devices,
+                                VkSurfaceKHR surface)
+        -> std::vector<DiscoveredPhysicalDevice> {
+        std::vector<DiscoveredPhysicalDevice> discovered_devices{};
 
-        std::vector<PhysicalDeviceCandidate> candidates{};
-
-        candidates.reserve(devices.size());
+        discovered_devices.reserve(devices.size());
 
         for (const VkPhysicalDevice &device : devices) {
             std::vector<VkExtensionProperties> extension_properties =
@@ -77,7 +94,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             SwapchainSupportDetails swapchain_support =
                 querySwapchainSupport(device, surface);
 
-            PhysicalDeviceCandidate candidate{
+            DiscoveredPhysicalDevice discovered_device{
                 .handle = device,
                 .queue_family_indices = queue_family_indices,
                 .available_extensions = std::move(extension_properties),
@@ -85,9 +102,9 @@ namespace SNE::Engine::Renderer::Vulkan {
                 .swapchain_support = std::move(swapchain_support),
             };
 
-            candidates.push_back(std::move(candidate));
+            discovered_devices.push_back(std::move(discovered_device));
         }
 
-        return candidates;
+        return discovered_devices;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

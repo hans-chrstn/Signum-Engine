@@ -10,7 +10,7 @@ namespace SNE::Engine::Platform {
 }
 
 namespace SNE::Engine::Renderer::Vulkan {
-    struct QueueFamilyIndices;
+    struct SelectedQueueFamilyIndices;
 
     /**
      * @brief Owns a Vulkan swapchain and its presentation image views.
@@ -79,16 +79,13 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param fifo_latest_ready_enabled Whether FIFO latest-ready
          * presentation is enabled on the logical device.
          *
-         * @pre queue_family_indices contains both graphics and presentation
-         * queue-family indices.
-         *
          * @throws Core::Error::EngineError if swapchain support cannot be
          * queried, swapchain creation fails, swapchain images cannot be
          * enumerated, or an image view cannot be created.
          */
         VulkanSwapchain(VkPhysicalDevice physical_device,
                         VkDevice logical_device, VkSurfaceKHR surface,
-                        const QueueFamilyIndices &queue_family_indices,
+                        const SelectedQueueFamilyIndices &queue_family_indices,
                         const Platform::FramebufferSize &framebuffer_size,
                         PresentationPreference presentation_preference,
                         bool fifo_latest_ready_enabled);
