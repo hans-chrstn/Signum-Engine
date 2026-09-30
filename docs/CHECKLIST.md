@@ -322,7 +322,7 @@
 
 ### Learn
 
-- [ ] command pools
+- [x] command pools
 - [ ] command buffers
 - [ ] synchronization
 - [ ] frame ownership
@@ -331,7 +331,7 @@
 
 ### Implement
 
-- [ ] Create command pool
+- [x] Create command pool
 - [ ] Create command buffers
 - [ ] Create synchronization objects
 - [ ] Implement frame loop

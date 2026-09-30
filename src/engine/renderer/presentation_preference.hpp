@@ -32,6 +32,6 @@ namespace SNE::Engine::Renderer {
          * Requests synchronized presentation that favors the latest ready frame
          * when supported.
          */
-        LatestReadyVSync
+        LatestReadyVSync,
     };
 } // namespace SNE::Engine::Renderer

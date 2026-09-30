@@ -47,10 +47,12 @@ TEST(VulkanDeviceSelectionTests,
      ReturnsTrueWhenRequiredDeviceExtensionsAreAvailable) {
     const VkExtensionProperties swapchain_extension{
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = std::uint32_t{0}};
+        .specVersion = std::uint32_t{0},
+    };
 
     const std::vector<VkExtensionProperties> available_extensions{
-        swapchain_extension};
+        swapchain_extension,
+    };
 
     EXPECT_TRUE(Vulkan::supportsRequiredDeviceExtensions(available_extensions));
 }
@@ -59,10 +61,12 @@ TEST(VulkanDeviceSelectionTests,
      ReturnsFalseWhenRequiredDeviceExtensionIsMissing) {
     const VkExtensionProperties unrelated_extension{
         .extensionName = VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
-        .specVersion = std::uint32_t{0}};
+        .specVersion = std::uint32_t{0},
+    };
 
     const std::vector<VkExtensionProperties> available_extensions{
-        unrelated_extension};
+        unrelated_extension,
+    };
 
     EXPECT_FALSE(
         Vulkan::supportsRequiredDeviceExtensions(available_extensions));
@@ -71,13 +75,18 @@ TEST(VulkanDeviceSelectionTests,
 TEST(VulkanDeviceSelectionTests,
      ReturnsTrueWhenRequiredDeviceExtensionsAreAvailableWithExtras) {
     const VkExtensionProperties unrelated_extension{
-        .extensionName = "VK_TEST", .specVersion = std::uint32_t{0}};
+        .extensionName = "VK_TEST",
+        .specVersion = std::uint32_t{0},
+    };
     const VkExtensionProperties swapchain_extension{
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = std::uint32_t{0}};
+        .specVersion = std::uint32_t{0},
+    };
 
     const std::vector<VkExtensionProperties> available_extensions{
-        unrelated_extension, swapchain_extension};
+        unrelated_extension,
+        swapchain_extension,
+    };
 
     EXPECT_TRUE(Vulkan::supportsRequiredDeviceExtensions(available_extensions));
 }
@@ -146,11 +155,13 @@ TEST(VulkanDeviceSelectionTests,
      ReturnsTrueWhenPhysicalDeviceMeetsAllRequirements) {
     const Vulkan::QueueFamilyIndices queue_family_indices{
         .graphics_family = std::uint32_t{0},
-        .presentation_family = std::uint32_t{0}};
+        .presentation_family = std::uint32_t{0},
+    };
 
     const VkExtensionProperties swapchain_extension{
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = std::uint32_t{0}};
+        .specVersion = std::uint32_t{0},
+    };
 
     const std::vector<VkExtensionProperties> available_extensions{
         swapchain_extension,
@@ -165,11 +176,13 @@ TEST(VulkanDeviceSelectionTests,
 TEST(VulkanDeviceSelectionTests, ReturnsFalseWhenGraphicsQueueFamilyIsMissing) {
     const Vulkan::QueueFamilyIndices queue_family_indices{
         .graphics_family = std::nullopt,
-        .presentation_family = std::uint32_t{0}};
+        .presentation_family = std::uint32_t{0},
+    };
 
     const VkExtensionProperties swapchain_extension{
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = std::uint32_t{0}};
+        .specVersion = std::uint32_t{0},
+    };
 
     const std::vector<VkExtensionProperties> available_extensions{
         swapchain_extension,
@@ -185,11 +198,13 @@ TEST(VulkanDeviceSelectionTests,
      ReturnsFalseWhenPresentationQueueFamilyIsMissing) {
     const Vulkan::QueueFamilyIndices queue_family_indices{
         .graphics_family = std::uint32_t{0},
-        .presentation_family = std::nullopt};
+        .presentation_family = std::nullopt,
+    };
 
     const VkExtensionProperties swapchain_extension{
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = std::uint32_t{0}};
+        .specVersion = std::uint32_t{0},
+    };
 
     const std::vector<VkExtensionProperties> available_extensions{
         swapchain_extension,
@@ -205,7 +220,8 @@ TEST(VulkanDeviceSelectionTests,
      ReturnsFalseWhenRequiredDeviceExtensionsAreMissing) {
     const Vulkan::QueueFamilyIndices queue_family_indices{
         .graphics_family = std::uint32_t{0},
-        .presentation_family = std::uint32_t{0}};
+        .presentation_family = std::uint32_t{0},
+    };
 
     const std::vector<VkExtensionProperties> available_extensions{};
 
@@ -218,11 +234,13 @@ TEST(VulkanDeviceSelectionTests,
 TEST(VulkanDeviceSelectionTests, ReturnsFalseWhenSwapchainSupportIsInadequate) {
     const Vulkan::QueueFamilyIndices queue_family_indices{
         .graphics_family = std::uint32_t{0},
-        .presentation_family = std::uint32_t{0}};
+        .presentation_family = std::uint32_t{0},
+    };
 
     const VkExtensionProperties swapchain_extension{
         .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        .specVersion = std::uint32_t{0}};
+        .specVersion = std::uint32_t{0},
+    };
 
     const std::vector<VkExtensionProperties> available_extensions{
         swapchain_extension,
@@ -259,7 +277,8 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
         .available_extensions = available_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
-        .swapchain_support = makeAdequateSwapchainSupport()};
+        .swapchain_support = makeAdequateSwapchainSupport(),
+    };
 
     const Vulkan::PhysicalDeviceCandidate second_device{
         .handle = VK_NULL_HANDLE,
@@ -271,7 +290,8 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
         .available_extensions = available_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
-        .swapchain_support = makeAdequateSwapchainSupport()};
+        .swapchain_support = makeAdequateSwapchainSupport(),
+    };
 
     const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
         first_device,
@@ -324,7 +344,8 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
         .available_extensions = swapchain_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
-        .swapchain_support = makeAdequateSwapchainSupport()};
+        .swapchain_support = makeAdequateSwapchainSupport(),
+    };
 
     const Vulkan::PhysicalDeviceCandidate unsuitable_device{
         .handle = VK_NULL_HANDLE,
@@ -336,7 +357,8 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
         .available_extensions = unrelated_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
-        .swapchain_support = makeAdequateSwapchainSupport()};
+        .swapchain_support = makeAdequateSwapchainSupport(),
+    };
 
     const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
         unsuitable_device,
@@ -380,7 +402,8 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
         .available_extensions = unrelated_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
-        .swapchain_support = makeAdequateSwapchainSupport()};
+        .swapchain_support = makeAdequateSwapchainSupport(),
+    };
 
     const Vulkan::PhysicalDeviceCandidate second_unsuitable_device{
         .handle = VK_NULL_HANDLE,
@@ -392,7 +415,8 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
         .available_extensions = unrelated_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
-        .swapchain_support = makeAdequateSwapchainSupport()};
+        .swapchain_support = makeAdequateSwapchainSupport(),
+    };
 
     const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
         first_unsuitable_device,
@@ -426,7 +450,8 @@ TEST(VulkanDeviceSelectionTests,
         .available_extensions = swapchain_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(VK_MAKE_API_VERSION(0, 1, 3, 999)),
-        .swapchain_support = makeAdequateSwapchainSupport()};
+        .swapchain_support = makeAdequateSwapchainSupport(),
+    };
 
     const std::vector<Vulkan::PhysicalDeviceCandidate> candidates{
         unsuitable_device,

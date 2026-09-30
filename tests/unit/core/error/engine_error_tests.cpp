@@ -2,6 +2,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include <concepts>
 #include <exception>
 #include <gtest/gtest.h>
 #include <string_view>
@@ -28,12 +29,7 @@ TEST(EngineErrorTests, PreservesEngineErrorMessage) {
 }
 
 TEST(EngineErrorTests, BehavesAsStandardException) {
-    Error::Code code = Error::Code::GlfwInitializationFailed;
-
-    Error::EngineError engine_error =
-        Error::EngineError(code, "Failed to initialize GLFW!");
-
-    EXPECT_THROW(throw engine_error, std::exception);
+    static_assert(std::derived_from<Error::EngineError, std::exception>);
 }
 
 TEST(EngineErrorTests, WithoutNativeContextHasNoNativeError) {

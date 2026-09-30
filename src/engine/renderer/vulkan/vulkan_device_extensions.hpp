@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -33,8 +34,8 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * @return Required Vulkan device-extension names.
      */
-    [[nodiscard]] auto requiredDeviceExtensions()
-        -> const std::vector<const char *> &;
+    [[nodiscard]] auto requiredDeviceExtensions() noexcept
+        -> std::span<const char *const>;
 
     /**
      * @brief Derives the Vulkan device extensions enabled for logical-device

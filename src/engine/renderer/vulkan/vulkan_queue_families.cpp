@@ -95,7 +95,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             findGraphicsQueueFamily(properties);
         const std::optional<std::uint32_t> presentation_family =
             findPresentationQueueFamily(device, surface, properties);
-        return {.graphics_family = graphics_family,
-                .presentation_family = presentation_family};
+        return {
+            .graphics_family = graphics_family,
+            .presentation_family = presentation_family,
+        };
     }
 } // namespace SNE::Engine::Renderer::Vulkan

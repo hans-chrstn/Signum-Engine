@@ -1,9 +1,14 @@
 #include "application.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/subsystem.hpp"
+#include "engine/renderer/vulkan/vulkan_command_pool.hpp"
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/vulkan_queue_requests.hpp"
+#include <cstdint>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -32,6 +37,21 @@ namespace {
         }
 
         return std::move(candidate.value());
+    }
+
+    [[nodiscard]] auto requiredGraphicsQueueFamilyIndex(
+        const Vulkan::PhysicalDeviceCandidate &candidate) -> std::uint32_t {
+        const std::optional<std::uint32_t> &graphics_family =
+            candidate.queue_family_indices.graphics_family;
+
+        if (!graphics_family.has_value()) {
+            SNE::Engine::Core::Assertion::failAssertion(
+                SNE::Engine::Core::Assertion::AssertionType::Invariant,
+                SNE::Engine::Core::Error::Subsystem::Vulkan,
+                "Selected physical device requires a graphics queue family");
+        }
+
+        return graphics_family.value();
     }
 } // namespace
 
@@ -63,7 +83,10 @@ namespace SNE::Engine::Core {
               m_Window.framebufferSize(),
               m_Configuration.presentation_preference,
               m_LogicalDeviceFeatureConfiguration.fifo_latest_ready_feature
-                      .presentModeFifoLatestReady == VK_TRUE) {}
+                      .presentModeFifoLatestReady == VK_TRUE),
+          m_VulkanCommandPool(
+              m_VulkanDevice.nativeHandle(),
+              requiredGraphicsQueueFamilyIndex(m_PhysicalDeviceCandidate)) {}
 
     void Application::run() {
         while (!m_Window.shouldClose()) {

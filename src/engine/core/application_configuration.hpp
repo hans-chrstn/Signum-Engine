@@ -46,7 +46,8 @@ namespace SNE::Engine::Core {
          * available capabilities.
          */
         Renderer::PresentationPreference presentation_preference{
-            Renderer::PresentationPreference::VSync};
+            Renderer::PresentationPreference::VSync,
+        };
 
         /**
          * @brief Whether development-oriented runtime diagnostics are enabled.

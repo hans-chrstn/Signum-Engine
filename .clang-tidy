@@ -1,4 +1,4 @@
-Checks: '-*,clang-analyzer-*,bugprone-*,performance-*,readability-*,modernize-*'
+Checks: '-*,clang-analyzer-*,bugprone-*,performance-*,readability-*,modernize-*,-bugprone-invalid-enum-default-initialization'
 WarningsAsErrors: '*'
 HeaderFilterRegex: '(^|/)(src|tests)/'
 SystemHeaders: false

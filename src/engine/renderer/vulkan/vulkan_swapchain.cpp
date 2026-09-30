@@ -54,7 +54,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             queue_family_indices.presentation_family.value();
 
         const std::array<std::uint32_t, 2> queue_family{
-            {queue_graphics_index, queue_presentation_index}};
+            {queue_graphics_index, queue_presentation_index},
+        };
 
         VkSwapchainCreateInfoKHR swapchain_create_info{};
         swapchain_create_info.sType =

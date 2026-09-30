@@ -56,6 +56,8 @@ namespace SNE::Engine::Core::Error {
         VulkanSwapchainImageEnumerationFailed,
         /** Creation of the Vulkan swapchain image view failed. */
         VulkanSwapchainImageViewCreationFailed,
+        /** Creation of the Vulkan command pool failed. */
+        VulkanCommandPoolCreationFailed,
     };
 
     /**

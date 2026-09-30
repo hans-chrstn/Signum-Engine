@@ -99,7 +99,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             .fifo_latest_ready_extension_supported =
                 has_fifo_latest_ready_extension_support,
             .fifo_latest_ready_feature_supported = static_cast<bool>(
-                fifo_latest_ready_feature.presentModeFifoLatestReady)};
+                fifo_latest_ready_feature.presentModeFifoLatestReady),
+        };
 
         return result;
     }
@@ -113,8 +114,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkPhysicalDeviceFeatures features = queryPhysicalDeviceFeatures(device);
         OptionalDeviceCapabilities optional_capabilities =
             queryOptionalDeviceCapabilities(device, extension_properties);
-        return {.properties = properties,
-                .features = features,
-                .optional_capabilities = optional_capabilities};
+        return {
+            .properties = properties,
+            .features = features,
+            .optional_capabilities = optional_capabilities,
+        };
     }
 } // namespace SNE::Engine::Renderer::Vulkan

@@ -1,9 +1,10 @@
 #include "vulkan_extension_support.hpp"
 #include <cstring>
+#include <span>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto hasRequiredExtensions(
-        const std::vector<const char *> &required_extensions,
+        std::span<const char *const> required_extensions,
         const std::vector<VkExtensionProperties> &available_extensions)
         -> bool {
         for (const char *required_extension : required_extensions) {

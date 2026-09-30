@@ -12,8 +12,14 @@ TEST(VulkanExtensionSupportTests,
     };
 
     const std::vector<VkExtensionProperties> available_extensions{
-        {"VK_KHR_surface", 0},
-        {"VK_EXT_debug_utils", 0},
+        {
+            .extensionName = "VK_KHR_surface",
+            .specVersion = 0,
+        },
+        {
+            .extensionName = "VK_EXT_debug_utils",
+            .specVersion = 0,
+        },
     };
 
     EXPECT_TRUE(Vulkan::hasRequiredExtensions(required_extensions,
@@ -27,7 +33,10 @@ TEST(VulkanExtensionSupportTests, ReturnsFalseWhenRequiredExtensionIsMissing) {
     };
 
     const std::vector<VkExtensionProperties> available_extensions{
-        {"VK_KHR_surface", 0},
+        {
+            .extensionName = "VK_KHR_surface",
+            .specVersion = 0,
+        },
     };
 
     EXPECT_FALSE(Vulkan::hasRequiredExtensions(required_extensions,
@@ -42,9 +51,18 @@ TEST(VulkanExtensionSupportTests,
     };
 
     const std::vector<VkExtensionProperties> available_extensions{
-        {"VK_KHR_surface", 0},
-        {"VK_EXT_debug_utils", 0},
-        {"VK_TEST_EXT", 0},
+        {
+            .extensionName = "VK_KHR_surface",
+            .specVersion = 0,
+        },
+        {
+            .extensionName = "VK_EXT_debug_utils",
+            .specVersion = 0,
+        },
+        {
+            .extensionName = "VK_TEST_EXT",
+            .specVersion = 0,
+        },
     };
 
     EXPECT_TRUE(Vulkan::hasRequiredExtensions(required_extensions,
@@ -55,8 +73,14 @@ TEST(VulkanExtensionSupportTests, ReturnsTrueWhenNoExtensionsAreRequired) {
     const std::vector<const char *> required_extensions{};
 
     const std::vector<VkExtensionProperties> available_extensions{
-        {"VK_KHR_surface", 0},
-        {"VK_EXT_debug_utils", 0},
+        {
+            .extensionName = "VK_KHR_surface",
+            .specVersion = 0,
+        },
+        {
+            .extensionName = "VK_EXT_debug_utils",
+            .specVersion = 0,
+        },
     };
 
     EXPECT_TRUE(Vulkan::hasRequiredExtensions(required_extensions,

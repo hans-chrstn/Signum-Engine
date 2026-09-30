@@ -3,6 +3,7 @@
 #include "application_configuration.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/vulkan/vulkan_command_pool.hpp"
 #include "engine/renderer/vulkan/vulkan_device.hpp"
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
@@ -31,6 +32,7 @@ namespace SNE::Engine::Core {
             m_LogicalDeviceFeatureConfiguration;
         Renderer::Vulkan::VulkanDevice m_VulkanDevice;
         Renderer::Vulkan::VulkanSwapchain m_VulkanSwapchain;
+        Renderer::Vulkan::VulkanCommandPool m_VulkanCommandPool;
 
       public:
         /**

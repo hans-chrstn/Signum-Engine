@@ -16,7 +16,7 @@ namespace SNE::Engine::Core::Error {
         Platform,
         Vulkan,
         Renderer,
-        Editor
+        Editor,
     };
 
     /**

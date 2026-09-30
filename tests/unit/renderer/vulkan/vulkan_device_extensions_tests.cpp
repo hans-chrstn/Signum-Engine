@@ -2,6 +2,7 @@
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include <cstddef>
 #include <gtest/gtest.h>
+#include <span>
 #include <vector>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
@@ -14,7 +15,7 @@ TEST(VulkanDeviceExtensionsTests,
     const std::vector<const char *> extensions =
         Vulkan::deriveEnabledDeviceExtensions(configuration);
 
-    const std::vector<const char *> &required_extensions =
+    std::span<const char *const> required_extensions =
         Vulkan::requiredDeviceExtensions();
 
     ASSERT_EQ(extensions.size(), required_extensions.size());
@@ -30,7 +31,7 @@ TEST(VulkanDeviceExtensionsTests,
         VK_TRUE;
     const std::vector<const char *> extensions =
         Vulkan::deriveEnabledDeviceExtensions(configuration);
-    const std::vector<const char *> &required_extensions =
+    std::span<const char *const> required_extensions =
         Vulkan::requiredDeviceExtensions();
 
     ASSERT_EQ(extensions.size(), required_extensions.size() + 1);

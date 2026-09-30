@@ -82,7 +82,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 .queue_family_indices = queue_family_indices,
                 .available_extensions = std::move(extension_properties),
                 .capabilities = capabilities,
-                .swapchain_support = std::move(swapchain_support)};
+                .swapchain_support = std::move(swapchain_support),
+            };
 
             candidates.push_back(std::move(candidate));
         }

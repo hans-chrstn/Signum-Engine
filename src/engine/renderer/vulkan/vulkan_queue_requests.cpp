@@ -9,7 +9,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::vector<QueueFamilyRequest> requests{};
         if (queue_family_indices.graphics_family.has_value()) {
             requests.push_back(QueueFamilyRequest{
-                .family_index = queue_family_indices.graphics_family.value()});
+                .family_index = queue_family_indices.graphics_family.value(),
+            });
         }
 
         if (queue_family_indices.presentation_family.has_value() &&
@@ -17,7 +18,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 queue_family_indices.graphics_family) {
             requests.push_back(QueueFamilyRequest{
                 .family_index =
-                    queue_family_indices.presentation_family.value()});
+                    queue_family_indices.presentation_family.value(),
+            });
         }
 
         return requests;

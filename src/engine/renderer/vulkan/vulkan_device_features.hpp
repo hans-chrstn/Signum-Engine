@@ -44,7 +44,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_MODE_FIFO_LATEST_READY_FEATURES_KHR,
                 .pNext = nullptr,
                 .presentModeFifoLatestReady = VK_FALSE,
-            };
+        };
     };
 
     /**

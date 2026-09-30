@@ -31,6 +31,7 @@ add_library(
     engine/renderer/vulkan/vulkan_swapchain_support.cpp
     engine/renderer/vulkan/vulkan_swapchain_selection.cpp
     engine/renderer/vulkan/vulkan_swapchain.cpp
+    engine/renderer/vulkan/vulkan_command_pool.cpp
 )
 
 target_include_directories(

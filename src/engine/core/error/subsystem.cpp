@@ -26,6 +26,7 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanSwapchainCreationFailed:
         case Code::VulkanSwapchainImageEnumerationFailed:
         case Code::VulkanSwapchainImageViewCreationFailed:
+        case Code::VulkanCommandPoolCreationFailed:
             return Subsystem::Vulkan;
         }
 

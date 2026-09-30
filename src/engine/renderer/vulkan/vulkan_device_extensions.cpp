@@ -4,15 +4,15 @@
 #include "engine/core/error/native_error.hpp"
 #include "vulkan_device_features.hpp"
 #include "vulkan_result.hpp"
+#include <array>
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan_core.h>
 
 namespace {
-    const std::vector<const char *> kRequiredDeviceExtensions{
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    constexpr std::array<const char *, 1> kRequiredDeviceExtensions{
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    };
 }
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -64,14 +64,20 @@ namespace SNE::Engine::Renderer::Vulkan {
         return extension_properties;
     }
 
-    auto requiredDeviceExtensions() -> const std::vector<const char *> & {
+    auto requiredDeviceExtensions() noexcept -> std::span<const char *const> {
         return kRequiredDeviceExtensions;
     }
 
     auto deriveEnabledDeviceExtensions(
         const LogicalDeviceFeatureConfiguration &configuration)
         -> std::vector<const char *> {
-        std::vector<const char *> extensions = requiredDeviceExtensions();
+        const std::span<const char *const> required_extensions =
+            requiredDeviceExtensions();
+
+        std::vector<const char *> extensions{
+            required_extensions.begin(),
+            required_extensions.end(),
+        };
 
         extensions.reserve(extensions.size() + 1);
 

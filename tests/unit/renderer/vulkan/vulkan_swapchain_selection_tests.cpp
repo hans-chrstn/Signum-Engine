@@ -108,9 +108,12 @@ TEST(VulkanSwapchainSelectionTests,
 
 TEST(VulkanSwapchainSelectionTests, SelectPresentationModeReturnsFifoForVSync) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(
         Vulkan::selectPresentationMode(Renderer::PresentationPreference::VSync,
@@ -121,9 +124,12 @@ TEST(VulkanSwapchainSelectionTests, SelectPresentationModeReturnsFifoForVSync) {
 TEST(VulkanSwapchainSelectionTests,
      SelectPresentationModeReturnsMailboxForLowLatencyVSyncWhenAvailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::LowLatencyVSync,
@@ -135,9 +141,11 @@ TEST(
     VulkanSwapchainSelectionTests,
     SelectPresentationModeReturnsFifoForLowLatencyVSyncWhenMailboxUnavailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
         VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::LowLatencyVSync,
@@ -148,9 +156,12 @@ TEST(
 TEST(VulkanSwapchainSelectionTests,
      SelectPresentationModeReturnsFifoRelaxedForAdaptiveVSyncWhenAvailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::AdaptiveVSync,
@@ -162,8 +173,11 @@ TEST(
     VulkanSwapchainSelectionTests,
     SelectPresentationModeReturnsFifoForAdaptiveVSyncWhenFifoRelaxedUnavailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::AdaptiveVSync,
@@ -174,9 +188,12 @@ TEST(
 TEST(VulkanSwapchainSelectionTests,
      SelectPresentationModeReturnsImmediateForAllowTearingWhenAvailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::AllowTearing,
@@ -188,9 +205,11 @@ TEST(
     VulkanSwapchainSelectionTests,
     SelectPresentationModeReturnsMailboxForAllowTearingWhenImmediateUnavailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
         VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::AllowTearing,
@@ -202,8 +221,10 @@ TEST(
     VulkanSwapchainSelectionTests,
     SelectPresentationModeReturnsFifoForAllowTearingWhenPreferredModesUnavailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::AllowTearing,
@@ -214,9 +235,12 @@ TEST(
 TEST(VulkanSwapchainSelectionTests,
      SelectPresentationModeReturnsFifoLatestReadyWhenEnabledAndAvailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::LatestReadyVSync,
@@ -227,9 +251,12 @@ TEST(VulkanSwapchainSelectionTests,
 TEST(VulkanSwapchainSelectionTests,
      SelectPresentationModeReturnsMailboxWhenLatestReadyFeatureDisabled) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::LatestReadyVSync,
@@ -240,8 +267,11 @@ TEST(VulkanSwapchainSelectionTests,
 TEST(VulkanSwapchainSelectionTests,
      SelectPresentationModeReturnsMailboxWhenLatestReadyModeUnavailable) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::LatestReadyVSync,
@@ -252,8 +282,11 @@ TEST(VulkanSwapchainSelectionTests,
 TEST(VulkanSwapchainSelectionTests,
      SelectPresentationModeReturnsMailboxForLatestReadyFallback) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::LatestReadyVSync,
@@ -264,8 +297,10 @@ TEST(VulkanSwapchainSelectionTests,
 TEST(VulkanSwapchainSelectionTests,
      SelectPresentationModeReturnsFifoForLatestReadyFinalFallback) {
     const std::vector<VkPresentModeKHR> presentation_modes{
-        VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR,
-        VK_PRESENT_MODE_FIFO_RELAXED_KHR};
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+    };
 
     EXPECT_EQ(Vulkan::selectPresentationMode(
                   Renderer::PresentationPreference::LatestReadyVSync,

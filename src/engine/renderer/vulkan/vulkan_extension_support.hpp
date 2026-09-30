@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -17,6 +18,6 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @return true if every required extension is available; otherwise false.
      */
     [[nodiscard]] auto hasRequiredExtensions(
-        const std::vector<const char *> &required_extensions,
+        std::span<const char *const> required_extensions,
         const std::vector<VkExtensionProperties> &available_extensions) -> bool;
 } // namespace SNE::Engine::Renderer::Vulkan

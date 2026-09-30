@@ -117,6 +117,11 @@ TEST(ErrorCodeTests, VulkanSwapchainImageViewCreationErrorCodeHasReadableName) {
         "VulkanSwapchainImageViewCreationFailed");
 }
 
+TEST(ErrorCodeTests, VulkanCommandPoolCreationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandPoolCreationFailed),
+              "VulkanCommandPoolCreationFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);

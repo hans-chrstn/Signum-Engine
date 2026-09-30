@@ -125,6 +125,12 @@ TEST(SubsystemTests, VulkanSwapchainImageViewCreationErrorsBelongToVulkan) {
               Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanCommandPoolCreationErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanCommandPoolCreationFailed),
+        Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");
