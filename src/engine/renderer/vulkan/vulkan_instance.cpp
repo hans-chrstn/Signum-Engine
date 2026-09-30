@@ -11,7 +11,10 @@
 #include <string>
 
 namespace SNE::Engine::Renderer::Vulkan {
-
+    /**
+     *
+     * @brief Vulkan validation layer enabled for development diagnostics.
+     */
     constexpr const char *kValidationLayerName = "VK_LAYER_KHRONOS_validation";
 
     // Instance creation succeeds before debug-messenger creation. If the latter

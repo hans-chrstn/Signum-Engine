@@ -296,11 +296,11 @@
 - [x] Run formatting checks
 - [x] Test FIFO_LATEST_READY capability negotiation
 - [x] Verify FIFO_LATEST_READY remains optional
-- [ ] Verify startup without FIFO_LATEST_READY support
+- [x] Verify startup without FIFO_LATEST_READY support
 - [x] Verify validation-enabled startup
 - [x] Verify validation-disabled startup
 - [x] Verify clean startup and shutdown
-- [ ] Generate Doxygen without new project warnings
+- [x] Generate Doxygen without new project warnings
 - [x] Verify CI build and test workflows
 
 ### Architecture

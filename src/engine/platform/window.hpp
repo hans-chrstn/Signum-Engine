@@ -7,7 +7,9 @@ namespace SNE::Engine::Platform {
      * @brief Specifies the dimensions of a platform window.
      */
     struct WindowSize {
+        /** Window width in logical window units. */
         int width;
+        /** Window height in logical window units. */
         int height;
     };
 
@@ -18,7 +20,9 @@ namespace SNE::Engine::Platform {
      * high-DPI displays and may change during the lifetime of the window.
      */
     struct FramebufferSize {
+        /** Framebuffer width in pixels. */
         int width;
+        /** Framebuffer height in pixels. */
         int height;
     };
 
