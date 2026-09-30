@@ -8,6 +8,7 @@
 #include "engine/renderer/vulkan/vulkan_result.hpp"
 #include <cstdint>
 #include <string>
+#include <utility>
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanCommandPool::VulkanCommandPool(VkDevice device,
@@ -41,14 +42,37 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     VulkanCommandPool::~VulkanCommandPool() noexcept {
+        destroy();
+    }
+
+    auto VulkanCommandPool::nativeHandle() const noexcept -> VkCommandPool {
+        return m_CommandPool;
+    }
+
+    VulkanCommandPool::VulkanCommandPool(VulkanCommandPool &&other) noexcept
+        : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)),
+          m_CommandPool(std::exchange(other.m_CommandPool, VK_NULL_HANDLE)) {}
+
+    auto VulkanCommandPool::operator=(VulkanCommandPool &&other) noexcept
+        -> VulkanCommandPool & {
+        if (this == &other) {
+            return *this;
+        }
+
+        destroy();
+
+        m_Device = std::exchange(other.m_Device, VK_NULL_HANDLE);
+        m_CommandPool = std::exchange(other.m_CommandPool, VK_NULL_HANDLE);
+
+        return *this;
+    }
+
+    auto VulkanCommandPool::destroy() noexcept -> void {
         if (m_CommandPool != VK_NULL_HANDLE) {
             vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
         }
 
         m_CommandPool = VK_NULL_HANDLE;
-    }
-
-    auto VulkanCommandPool::nativeHandle() const noexcept -> VkCommandPool {
-        return m_CommandPool;
+        m_Device = VK_NULL_HANDLE;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

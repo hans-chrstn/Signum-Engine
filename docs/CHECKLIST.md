@@ -325,7 +325,7 @@
 - [x] composition-root boundaries
 - [x] renderer runtime ownership
 - [ ] selected-resource invariants
-- [ ] frame-resource ownership boundaries
+- [x] frame-resource ownership boundaries
 - [ ] borrowed views versus owned containers
 - [ ] swapchain recreation ownership requirements
 - [ ] scalable queue-request modeling
@@ -337,9 +337,9 @@
 - [x] Prevent `Application` from becoming the permanent owner of per-frame Vulkan resources
 - [x] Keep `Application` responsible for orchestration rather than rendering internals
 - [x] Define where device, swapchain, command, and frame resources belong
-- [ ] Define per-frame resource ownership before adding synchronization
+- [x] Define per-frame resource ownership before adding synchronization
 - [ ] Keep command-buffer lifetime tied to its command pool
-- [ ] Define a scalable command-pool ownership model
+- [x] Define a scalable command-pool ownership model
 - [ ] Define swapchain image and image-view access needed by rendering
 - [ ] Expose borrowed swapchain resource views without transferring ownership
 - [ ] Preserve selected physical-device queue-family invariants
@@ -372,9 +372,9 @@
 
 - [x] Keep `Application` as a composition root and high-level orchestrator
 - [x] Keep renderer-runtime ownership outside normal application logic
-- [ ] Keep per-frame GPU state grouped by frame ownership
+- [x] Keep per-frame GPU state grouped by frame ownership
 - [x] Avoid global command buffers, synchronization objects, and frame state
-- [ ] Support multiple frames in flight without redesigning ownership
+- [x] Support multiple frames in flight without redesigning ownership
 - [ ] Allow future graphics, compute, and transfer command pools
 - [ ] Keep command-pool ownership independent from command-buffer recording policy
 - [ ] Keep swapchain ownership separate from frame ownership

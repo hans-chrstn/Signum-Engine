@@ -2,14 +2,15 @@
 
 #include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
-#include "engine/renderer/vulkan/vulkan_command_pool.hpp"
 #include "engine/renderer/vulkan/vulkan_device.hpp"
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
+#include "engine/renderer/vulkan/vulkan_frame_resources.hpp"
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
 #include "engine/renderer/vulkan/vulkan_surface.hpp"
 #include "engine/renderer/vulkan/vulkan_swapchain.hpp"
 #include <string>
+#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
@@ -37,7 +38,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         LogicalDeviceFeatureConfiguration m_LogicalDeviceFeatureConfiguration;
         VulkanDevice m_Device;
         VulkanSwapchain m_Swapchain;
-        VulkanCommandPool m_CommandPool;
+        std::vector<VulkanFrameResources> m_FrameResources;
 
       public:
         /**

@@ -32,6 +32,7 @@ add_library(
     engine/renderer/vulkan/vulkan_swapchain_selection.cpp
     engine/renderer/vulkan/vulkan_swapchain.cpp
     engine/renderer/vulkan/vulkan_command_pool.cpp
+    engine/renderer/vulkan/vulkan_frame_resources.cpp
     engine/renderer/vulkan/vulkan_renderer.cpp
 )
 

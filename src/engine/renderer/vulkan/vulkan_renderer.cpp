@@ -8,6 +8,7 @@
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/vulkan_queue_requests.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -53,6 +54,8 @@ namespace {
 
         return graphics_family.value();
     }
+
+    constexpr std::size_t kFramesInFlight = 2;
 } // namespace
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -79,8 +82,15 @@ namespace SNE::Engine::Renderer::Vulkan {
               m_PhysicalDeviceCandidate.queue_family_indices,
               window.framebufferSize(), presentation_preference,
               m_LogicalDeviceFeatureConfiguration.fifo_latest_ready_feature
-                      .presentModeFifoLatestReady == VK_TRUE),
-          m_CommandPool(
-              m_Device.nativeHandle(),
-              requiredGraphicsQueueFamilyIndex(m_PhysicalDeviceCandidate)) {}
+                      .presentModeFifoLatestReady == VK_TRUE) {
+        const std::uint32_t graphics_queue_family_index =
+            requiredGraphicsQueueFamilyIndex(m_PhysicalDeviceCandidate);
+
+        m_FrameResources.reserve(kFramesInFlight);
+
+        for (std::size_t i{}; i < kFramesInFlight; ++i) {
+            m_FrameResources.emplace_back(m_Device.nativeHandle(),
+                                          graphics_queue_family_index);
+        }
+    }
 } // namespace SNE::Engine::Renderer::Vulkan
