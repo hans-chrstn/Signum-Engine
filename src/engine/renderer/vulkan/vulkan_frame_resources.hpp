@@ -56,9 +56,25 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto operator=(const VulkanFrameResources &)
             -> VulkanFrameResources & = delete;
 
-        VulkanFrameResources(VulkanFrameResources &&) noexcept = default;
+        /**
+         * @brief Transfers ownership of one frame's Vulkan resources from
+         * another object.
+         *
+         * @param other Frame-resource owner from which ownership is
+         * transferred.
+         */
+        VulkanFrameResources(VulkanFrameResources &&other) noexcept = default;
 
-        auto operator=(VulkanFrameResources &&) noexcept
+        /**
+         * @brief Replaces the currently owned frame resources by transferring
+         * ownership from another object.
+         *
+         * @param other Frame-resource owner from which ownership is
+         * transferred.
+         *
+         * @return Reference to this object.
+         */
+        auto operator=(VulkanFrameResources &&other) noexcept
             -> VulkanFrameResources & = default;
     };
 } // namespace SNE::Engine::Renderer::Vulkan
