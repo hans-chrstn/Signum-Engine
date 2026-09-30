@@ -25,7 +25,7 @@
 - [x] ownership
 - [x] constructor/destructor lifetime relationships
 - [x] non-copyable resource owners
-- [ ] application composition root
+- [x] application composition root
 - [ ] process lifetime
 - [ ] subsystem lifetime
 
@@ -315,6 +315,80 @@
 - [x] Avoid global configuration state
 - [x] Avoid speculative abstractions
 - [x] Avoid premature subsystem splitting
+
+---
+
+## Phase 5.75 — Renderer Foundation Scalability
+
+### Learn
+
+- [x] composition-root boundaries
+- [x] renderer runtime ownership
+- [ ] selected-resource invariants
+- [ ] frame-resource ownership boundaries
+- [ ] borrowed views versus owned containers
+- [ ] swapchain recreation ownership requirements
+- [ ] scalable queue-request modeling
+- [ ] incremental abstraction versus speculative abstraction
+
+### Implement
+
+- [x] Define the renderer runtime ownership boundary
+- [x] Prevent `Application` from becoming the permanent owner of per-frame Vulkan resources
+- [x] Keep `Application` responsible for orchestration rather than rendering internals
+- [x] Define where device, swapchain, command, and frame resources belong
+- [ ] Define per-frame resource ownership before adding synchronization
+- [ ] Keep command-buffer lifetime tied to its command pool
+- [ ] Define a scalable command-pool ownership model
+- [ ] Define swapchain image and image-view access needed by rendering
+- [ ] Expose borrowed swapchain resource views without transferring ownership
+- [ ] Preserve selected physical-device queue-family invariants
+- [ ] Document the selected-device type-safety limitation for later cleanup
+- [ ] Remove hardcoded non-resizable window policy before swapchain recreation work
+- [ ] Prepare the application loop for non-blocking rendering
+- [ ] Keep queue-request structures extensible for future compute and transfer queues
+- [ ] Keep logical-device feature negotiation extensible for additional feature chains
+
+### Test
+
+- [x] Verify renderer resource destruction remains dependency-safe
+- [x] Verify `Application` shutdown after renderer ownership changes
+- [x] Verify command-pool lifetime remains shorter than logical-device lifetime
+- [x] Verify borrowed swapchain views cannot outlive the swapchain owner
+- [x] Verify selected physical devices always provide required queue families
+- [x] Verify window creation remains valid with resizing enabled
+- [x] Verify event polling does not block continuous renderer execution
+- [x] Run clean Debug build
+- [x] Run unit tests
+- [x] Run supported integration tests
+- [x] Run ASan/UBSan
+- [x] Run Valgrind
+- [x] Run Clang-Tidy
+- [x] Run formatting checks
+- [x] Run Vulkan validation cleanly
+- [x] Generate Doxygen without new warnings
+
+### Architecture
+
+- [x] Keep `Application` as a composition root and high-level orchestrator
+- [x] Keep renderer-runtime ownership outside normal application logic
+- [ ] Keep per-frame GPU state grouped by frame ownership
+- [x] Avoid global command buffers, synchronization objects, and frame state
+- [ ] Support multiple frames in flight without redesigning ownership
+- [ ] Allow future graphics, compute, and transfer command pools
+- [ ] Keep command-pool ownership independent from command-buffer recording policy
+- [ ] Keep swapchain ownership separate from frame ownership
+- [ ] Keep swapchain resource access non-owning
+- [ ] Keep physical-device discovery separate from selected-device guarantees
+- [x] Keep supported capabilities separate from requested and enabled features
+- [x] Keep queue planning separate from logical-device creation
+- [ ] Allow queue requests to evolve without redesigning `VulkanDevice`
+- [ ] Allow additional Vulkan feature structures without redesigning feature negotiation
+- [ ] Avoid exposing Vulkan implementation details to game-facing APIs
+- [x] Avoid introducing generic managers or registries without a concrete requirement
+- [x] Prefer the smallest durable abstraction over demo-specific shortcuts
+- [x] Do not introduce abstractions solely for hypothetical future systems
+- [x] Preserve explicit RAII ownership and dependency-ordered destruction
 
 ---
 

@@ -3,54 +3,42 @@
 #include "application_configuration.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
-#include "engine/renderer/vulkan/vulkan_command_pool.hpp"
-#include "engine/renderer/vulkan/vulkan_device.hpp"
-#include "engine/renderer/vulkan/vulkan_device_features.hpp"
-#include "engine/renderer/vulkan/vulkan_device_selection.hpp"
-#include "engine/renderer/vulkan/vulkan_instance.hpp"
-#include "engine/renderer/vulkan/vulkan_surface.hpp"
-#include "engine/renderer/vulkan/vulkan_swapchain.hpp"
+#include "engine/renderer/vulkan/vulkan_renderer.hpp"
 
 namespace SNE::Engine::Core {
     /**
      * @brief Owns and coordinates the top-level engine lifetime.
      *
-     * Establishes the lifetime of engine-wide platform, window, and rendering
-     * resources. Members are declared in dependency order so construction
-     * occurs from lower-level dependencies to higher-level systems and
-     * destruction occurs safely in reverse order.
+     * Establishes the lifetime of engine-wide configuration, platform, window,
+     * and rendering systems. Members are declared in dependency order so
+     * construction occurs from lower-level dependencies to higher-level systems
+     * and destruction occurs safely in reverse order.
+     *
+     * Rendering backend initialization and Vulkan resource ownership are
+     * delegated to the renderer rather than managed directly by Application.
      */
     class Application {
       private:
         ApplicationConfiguration m_Configuration;
         Platform::GlfwContext m_GlfwContext;
         Platform::Window m_Window;
-        Renderer::Vulkan::VulkanInstance m_VulkanInstance;
-        Renderer::Vulkan::VulkanSurface m_VulkanSurface;
-        Renderer::Vulkan::PhysicalDeviceCandidate m_PhysicalDeviceCandidate;
-        Renderer::Vulkan::LogicalDeviceFeatureConfiguration
-            m_LogicalDeviceFeatureConfiguration;
-        Renderer::Vulkan::VulkanDevice m_VulkanDevice;
-        Renderer::Vulkan::VulkanSwapchain m_VulkanSwapchain;
-        Renderer::Vulkan::VulkanCommandPool m_VulkanCommandPool;
+        Renderer::Vulkan::VulkanRenderer m_Renderer;
 
       public:
         /**
-         * @brief Constructs the application and its engine-wide resources.
+         * @brief Constructs the application and its engine-wide systems.
          *
          * Stores the supplied application configuration, initializes the
-         * platform context, creates the primary application window, establishes
-         * the Vulkan instance and presentation surface, selects a suitable
-         * physical device, creates the Vulkan logical device, retrieves the
-         * graphics and presentation queues, and creates the initial
-         * presentation swapchain.
+         * platform context, creates the primary application window, and
+         * initializes the renderer for that window using the configured
+         * presentation and diagnostic policies.
          *
          * @param configuration Top-level configuration controlling application
          * startup policy. The default value uses Signum's standard application
          * settings.
          *
-         * @throws Error::EngineError if a required platform, window, or Vulkan
-         *         resource cannot be initialized.
+         * @throws Error::EngineError if a required platform, window, or
+         * rendering resource cannot be initialized.
          */
         explicit Application(ApplicationConfiguration configuration = {});
 
