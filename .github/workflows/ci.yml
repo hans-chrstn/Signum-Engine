@@ -14,11 +14,6 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CC: clang
-  CXX: clang++
-  CXXFLAGS: -Werror
-
 jobs:
   quality:
     name: Build, Unit Tests, Static Analysis, and Docs
@@ -29,49 +24,42 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes \
-            clang \
-            clang-format \
-            clang-tidy \
-            cmake \
-            doxygen \
-            just \
-            libglfw3-dev \
-            libgtest-dev \
-            libvulkan-dev \
-            ninja-build
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
 
-      - name: Show Clang toolchain versions
+      - name: Show toolchain versions
         run: |
-          clang++ --version
-          clang-format --version
-          clang-tidy --version
+          nix develop --command bash -c '
+            clang++ --version
+            clang-format --version
+            clang-tidy --version
+            cmake --version
+            ninja --version
+            just --version
+          '
 
       - name: Verify development environment
-        run: just doctor
+        run: nix develop --command just doctor
 
       - name: Check formatting
-        run: ./scripts/format-check.sh
+        run: nix develop --command ./scripts/format-check.sh
 
       - name: Clean Debug build
         run: |
-          just clean
-          just build debug
+          nix develop --command just clean
+          nix develop --command just build debug
 
       - name: Run unit tests
-        run: just test-unit debug
+        run: nix develop --command just test-unit debug
 
       - name: Run Clang-Tidy
-        run: just tidy
+        run: nix develop --command just tidy
 
       - name: Build with AddressSanitizer and UndefinedBehaviorSanitizer
-        run: just build asan
+        run: nix develop --command just build asan
 
       - name: Run sanitized unit tests
-        run: ctest --preset asan -L "^unit$"
+        run: nix develop --command ctest --preset asan -L "^unit$"
 
       - name: Generate Doxygen documentation
-        run: just docs
+        run: nix develop --command just docs
