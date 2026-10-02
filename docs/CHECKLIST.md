@@ -413,23 +413,23 @@
 ### Learn
 
 - [x] command pools
-- [ ] command buffers
-- [ ] synchronization
-- [ ] frame ownership
-- [ ] acquire-submit-present flow
-- [ ] dynamic rendering
+- [x] command buffers
+- [x] synchronization
+- [x] frame ownership
+- [x] acquire-submit-present flow
+- [x] dynamic rendering
 
 ### Implement
 
 - [x] Create command pool
 - [x] Create initial per-frame primary command buffers without making one-buffer-per-frame a permanent abstraction
 - [x] Create initial frame synchronization objects without making one fixed synchronization layout a permanent renderer contract
-- [ ] Implement frame loop
-- [ ] Use Vulkan dynamic rendering
+- [x] Implement frame loop
+- [x] Use Vulkan dynamic rendering
 - [x] Poll platform events
-- [ ] Clear screen
+- [x] Clear screen
 - [ ] Render triangle
-- [ ] Handle frame errors
+- [x] Handle frame errors
 
 ### Test
 
@@ -441,11 +441,11 @@
 
 ### Architecture
 
-- [ ] Keep rendering loop independent from gameplay
+- [x] Keep rendering loop independent from gameplay
 - [x] Keep synchronization details inside rendering subsystem
 - [x] Keep command-buffer allocation, recording, and recycling policy inside rendering boundaries
 - [ ] Keep synchronization ownership extensible for additional queues and submission paths
-- [ ] Prefer dynamic rendering over legacy render-pass/framebuffer objects unless a concrete compatibility need requires them
+- [x] Prefer dynamic rendering over legacy render-pass/framebuffer objects unless a concrete compatibility need requires them
 
 ---
 
