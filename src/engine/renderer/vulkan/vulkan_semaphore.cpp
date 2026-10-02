@@ -33,16 +33,16 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
-    VulkanSemaphore::~VulkanSemaphore() noexcept {
-        destroy();
-    }
-
     auto VulkanSemaphore::destroy() noexcept -> void {
         if (m_Semaphore != VK_NULL_HANDLE) {
             vkDestroySemaphore(m_Device, m_Semaphore, nullptr);
         }
         m_Device = VK_NULL_HANDLE;
         m_Semaphore = VK_NULL_HANDLE;
+    }
+
+    VulkanSemaphore::~VulkanSemaphore() noexcept {
+        destroy();
     }
 
     VulkanSemaphore::VulkanSemaphore(VulkanSemaphore &&other) noexcept

@@ -6,7 +6,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkDevice device, std::uint32_t graphics_queue_family_index)
         : m_CommandPool(device, graphics_queue_family_index),
           m_CommandBuffers(m_CommandPool.allocateCommandBuffers(
-              VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1U)) {}
+              VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1U)),
+          m_ImageAvailableSemaphore(device), m_InFlightFence(device, true) {}
 
     auto VulkanFrameResources::commandBuffers() const noexcept
         -> std::span<const VkCommandBuffer> {

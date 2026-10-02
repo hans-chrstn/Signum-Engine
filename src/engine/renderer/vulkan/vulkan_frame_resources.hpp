@@ -1,6 +1,8 @@
 #pragma once
 
 #include "engine/renderer/vulkan/vulkan_command_pool.hpp"
+#include "engine/renderer/vulkan/vulkan_fence.hpp"
+#include "engine/renderer/vulkan/vulkan_semaphore.hpp"
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -14,28 +16,64 @@ namespace SNE::Engine::Renderer::Vulkan {
      * Groups Vulkan resources whose lifetime and reuse are tied to a single
      * frame-in-flight slot.
      *
-     * Each frame owns an independent command pool so command resources may be
-     * reset and reused only after that frame's GPU work has completed.
+     * Each frame owns an independent command pool and command-buffer storage so
+     * command resources may be reused only after that frame's GPU work has
+     * completed.
      *
-     * Additional per-frame command and synchronization resources are owned by
-     * this type as the rendering frame lifecycle is established.
+     * The frame also owns an image-availability semaphore used to synchronize
+     * swapchain-image acquisition with GPU submission and an in-flight fence
+     * used to determine when the frame slot may be safely reused.
      *
      * The type is non-copyable because it owns Vulkan resources with exclusive
      * lifetimes. Ownership may be transferred through move operations.
      */
     class VulkanFrameResources {
       private:
+        /**
+         * @brief Command pool owned by this frame-in-flight slot.
+         *
+         * Allocates command buffers associated with the graphics queue family
+         * and remains alive for the lifetime of those command buffers.
+         */
         VulkanCommandPool m_CommandPool;
+        /**
+         * @brief Command-buffer handles allocated from this frame's command
+         * pool.
+         *
+         * The handles are non-owning with respect to Vulkan allocation
+         * lifetime; their validity is tied to m_CommandPool.
+         *
+         * The container owns only the stored handle values.
+         */
         std::vector<VkCommandBuffer> m_CommandBuffers;
+        /**
+         * @brief Semaphore signaled when a swapchain image becomes available.
+         *
+         * Used to synchronize swapchain-image acquisition with GPU work
+         * submitted for this frame-in-flight slot.
+         */
+        VulkanSemaphore m_ImageAvailableSemaphore;
+        /**
+         * @brief Fence used to determine when this frame-in-flight slot may be
+         * reused.
+         *
+         * The fence begins in the signaled state so the frame slot is
+         * immediately reusable before its first GPU submission.
+         *
+         * Subsequent submissions signal the fence when the GPU work associated
+         * with this frame slot has completed.
+         */
+        VulkanFence m_InFlightFence;
 
       public:
         /**
          * @brief Creates the Vulkan resources required by one frame-in-flight
          * slot.
          *
-         * Creates a command pool associated with the graphics queue family.
-         * Additional per-frame command and synchronization resources are
-         * established here as the frame lifecycle is implemented.
+         * Creates a command pool associated with the graphics queue family,
+         * allocates the initial command-buffer set, creates the
+         * image-availability semaphore, and creates the in-flight fence in the
+         * signaled state.
          *
          * @param device Logical device used by the frame's Vulkan resources.
          * @param graphics_queue_family_index Queue-family index used for
