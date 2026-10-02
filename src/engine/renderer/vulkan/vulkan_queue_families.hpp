@@ -24,19 +24,43 @@ namespace SNE::Engine::Renderer::Vulkan {
     };
 
     /**
-     * @brief Stores queue-family indices guaranteed for renderer use.
+     * @brief Represents a queue family selected for renderer use.
      *
-     * Represents the graphics and presentation queue families of a physical
-     * device that has already satisfied the renderer's queue-family
-     * requirements.
+     * Stores the Vulkan queue-family index together with the number of queues
+     * exposed by that family.
      *
-     * Unlike QueueFamilyIndices, these values are not optional because
-     * physical-device selection has already established that both required
-     * queue families exist.
+     * This information is produced after physical-device selection and is used
+     * during logical-device queue planning to verify that requested queues can
+     * be provided by the selected hardware.
      */
-    struct SelectedQueueFamilyIndices {
-        std::uint32_t graphics_family;
-        std::uint32_t presentation_family;
+
+    struct SelectedQueueFamily {
+        /** Vulkan queue-family index. */
+        std::uint32_t family_index{};
+        /** Number of queues exposed by this Vulkan queue family. */
+        std::uint32_t available_queue_count = 0;
+    };
+
+    /**
+     * @brief Stores selected queue-family information guaranteed for renderer
+     * use.
+     *
+     * Represents the graphics and presentation queue families chosen during
+     * physical-device selection.
+     *
+     * Unlike QueueFamilyIndices, these values are not optional because device
+     * selection has already established that both required queue families
+     * exist.
+     *
+     * Each selected queue family contains both its Vulkan index and the queue
+     * capacity reported by the physical device. This information is used when
+     * creating the logical-device queue plan.
+     */
+    struct SelectedQueueFamilies {
+        /** Selected queue family used for graphics operations. */
+        SelectedQueueFamily graphics_family;
+        /** Selected queue family used for presentation operations. */
+        SelectedQueueFamily presentation_family;
     };
 
     /**

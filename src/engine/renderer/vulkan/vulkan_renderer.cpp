@@ -54,19 +54,18 @@ namespace SNE::Engine::Renderer::Vulkan {
               deriveLogicalDeviceFeatureConfiguration(
                   deriveLogicalDeviceFeatureRequest(presentation_preference),
                   m_PhysicalDevice.capabilities)),
-          m_Device(m_PhysicalDevice.handle,
-                   m_PhysicalDevice.queue_family_indices,
-                   deriveUniqueQueueFamilyRequests(
-                       m_PhysicalDevice.queue_family_indices),
-                   m_LogicalDeviceFeatureConfiguration),
+          m_Device(
+              m_PhysicalDevice.handle, m_PhysicalDevice.queue_families,
+              deriveUniqueQueueFamilyRequests(m_PhysicalDevice.queue_families),
+              m_LogicalDeviceFeatureConfiguration),
           m_Swapchain(
               m_PhysicalDevice.handle, m_Device.nativeHandle(),
-              m_Surface.nativeHandle(), m_PhysicalDevice.queue_family_indices,
+              m_Surface.nativeHandle(), m_PhysicalDevice.queue_families,
               window.framebufferSize(), presentation_preference,
               m_LogicalDeviceFeatureConfiguration.fifo_latest_ready_feature
                       .presentModeFifoLatestReady == VK_TRUE) {
         const std::uint32_t graphics_queue_family_index =
-            m_PhysicalDevice.queue_family_indices.graphics_family;
+            m_PhysicalDevice.queue_families.graphics_family.family_index;
 
         m_FrameResources.reserve(kFramesInFlight);
 

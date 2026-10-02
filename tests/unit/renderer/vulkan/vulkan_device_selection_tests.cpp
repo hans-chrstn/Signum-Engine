@@ -12,6 +12,24 @@
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 namespace {
+    [[nodiscard]] auto makeQueueFamilyProperties()
+        -> std::vector<VkQueueFamilyProperties> {
+        VkQueueFamilyProperties graphics_properties{};
+        graphics_properties.queueFlags = VK_QUEUE_GRAPHICS_BIT;
+        graphics_properties.queueCount = 1;
+
+        VkQueueFamilyProperties second_properties{};
+        second_properties.queueFlags = VK_QUEUE_GRAPHICS_BIT;
+        second_properties.queueCount = 1;
+
+        return {
+            graphics_properties,
+            second_properties,
+        };
+    }
+} // namespace
+
+namespace {
     [[nodiscard]] auto makePhysicalDeviceCapabilities(std::uint32_t api_version)
         -> Vulkan::PhysicalDeviceCapabilities {
         Vulkan::PhysicalDeviceCapabilities capabilities{};
@@ -275,6 +293,7 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
                 .graphics_family = std::uint32_t{0},
                 .presentation_family = std::uint32_t{0},
             },
+        .queue_family_properties = makeQueueFamilyProperties(),
         .available_extensions = available_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
@@ -288,6 +307,7 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
                 .graphics_family = std::uint32_t{1},
                 .presentation_family = std::uint32_t{1},
             },
+        .queue_family_properties = makeQueueFamilyProperties(),
         .available_extensions = available_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
@@ -309,10 +329,10 @@ TEST(VulkanDeviceSelectionTests, ReturnsFirstSuitablePhysicalDevice) {
 
     const Vulkan::SelectedPhysicalDevice &selected_device = selected.value();
 
-    EXPECT_EQ(selected_device.queue_family_indices.graphics_family,
+    EXPECT_EQ(selected_device.queue_families.graphics_family.family_index,
               std::uint32_t{0});
 
-    EXPECT_EQ(selected_device.queue_family_indices.presentation_family,
+    EXPECT_EQ(selected_device.queue_families.presentation_family.family_index,
               std::uint32_t{0});
 }
 
@@ -342,6 +362,7 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
                 .graphics_family = std::uint32_t{0},
                 .presentation_family = std::uint32_t{0},
             },
+        .queue_family_properties = makeQueueFamilyProperties(),
         .available_extensions = swapchain_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
@@ -355,6 +376,7 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
                 .graphics_family = std::uint32_t{1},
                 .presentation_family = std::uint32_t{1},
             },
+        .queue_family_properties = makeQueueFamilyProperties(),
         .available_extensions = unrelated_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
@@ -376,10 +398,10 @@ TEST(VulkanDeviceSelectionTests, SkipsUnsuitablePhysicalDevices) {
 
     const Vulkan::SelectedPhysicalDevice &selected_device = selected.value();
 
-    EXPECT_EQ(selected_device.queue_family_indices.graphics_family,
+    EXPECT_EQ(selected_device.queue_families.graphics_family.family_index,
               std::uint32_t{0});
 
-    EXPECT_EQ(selected_device.queue_family_indices.presentation_family,
+    EXPECT_EQ(selected_device.queue_families.presentation_family.family_index,
               std::uint32_t{0});
 }
 
@@ -400,6 +422,7 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
                 .graphics_family = std::uint32_t{0},
                 .presentation_family = std::uint32_t{0},
             },
+        .queue_family_properties = makeQueueFamilyProperties(),
         .available_extensions = unrelated_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
@@ -413,6 +436,7 @@ TEST(VulkanDeviceSelectionTests, ReturnsNulloptWhenNoPhysicalDeviceIsSuitable) {
                 .graphics_family = std::uint32_t{1},
                 .presentation_family = std::uint32_t{1},
             },
+        .queue_family_properties = makeQueueFamilyProperties(),
         .available_extensions = unrelated_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
@@ -448,6 +472,7 @@ TEST(VulkanDeviceSelectionTests,
                 .graphics_family = std::uint32_t{0},
                 .presentation_family = std::uint32_t{0},
             },
+        .queue_family_properties = makeQueueFamilyProperties(),
         .available_extensions = swapchain_extensions,
         .capabilities =
             makePhysicalDeviceCapabilities(VK_MAKE_API_VERSION(0, 1, 3, 999)),

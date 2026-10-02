@@ -10,21 +10,24 @@
 #include "vulkan_queue_families.hpp"
 #include "vulkan_result.hpp"
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanDevice::VulkanDevice(
         VkPhysicalDevice physical_device,
-        const SelectedQueueFamilyIndices &queue_family_indices,
+        const SelectedQueueFamilies &queue_families,
         const std::vector<QueueFamilyRequest> &queue_family_requests,
         const LogicalDeviceFeatureConfiguration &logical_device_configuration) {
 
         const std::uint32_t graphics_family =
-            queue_family_indices.graphics_family;
+            queue_families.graphics_family.family_index;
         const std::uint32_t presentation_family =
-            queue_family_indices.presentation_family;
+            queue_families.presentation_family.family_index;
 
         const bool has_graphics_request = std::ranges::any_of(
             queue_family_requests,
@@ -46,19 +49,64 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "presentation families");
         }
 
+        for (std::size_t i{}; i < queue_family_requests.size(); ++i) {
+            for (std::size_t j{i + 1}; j < queue_family_requests.size(); ++j) {
+                if (queue_family_requests[i].family_index ==
+                    queue_family_requests[j].family_index) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "VulkanDevice requires each queue-family request to "
+                        "use a unique queue-family index");
+                }
+            }
+        }
+
         std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
         queue_create_infos.reserve(queue_family_requests.size());
 
-        const float queue_priority = 1.0F;
         for (const QueueFamilyRequest &queue_family_request :
              queue_family_requests) {
             VkDeviceQueueCreateInfo queue_create_info{};
             queue_create_info.sType =
                 VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queue_create_info.queueCount = std::uint32_t{1};
+
+            if (queue_family_request.priorities.empty()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanDevice requires each queue-family request to "
+                    "contain at least one queue priority");
+            }
+
+            if (queue_family_request.priorities.size() >
+                std::numeric_limits<std::uint32_t>::max()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanDevice queue-family request count exceeds the "
+                    "Vulkan queue-count representation");
+            }
+
+            for (const float &priority : queue_family_request.priorities) {
+                if (std::isnan(priority) || priority < 0.0F ||
+                    priority > 1.0F) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "VulkanDevice requires each queue priority to be "
+                        "within the range [0.0, 1.0]");
+                }
+            }
+
+            const auto queue_count = static_cast<std::uint32_t>(
+                queue_family_request.priorities.size());
+
+            queue_create_info.queueCount = queue_count;
             queue_create_info.queueFamilyIndex =
                 queue_family_request.family_index;
-            queue_create_info.pQueuePriorities = &queue_priority;
+            queue_create_info.pQueuePriorities =
+                queue_family_request.priorities.data();
             queue_create_infos.push_back(queue_create_info);
         }
 

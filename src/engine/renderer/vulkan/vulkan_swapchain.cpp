@@ -1,10 +1,7 @@
 #include "vulkan_swapchain.hpp"
-#include "engine/core/assert/assertion_handler.hpp"
-#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
-#include "engine/core/error/subsystem.hpp"
 #include "engine/platform/window.hpp"
 #include "vulkan_queue_families.hpp"
 #include "vulkan_result.hpp"
@@ -18,8 +15,7 @@
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanSwapchain::VulkanSwapchain(
         VkPhysicalDevice physical_device, VkDevice logical_device,
-        VkSurfaceKHR surface,
-        const SelectedQueueFamilyIndices &queue_family_indices,
+        VkSurfaceKHR surface, const SelectedQueueFamilies &queue_families,
         const Platform::FramebufferSize &framebuffer_size,
         PresentationPreference presentation_preference,
         bool fifo_latest_ready_enabled)
@@ -42,9 +38,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             selectSwapchainImageCount(swapchain_support.surface_capabilities);
 
         const std::uint32_t queue_graphics_index =
-            queue_family_indices.graphics_family;
+            queue_families.graphics_family.family_index;
         const std::uint32_t queue_presentation_index =
-            queue_family_indices.presentation_family;
+            queue_families.presentation_family.family_index;
 
         const std::array<std::uint32_t, 2> queue_family{
             {queue_graphics_index, queue_presentation_index},

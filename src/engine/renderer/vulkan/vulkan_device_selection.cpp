@@ -9,6 +9,21 @@
 #include <utility>
 #include <vector>
 
+namespace {
+
+    [[nodiscard]] auto findQueueFamilyProperty(
+        const std::vector<VkQueueFamilyProperties> &properties,
+        std::uint32_t family_index) -> const VkQueueFamilyProperties * {
+
+        if (family_index >= properties.size()) {
+            return nullptr;
+        }
+
+        return &properties[family_index];
+    }
+
+} // namespace
+
 namespace SNE::Engine::Renderer::Vulkan {
     auto hasRequiredSwapchainSupport(
         const SwapchainSupportDetails &swapchain_support) -> bool {
@@ -56,12 +71,36 @@ namespace SNE::Engine::Renderer::Vulkan {
                 continue;
             }
 
+            const VkQueueFamilyProperties *graphics_properties =
+                findQueueFamilyProperty(device.queue_family_properties,
+                                        graphics_family.value());
+
+            const VkQueueFamilyProperties *presentation_properties =
+                findQueueFamilyProperty(device.queue_family_properties,
+                                        presentation_family.value());
+
+            if (graphics_properties == nullptr ||
+                presentation_properties == nullptr) {
+                continue;
+            }
+
             return SelectedPhysicalDevice{
                 .handle = device.handle,
-                .queue_family_indices =
+                .queue_families =
                     {
-                        .graphics_family = graphics_family.value(),
-                        .presentation_family = presentation_family.value(),
+                        .graphics_family =
+                            {
+                                .family_index = graphics_family.value(),
+                                .available_queue_count =
+                                    graphics_properties->queueCount,
+                            },
+
+                        .presentation_family =
+                            {
+                                .family_index = presentation_family.value(),
+                                .available_queue_count =
+                                    presentation_properties->queueCount,
+                            },
                     },
                 .capabilities = device.capabilities,
             };
@@ -97,6 +136,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             DiscoveredPhysicalDevice discovered_device{
                 .handle = device,
                 .queue_family_indices = queue_family_indices,
+                .queue_family_properties = queue_family_properties,
                 .available_extensions = std::move(extension_properties),
                 .capabilities = capabilities,
                 .swapchain_support = std::move(swapchain_support),

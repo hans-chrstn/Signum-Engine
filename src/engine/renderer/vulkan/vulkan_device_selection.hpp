@@ -8,27 +8,38 @@
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+
     /**
      * @brief Represents a physical device being evaluated for renderer use.
      *
-     * Groups the Vulkan physical-device handle with the discovered queue-family
-     * indices, device-extension properties, capability information, and
+     * Groups the Vulkan physical-device handle with discovered queue-family
+     * information, device-extension properties, capability information, and
      * swapchain support required by physical-device suitability and selection
      * policy.
+     *
+     * Queue-family indices represent discovered capabilities and remain
+     * optional because this structure describes an evaluated device before
+     * selection has completed.
      *
      * The structure does not own the Vulkan physical device. The handle remains
      * valid only while the Vulkan instance that provided it remains valid.
      *
-     * @note Queue-family indices remain optional because this type represents
-     * discovered physical-device state. Successful physical-device selection
-     * converts a suitable discovered device into SelectedPhysicalDevice, where
-     * required queue-family guarantees are represented explicitly.
+     * @note Successful physical-device selection converts this discovered state
+     * into SelectedPhysicalDevice, where required queue-family guarantees are
+     * represented explicitly.
      */
     struct DiscoveredPhysicalDevice {
         /** Non-owning handle to the Vulkan physical device. */
         VkPhysicalDevice handle;
         /** Queue-family indices discovered for the physical device. */
         QueueFamilyIndices queue_family_indices;
+        /**
+         * Queue-family properties reported by Vulkan for the physical device.
+         *
+         * Contains hardware information such as queue capabilities and queue
+         * counts used during physical-device selection.
+         */
+        std::vector<VkQueueFamilyProperties> queue_family_properties;
         /** Device extensions reported as available by the physical device. */
         std::vector<VkExtensionProperties> available_extensions;
         /** Capabilities reported by the physical device. */
@@ -41,13 +52,13 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @brief Represents a physical device validated and selected for renderer
      * use.
      *
-     * Stores the Vulkan physical-device handle, required queue-family indices,
-     * and capability information needed after physical-device selection.
+     * Stores the Vulkan physical-device handle, selected queue-family
+     * information, and capability information required after physical-device
+     * selection.
      *
-     * The queue-family indices are guaranteed to contain the graphics and
-     * presentation families required by the renderer because this type is
-     * created only after the corresponding discovered physical device satisfies
-     * the renderer's suitability policy.
+     * The selected queue families are guaranteed to satisfy renderer
+     * requirements because this type is created only after suitability
+     * validation succeeds.
      *
      * The structure does not own the Vulkan physical device. The handle remains
      * valid only while the Vulkan instance that provided it remains valid.
@@ -55,8 +66,9 @@ namespace SNE::Engine::Renderer::Vulkan {
     struct SelectedPhysicalDevice {
         /** Non-owning handle to the selected Vulkan physical device. */
         VkPhysicalDevice handle;
-        /** Required queue-family indices guaranteed by device selection. */
-        SelectedQueueFamilyIndices queue_family_indices;
+        /** Selected graphics and presentation queue-family information
+         * guaranteed by device selection. */
+        SelectedQueueFamilies queue_families;
         /** Capabilities reported by the selected physical device. */
         PhysicalDeviceCapabilities capabilities;
     };

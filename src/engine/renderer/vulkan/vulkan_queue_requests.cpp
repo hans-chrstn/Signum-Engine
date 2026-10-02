@@ -3,17 +3,23 @@
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
-    auto deriveUniqueQueueFamilyRequests(
-        const SelectedQueueFamilyIndices &queue_family_indices)
+    auto
+    deriveUniqueQueueFamilyRequests(const SelectedQueueFamilies &queue_families)
         -> std::vector<QueueFamilyRequest> {
+        std::vector<float> priorities{};
+        priorities.push_back(1.0F);
         std::vector<QueueFamilyRequest> requests{
-            {.family_index = queue_family_indices.graphics_family},
+            {
+                .family_index = queue_families.graphics_family.family_index,
+                .priorities = priorities,
+            },
         };
 
-        if (queue_family_indices.presentation_family !=
-            queue_family_indices.graphics_family) {
+        if (queue_families.presentation_family.family_index !=
+            queue_families.graphics_family.family_index) {
             requests.push_back({
-                .family_index = queue_family_indices.presentation_family,
+                .family_index = queue_families.presentation_family.family_index,
+                .priorities = priorities,
             });
         }
         return requests;

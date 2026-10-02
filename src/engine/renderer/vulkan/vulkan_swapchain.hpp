@@ -10,7 +10,7 @@ namespace SNE::Engine::Platform {
 }
 
 namespace SNE::Engine::Renderer::Vulkan {
-    struct SelectedQueueFamilyIndices;
+    struct SelectedQueueFamilies;
 
     /**
      * @brief Owns a Vulkan swapchain and its presentation image views.
@@ -70,7 +70,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * the swapchain.
          * @param surface Vulkan surface to which swapchain images will be
          * presented.
-         * @param queue_family_indices Graphics and presentation queue-family
+         * @param queue_families Graphics and presentation queue-family
          * indices used to determine swapchain image-sharing behavior.
          * @param framebuffer_size Current framebuffer dimensions in pixels used
          * when selecting the swapchain image extent.
@@ -85,7 +85,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         VulkanSwapchain(VkPhysicalDevice physical_device,
                         VkDevice logical_device, VkSurfaceKHR surface,
-                        const SelectedQueueFamilyIndices &queue_family_indices,
+                        const SelectedQueueFamilies &queue_families,
                         const Platform::FramebufferSize &framebuffer_size,
                         PresentationPreference presentation_preference,
                         bool fifo_latest_ready_enabled);

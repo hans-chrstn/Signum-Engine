@@ -10,15 +10,26 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 TEST(VulkanDeviceTests, RequiresGraphicsQueueRequest) {
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+    std::vector<float> priorities{};
+    priorities.push_back(1.0F);
 
-    const Vulkan::SelectedQueueFamilyIndices queue_family_indices{
-        .graphics_family = 0U,
-        .presentation_family = 1U,
+    const Vulkan::SelectedQueueFamilies queue_family_indices{
+        .graphics_family =
+            {
+                .family_index = 0U,
+                .available_queue_count = 1U,
+            },
+        .presentation_family =
+            {
+                .family_index = 1U,
+                .available_queue_count = 1U,
+            },
     };
 
     const std::vector<Vulkan::QueueFamilyRequest> queue_family_requests{
         Vulkan::QueueFamilyRequest{
             .family_index = 1U,
+            .priorities = priorities,
         },
     };
 
@@ -35,15 +46,26 @@ TEST(VulkanDeviceTests, RequiresGraphicsQueueRequest) {
 
 TEST(VulkanDeviceTests, RequiresPresentationQueueRequest) {
     VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+    std::vector<float> priorities{};
+    priorities.push_back(1.0F);
 
-    const Vulkan::SelectedQueueFamilyIndices queue_family_indices{
-        .graphics_family = 0U,
-        .presentation_family = 1U,
+    const Vulkan::SelectedQueueFamilies queue_family_indices{
+        .graphics_family =
+            {
+                .family_index = 0U,
+                .available_queue_count = 1U,
+            },
+        .presentation_family =
+            {
+                .family_index = 1U,
+                .available_queue_count = 1U,
+            },
     };
 
     const std::vector<Vulkan::QueueFamilyRequest> queue_family_requests{
         Vulkan::QueueFamilyRequest{
             .family_index = 0U,
+            .priorities = priorities,
         },
     };
 

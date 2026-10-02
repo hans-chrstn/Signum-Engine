@@ -10,9 +10,17 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 TEST(VulkanQueueRequestsTests,
      ReturnsSingleRequestWhenGraphicsAndPresentationShareQueueFamily) {
-    const Vulkan::SelectedQueueFamilyIndices queue_family_indices{
-        .graphics_family = std::uint32_t{0},
-        .presentation_family = std::uint32_t{0},
+    const Vulkan::SelectedQueueFamilies queue_family_indices{
+        .graphics_family =
+            {
+                .family_index = std::uint32_t{0},
+                .available_queue_count = 1U,
+            },
+        .presentation_family =
+            {
+                .family_index = std::uint32_t{0},
+                .available_queue_count = 1U,
+            },
     };
 
     const std::vector<Vulkan::QueueFamilyRequest> requests =
@@ -25,9 +33,17 @@ TEST(VulkanQueueRequestsTests,
 TEST(
     VulkanQueueRequestsTests,
     ReturnsDistinctRequestsWhenGraphicsAndPresentationUseDifferentQueueFamilies) {
-    const Vulkan::SelectedQueueFamilyIndices queue_family_indices{
-        .graphics_family = std::uint32_t{0},
-        .presentation_family = std::uint32_t{1},
+    const Vulkan::SelectedQueueFamilies queue_family_indices{
+        .graphics_family =
+            {
+                .family_index = std::uint32_t{0},
+                .available_queue_count = 1U,
+            },
+        .presentation_family =
+            {
+                .family_index = std::uint32_t{1},
+                .available_queue_count = 1U,
+            },
     };
 
     const std::vector<Vulkan::QueueFamilyRequest> requests =
