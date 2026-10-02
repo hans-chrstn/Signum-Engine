@@ -2,6 +2,8 @@
 
 #include "engine/renderer/vulkan/vulkan_command_pool.hpp"
 #include <cstdint>
+#include <span>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -24,6 +26,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     class VulkanFrameResources {
       private:
         VulkanCommandPool m_CommandPool;
+        std::vector<VkCommandBuffer> m_CommandBuffers;
 
       public:
         /**
@@ -76,5 +79,23 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         auto operator=(VulkanFrameResources &&other) noexcept
             -> VulkanFrameResources & = default;
+
+        /**
+         * @brief Returns the command buffers associated with this frame.
+         *
+         * Provides a non-owning read-only view of the command-buffer handles
+         * stored by this frame-in-flight resource set.
+         *
+         * The returned span remains valid only while this object exists and its
+         * command-buffer storage is not modified.
+         *
+         * The command buffers remain associated with the command pool owned by
+         * this frame and must not outlive that pool.
+         *
+         * @return Read-only non-owning view of this frame's command-buffer
+         * handles.
+         */
+        [[nodiscard]] auto commandBuffers() const noexcept
+            -> std::span<const VkCommandBuffer>;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

@@ -131,6 +131,12 @@ TEST(SubsystemTests, VulkanCommandPoolCreationErrorsBelongToVulkan) {
         Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanCommandBufferAllocationErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(
+                  Error::Code::VulkanCommandBufferAllocationFailed),
+              Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

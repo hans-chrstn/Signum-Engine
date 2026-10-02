@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -92,5 +93,29 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @return Vulkan command-pool handle owned by this object.
          */
         [[nodiscard]] auto nativeHandle() const noexcept -> VkCommandPool;
+
+        /**
+         * @brief Allocates command buffers from this command pool.
+         *
+         * Allocates the requested number of Vulkan command buffers using this
+         * command pool and the specified command-buffer level.
+         *
+         * The returned command-buffer handles remain associated with this
+         * command pool and are valid only while the pool remains valid.
+         *
+         * @param level Vulkan command-buffer level to allocate.
+         * @param count Number of command buffers to allocate.
+         *
+         * @pre This object must own a valid Vulkan command pool.
+         * @pre count must be greater than zero.
+         *
+         * @return Command-buffer handles allocated from this command pool.
+         *
+         * @throws Core::Error::EngineError if Vulkan fails to allocate the
+         * command buffers.
+         */
+        [[nodiscard]] auto allocateCommandBuffers(VkCommandBufferLevel level,
+                                                  std::uint32_t count)
+            -> std::vector<VkCommandBuffer>;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

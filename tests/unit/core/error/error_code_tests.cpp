@@ -122,6 +122,11 @@ TEST(ErrorCodeTests, VulkanCommandPoolCreationErrorCodeHasReadableName) {
               "VulkanCommandPoolCreationFailed");
 }
 
+TEST(ErrorCodeTests, VulkanCommandBufferAllocationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandBufferAllocationFailed),
+              "VulkanCommandBufferAllocationFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);

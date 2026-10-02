@@ -47,6 +47,8 @@ namespace SNE::Engine::Core::Error {
             return "VulkanSwapchainImageViewCreationFailed";
         case Code::VulkanCommandPoolCreationFailed:
             return "VulkanCommandPoolCreationFailed";
+        case Code::VulkanCommandBufferAllocationFailed:
+            return "VulkanCommandBufferAllocationFailed";
         }
         return "Unknown";
     }

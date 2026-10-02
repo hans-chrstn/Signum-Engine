@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanCommandPool::VulkanCommandPool(VkDevice device,
@@ -74,5 +75,44 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         m_CommandPool = VK_NULL_HANDLE;
         m_Device = VK_NULL_HANDLE;
+    }
+
+    auto VulkanCommandPool::allocateCommandBuffers(VkCommandBufferLevel level,
+                                                   std::uint32_t count)
+        -> std::vector<VkCommandBuffer> {
+        if (m_CommandPool == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanCommandPool must own a valid command pool before "
+                "allocating command buffers");
+        }
+
+        if (count == 0) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Command-buffer allocation count must be greater than zero");
+        }
+
+        std::vector<VkCommandBuffer> command_buffers(count);
+        VkCommandBufferAllocateInfo allocate_info{};
+        allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocate_info.commandPool = m_CommandPool;
+        allocate_info.level = level;
+        allocate_info.commandBufferCount = count;
+
+        const VkResult result = vkAllocateCommandBuffers(
+            m_Device, &allocate_info, command_buffers.data());
+        if (result != VK_SUCCESS) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanCommandBufferAllocationFailed,
+                "Failed to allocate Vulkan command buffers",
+                Core::Error::NativeError(static_cast<int>(result),
+                                         std::string(toString(result))),
+                "Allocate Vulkan Command Buffers");
+        }
+
+        return command_buffers;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

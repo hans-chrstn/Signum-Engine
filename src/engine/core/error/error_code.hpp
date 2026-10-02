@@ -58,6 +58,8 @@ namespace SNE::Engine::Core::Error {
         VulkanSwapchainImageViewCreationFailed,
         /** Creation of the Vulkan command pool failed. */
         VulkanCommandPoolCreationFailed,
+        /** Allocation of Vulkan command buffers failed. */
+        VulkanCommandBufferAllocationFailed,
     };
 
     /**

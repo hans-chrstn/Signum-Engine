@@ -339,7 +339,7 @@
 - [x] borrowed views versus owned containers
 - [ ] swapchain recreation ownership requirements
 - [x] scalable queue-request modeling
-- [ ] incremental abstraction versus speculative abstraction
+- [x] incremental abstraction versus speculative abstraction
 
 ### Implement
 
@@ -348,9 +348,9 @@
 - [x] Keep `Application` responsible for orchestration rather than rendering internals
 - [x] Define where device, swapchain, command, and frame resources belong
 - [x] Define per-frame resource ownership before adding synchronization
-- [ ] Keep command-buffer lifetime tied to its command pool
+- [x] Keep command-buffer lifetime tied to its command pool
 - [ ] Keep command-buffer allocation and recycling strategy replaceable without changing frame-resource or renderer callers
-- [ ] Allow per-frame command resources to evolve from one primary command buffer to multiple primary or secondary command buffers without redesigning frame ownership
+- [x] Allow per-frame command resources to evolve from one primary command buffer to multiple primary or secondary command buffers without redesigning frame ownership
 - [x] Define a scalable command-pool ownership model
 - [x] Define swapchain image and image-view access needed by rendering
 - [x] Expose borrowed swapchain resource views without transferring ownership
@@ -385,14 +385,14 @@
 - [x] Keep `Application` as a composition root and high-level orchestrator
 - [x] Keep renderer-runtime ownership outside normal application logic
 - [x] Keep per-frame GPU state grouped by frame ownership
-- [ ] Keep non-frame-scoped GPU resources independently ownable instead of forcing all GPU state into frame ownership
+- [x] Keep non-frame-scoped GPU resources independently ownable instead of forcing all GPU state into frame ownership
 - [x] Avoid global command buffers, synchronization objects, and frame state
 - [x] Support multiple frames in flight without redesigning ownership
-- [ ] Allow future graphics, compute, and transfer command pools
+- [x] Allow future graphics, compute, and transfer command pools
 - [x] Keep command-pool ownership independent from command-buffer recording policy
-- [ ] Keep command-pool and command-buffer mechanisms reusable across graphics, compute, and transfer roles
-- [ ] Do not make one command buffer per frame a permanent renderer contract
-- [ ] Allow command-buffer allocation to evolve from individual to batched or pool-managed strategies without changing unrelated renderer code
+- [x] Keep command-pool and command-buffer mechanisms reusable across graphics, compute, and transfer roles
+- [x] Do not make one command buffer per frame a permanent renderer contract
+- [x] Allow command-buffer allocation to evolve from individual to batched or pool-managed strategies without changing unrelated renderer code
 - [x] Keep swapchain ownership separate from frame ownership
 - [x] Keep swapchain resource access non-owning
 - [x] Keep physical-device discovery separate from selected-device guarantees
@@ -422,7 +422,7 @@
 ### Implement
 
 - [x] Create command pool
-- [ ] Create initial per-frame primary command buffers without making one-buffer-per-frame a permanent abstraction
+- [x] Create initial per-frame primary command buffers without making one-buffer-per-frame a permanent abstraction
 - [ ] Create initial frame synchronization objects without making one fixed synchronization layout a permanent renderer contract
 - [ ] Implement frame loop
 - [ ] Use Vulkan dynamic rendering
