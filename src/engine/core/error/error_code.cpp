@@ -49,6 +49,14 @@ namespace SNE::Engine::Core::Error {
             return "VulkanCommandPoolCreationFailed";
         case Code::VulkanCommandBufferAllocationFailed:
             return "VulkanCommandBufferAllocationFailed";
+        case Code::VulkanSemaphoreCreationFailed:
+            return "VulkanSemaphoreCreationFailed";
+        case Code::VulkanFenceCreationFailed:
+            return "VulkanFenceCreationFailed";
+        case Code::VulkanFenceWaitFailed:
+            return "VulkanFenceWaitFailed";
+        case Code::VulkanFenceResetFailed:
+            return "VulkanFenceResetFailed";
         }
         return "Unknown";
     }

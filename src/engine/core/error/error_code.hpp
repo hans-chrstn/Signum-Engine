@@ -60,6 +60,14 @@ namespace SNE::Engine::Core::Error {
         VulkanCommandPoolCreationFailed,
         /** Allocation of Vulkan command buffers failed. */
         VulkanCommandBufferAllocationFailed,
+        /** Creation of the Vulkan semaphore failed. */
+        VulkanSemaphoreCreationFailed,
+        /** Creation of a Vulkan fence failed. */
+        VulkanFenceCreationFailed,
+        /** Waiting for a Vulkan fence failed. */
+        VulkanFenceWaitFailed,
+        /** Resetting a Vulkan fence failed. */
+        VulkanFenceResetFailed,
     };
 
     /**

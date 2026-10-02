@@ -127,6 +127,26 @@ TEST(ErrorCodeTests, VulkanCommandBufferAllocationErrorCodeHasReadableName) {
               "VulkanCommandBufferAllocationFailed");
 }
 
+TEST(ErrorCodeTests, VulkanSemaphoreCreationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanSemaphoreCreationFailed),
+              "VulkanSemaphoreCreationFailed");
+}
+
+TEST(ErrorCodeTests, VulkanFenceCreationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanFenceCreationFailed),
+              "VulkanFenceCreationFailed");
+}
+
+TEST(ErrorCodeTests, VulkanFenceWaitErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanFenceWaitFailed),
+              "VulkanFenceWaitFailed");
+}
+
+TEST(ErrorCodeTests, VulkanFenceResetErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanFenceResetFailed),
+              "VulkanFenceResetFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);

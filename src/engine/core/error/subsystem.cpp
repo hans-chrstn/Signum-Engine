@@ -28,6 +28,10 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanSwapchainImageViewCreationFailed:
         case Code::VulkanCommandPoolCreationFailed:
         case Code::VulkanCommandBufferAllocationFailed:
+        case Code::VulkanSemaphoreCreationFailed:
+        case Code::VulkanFenceCreationFailed:
+        case Code::VulkanFenceWaitFailed:
+        case Code::VulkanFenceResetFailed:
             return Subsystem::Vulkan;
         }
 

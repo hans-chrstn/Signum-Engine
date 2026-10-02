@@ -137,6 +137,27 @@ TEST(SubsystemTests, VulkanCommandBufferAllocationErrorsBelongToVulkan) {
               Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanSemaphoreCreationErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanSemaphoreCreationFailed),
+        Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanFenceCreationErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::VulkanFenceCreationFailed),
+              Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanFenceWaitErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::VulkanFenceWaitFailed),
+              Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanFenceResetErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::VulkanFenceResetFailed),
+              Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");
