@@ -40,6 +40,8 @@
 - [ ] Keep `Application` as orchestration
 - [ ] Avoid turning `Application` into a global subsystem container
 - [ ] Keep platform lifecycle ownership explicit
+- [ ] Keep subsystem construction and lifetime policy behind composition-root boundaries
+- [ ] Avoid making the current windowed frontend a requirement for reusable engine subsystems
 
 ---
 
@@ -87,6 +89,8 @@
 - [ ] Keep error formatting separate from reporting
 - [ ] Keep recoverability separate from error type
 - [ ] Keep native API information intact
+- [ ] Keep subsystem-specific native failures as context rather than forcing backend details into engine-wide error APIs
+- [ ] Allow exception and explicit-result policies to evolve without duplicating the engine error model
 
 ---
 
@@ -132,6 +136,7 @@
 - [ ] Avoid exposing Vulkan types to normal game APIs
 - [x] Keep Vulkan initialization out of gameplay code
 - [x] Keep Vulkan instance and surface ownership in separate RAII components
+- [ ] Prevent Vulkan instance/surface ownership details from defining future backend-independent renderer contracts
 
 ---
 
@@ -186,6 +191,8 @@
 - [x] Keep hardware policy independent from gameplay
 - [x] Keep optional GPU capabilities opt-in
 - [x] Do not make renderer startup depend on hardware ray tracing
+- [ ] Keep queue roles and requests extensible beyond the initial graphics/presentation pair
+- [ ] Avoid exposing physical queue topology as a permanent higher-level renderer contract
 
 ---
 
@@ -243,6 +250,8 @@
 - [ ] Keep swapchain details out of game-facing APIs
 - [x] Keep presentation preference independent from Vulkan presentation-mode enums
 - [x] Keep presentation-mode capability separate from presentation policy
+- [ ] Keep presentation optional so offscreen, headless, and non-presenting renderer frontends remain possible
+- [ ] Keep swapchain-dependent resources distinguishable from device-lifetime renderer resources
 
 ---
 
@@ -315,6 +324,7 @@
 - [x] Avoid global configuration state
 - [x] Avoid speculative abstractions
 - [x] Avoid premature subsystem splitting
+- [ ] Treat current cardinalities, queue roles, frame counts, and feature chains as implementation choices rather than permanent public contracts unless explicitly required
 
 ---
 
@@ -339,6 +349,8 @@
 - [x] Define where device, swapchain, command, and frame resources belong
 - [x] Define per-frame resource ownership before adding synchronization
 - [ ] Keep command-buffer lifetime tied to its command pool
+- [ ] Keep command-buffer allocation and recycling strategy replaceable without changing frame-resource or renderer callers
+- [ ] Allow per-frame command resources to evolve from one primary command buffer to multiple primary or secondary command buffers without redesigning frame ownership
 - [x] Define a scalable command-pool ownership model
 - [x] Define swapchain image and image-view access needed by rendering
 - [x] Expose borrowed swapchain resource views without transferring ownership
@@ -373,10 +385,14 @@
 - [x] Keep `Application` as a composition root and high-level orchestrator
 - [x] Keep renderer-runtime ownership outside normal application logic
 - [x] Keep per-frame GPU state grouped by frame ownership
+- [ ] Keep non-frame-scoped GPU resources independently ownable instead of forcing all GPU state into frame ownership
 - [x] Avoid global command buffers, synchronization objects, and frame state
 - [x] Support multiple frames in flight without redesigning ownership
 - [ ] Allow future graphics, compute, and transfer command pools
 - [x] Keep command-pool ownership independent from command-buffer recording policy
+- [ ] Keep command-pool and command-buffer mechanisms reusable across graphics, compute, and transfer roles
+- [ ] Do not make one command buffer per frame a permanent renderer contract
+- [ ] Allow command-buffer allocation to evolve from individual to batched or pool-managed strategies without changing unrelated renderer code
 - [x] Keep swapchain ownership separate from frame ownership
 - [x] Keep swapchain resource access non-owning
 - [x] Keep physical-device discovery separate from selected-device guarantees
@@ -386,8 +402,8 @@
 - [ ] Allow additional Vulkan feature structures without redesigning feature negotiation
 - [ ] Avoid exposing Vulkan implementation details to game-facing APIs
 - [x] Avoid introducing generic managers or registries without a concrete requirement
-- [x] Prefer the smallest durable abstraction over demo-specific shortcuts
-- [x] Do not introduce abstractions solely for hypothetical future systems
+- [x] Prefer focused abstractions over demo-specific shortcuts
+- [x] Add abstractions only when a concrete requirement exists
 - [x] Preserve explicit RAII ownership and dependency-ordered destruction
 
 ---
@@ -406,8 +422,8 @@
 ### Implement
 
 - [x] Create command pool
-- [ ] Create command buffers
-- [ ] Create synchronization objects
+- [ ] Create initial per-frame primary command buffers without making one-buffer-per-frame a permanent abstraction
+- [ ] Create initial frame synchronization objects without making one fixed synchronization layout a permanent renderer contract
 - [ ] Implement frame loop
 - [ ] Use Vulkan dynamic rendering
 - [ ] Poll platform events
@@ -427,6 +443,8 @@
 
 - [ ] Keep rendering loop independent from gameplay
 - [ ] Keep synchronization details inside rendering subsystem
+- [ ] Keep command-buffer allocation, recording, and recycling policy inside rendering boundaries
+- [ ] Keep synchronization ownership extensible for additional queues and submission paths
 - [ ] Prefer dynamic rendering over legacy render-pass/framebuffer objects unless a concrete compatibility need requires them
 
 ---
@@ -492,9 +510,11 @@
 
 - [ ] Separate GPU resource identity from memory allocation
 - [ ] Keep allocation backend-specific
+- [ ] Keep allocation policy replaceable without changing resource identity or normal renderer callers
 - [ ] Keep future streaming requirements possible
 - [ ] Keep future memory-budget enforcement possible
 - [ ] Keep future specialized allocator experiments possible
+- [ ] Allow dedicated, suballocated, pooled, and externally managed allocations where concrete workloads justify them
 - [ ] Do not build a complex allocator before measurements justify it
 
 ---
@@ -554,6 +574,8 @@
 - [ ] Keep resource, shader, pipeline, binding, and material mechanisms independent from optional rendering features
 - [ ] Keep core GPU resource APIs usable by built-in and developer-defined render features
 - [ ] Avoid baking PBR, shadow, terrain, water, ray-tracing-effect, or other optional-feature semantics into renderer-core resource types
+- [ ] Do not make vertex/index-buffer meshes the only renderable representation
+- [ ] Keep renderer resource mechanisms usable by mesh, procedural, indirect, compute-generated, and future GPU-driven workloads
 
 ---
 
@@ -655,6 +677,8 @@
 
 - [ ] Keep logging independent from editor
 - [ ] Keep logging implementation out of gameplay APIs
+- [ ] Keep log sinks replaceable and independently extensible
+- [ ] Keep structured log and diagnostic data independent from sink presentation
 
 ---
 
@@ -807,6 +831,8 @@
 
 - [ ] Keep GLFW types out of engine-facing input API
 - [ ] Keep actions such as Jump/Shoot project-defined
+- [ ] Keep input-device/backend translation replaceable without changing gameplay-facing action/state contracts
+- [ ] Avoid assuming one window, keyboard/mouse-only input, or one platform event source in engine-facing APIs
 
 ---
 
@@ -871,7 +897,7 @@
 
 ### Architecture
 
-- [ ] Engine provides mechanisms, built-in modules provide implementations, developers provide specialization
+- [ ] Keep renderer mechanisms separate from built-in feature implementations and project-specific extensions
 - [ ] Keep renderer-core focused on reusable mechanisms rather than specific rendering effects
 - [ ] Keep renderer-core independent from optional rendering modules
 - [ ] Require optional rendering modules to depend on renderer-core, never the reverse
@@ -880,6 +906,8 @@
 - [ ] Keep game rendering API independent from Vulkan
 - [ ] Keep explicit low-level backend access for advanced extensions
 - [ ] Keep unused optional render features uninitialized and unallocated
+- [ ] Avoid freezing Vulkan-specific queue counts, command-buffer layouts, descriptor strategies, or submission topology into backend-independent APIs
+- [ ] Let backend implementations expose specialized capabilities without forcing every backend into a least-common-denominator interface
 - [ ] Leave frame-graph scheduling and graph compilation to Phase 13.5
 
 ---
@@ -912,6 +940,12 @@
 - [ ] Test destroyed resources
 - [ ] Test reused IDs
 - [ ] Test stale generations if used
+
+### Architecture
+
+- [ ] Keep logical identity independent from memory address and backend-native handle values
+- [ ] Keep handle representation replaceable without changing resource ownership semantics
+- [ ] Avoid requiring globally persistent identity for temporary or representation-local resources that do not need it
 
 ---
 
@@ -974,6 +1008,9 @@
 - [ ] Render graph depends on renderer mechanisms, not individual effects
 - [ ] Do not encode PBR, shadows, terrain, or other feature semantics into graph core
 - [ ] Keep synchronization details inside renderer/backend layers
+- [ ] Keep graph queue declarations extensible beyond graphics-only execution
+- [ ] Do not couple pass declarations to the current physical queue topology
+- [ ] Preserve specialized backend scheduling paths where they outperform a generic path without changing graph semantics
 
 ---
 
@@ -993,6 +1030,8 @@
 - [ ] Define Scene role
 - [ ] Define scene serialization role
 - [ ] Define transform hierarchy rules
+- [ ] Define logical world identity independently from one physical storage model
+- [ ] Allow authoring/scene representation to differ from optimized runtime representations
 
 ### Implement
 
@@ -1016,6 +1055,8 @@
 
 - [ ] Keep gameplay types project-defined
 - [ ] Keep scene ownership independent from renderer ownership
+- [ ] Keep World and Scene APIs independent from a mandatory ECS, object hierarchy, or renderer storage layout
+- [ ] Allow specialized subsystem representations to coexist without making one subsystem's storage the definition of the world
 
 ---
 
@@ -1040,7 +1081,8 @@
 - [ ] Define query requirements
 - [ ] Define editor requirements
 - [ ] Define serialization requirements
-- [ ] Benchmark storage alternatives
+- [ ] Benchmark archetype, sparse-set, and other justified storage alternatives instead of assuming one layout is universally optimal
+- [ ] Keep entity identity separable from whichever component-storage strategy is selected
 
 ### Implement
 
@@ -1071,6 +1113,9 @@
 - [ ] Do not hard-code Weapon
 - [ ] Do not hard-code Planet
 - [ ] Do not hard-code gameplay components
+- [ ] Treat ECS/entity-component storage as one world representation mechanism rather than the definition of every engine subsystem
+- [ ] Do not require rendering, physics, audio, navigation, procedural data, or editor metadata to become ECS-shaped
+- [ ] Keep component semantics independent from one physical storage layout where practical
 
 ---
 
@@ -1110,6 +1155,12 @@
 - [ ] version mismatch tests
 - [ ] migration tests
 
+### Architecture
+
+- [ ] Keep serialized schemas independent from in-memory layout and module addresses
+- [ ] Allow storage/backends to define serialization adapters without exposing their private physical representation
+- [ ] Keep migration/version policy usable across editor state, world data, modules, and future reload workflows
+
 ---
 
 ## Phase 17 — Reflection and Metadata
@@ -1130,9 +1181,12 @@
 - [ ] Define stable type identity
 - [ ] Define stable property identity
 - [ ] Define user-type registration
+- [ ] Define opt-in reflection boundaries rather than attempting to reflect all C++
+- [ ] Define property attributes as metadata rather than hard-coded inspector behavior
 - [ ] Minimize repeated registration
 - [ ] Minimize unnecessary macros
 - [ ] Keep metadata inspectable
+- [ ] Keep the reflection API independent from whether metadata comes from manual registration, generated code, compiler tooling, or future language facilities
 
 ### Implement
 
@@ -1142,6 +1196,8 @@
 - [ ] Expose property metadata
 - [ ] Connect metadata to serialization
 - [ ] Support one project-defined component
+- [ ] Add reflected property attributes only as real inspector/serialization needs appear
+- [ ] Add metadata generation only after manual registration becomes meaningfully repetitive
 
 ### Test
 
@@ -1150,6 +1206,17 @@
 - [ ] Test duplicate type IDs
 - [ ] Test duplicate property IDs
 - [ ] Test metadata serialization
+- [ ] Test missing/invalid metadata without requiring unrelated systems to fail
+- [ ] Verify reflected IDs remain meaningful across executions and module reloads
+
+### Architecture
+
+- [ ] Keep reflection incremental and independently useful at each stage
+- [ ] Keep reflection opt-in for explicitly exposed engine/project types
+- [ ] Do not make reflection the universal communication mechanism between engine subsystems
+- [ ] Keep strongly typed C++ APIs as the default where reflection is unnecessary
+- [ ] Keep internal renderer/backend types unreflected unless a concrete tooling requirement justifies exposure
+- [ ] Keep consumers dependent on the metadata API rather than one metadata-generation mechanism
 
 ### Future Consumers
 
@@ -1238,7 +1305,7 @@
 ### Implement
 
 - [ ] Add asset database
-- [ ] Add resource manager
+- [ ] Add runtime resource management mechanism
 - [ ] Add first importer
 - [ ] Add asset load
 - [ ] Add asset unload
@@ -1261,6 +1328,8 @@
 
 - [ ] Keep shader/material asset formats independent from ownership by any built-in render feature
 - [ ] Let built-in and custom render features consume the same asset/resource mechanisms
+- [ ] Avoid one global resource manager becoming the permanent owner of unrelated resource domains
+- [ ] Keep resource lifetime, loading, caching, and residency policies replaceable behind asset/resource contracts
 
 ---
 
@@ -1304,7 +1373,7 @@
 - [ ] Use mature decoders for source formats where appropriate
 - [ ] Keep `stb_image` or replacement decoder inside importer boundaries
 - [ ] Do not make PNG/JPEG decoding part of runtime resource architecture
-- [ ] Prefer Signum cooked textures at runtime
+- [ ] Prefer engine-native cooked textures at runtime
 - [ ] Do not rewrite commodity codecs without a measured reason
 
 ### Test
@@ -1320,9 +1389,9 @@
 ### Architecture
 
 - [ ] Source formats are editor/import concerns
-- [ ] Runtime formats are Signum-controlled
+- [ ] Runtime formats are engine-controlled
 - [ ] Runtime resource layout may evolve independently from source file format
-- [ ] Custom Signum formats target runtime requirements rather than novelty
+- [ ] Custom runtime formats target runtime requirements rather than novelty
 
 ---
 
@@ -1345,6 +1414,9 @@
 - [ ] Define module dependency direction
 - [ ] Define CMake target dependency direction
 - [ ] Define project module boundary
+- [ ] Define explicit game-module interface and ownership boundary
+- [ ] Define game-module load, unload, and failure lifecycle
+- [ ] Define how callbacks, systems, metadata, and module-owned objects are invalidated before unload
 - [ ] Define optional module lifecycle
 - [ ] Define optional rendering-module lifecycle
 - [ ] Define built-in rendering features as optional modules rather than renderer-core services
@@ -1405,10 +1477,14 @@
 
 ### Design
 
-- [ ] Use C++23 as initial game-code language
+- [ ] Use C++23 as the first-class initial game-code language
+- [ ] Separate engine/editor code from ordinary project game code
 - [ ] Allow ordinary project-defined C++ types
 - [ ] Allow project-defined components
 - [ ] Allow project-defined systems
+- [ ] Define a narrow explicit runtime/game-module API boundary instead of exposing arbitrary engine internals
+- [ ] Keep game-module lifetime explicit
+- [ ] Ensure engine-owned resources cannot depend on code or objects after their game module unloads
 - [ ] Avoid mandatory giant gameplay base classes
 - [ ] Avoid mandatory proprietary runtime model
 - [ ] Keep normal C++ debugging possible
@@ -1420,10 +1496,13 @@
 - [ ] Allow project-defined shaders and materials
 - [ ] Allow project-defined render features and render passes through public renderer mechanisms
 - [ ] Allow projects to enable, disable, and configure optional rendering modules without Vulkan-facing code
+- [ ] Keep basic C++ gameplay usable before advanced reflection or state-preserving reload exists
 
 ### Implement
 
-- [ ] Create project/game module
+- [ ] Create separately buildable project/game module
+- [ ] Produce a dynamically loadable game library on supported platforms
+- [ ] Load and unload the game module through the module boundary
 - [ ] Expose runtime APIs
 - [ ] Add project-defined component example
 - [ ] Add project-defined system example
@@ -1433,12 +1512,22 @@
 ### Test
 
 - [ ] Build standalone project module
+- [ ] Load and unload a project module repeatedly without leaking module-owned resources
 - [ ] Run project-defined behavior
+- [ ] Verify ordinary game-code changes do not require rebuilding unrelated engine/editor systems
 - [ ] Verify project does not need Vulkan calls
 - [ ] Verify project does not need GLFW calls
 - [ ] Verify project-defined render feature does not require renderer-core modification
 - [ ] Verify project-defined render feature can use the same render graph, resource, shader, pipeline, binding, and material mechanisms as built-in features
 - [ ] Verify project runs without scripting runtime
+
+### Architecture
+
+- [ ] Keep C++ gameplay first-class without making scripting mandatory
+- [ ] Keep game-module interfaces explicit, versionable, and smaller than arbitrary engine internals
+- [ ] Prefer handles, IDs, opaque ownership, and explicit data contracts where raw C++ layout coupling would make module reload unsafe
+- [ ] Do not require the editor or engine binaries to restart for ordinary game-module rebuild/reload workflows
+- [ ] Keep module/reload capability independent from one reflection-generation implementation
 
 ---
 
@@ -1477,8 +1566,11 @@
 
 - [ ] Keep C++ usable without scripting
 - [ ] Avoid separate duplicated engine API for every language
-- [ ] Use shared metadata where practical
+- [ ] Use shared metadata and runtime contracts where practical
 - [ ] Keep scripting overhead absent when scripting is unused
+- [ ] Keep optional language runtimes from owning world, component, asset, or renderer architecture
+- [ ] Allow scripting backends to be added, removed, or replaced without rewriting the native C++ gameplay API
+- [ ] Keep language-specific garbage collection, sandboxing, and lifetime rules behind each language integration boundary
 
 ---
 
@@ -1505,6 +1597,9 @@
 - [ ] Define task result ownership
 - [ ] Define main-thread-only operations
 - [ ] Define renderer thread rules
+- [ ] Keep scheduling policy independent from task semantics
+- [ ] Avoid making one fixed worker topology or renderer-thread model a permanent public contract
+- [ ] Allow subsystem-specific schedulers or specialized execution paths to integrate through explicit dependencies when justified
 
 ### Implement
 
@@ -1523,6 +1618,12 @@
 - [ ] Test shutdown with pending tasks
 - [ ] Add concurrency stress tests
 - [ ] Run ThreadSanitizer where supported
+
+### Architecture
+
+- [ ] Keep task description separate from worker-pool implementation
+- [ ] Keep dependency semantics usable by gameplay, rendering, asset, procedural, and future Composable World Model workloads
+- [ ] Allow the scheduler implementation to evolve without rewriting task producers
 
 ---
 
@@ -1572,6 +1673,123 @@
 - [ ] Verify optimized behavior remains correct
 - [ ] Measure CPU, GPU, memory, and resource overhead of disabled optional rendering features
 - [ ] Verify disabled optional rendering features remain at the renderer-core baseline within defined tolerances
+
+### Architecture
+
+- [ ] Optimize only after representative measurements identify a bottleneck
+- [ ] Keep optimized fast paths replaceable and comparable with a correct baseline
+- [ ] Prefer specialized coexistence over forcing every workload through one optimization strategy
+- [ ] Keep performance instrumentation independent from one storage, scheduler, renderer, or world architecture
+
+---
+
+## Phase 23.5 — Composable World Model Research
+
+### Learn
+
+- [ ] logical world models versus physical storage models
+- [ ] archetype and chunk-oriented ECS storage
+- [ ] sparse-set storage
+- [ ] relationship and graph representations
+- [ ] spatial indices and spatial representations
+- [ ] procedural and partially materialized representations
+- [ ] GPU-native world representations
+- [ ] stable logical identity independent from representation storage
+- [ ] authority and source-of-truth semantics
+- [ ] projections, indices, caches, mirrors, and derived representations
+- [ ] capability-based interfaces
+- [ ] cross-representation lifetime and synchronization
+- [ ] dependency-driven scheduling
+- [ ] prior art from Unity Entities, Unreal Mass, Flecs, EnTT, Bevy, Godot, physics engines, databases, and task systems
+
+### Design
+
+- [ ] Keep the Composable World Model experimental until prototypes and benchmarks justify adoption
+- [ ] Define stable world identity independently from ECS rows, object addresses, physics handles, renderer handles, and other representation-local identifiers
+- [ ] Allow a logical identity to have zero, one, or many physical representations
+- [ ] Allow representation-local data to exist without requiring global world identity when global identity adds no value
+- [ ] Allow one domain to use multiple compatible representations instead of requiring exactly one storage model
+- [ ] Allow one logical data concept to participate in multiple representations with explicit roles
+- [ ] Define representation roles such as authoritative state, derived projection, index, cache, mirror, transient materialization, external/native representation, and read-only view
+- [ ] Require explicit authority/source-of-truth declaration for mutable state
+- [ ] Define read/write permissions for cross-representation access
+- [ ] Define lifetime ownership independently from representation type
+- [ ] Define dependency and projection/update declarations
+- [ ] Define consistency and synchronization boundaries
+- [ ] Define thread-safety and CPU/GPU residency declarations where relevant
+- [ ] Define serialization and editor/introspection expectations per representation capability
+- [ ] Define deterministic and unload/failure behavior where required
+- [ ] Prefer small capability declarations over one giant World Protocol interface
+- [ ] Preserve representation-native fast paths instead of forcing a least-common-denominator abstraction
+- [ ] Keep domain semantics independent from one built-in representation
+- [ ] Keep the public custom-representation contract provisional until several materially different built-in representations reveal the minimum stable contract
+- [ ] Define explicit validation for unsupported or semantically inconsistent representation combinations
+- [ ] Keep initial representation choice explicit rather than silently migrating storage at runtime
+- [ ] Keep small ordinary games usable without configuring Composable World Model internals
+
+### Implement
+
+- [ ] Establish conventional object, archetype ECS, sparse-set ECS, and specialized-direct-structure baselines where relevant
+- [ ] Build representative benchmark workloads before designing a large World Protocol
+- [ ] Prototype world identity independent from archetype/component storage
+- [ ] Measure identity lookup and generational-safety costs
+- [ ] Prototype exactly two materially different representations first
+- [ ] Start with an archetype representation plus a sparse or spatial representation
+- [ ] Attach one logical identity to both prototype representations
+- [ ] Declare authority, projection, lifetime, and dependencies explicitly
+- [ ] Integrate explicit representation dependencies with the task system
+- [ ] Parallelize independent representation work only when dependency declarations prove it safe
+- [ ] Evaluate relationship workloads against ECS relationship models before adding a dedicated graph representation
+- [ ] Add a spatial representation only after a workload justifies it
+- [ ] Add a GPU-native representation only after renderer/resource foundations can measure extraction, residency, and synchronization
+- [ ] Add a procedural representation capable of conceptual state without full materialization only after a representative workload exists
+- [ ] Add custom representation support only after built-in experiments establish the minimum stable capability contract
+- [ ] Implement one useful representation outside engine core as the custom-backend proof
+- [ ] Evaluate cross-representation query planning only when representation-native queries are insufficient
+- [ ] Evaluate a world compiler or planner only after static logical/physical separation demonstrates concrete value
+
+### Test
+
+- [ ] Keep benchmark source and negative results in the repository
+- [ ] Compare equivalent semantics rather than benchmark-friendly approximations
+- [ ] Measure frame/wall time, memory, allocations, cache behavior, mutation cost, query cost, synchronization stalls, worker utilization, and CPU/GPU transfer cost where relevant
+- [ ] Test homogeneous iteration workloads
+- [ ] Test structural-churn workloads
+- [ ] Test relationship-heavy workloads
+- [ ] Test spatial-query workloads
+- [ ] Test procedural materialization, eviction, regeneration, and persistent-delta workloads
+- [ ] Test render extraction and GPU projection workloads
+- [ ] Test one logical identity represented across gameplay, physics, and rendering
+- [ ] Test authority changes, projections, synchronization, destruction, and lifetime correctness
+- [ ] Test a small-game workload to measure abstraction overhead when extreme scale is unnecessary
+- [ ] Compare dedicated graph candidates against mature relationship approaches before retaining them
+- [ ] Compare multi-representation state against a simpler one-representation plus manual-index baseline
+- [ ] Measure scheduling overhead against explicit sequential and simpler scheduling baselines
+- [ ] Verify a custom representation can integrate with tooling, serialization, scheduling, failure/unload behavior, and profiling without privileged engine internals
+- [ ] Verify unified queries preserve native fast paths if cross-representation query planning is introduced
+- [ ] Validate the architecture against multiple genres and workloads rather than only the space-game target
+
+### Architecture
+
+- [ ] Use the best proven representation for each workload instead of requiring every workload to be ECS-shaped
+- [ ] Keep one coherent logical world capable of using multiple optimized physical representations
+- [ ] Keep logical identity independent from physical storage
+- [ ] Keep authority explicit and avoid multiple independent mutable sources of truth for the same semantic state
+- [ ] Treat derived data as explicit projections, indices, caches, mirrors, or transient materializations
+- [ ] Keep specialized representations independently optimizable
+- [ ] Do not require custom representations to imitate built-in representations
+- [ ] Do not require every representation to support every capability
+- [ ] Keep cross-representation communication explicit, measurable, and dependency-aware
+- [ ] Keep Composable World Model mechanisms independent from gameplay-specific concepts such as Player, Weapon, Planet, terrain, or one game genre
+- [ ] Keep renderer, physics, networking, editor, and procedural systems free to retain native representations behind explicit integration contracts
+- [ ] Keep ordinary single-representation use free from unnecessary multi-representation overhead
+- [ ] Allow advanced developers to override representation policy without requiring ordinary developers to understand storage internals
+- [ ] Allow third-party representations long term without requiring edits to engine core
+- [ ] Keep extension contracts versioned, capability-based, testable, introspectable, and unable to silently violate world invariants
+- [ ] Remove or redesign Composable World Model abstractions when benchmarks show a simpler established architecture is equally effective
+- [ ] Require measurable or concrete technical justification for architecture decisions
+- [ ] Preserve simpler baselines and define measurable rejection criteria during Composable World Model experiments
+- [ ] Move Composable World Model mechanisms into core only after performance, correctness, flexibility, usability, and generality criteria are met
 
 ---
 
@@ -1625,6 +1843,8 @@
 - [ ] Do not make virtual paths mandatory for every engine user
 - [ ] Keep asset identity separate from both physical and virtual paths
 - [ ] Keep mount behavior out of gameplay-specific concepts
+- [ ] Keep mount/source implementations replaceable without changing logical asset identity
+- [ ] Allow directory, archive, package, network, or future custom mounts without forcing all mounts to share one physical storage model
 
 ---
 
@@ -1643,7 +1863,7 @@
 
 ### Design
 
-- [ ] Define Signum physics API before exposing backend types
+- [ ] Define engine physics API before exposing backend types
 - [ ] Keep physics backend replaceable
 - [ ] Define physics ownership
 - [ ] Define physics-resource identity
@@ -1670,7 +1890,7 @@
 - [ ] Add queries
 - [ ] Add events
 - [ ] Connect fixed-step simulation
-- [ ] Connect world synchronization through Signum-facing contracts
+- [ ] Connect world synchronization through engine-facing contracts
 
 ### Test
 
@@ -1687,6 +1907,7 @@
 - [ ] Allow specialized procedural-collision systems
 - [ ] Allow large-world physics specialization
 - [ ] Allow experimental solver or broad-phase research without rewriting gameplay APIs
+- [ ] Allow physics-native representations to participate in the Composable World Model if validated without forcing physics state into ECS storage
 - [ ] Replace general-purpose backend pieces only when measurements justify it
 
 ---
@@ -1706,7 +1927,7 @@
 
 ### Design
 
-- [ ] Define Signum audio resource model
+- [ ] Define engine audio resource model
 - [ ] Define playback API
 - [ ] Define audio ownership
 - [ ] Define audio-device ownership
@@ -1751,6 +1972,7 @@
 - [ ] Support custom DSP when justified
 - [ ] Support custom acoustic simulation when justified
 - [ ] Support alternative backend without changing gameplay-facing API
+- [ ] Keep audio-native spatial/state representations independent from ECS or renderer storage assumptions
 - [ ] Keep mature OS/device infrastructure when replacing it offers no measurable benefit
 
 ---
@@ -1768,7 +1990,7 @@
 
 ### Design
 
-- [ ] Build runtime UI as a Signum-owned system
+- [ ] Build runtime UI as a engine-owned system
 - [ ] Separate runtime UI from editor UI
 - [ ] Separate runtime UI from Phase 9.5 Dear ImGui developer tooling
 - [ ] Define UI ownership
@@ -1805,6 +2027,7 @@
 - [ ] Keep runtime widget state independent from renderer backend
 - [ ] Keep runtime UI data reusable by future editor tooling where appropriate
 - [ ] Avoid coupling game-facing UI to editor-only systems
+- [ ] Keep UI hierarchy/storage independent from the engine's entity/component or future Composable World Model representation choices
 
 ---
 
@@ -1836,6 +2059,12 @@
 - [ ] Test lifetime behavior
 - [ ] Test dispatch ordering where defined
 
+### Architecture
+
+- [ ] Keep direct calls available for simple strongly coupled interactions
+- [ ] Keep event transport independent from event payload semantics
+- [ ] Avoid making a global event bus the mandatory communication path between subsystems or world representations
+
 ---
 
 ## Phase 29 — Editor Foundation
@@ -1861,13 +2090,15 @@
 - [ ] Add diagnostics panel
 - [ ] Add status bar
 - [ ] Add editor command abstraction
+- [ ] Add explicit Editor World and Runtime World roles before Play-in-Editor
+- [ ] Keep the editable Editor World intact while gameplay runs against a separate Runtime World
 
 ### Dear ImGui Migration Policy
 
 - [ ] Allow Dear ImGui developer panels during editor bootstrap
 - [ ] Keep editor models independent from Dear ImGui
 - [ ] Keep inspector/hierarchy/project state independent from widget implementation
-- [ ] Allow editor panels to migrate incrementally to Signum UI
+- [ ] Allow editor panels to migrate incrementally to editor UI
 - [ ] Avoid a single all-at-once UI rewrite
 - [ ] Preserve Phase 9.5 tooling during migration
 - [ ] Remove individual Dear ImGui dependencies only when replacement functionality exists
@@ -1886,6 +2117,8 @@
 - [ ] Avoid arbitrary access to private engine internals
 - [ ] Keep editor state separate from presentation/widget implementation
 - [ ] Keep editor-only dependencies out of game/runtime targets
+- [ ] Keep Editor World authority separate from temporary Runtime World simulation state
+- [ ] Keep Play-in-Editor independent from one concrete world-storage or component-storage implementation
 
 ---
 
@@ -1914,6 +2147,8 @@
 ### Architecture
 
 - [ ] Avoid hard-coded editor support for each gameplay component
+- [ ] Drive inspector/tooling behavior from metadata and extension contracts rather than concrete game classes
+- [ ] Keep editor tooling capable of inspecting Composable World Model representations if validated through declared introspection capabilities rather than privileged storage access
 
 ---
 
@@ -1942,6 +2177,11 @@
 - [ ] Test object deletion undo
 - [ ] Test long edit sequences
 
+### Architecture
+
+- [ ] Keep undo/redo commands expressed against stable editor/runtime contracts rather than raw widget state or backend-native storage addresses
+- [ ] Allow new editor operations to participate without modifying one monolithic command type
+
 ---
 
 ## Phase 32 — Prefabs and Templates
@@ -1969,6 +2209,11 @@
 - [ ] Test nested instances
 - [ ] Test malformed prefab files
 
+### Architecture
+
+- [ ] Keep prefab identity and overrides independent from transient memory addresses and one component-storage layout
+- [ ] Keep prefab format versionable so world/component representation changes do not require abandoning existing project data
+
 ---
 
 ## Phase 33 — Project and Build System
@@ -1982,6 +2227,8 @@
 - [ ] Define project settings
 - [ ] Define build configurations
 - [ ] Define project module configuration
+- [ ] Define incremental project/game-module build integration
+- [ ] Define compiler-diagnostic capture for editor tooling
 - [ ] Separate editor-only dependencies from runtime
 
 ### Implement
@@ -1990,6 +2237,12 @@
 - [ ] Add project creation
 - [ ] Add project settings
 - [ ] Build project game module
+- [ ] Track whether game-module source is dirty
+- [ ] Trigger incremental game-module builds from the editor
+- [ ] Capture compiler diagnostics for editor display
+- [ ] Add Build command
+- [ ] Add Build and Play command
+- [ ] Keep the previous valid game module available when a new build fails
 - [ ] Package runtime dependencies
 - [ ] Export runnable game
 
@@ -2001,6 +2254,88 @@
 - [ ] Export clean project
 - [ ] Test missing dependencies
 - [ ] Test version mismatch
+- [ ] Verify changing one gameplay translation unit does not rebuild unrelated engine targets
+
+### Architecture
+
+- [ ] Keep project builds separate from engine/editor builds
+- [ ] Keep compiler/build tooling replaceable behind project-build contracts
+- [ ] Keep project format independent from one build-system generator or one optional scripting runtime
+
+---
+
+## Phase 33.5 — C++ Play-in-Editor and Game Module Reload
+
+### Learn
+
+- [ ] dynamic library loading and unloading
+- [ ] module lifetime and code-pointer safety
+- [ ] incremental C++ build workflows
+- [ ] Editor World versus Runtime World ownership
+- [ ] module reload boundaries
+- [ ] ABI-compatible versus ABI-incompatible changes
+- [ ] state reconstruction versus state-preserving reload
+
+### Design
+
+- [ ] Keep the editor running across ordinary game-code build, play, stop, and reload cycles
+- [ ] Treat the Editor World as authoritative editable state
+- [ ] Create or clone a separate Runtime World when entering Play Mode
+- [ ] Keep gameplay changes isolated from the Editor World unless an explicit editor workflow applies them
+- [ ] Destroy Runtime World state when leaving Play Mode
+- [ ] Define safe game-module unload preconditions
+- [ ] Prevent module unload while old module code is executing
+- [ ] Require destruction or detachment of module-owned objects before unload
+- [ ] Remove or invalidate old callbacks, systems, metadata, function pointers, and other code-dependent registrations before unload
+- [ ] Keep basic reload independent from full state-preserving hot reload
+- [ ] Define compatibility checks before restoring state across module versions
+- [ ] Prefer Runtime World reconstruction when migration cannot be proven safe
+- [ ] Keep reflection/reload consumers independent from manual, generated, compiler-assisted, or future standard C++ metadata sources
+
+### Implement
+
+- [ ] Enter Play Mode by creating Runtime World state from Editor World state
+- [ ] Run game systems only against Runtime World during Play Mode
+- [ ] Stop Play Mode without restarting the editor
+- [ ] Destroy Runtime World and return control to Editor World
+- [ ] Reload a newly built game module after a successful build
+- [ ] Keep the previous valid module when compilation fails
+- [ ] Implement safe basic reload by stopping play, destroying runtime state, unloading the old module, loading the new module, and recreating Runtime World
+- [ ] Add module-reload diagnostics
+- [ ] Add reflected-state snapshot/reconstruction only after reflection and serialization are mature enough
+- [ ] Preserve primitive reflected properties only as the first state-preserving reload experiment
+- [ ] Add entity/reference restoration incrementally
+- [ ] Add schema-change detection for removed, added, or changed reflected properties
+- [ ] Add explicit migration hooks only after a concrete incompatible-change use case exists
+- [ ] Add implementation-only live reload during active Play Mode only after basic reload is proven safe
+
+### Test
+
+- [ ] Verify repeated Play/Stop cycles do not leak resources
+- [ ] Verify Runtime World changes do not mutate Editor World implicitly
+- [ ] Verify repeated game-module load/unload cycles
+- [ ] Verify no module-owned object survives module unload
+- [ ] Verify old callbacks, systems, metadata, function pointers, and vtables cannot be used after unload
+- [ ] Verify failed builds preserve the last valid playable module
+- [ ] Verify failed module loads leave the editor operational
+- [ ] Verify ordinary game-code changes can be rebuilt and played without restarting editor
+- [ ] Verify compatible reflected state can be reconstructed after reload when state-preserving reload is implemented
+- [ ] Verify incompatible state migration is rejected rather than corrupting memory
+- [ ] Verify fallback Runtime World reconstruction works when state preservation is unsafe
+
+### Architecture
+
+- [ ] Keep game code separately buildable from engine/editor code
+- [ ] Keep Play-in-Editor independent from full hot reload
+- [ ] Keep full state-preserving reload optional rather than a prerequisite for productive C++ gameplay
+- [ ] Keep game-module boundaries explicit and avoid dependence on arbitrary cross-module object layout
+- [ ] Keep stable type/property/entity identity independent from memory addresses across module reloads
+- [ ] Keep reflection descriptive rather than making it the universal engine communication mechanism
+- [ ] Keep module reload correctness ahead of preserving every possible C++ object
+- [ ] Allow reload implementation to evolve without changing ordinary gameplay APIs
+- [ ] Fall back safely to Runtime World reconstruction instead of pretending every ABI/schema change can be hot reloaded
+- [ ] Keep the editor alive when game-module reload fails whenever engine/editor binaries themselves remain valid
+- [ ] Keep low-level engine, renderer, and editor binary reload outside the initial game-module reload contract
 
 ---
 
@@ -2042,6 +2377,7 @@
 - [ ] Keep frontend type separate from reusable engine subsystems
 - [ ] Keep window ownership optional for reusable tools
 - [ ] Preserve one shared diagnostics/error infrastructure
+- [ ] Keep editor, game-module, scripting, and presentation dependencies optional for tools that do not need them
 
 ---
 
@@ -2093,8 +2429,10 @@
 
 - [ ] Keep large-world coordinates independent from streaming
 - [ ] Keep procedural generation independent from absolute coordinate representation
+- [ ] Keep coordinate precision strategy replaceable behind world/reference-frame contracts rather than freezing one numeric representation into every subsystem
 - [ ] Do not make planets a core engine primitive
 - [ ] Support ordinary small worlds without large-world overhead
+- [ ] Keep large-world/reference-frame data compatible with Composable World Model representations if validated without requiring CWM for ordinary worlds
 
 ---
 
@@ -2147,6 +2485,8 @@
 - [ ] Keep transport details out of gameplay state
 - [ ] Keep large-world coordinate encoding consistent with Phase 34.5
 - [ ] Avoid coupling networking to one ECS storage implementation
+- [ ] Keep replication identity and authority independent from one local world representation
+- [ ] Allow a Composable World Model network representation if validated without making networking the authority for unrelated local state
 
 ---
 
@@ -2191,6 +2531,7 @@
 - [ ] Let optional large-world rendering modules consume generic streaming APIs rather than own streaming-core policy
 - [ ] Keep streaming separate from coordinate representation
 - [ ] Keep streaming separate from procedural-generation algorithms
+- [ ] Keep streaming policy independent from one world/component storage representation
 - [ ] Keep ordinary small projects free from large-world streaming requirements
 
 ---
@@ -2220,6 +2561,9 @@
 - [ ] Keep procedural algorithms project-defined unless generally reusable
 - [ ] Do not require procedural generation for normal projects
 - [ ] Do not make chunks or planets core engine concepts
+- [ ] Keep generator definition independent from CPU or GPU execution strategy
+- [ ] Allow specialized procedural representations without making materialized ECS/component state mandatory
+- [ ] Keep procedural generation compatible with but not dependent on the Composable World Model if validated
 
 ---
 
@@ -2284,6 +2628,7 @@
 - [ ] Allow developers to enable, disable, configure, replace, and extend built-in rendering modules
 - [ ] Allow developers to implement equivalent or new features through the same public renderer mechanisms
 - [ ] Avoid initializing or allocating resources for unused optional rendering modules
+- [ ] Keep feature modules compatible with multiple geometry, visibility, queue, and world-data representations rather than assuming one built-in path
 
 ---
 
@@ -2308,6 +2653,12 @@
 - [ ] Handle extension failure
 - [ ] Test extension version mismatch
 
+### Architecture
+
+- [ ] Keep editor extensions on versioned public tooling/metadata contracts rather than arbitrary private engine access
+- [ ] Allow editor extensions to add support for custom assets, systems, world representations, and tools without modifying editor core
+- [ ] Keep extension failure isolated from unrelated editor/runtime systems where practical
+
 ---
 
 ## Phase 40 — API Compatibility
@@ -2321,6 +2672,8 @@
 - [ ] Version serialized formats
 - [ ] Define deprecation policy
 - [ ] Define migration policy
+- [ ] Avoid promoting temporary implementation details, cardinalities, storage layouts, or backend-native types into compatibility promises
+- [ ] Define compatibility boundaries narrowly enough that internal implementations can continue to evolve
 
 ### ABI
 
@@ -2379,6 +2732,13 @@
 - [ ] Compare renderer-core baseline against enabled feature modules
 - [ ] Measure feature activation/deactivation cost
 - [ ] Track per-feature CPU, GPU, memory, descriptor, and resource usage
+- [ ] Track Composable World Model representation/projection/synchronization overhead separately if CWM research is active
+
+### Architecture
+
+- [ ] Keep profiling capable of comparing baseline and replacement implementations under equivalent workloads
+- [ ] Keep performance metrics attributable to subsystems, representations, features, and synchronization boundaries
+- [ ] Use measurements to choose specialization without turning one benchmark winner into a mandatory architecture for unrelated workloads
 
 ---
 
@@ -2420,7 +2780,7 @@
 
 - [ ] Profile Jolt-backed workloads
 - [ ] Identify workload-specific limitations
-- [ ] Prototype specialized Signum physics where justified
+- [ ] Prototype specialized engine physics where justified
 - [ ] Evaluate procedural-collision specialization
 - [ ] Evaluate large-world broad-phase specialization
 - [ ] Evaluate large-scale/reference-frame simulation
@@ -2445,9 +2805,9 @@
 
 ### UI Evolution
 
-- [ ] Profile Signum UI
+- [ ] Profile editor UI
 - [ ] Identify remaining Dear ImGui dependencies
-- [ ] Migrate remaining editor tooling when Signum UI provides equivalent capability
+- [ ] Migrate remaining editor tooling when editor UI provides equivalent capability
 - [ ] Keep developer tooling usable during migration
 - [ ] Remove Dear ImGui only when no longer needed
 
@@ -2465,11 +2825,13 @@
 
 ### Architecture
 
-- [ ] Third-party implementation must not define Signum architecture
-- [ ] Experimental backends use normal Signum boundaries
+- [ ] Third-party implementation must not define engine architecture
+- [ ] Experimental backends use normal engine boundaries
 - [ ] Baseline and experimental implementations can coexist
 - [ ] Custom technology must remain measurable
 - [ ] Avoid custom implementations whose only advantage is being custom
+- [ ] Keep Composable World Model experiments comparable with conventional ECS, object, and specialized direct-structure baselines
+- [ ] Preserve simpler implementations when a specialized or composable architecture does not justify its complexity
 
 ---
 
@@ -2518,13 +2880,41 @@
 - [ ] Test clean project build
 - [ ] Test clean project export
 
+### Architecture
+
+- [ ] Audit public APIs for accidental dependencies on temporary backend, storage, queue, threading, editor, or module implementation details
+- [ ] Verify optional subsystems can remain absent without forcing placeholder initialization or resource allocation
+- [ ] Verify replacement backends and extension points do not require unrelated engine-core modifications
+- [ ] Preserve migration paths for serialized/project data when internal representations evolve
+
 ---
 
 ## Long-Term Architecture
 
+### Architecture Scaling Principles
+
+- [ ] Add only the abstraction required by the current use case
+- [ ] Do not encode current counts, cardinalities, queue topology, frame layout, storage layout, thread topology, or backend-native handles into public contracts unless the requirement is intentionally fundamental
+- [ ] Keep ownership explicit and dependency lifetimes mechanically enforceable where practical
+- [ ] Keep logical identity separate from physical storage and backend-native identity where future replacement or multi-representation use requires it
+- [ ] Keep policy separate from capability discovery and mechanism
+- [ ] Keep optional systems optional in initialization, runtime overhead, dependencies, and public APIs
+- [ ] Prefer capability-based composition over giant interfaces that force every implementation into the same shape
+- [ ] Preserve specialized/native fast paths when a generic abstraction would erase the reason specialization exists
+- [ ] Allow implementations to be replaced, specialized, or experimentally coexisted without rewriting unrelated callers
+- [ ] Generalize only after multiple concrete use cases reveal a real shared abstraction
+- [ ] Avoid generic managers, registries, service locators, or global buses without a concrete ownership/coordination requirement
+- [ ] Avoid forcing renderer, physics, audio, networking, UI, world, assets, or tooling into one storage or execution model
+- [ ] Keep built-in implementations on the same public extension mechanisms intended for project-defined or third-party implementations where practical
+- [ ] Keep development/editor conveniences from becoming runtime requirements
+- [ ] Preserve headless, non-rendering, non-networked, non-scripted, and small-project configurations without unrelated subsystem overhead
+- [ ] Keep experimental architecture measurable with explicit acceptance, rejection, and redesign criteria
+- [ ] Prefer correctness and safe fallback over preserving an abstraction, optimization, or hot-reload path that cannot prove its invariants
+- [ ] Keep architecture documents and roadmap decisions revisable as requirements and evidence change
+
 ### Rendering Principles
 
-- [ ] Engine provides mechanisms, built-in modules provide implementations, developers provide specialization
+- [ ] Keep renderer mechanisms separate from built-in feature implementations and project-specific extensions
 - [ ] Renderer-core does not depend on optional rendering modules
 - [ ] Built-in rendering modules use the same public mechanisms available to developer-defined features
 - [ ] Optional rendering modules can be enabled, disabled, configured, replaced, and extended
@@ -2556,6 +2946,8 @@
 - [ ] GPU resource lifetime/dependency tracking
 - [ ] Hardware ray-tracing infrastructure
 - [ ] Large-world spatial/reference-frame infrastructure
+- [ ] Composable World Model identity/authority/projection mechanisms if research validates them
+- [ ] Capability-based custom world-representation integration if research validates it
 
 ### Runtime APIs
 
@@ -2573,6 +2965,8 @@
 - [ ] Runtime UI
 - [ ] Events
 - [ ] Serialization
+- [ ] Reflection/metadata where explicitly exposed
+- [ ] Game-module lifecycle and reload contracts
 - [ ] Optional networking
 
 ### Replaceable / Experimental Backends
@@ -2582,14 +2976,21 @@
 - [ ] Audio backend
 - [ ] Source-asset decoders/importers
 - [ ] Developer/editor UI implementation
+- [ ] Optional scripting runtimes
+- [ ] Project/game-module build integration
+- [ ] Composable World Model representations if CWM research is validated
 - [ ] Baseline implementations remain available while experimental alternatives are measured
 - [ ] Replace implementations only for concrete capability, performance, scalability, or maintenance benefits
+- [ ] Subsystem implementations may be replaced or specialized without rewriting unrelated public APIs
+- [ ] Initial third-party libraries and backend choices must not become permanent architectural dependencies
 
 ### Extension APIs
 
 - [ ] Runtime modules
+- [ ] Game modules
 - [ ] Custom systems
 - [ ] Custom components
+- [ ] Custom world representations if CWM research validates the extension contract
 - [ ] Custom asset types
 - [ ] Custom importers
 - [ ] Renderer extensions
@@ -2617,11 +3018,13 @@
 ### Game Project
 
 - [ ] Project-defined C++ code
+- [ ] Separately buildable/reloadable C++ game module
 - [ ] Project-defined components
 - [ ] Project-defined systems
 - [ ] Project-defined assets
 - [ ] Optional project modules
 - [ ] Optional scripting
+- [ ] Play-in-Editor without requiring editor restart for ordinary game-code changes
 
 ---
 
