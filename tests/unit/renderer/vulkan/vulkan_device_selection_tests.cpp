@@ -28,10 +28,17 @@ namespace {
         };
     }
 
-    [[nodiscard]] auto makePhysicalDeviceCapabilities(std::uint32_t api_version)
+    [[nodiscard]] auto
+    makePhysicalDeviceCapabilities(std::uint32_t api_version,
+                                   bool dynamic_rendering_supported = true,
+                                   bool synchronization2_supported = true)
         -> Vulkan::PhysicalDeviceCapabilities {
         Vulkan::PhysicalDeviceCapabilities capabilities{};
         capabilities.properties.apiVersion = api_version;
+        capabilities.required_capabilities.dynamic_rendering_supported =
+            dynamic_rendering_supported;
+        capabilities.required_capabilities.synchronization2_supported =
+            synchronization2_supported;
         return capabilities;
     }
 
@@ -187,6 +194,52 @@ TEST(VulkanDeviceSelectionTests,
     EXPECT_TRUE(Vulkan::isPhysicalDeviceSuitable(
         queue_family_indices, available_extensions,
         makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion),
+        makeAdequateSwapchainSupport()));
+}
+
+TEST(VulkanDeviceSelectionTests,
+     ReturnsFalseWhenDynamicRenderingIsUnsupported) {
+    const Vulkan::QueueFamilyIndices queue_family_indices{
+        .graphics_family = std::uint32_t{0},
+        .presentation_family = std::uint32_t{0},
+    };
+
+    const VkExtensionProperties swapchain_extension{
+        .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = std::uint32_t{0},
+    };
+
+    const std::vector<VkExtensionProperties> available_extensions{
+        swapchain_extension,
+    };
+
+    EXPECT_FALSE(Vulkan::isPhysicalDeviceSuitable(
+        queue_family_indices, available_extensions,
+        makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion, false,
+                                       true),
+        makeAdequateSwapchainSupport()));
+}
+
+TEST(VulkanDeviceSelectionTests,
+     ReturnsFalseWhenSynchronization2IsUnsupported) {
+    const Vulkan::QueueFamilyIndices queue_family_indices{
+        .graphics_family = std::uint32_t{0},
+        .presentation_family = std::uint32_t{0},
+    };
+
+    const VkExtensionProperties swapchain_extension{
+        .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        .specVersion = std::uint32_t{0},
+    };
+
+    const std::vector<VkExtensionProperties> available_extensions{
+        swapchain_extension,
+    };
+
+    EXPECT_FALSE(Vulkan::isPhysicalDeviceSuitable(
+        queue_family_indices, available_extensions,
+        makePhysicalDeviceCapabilities(Vulkan::kRequiredApiVersion, true,
+                                       false),
         makeAdequateSwapchainSupport()));
 }
 

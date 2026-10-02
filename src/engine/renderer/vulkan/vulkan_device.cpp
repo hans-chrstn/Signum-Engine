@@ -112,11 +112,13 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         LogicalDeviceFeatureConfiguration creation_features =
             logical_device_configuration;
-        creation_features.feature_chain_root.pNext = nullptr;
+        creation_features.feature_chain_root.pNext =
+            &creation_features.vulkan_13_features;
         creation_features.fifo_latest_ready_feature.pNext = nullptr;
+        creation_features.vulkan_13_features.pNext = nullptr;
         if (creation_features.fifo_latest_ready_feature
                 .presentModeFifoLatestReady == VK_TRUE) {
-            creation_features.feature_chain_root.pNext =
+            creation_features.vulkan_13_features.pNext =
                 &creation_features.fifo_latest_ready_feature;
         }
 

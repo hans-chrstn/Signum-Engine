@@ -30,4 +30,11 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         return request;
     }
+
+    LogicalDeviceFeatureConfiguration::LogicalDeviceFeatureConfiguration() {
+        vulkan_13_features.sType =
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        vulkan_13_features.dynamicRendering = VK_TRUE;
+        vulkan_13_features.synchronization2 = VK_TRUE;
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

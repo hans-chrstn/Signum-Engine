@@ -47,6 +47,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                queue_family_indices.presentation_family.has_value() &&
                supportsRequiredDeviceExtensions(available_extensions) &&
                supportsRequiredApiVersion(capabilities.properties.apiVersion) &&
+               capabilities.required_capabilities.dynamic_rendering_supported &&
+               capabilities.required_capabilities.synchronization2_supported &&
                hasRequiredSwapchainSupport(swapchain_support);
     }
 

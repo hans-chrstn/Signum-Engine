@@ -113,13 +113,17 @@ namespace SNE::Engine::Renderer::Vulkan {
      *        the renderer's mandatory requirements.
      *
      * Evaluates required queue-family availability, device-extension support,
-     * Vulkan API-version support, and required swapchain support for a physical
-     * device.
+     * Vulkan API-version support, required renderer feature support, and
+     * required swapchain support for a physical device.
+     *
+     * Required renderer features include Vulkan dynamic rendering and
+     * synchronization2 functionality used by the current rendering path.
      *
      * @param queue_family_indices Queue-family indices discovered for the
      * device.
      * @param available_extensions Device extensions reported by the device.
-     * @param capabilities Capability information discovered for the device.
+     * @param capabilities Capability information discovered for the device,
+     * including mandatory renderer feature support.
      * @param swapchain_support Swapchain support discovered for the physical
      * device and surface.
      *

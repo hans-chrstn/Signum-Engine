@@ -63,6 +63,12 @@ namespace SNE::Engine::Core::Error {
             return "VulkanCommandPoolResetFailed";
         case Code::VulkanCommandBufferBeginFailed:
             return "VulkanCommandBufferBeginFailed";
+        case Code::VulkanCommandBufferEndFailed:
+            return "VulkanCommandBufferEndFailed";
+        case Code::VulkanQueueSubmissionFailed:
+            return "VulkanQueueSubmissionFailed";
+        case Code::VulkanQueuePresentationFailed:
+            return "VulkanQueuePresentationFailed";
         }
         return "Unknown";
     }

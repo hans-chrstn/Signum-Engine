@@ -2,6 +2,7 @@
 
 #include "engine/renderer/presentation_preference.hpp"
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     struct PhysicalDeviceCapabilities;
@@ -17,16 +18,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         /** Whether FIFO latest-ready presentation is requested. */
         bool fifo_latest_ready_requested = false;
     };
+
     /**
      * @brief Stores Vulkan features selected for logical-device creation.
      *
-     * Owns the root of the Vulkan feature chain used when creating the logical
-     * device. Additional Vulkan-version or extension feature structures may be
-     * linked through the root as feature requirements are introduced.
+     * Owns the root of the Vulkan feature chain together with the
+     * Vulkan-version and extension feature structures required during
+     * logical-device creation.
+     *
+     * Required renderer features are enabled unconditionally after
+     * physical-device selection has established that the selected device
+     * supports them. Optional features are enabled only when requested by
+     * engine policy and supported by the selected physical device.
      *
      * This configuration is distinct from PhysicalDeviceCapabilities, which
-     * describes features supported by the physical device. A supported feature
-     * is not necessarily enabled by this configuration.
+     * describes features supported by the physical device. Supported
+     * optional features are not necessarily enabled by this configuration.
      */
     struct LogicalDeviceFeatureConfiguration {
         /** Root of the Vulkan feature chain used for logical-device creation.
@@ -37,6 +44,14 @@ namespace SNE::Engine::Renderer::Vulkan {
             .features = {},
         };
 
+        /**
+         * @brief Vulkan 1.3 features required by the renderer.
+         *
+         * Enables dynamic rendering and synchronization2 functionality used by
+         * the renderer's command-recording and synchronization paths.
+         */
+        VkPhysicalDeviceVulkan13Features vulkan_13_features{};
+
         /** FIFO latest-ready feature configuration owned by this object. */
         VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR
             fifo_latest_ready_feature{
@@ -45,6 +60,18 @@ namespace SNE::Engine::Renderer::Vulkan {
                 .pNext = nullptr,
                 .presentModeFifoLatestReady = VK_FALSE,
         };
+
+        /**
+         * @brief Creates the logical-device feature configuration.
+         *
+         * Initializes the Vulkan feature structures owned by this configuration
+         * and enables the mandatory Vulkan 1.3 features required by the
+         * renderer.
+         *
+         * Optional features remain disabled until selected by
+         * feature-negotiation policy.
+         */
+        LogicalDeviceFeatureConfiguration();
     };
 
     /**

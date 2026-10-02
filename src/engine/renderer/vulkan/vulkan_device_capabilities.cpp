@@ -105,18 +105,41 @@ namespace SNE::Engine::Renderer::Vulkan {
         return result;
     }
 
+    auto queryRequiredDeviceCapabilities(VkPhysicalDevice device)
+        -> RequiredDeviceCapabilities {
+        VkPhysicalDeviceVulkan13Features vulkan_13_features{};
+        vulkan_13_features.sType =
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+
+        VkPhysicalDeviceFeatures2 feature_query_root{};
+        feature_query_root.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        feature_query_root.pNext = &vulkan_13_features;
+        vkGetPhysicalDeviceFeatures2(device, &feature_query_root);
+        const RequiredDeviceCapabilities required_capabilities{
+            .dynamic_rendering_supported =
+                vulkan_13_features.dynamicRendering == VK_TRUE,
+            .synchronization2_supported =
+                vulkan_13_features.synchronization2 == VK_TRUE,
+        };
+        return required_capabilities;
+    }
+
     auto queryPhysicalDeviceCapabilities(
         VkPhysicalDevice device,
         const std::vector<VkExtensionProperties> &extension_properties)
         -> PhysicalDeviceCapabilities {
-        VkPhysicalDeviceProperties properties =
+        const VkPhysicalDeviceProperties properties =
             queryPhysicalDeviceProperties(device);
-        VkPhysicalDeviceFeatures features = queryPhysicalDeviceFeatures(device);
-        OptionalDeviceCapabilities optional_capabilities =
+        const VkPhysicalDeviceFeatures features =
+            queryPhysicalDeviceFeatures(device);
+        const RequiredDeviceCapabilities required_capabilities =
+            queryRequiredDeviceCapabilities(device);
+        const OptionalDeviceCapabilities optional_capabilities =
             queryOptionalDeviceCapabilities(device, extension_properties);
         return {
             .properties = properties,
             .features = features,
+            .required_capabilities = required_capabilities,
             .optional_capabilities = optional_capabilities,
         };
     }

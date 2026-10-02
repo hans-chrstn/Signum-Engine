@@ -28,18 +28,34 @@ namespace SNE::Engine::Renderer::Vulkan {
     };
 
     /**
+     * @brief Stores mandatory Vulkan capabilities required by the renderer.
+     *
+     * Represents Vulkan features that must be supported by a physical device
+     * for the current renderer backend to operate correctly.
+     */
+    struct RequiredDeviceCapabilities {
+        /** Whether Vulkan dynamic rendering is supported. */
+        bool dynamic_rendering_supported = false;
+        /** Whether Vulkan synchronization2 functionality is supported. */
+        bool synchronization2_supported = false;
+    };
+
+    /**
      * @brief Stores capability information reported for a Vulkan physical
      * device.
      *
-     * Groups the core properties, supported features, and optional capabilities
-     * discovered for a physical device so later systems can inspect device
-     * characteristics without repeating Vulkan capability queries.
+     * Groups the core properties, supported features, required capabilities,
+     * and optional capabilities discovered for a physical device so later
+     * systems can inspect device characteristics without repeating Vulkan
+     * capability queries.
      */
     struct PhysicalDeviceCapabilities {
         /** Descriptive properties reported by the physical device. */
         VkPhysicalDeviceProperties properties{};
         /** Core Vulkan features supported by the physical device. */
         VkPhysicalDeviceFeatures features{};
+        /** Mandatory capabilities required by the renderer. */
+        RequiredDeviceCapabilities required_capabilities{};
         /** Optional hardware capabilities discovered for the physical device.
          */
         OptionalDeviceCapabilities optional_capabilities;
@@ -95,11 +111,35 @@ namespace SNE::Engine::Renderer::Vulkan {
         -> OptionalDeviceCapabilities;
 
     /**
+     * @brief Queries mandatory Vulkan capabilities required by the renderer.
+     *
+     * Discovers Vulkan features that must be supported by a physical device for
+     * the current renderer backend to operate correctly.
+     *
+     * Queries the Vulkan feature set required by the renderer, including
+     * dynamic rendering and synchronization2 support.
+     *
+     * This function reports support only. It does not enable the discovered
+     * features on a logical device.
+     *
+     * @param device Physical device whose required capabilities are queried.
+     *
+     * @return Required capabilities supported by the physical device.
+     */
+    [[nodiscard]] auto queryRequiredDeviceCapabilities(VkPhysicalDevice device)
+        -> RequiredDeviceCapabilities;
+
+    /**
      * @brief Queries the capabilities of a Vulkan physical device.
      *
      * Collects the physical device's descriptive properties, supported core
-     * features, and optional hardware capabilities into a single capability
-     * snapshot.
+     * features, required renderer capabilities, and optional hardware
+     * capabilities into a single capability snapshot.
+     *
+     * Required capabilities describe Vulkan functionality that must be
+     * supported for the current renderer backend to operate correctly. Optional
+     * capabilities describe functionality that may be used when available but
+     * is not required for physical-device suitability.
      *
      * Reuses the supplied device-extension properties when determining optional
      * capability support.

@@ -13,6 +13,7 @@ namespace SNE::Engine::Core {
     void Application::run() {
         while (!m_Window.shouldClose()) {
             Platform::Window::pollEvents();
+            m_Renderer.renderFrame();
         }
     }
 } // namespace SNE::Engine::Core

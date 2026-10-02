@@ -35,6 +35,9 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanSwapchainImageAcquisitionFailed:
         case Code::VulkanCommandPoolResetFailed:
         case Code::VulkanCommandBufferBeginFailed:
+        case Code::VulkanCommandBufferEndFailed:
+        case Code::VulkanQueueSubmissionFailed:
+        case Code::VulkanQueuePresentationFailed:
             return Subsystem::Vulkan;
         }
 

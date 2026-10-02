@@ -74,6 +74,12 @@ namespace SNE::Engine::Core::Error {
         VulkanCommandPoolResetFailed,
         /** Beginning Vulkan command-buffer recording failed. */
         VulkanCommandBufferBeginFailed,
+        /** Ending Vulkan command-buffer recording failed. */
+        VulkanCommandBufferEndFailed,
+        /** Submitting Vulkan work to a queue failed. */
+        VulkanQueueSubmissionFailed,
+        /** Presenting a Vulkan swapchain image failed. */
+        VulkanQueuePresentationFailed,
     };
 
     /**

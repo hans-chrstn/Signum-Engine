@@ -163,6 +163,21 @@ TEST(ErrorCodeTests, VulkanCommandBufferBeginErrorCodeHasReadableName) {
               "VulkanCommandBufferBeginFailed");
 }
 
+TEST(ErrorCodeTests, VulkanCommandBufferEndErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandBufferEndFailed),
+              "VulkanCommandBufferEndFailed");
+}
+
+TEST(ErrorCodeTests, VulkanQueueSubmissionErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanQueueSubmissionFailed),
+              "VulkanQueueSubmissionFailed");
+}
+
+TEST(ErrorCodeTests, VulkanQueuePresentationErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanQueuePresentationFailed),
+              "VulkanQueuePresentationFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);
