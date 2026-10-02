@@ -328,7 +328,7 @@
 - [x] frame-resource ownership boundaries
 - [x] borrowed views versus owned containers
 - [ ] swapchain recreation ownership requirements
-- [ ] scalable queue-request modeling
+- [x] scalable queue-request modeling
 - [ ] incremental abstraction versus speculative abstraction
 
 ### Implement
