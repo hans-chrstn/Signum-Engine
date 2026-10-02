@@ -14,4 +14,17 @@ namespace SNE::Engine::Renderer::Vulkan {
         return m_CommandBuffers;
     }
 
+    auto VulkanFrameResources::imageAvailableSemaphore() const noexcept
+        -> const VulkanSemaphore & {
+        return m_ImageAvailableSemaphore;
+    }
+
+    auto VulkanFrameResources::inFlightFence() noexcept -> VulkanFence & {
+        return m_InFlightFence;
+    }
+
+    auto VulkanFrameResources::resetCommandResources() -> void {
+        m_CommandPool.reset();
+    }
+
 } // namespace SNE::Engine::Renderer::Vulkan

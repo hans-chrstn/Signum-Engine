@@ -57,6 +57,12 @@ namespace SNE::Engine::Core::Error {
             return "VulkanFenceWaitFailed";
         case Code::VulkanFenceResetFailed:
             return "VulkanFenceResetFailed";
+        case Code::VulkanSwapchainImageAcquisitionFailed:
+            return "VulkanSwapchainImageAcquisitionFailed";
+        case Code::VulkanCommandPoolResetFailed:
+            return "VulkanCommandPoolResetFailed";
+        case Code::VulkanCommandBufferBeginFailed:
+            return "VulkanCommandBufferBeginFailed";
         }
         return "Unknown";
     }

@@ -158,6 +158,23 @@ TEST(SubsystemTests, VulkanFenceResetErrorsBelongToVulkan) {
               Error::Subsystem::Vulkan);
 }
 
+TEST(SubsystemTests, VulkanSwapchainImageAcquisitionErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(
+                  Error::Code::VulkanSwapchainImageAcquisitionFailed),
+              Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanCommandPoolResetErrorsBelongToVulkan) {
+    EXPECT_EQ(Error::getSubsystemFor(Error::Code::VulkanCommandPoolResetFailed),
+              Error::Subsystem::Vulkan);
+}
+
+TEST(SubsystemTests, VulkanCommandBufferBeginErrorsBelongToVulkan) {
+    EXPECT_EQ(
+        Error::getSubsystemFor(Error::Code::VulkanCommandBufferBeginFailed),
+        Error::Subsystem::Vulkan);
+}
+
 TEST(SubsystemTests, SubsystemsHaveReadableNames) {
     EXPECT_EQ(Error::toString(Error::Subsystem::Platform), "Platform");
     EXPECT_EQ(Error::toString(Error::Subsystem::Core), "Core");

@@ -68,6 +68,12 @@ namespace SNE::Engine::Core::Error {
         VulkanFenceWaitFailed,
         /** Resetting a Vulkan fence failed. */
         VulkanFenceResetFailed,
+        /** Failed to acquire Vulkan swapchain image. */
+        VulkanSwapchainImageAcquisitionFailed,
+        /** Resetting a Vulkan command pool failed. */
+        VulkanCommandPoolResetFailed,
+        /** Beginning Vulkan command-buffer recording failed. */
+        VulkanCommandBufferBeginFailed,
     };
 
     /**

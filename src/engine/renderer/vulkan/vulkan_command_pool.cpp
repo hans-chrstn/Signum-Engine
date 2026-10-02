@@ -115,4 +115,25 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         return command_buffers;
     }
+
+    auto VulkanCommandPool::reset() -> void {
+        if (m_CommandPool == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanCommandPool must own a valid command pool before "
+                "resetting it");
+        }
+
+        const VkResult result = vkResetCommandPool(m_Device, m_CommandPool, 0U);
+
+        if (result != VK_SUCCESS) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanCommandPoolResetFailed,
+                "Failed to reset Vulkan command pool",
+                Core::Error::NativeError(static_cast<int>(result),
+                                         std::string(toString(result))),
+                "Reset Vulkan Command Pool");
+        }
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

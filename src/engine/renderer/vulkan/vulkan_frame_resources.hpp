@@ -135,5 +135,50 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto commandBuffers() const noexcept
             -> std::span<const VkCommandBuffer>;
+
+        /**
+         * @brief Returns the image-availability semaphore owned by this frame
+         * slot.
+         *
+         * Provides access to the semaphore used to synchronize swapchain-image
+         * acquisition with GPU submission for this frame-in-flight slot.
+         *
+         * The returned reference does not transfer ownership and remains valid
+         * only while this VulkanFrameResources object remains alive.
+         *
+         * @return Reference to the image-availability semaphore owned by this
+         * frame.
+         */
+        [[nodiscard]] auto imageAvailableSemaphore() const noexcept
+            -> const VulkanSemaphore &;
+
+        /**
+         * @brief Returns the in-flight fence owned by this frame slot.
+         *
+         * Provides access to the fence used to wait for completion of GPU work
+         * associated with this frame and to prepare the fence for a subsequent
+         * submission.
+         *
+         * The returned reference does not transfer ownership and remains valid
+         * only while this VulkanFrameResources object remains alive.
+         *
+         * @return Reference to the in-flight fence owned by this frame.
+         */
+        [[nodiscard]] auto inFlightFence() noexcept -> VulkanFence &;
+
+        /**
+         * @brief Resets this frame slot's command resources for reuse.
+         *
+         * Resets the command-pool state associated with this frame so its
+         * allocated command buffers return to the initial state and may be
+         * recorded again.
+         *
+         * The caller must ensure that GPU execution using this frame's command
+         * resources has completed before calling this function.
+         *
+         * @throws Core::Error::EngineError if the underlying Vulkan
+         * command-resource reset fails.
+         */
+        auto resetCommandResources() -> void;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

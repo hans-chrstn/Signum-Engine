@@ -117,5 +117,21 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto allocateCommandBuffers(VkCommandBufferLevel level,
                                                   std::uint32_t count)
             -> std::vector<VkCommandBuffer>;
+
+        /**
+         * @brief Resets the command pool and its allocated command buffers.
+         *
+         * Returns command buffers allocated from this pool to their initial
+         * state so they may be recorded again.
+         *
+         * The caller must ensure that no command buffer allocated from this
+         * pool is still pending execution on a Vulkan queue.
+         *
+         * @pre This object must own a valid Vulkan command pool.
+         *
+         * @throws Core::Error::EngineError if Vulkan fails to reset the command
+         * pool.
+         */
+        auto reset() -> void;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

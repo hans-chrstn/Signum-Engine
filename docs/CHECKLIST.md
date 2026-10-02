@@ -443,7 +443,7 @@
 
 - [ ] Keep rendering loop independent from gameplay
 - [ ] Keep synchronization details inside rendering subsystem
-- [ ] Keep command-buffer allocation, recording, and recycling policy inside rendering boundaries
+- [x] Keep command-buffer allocation, recording, and recycling policy inside rendering boundaries
 - [ ] Keep synchronization ownership extensible for additional queues and submission paths
 - [ ] Prefer dynamic rendering over legacy render-pass/framebuffer objects unless a concrete compatibility need requires them
 

@@ -147,6 +147,22 @@ TEST(ErrorCodeTests, VulkanFenceResetErrorCodeHasReadableName) {
               "VulkanFenceResetFailed");
 }
 
+TEST(ErrorCodeTests, VulkanSwapchainImageAcquisitionErrorCodeHasReadableName) {
+    EXPECT_EQ(
+        Error::toString(Error::Code::VulkanSwapchainImageAcquisitionFailed),
+        "VulkanSwapchainImageAcquisitionFailed");
+}
+
+TEST(ErrorCodeTests, VulkanCommandPoolResetErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandPoolResetFailed),
+              "VulkanCommandPoolResetFailed");
+}
+
+TEST(ErrorCodeTests, VulkanCommandBufferBeginErrorCodeHasReadableName) {
+    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandBufferBeginFailed),
+              "VulkanCommandBufferBeginFailed");
+}
+
 TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);
