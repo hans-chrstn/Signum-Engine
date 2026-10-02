@@ -10,7 +10,7 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 TEST(VulkanQueueRequestsTests,
      ReturnsSingleRequestWhenGraphicsAndPresentationShareQueueFamily) {
-    const Vulkan::SelectedQueueFamilies queue_family_indices{
+    const Vulkan::SelectedQueueFamilies queue_families{
         .graphics_family =
             {
                 .family_index = std::uint32_t{0},
@@ -24,16 +24,20 @@ TEST(VulkanQueueRequestsTests,
     };
 
     const std::vector<Vulkan::QueueFamilyRequest> requests =
-        Vulkan::deriveUniqueQueueFamilyRequests(queue_family_indices);
+        Vulkan::deriveUniqueQueueFamilyRequests(queue_families);
 
     ASSERT_EQ(requests.size(), std::size_t{1});
+
     EXPECT_EQ(requests[0].family_index, std::uint32_t{0});
+
+    ASSERT_EQ(requests[0].priorities.size(), std::size_t{1});
+    EXPECT_FLOAT_EQ(requests[0].priorities[0], 1.0F);
 }
 
 TEST(
     VulkanQueueRequestsTests,
     ReturnsDistinctRequestsWhenGraphicsAndPresentationUseDifferentQueueFamilies) {
-    const Vulkan::SelectedQueueFamilies queue_family_indices{
+    const Vulkan::SelectedQueueFamilies queue_families{
         .graphics_family =
             {
                 .family_index = std::uint32_t{0},
@@ -47,9 +51,15 @@ TEST(
     };
 
     const std::vector<Vulkan::QueueFamilyRequest> requests =
-        Vulkan::deriveUniqueQueueFamilyRequests(queue_family_indices);
+        Vulkan::deriveUniqueQueueFamilyRequests(queue_families);
 
     ASSERT_EQ(requests.size(), std::size_t{2});
+
     EXPECT_EQ(requests[0].family_index, std::uint32_t{0});
+    ASSERT_EQ(requests[0].priorities.size(), std::size_t{1});
+    EXPECT_FLOAT_EQ(requests[0].priorities[0], 1.0F);
+
     EXPECT_EQ(requests[1].family_index, std::uint32_t{1});
+    ASSERT_EQ(requests[1].priorities.size(), std::size_t{1});
+    EXPECT_FLOAT_EQ(requests[1].priorities[0], 1.0F);
 }

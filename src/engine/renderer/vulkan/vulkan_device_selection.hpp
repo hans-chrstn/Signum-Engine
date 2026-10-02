@@ -56,9 +56,12 @@ namespace SNE::Engine::Renderer::Vulkan {
      * information, and capability information required after physical-device
      * selection.
      *
-     * The selected queue families are guaranteed to satisfy renderer
-     * requirements because this type is created only after suitability
-     * validation succeeds.
+     * The selected queue families are guaranteed to satisfy the renderer's
+     * required graphics and presentation roles because this type is created
+     * only after suitability validation succeeds.
+     *
+     * Each selected queue family also preserves the queue capacity reported by
+     * Vulkan for later logical-device queue planning.
      *
      * The structure does not own the Vulkan physical device. The handle remains
      * valid only while the Vulkan instance that provided it remains valid.
@@ -66,8 +69,10 @@ namespace SNE::Engine::Renderer::Vulkan {
     struct SelectedPhysicalDevice {
         /** Non-owning handle to the selected Vulkan physical device. */
         VkPhysicalDevice handle;
-        /** Selected graphics and presentation queue-family information
-         * guaranteed by device selection. */
+        /**
+         * Selected graphics and presentation queue families guaranteed by
+         * physical-device selection.
+         */
         SelectedQueueFamilies queue_families;
         /** Capabilities reported by the selected physical device. */
         PhysicalDeviceCapabilities capabilities;

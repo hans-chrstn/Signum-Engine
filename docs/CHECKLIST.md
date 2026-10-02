@@ -379,7 +379,7 @@
 - [x] Keep command-pool ownership independent from command-buffer recording policy
 - [x] Keep swapchain ownership separate from frame ownership
 - [x] Keep swapchain resource access non-owning
-- [ ] Keep physical-device discovery separate from selected-device guarantees
+- [x] Keep physical-device discovery separate from selected-device guarantees
 - [x] Keep supported capabilities separate from requested and enabled features
 - [x] Keep queue planning separate from logical-device creation
 - [ ] Allow queue requests to evolve without redesigning `VulkanDevice`

@@ -70,8 +70,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * the swapchain.
          * @param surface Vulkan surface to which swapchain images will be
          * presented.
-         * @param queue_families Graphics and presentation queue-family
-         * indices used to determine swapchain image-sharing behavior.
+         * @param queue_families Selected graphics and presentation queue
+         * families whose indices are used to determine swapchain image-sharing
+         * behavior.
          * @param framebuffer_size Current framebuffer dimensions in pixels used
          * when selecting the swapchain image extent.
          * @param presentation_preference Backend-independent presentation

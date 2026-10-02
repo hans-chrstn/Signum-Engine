@@ -18,8 +18,29 @@
 
     llvm = pkgs.llvmPackages_23;
 
-    clangTools = pkgs.hiPrio (llvm.clang-tools.override {
+    clangToolsBase = llvm.clang-tools.override {
       enableLibcxx = false;
+    };
+
+    clangTools = pkgs.lib.hiPrio (pkgs.symlinkJoin {
+      name = "signum-clang-tools";
+
+      paths = [
+        clangToolsBase
+      ];
+
+      nativeBuildInputs = [
+        pkgs.makeWrapper
+      ];
+
+      postBuild = ''
+        for tool in clangd clang-tidy clang-format; do
+          rm -f "$out/bin/$tool"
+
+          makeWrapper ${pkgs.bash}/bin/bash "$out/bin/$tool" \
+            --add-flags "${clangToolsBase}/bin/$tool"
+        done
+      '';
     });
 
     runtimeLibraries = with pkgs; [
@@ -33,6 +54,7 @@
     packages.${system}.default = pkgs.callPackage ./nix/package.nix {
       stdenv = llvm.stdenv;
     };
+
     devShells.${system}.default =
       pkgs.mkShell.override {
         stdenv = llvm.stdenv;
@@ -104,6 +126,7 @@
           just --version
         '';
       };
+
     apps.${system}.default = {
       type = "app";
       program = "${self.packages.${system}.default}/bin/signum";

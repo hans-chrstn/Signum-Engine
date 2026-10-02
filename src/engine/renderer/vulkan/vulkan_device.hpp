@@ -35,18 +35,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         /**
          * @brief Creates a Vulkan logical device.
          *
-         * Creates one queue from each requested queue family, enables the
-         * Vulkan device extensions required by Signum, and enables the supplied
-         * logical-device feature configuration.
+         * Creates the queues described by the supplied queue-family requests,
+         * enables the Vulkan device extensions required by Signum, and enables
+         * the supplied logical-device feature configuration.
+         *
+         * Each queue-family request contains the priorities of the queues
+         * requested from that family. The number of priorities therefore
+         * determines the number of queues created from that family.
          *
          * @param physical_device Physical device from which the logical device
          * is created.
-         * @param queue_families Graphics and presentation queue-family
-         * indices used to retrieve their corresponding queues.
-         * @param queue_family_requests Unique queue families from which queues
-         * are requested.
+         * @param queue_families Selected graphics and presentation queue
+         * families used to retrieve their corresponding logical-device queues.
+         * @param queue_family_requests Unique queue-family requests describing
+         * the queues to create and their priorities.
          * @param logical_device_configuration Vulkan features selected for
-         *                                     logical-device creation.
+         * logical-device creation.
          *
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * logical device.

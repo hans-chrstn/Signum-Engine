@@ -13,7 +13,7 @@ TEST(VulkanDeviceTests, RequiresGraphicsQueueRequest) {
     std::vector<float> priorities{};
     priorities.push_back(1.0F);
 
-    const Vulkan::SelectedQueueFamilies queue_family_indices{
+    const Vulkan::SelectedQueueFamilies queue_families{
         .graphics_family =
             {
                 .family_index = 0U,
@@ -37,7 +37,7 @@ TEST(VulkanDeviceTests, RequiresGraphicsQueueRequest) {
         logical_device_configuration{};
 
     ASSERT_DEATH(
-        Vulkan::VulkanDevice(physical_device, queue_family_indices,
+        Vulkan::VulkanDevice(physical_device, queue_families,
                              queue_family_requests,
                              logical_device_configuration),
         "VulkanDevice requires queue requests for graphics and presentation "
@@ -49,7 +49,7 @@ TEST(VulkanDeviceTests, RequiresPresentationQueueRequest) {
     std::vector<float> priorities{};
     priorities.push_back(1.0F);
 
-    const Vulkan::SelectedQueueFamilies queue_family_indices{
+    const Vulkan::SelectedQueueFamilies queue_families{
         .graphics_family =
             {
                 .family_index = 0U,
@@ -73,7 +73,7 @@ TEST(VulkanDeviceTests, RequiresPresentationQueueRequest) {
         logical_device_configuration{};
 
     ASSERT_DEATH(
-        Vulkan::VulkanDevice(physical_device, queue_family_indices,
+        Vulkan::VulkanDevice(physical_device, queue_families,
                              queue_family_requests,
                              logical_device_configuration),
         "VulkanDevice requires queue requests for graphics and presentation "

@@ -7,29 +7,38 @@ namespace SNE::Engine::Renderer::Vulkan {
     struct SelectedQueueFamilies;
 
     /**
-     * @brief Describes a queue family requested for logical-device creation.
+     * @brief Describes queues requested from one Vulkan queue family.
      *
      * Represents one unique Vulkan queue family from which Signum intends to
      * create one or more queues.
+     *
+     * The number of entries in priorities determines the number of queues
+     * requested from the family. Each entry specifies the Vulkan scheduling
+     * priority for the corresponding queue.
      */
     struct QueueFamilyRequest {
-        /** Index of the queue family to request from the logical device. */
+        /** Index of the Vulkan queue family from which queues are requested. */
         std::uint32_t family_index{};
+        /** Queue priorities, with one entry for each requested queue. */
         std::vector<float> priorities;
     };
 
     /**
-     * @brief Derives the unique queue-family requests required by a logical
-     * device.
+     * @brief Derives queue requests for the selected renderer queue families.
      *
-     * Converts the selected graphics and presentation queue-family indices into
-     * unique queue-family requests. When both roles use the same family, that
-     * family is requested only once.
+     * Creates one queue-family request for each unique graphics and
+     * presentation queue family selected for renderer use.
      *
-     * @param queue_families Graphics and presentation queue-family
-     * indices.
+     * When graphics and presentation use the same queue family, only one
+     * request is produced for that family.
      *
-     * @return Unique queue-family requests derived from the supplied indices.
+     * The current queue policy requests one queue with priority 1.0 from each
+     * required unique queue family.
+     *
+     * @param queue_families Selected graphics and presentation queue families.
+     *
+     * @return Unique queue-family requests required by the current renderer
+     * policy.
      */
     [[nodiscard]] auto
     deriveUniqueQueueFamilyRequests(const SelectedQueueFamilies &queue_families)

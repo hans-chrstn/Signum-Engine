@@ -29,11 +29,10 @@ namespace SNE::Engine::Renderer::Vulkan {
      * Stores the Vulkan queue-family index together with the number of queues
      * exposed by that family.
      *
-     * This information is produced after physical-device selection and is used
-     * during logical-device queue planning to verify that requested queues can
-     * be provided by the selected hardware.
+     * This information is produced after physical-device selection and provides
+     * the queue-family identity and hardware capacity required by
+     * logical-device queue planning.
      */
-
     struct SelectedQueueFamily {
         /** Vulkan queue-family index. */
         std::uint32_t family_index{};
