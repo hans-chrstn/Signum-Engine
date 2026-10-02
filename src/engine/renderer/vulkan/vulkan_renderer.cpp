@@ -64,6 +64,13 @@ namespace SNE::Engine::Renderer::Vulkan {
               window.framebufferSize(), presentation_preference,
               m_LogicalDeviceFeatureConfiguration.fifo_latest_ready_feature
                       .presentModeFifoLatestReady == VK_TRUE) {
+        const std::size_t images = m_Swapchain.images().size();
+        m_RenderFinishedSemaphores.reserve(images);
+
+        for (std::size_t i{}; i < images; ++i) {
+            m_RenderFinishedSemaphores.emplace_back(m_Device.nativeHandle());
+        }
+
         const std::uint32_t graphics_queue_family_index =
             m_PhysicalDevice.queue_families.graphics_family.family_index;
 

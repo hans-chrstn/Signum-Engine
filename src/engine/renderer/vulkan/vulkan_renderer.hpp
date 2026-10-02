@@ -2,13 +2,14 @@
 
 #include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
-#include "engine/renderer/vulkan/vulkan_device.hpp"
-#include "engine/renderer/vulkan/vulkan_device_features.hpp"
-#include "engine/renderer/vulkan/vulkan_device_selection.hpp"
-#include "engine/renderer/vulkan/vulkan_frame_resources.hpp"
-#include "engine/renderer/vulkan/vulkan_instance.hpp"
-#include "engine/renderer/vulkan/vulkan_surface.hpp"
-#include "engine/renderer/vulkan/vulkan_swapchain.hpp"
+#include "vulkan_device.hpp"
+#include "vulkan_device_features.hpp"
+#include "vulkan_device_selection.hpp"
+#include "vulkan_frame_resources.hpp"
+#include "vulkan_instance.hpp"
+#include "vulkan_semaphore.hpp"
+#include "vulkan_surface.hpp"
+#include "vulkan_swapchain.hpp"
 #include <string>
 #include <vector>
 
@@ -38,6 +39,17 @@ namespace SNE::Engine::Renderer::Vulkan {
         LogicalDeviceFeatureConfiguration m_LogicalDeviceFeatureConfiguration;
         VulkanDevice m_Device;
         VulkanSwapchain m_Swapchain;
+        /**
+         * @brief Presentation-wait semaphores associated with swapchain images.
+         *
+         * Stores one semaphore for each swapchain image. The semaphore selected
+         * by an acquired image index is signaled when rendering for that image
+         * completes and is subsequently waited on by presentation.
+         *
+         * The collection follows swapchain-image lifetime and must be recreated
+         * when the corresponding swapchain images are replaced.
+         */
+        std::vector<VulkanSemaphore> m_RenderFinishedSemaphores;
         std::vector<VulkanFrameResources> m_FrameResources;
 
       public:

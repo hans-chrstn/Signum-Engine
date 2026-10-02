@@ -423,7 +423,7 @@
 
 - [x] Create command pool
 - [x] Create initial per-frame primary command buffers without making one-buffer-per-frame a permanent abstraction
-- [ ] Create initial frame synchronization objects without making one fixed synchronization layout a permanent renderer contract
+- [x] Create initial frame synchronization objects without making one fixed synchronization layout a permanent renderer contract
 - [ ] Implement frame loop
 - [ ] Use Vulkan dynamic rendering
 - [ ] Poll platform events
