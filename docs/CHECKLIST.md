@@ -349,7 +349,7 @@
 - [x] Define where device, swapchain, command, and frame resources belong
 - [x] Define per-frame resource ownership before adding synchronization
 - [x] Keep command-buffer lifetime tied to its command pool
-- [ ] Keep command-buffer allocation and recycling strategy replaceable without changing frame-resource or renderer callers
+- [x] Keep command-buffer allocation and recycling strategy replaceable without changing frame-resource or renderer callers
 - [x] Allow per-frame command resources to evolve from one primary command buffer to multiple primary or secondary command buffers without redesigning frame ownership
 - [x] Define a scalable command-pool ownership model
 - [x] Define swapchain image and image-view access needed by rendering
@@ -426,7 +426,7 @@
 - [x] Create initial frame synchronization objects without making one fixed synchronization layout a permanent renderer contract
 - [ ] Implement frame loop
 - [ ] Use Vulkan dynamic rendering
-- [ ] Poll platform events
+- [x] Poll platform events
 - [ ] Clear screen
 - [ ] Render triangle
 - [ ] Handle frame errors
@@ -442,7 +442,7 @@
 ### Architecture
 
 - [ ] Keep rendering loop independent from gameplay
-- [ ] Keep synchronization details inside rendering subsystem
+- [x] Keep synchronization details inside rendering subsystem
 - [x] Keep command-buffer allocation, recording, and recycling policy inside rendering boundaries
 - [ ] Keep synchronization ownership extensible for additional queues and submission paths
 - [ ] Prefer dynamic rendering over legacy render-pass/framebuffer objects unless a concrete compatibility need requires them
