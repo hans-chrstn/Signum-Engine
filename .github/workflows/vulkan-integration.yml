@@ -39,6 +39,7 @@ jobs:
             libglfw3-dev \
             libgtest-dev \
             libvulkan-dev \
+            libvulkan-memory-allocator-dev\
             glslc \
             spirv-tools \
             mesa-vulkan-drivers \
