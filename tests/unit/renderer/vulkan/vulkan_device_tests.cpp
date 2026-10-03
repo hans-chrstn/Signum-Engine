@@ -9,7 +9,8 @@
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 TEST(VulkanDeviceTests, RequiresGraphicsQueueRequest) {
-    VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+    std::byte dummy{};
+    auto *physical_device = reinterpret_cast<VkPhysicalDevice>(&dummy);
     std::vector<float> priorities{};
     priorities.push_back(1.0F);
 
@@ -45,7 +46,8 @@ TEST(VulkanDeviceTests, RequiresGraphicsQueueRequest) {
 }
 
 TEST(VulkanDeviceTests, RequiresPresentationQueueRequest) {
-    VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+    std::byte dummy{};
+    auto *physical_device = reinterpret_cast<VkPhysicalDevice>(&dummy);
     std::vector<float> priorities{};
     priorities.push_back(1.0F);
 
