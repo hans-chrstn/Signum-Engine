@@ -1,7 +1,10 @@
 #include "vulkan_graphics_pipeline.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/vulkan/vulkan_result.hpp"
 #include "vulkan_shader_module.hpp"
 #include "vulkan_spirv.hpp"
@@ -14,6 +17,21 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(
         VkDevice device, VkFormat color_attachment_format)
         : m_Device(device) {
+        if (device == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires a valid Vulkan device");
+        }
+
+        if (color_attachment_format == VK_FORMAT_UNDEFINED) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires a valid color attachment "
+                "format");
+        }
+
         std::vector<std::uint32_t> vertex =
             loadSpirv("build/shaders/triangle.vert.spv");
         std::vector<std::uint32_t> fragment =

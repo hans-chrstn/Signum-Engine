@@ -1,6 +1,10 @@
 #include "vulkan_surface.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "vulkan_result.hpp"
 #include <GLFW/glfw3.h>
 #include <string>
@@ -8,6 +12,20 @@
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanSurface::VulkanSurface(VkInstance instance, GLFWwindow *window)
         : m_Instance(instance) {
+        if (instance == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanSurface requires a valid Vulkan instance");
+        }
+
+        if (window == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanSurface requires a valid GLFW window");
+        }
+
         const VkResult result =
             glfwCreateWindowSurface(m_Instance, window, nullptr, &m_Surface);
 

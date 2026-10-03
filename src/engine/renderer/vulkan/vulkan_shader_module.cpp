@@ -1,7 +1,10 @@
 #include "vulkan_shader_module.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/vulkan/vulkan_result.hpp"
 #include <cstdint>
 #include <span>
@@ -11,6 +14,20 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanShaderModule::VulkanShaderModule(VkDevice device,
                                            std::span<const std::uint32_t> spirv)
         : m_Device(device) {
+        if (device == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanShaderModule requires a valid Vulkan device");
+        }
+
+        if (spirv.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanShaderModule requires non-empty SPIR-V bytecode");
+        }
+
         VkShaderModuleCreateInfo shader_create_info{};
         shader_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         shader_create_info.codeSize = spirv.size_bytes();

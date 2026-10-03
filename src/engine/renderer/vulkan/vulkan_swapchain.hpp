@@ -66,7 +66,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @param physical_device Physical device whose surface capabilities,
          * formats, and presentation modes are used to configure the swapchain.
-         * @param logical_device Logical device used to create and later destroy
+         * @param device Logical device used to create and later destroy
          * the swapchain.
          * @param surface Vulkan surface to which swapchain images will be
          * presented.
@@ -84,8 +84,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * queried, swapchain creation fails, swapchain images cannot be
          * enumerated, or an image view cannot be created.
          */
-        VulkanSwapchain(VkPhysicalDevice physical_device,
-                        VkDevice logical_device, VkSurfaceKHR surface,
+        VulkanSwapchain(VkPhysicalDevice physical_device, VkDevice device,
+                        VkSurfaceKHR surface,
                         const SelectedQueueFamilies &queue_families,
                         const Platform::FramebufferSize &framebuffer_size,
                         PresentationPreference presentation_preference,

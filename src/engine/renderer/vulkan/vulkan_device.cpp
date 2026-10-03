@@ -24,6 +24,13 @@ namespace SNE::Engine::Renderer::Vulkan {
         const std::vector<QueueFamilyRequest> &queue_family_requests,
         const LogicalDeviceFeatureConfiguration &logical_device_configuration) {
 
+        if (physical_device == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanDevice requires a valid Vulkan physical device");
+        }
+
         const std::uint32_t graphics_family =
             queue_families.graphics_family.family_index;
         const std::uint32_t presentation_family =

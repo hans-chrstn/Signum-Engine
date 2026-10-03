@@ -1,7 +1,10 @@
 #include "vulkan_swapchain.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/platform/window.hpp"
 #include "vulkan_queue_families.hpp"
 #include "vulkan_result.hpp"
@@ -14,12 +17,33 @@
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanSwapchain::VulkanSwapchain(
-        VkPhysicalDevice physical_device, VkDevice logical_device,
-        VkSurfaceKHR surface, const SelectedQueueFamilies &queue_families,
+        VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface,
+        const SelectedQueueFamilies &queue_families,
         const Platform::FramebufferSize &framebuffer_size,
         PresentationPreference presentation_preference,
         bool fifo_latest_ready_enabled)
-        : m_Device(logical_device) {
+        : m_Device(device) {
+        if (physical_device == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanSwapchain requires a valid Vulkan physical device");
+        }
+
+        if (device == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanSwapchain requires a valid Vulkan logical device");
+        }
+
+        if (surface == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanSwapchain requires a valid Vulkan surface");
+        }
+
         const SwapchainSupportDetails swapchain_support =
             querySwapchainSupport(physical_device, surface);
 
