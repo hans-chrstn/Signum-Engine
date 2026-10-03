@@ -148,10 +148,14 @@ namespace SNE::Engine::Renderer::Vulkan {
         /**
          * @brief Releases the Vulkan renderer runtime.
          *
-         * Owned renderer resources are destroyed automatically in reverse
-         * dependency order.
+         * Waits for outstanding Vulkan device work to complete before
+         * renderer-owned frame, synchronization, swapchain, and device
+         * resources are destroyed in reverse dependency order.
+         *
+         * Shutdown synchronization is best-effort because destruction must not
+         * propagate exceptions.
          */
-        ~VulkanRenderer() = default;
+        ~VulkanRenderer() noexcept;
 
         VulkanRenderer(const VulkanRenderer &) = delete;
 

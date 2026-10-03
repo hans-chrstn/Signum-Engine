@@ -43,10 +43,10 @@ namespace SNE::Engine::Core {
         explicit Application(ApplicationConfiguration configuration = {});
 
         /**
-         * @brief Runs the application's primary event loop.
+         * @brief Runs the application's primary event and rendering loop.
          *
-         * Processes platform events until the primary application window
-         * receives a close request.
+         * Processes platform events and requests one renderer frame repeatedly
+         * until the primary application window receives a close request.
          */
         auto run() -> void;
     };

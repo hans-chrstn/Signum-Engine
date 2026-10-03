@@ -15,6 +15,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Error = SNE::Engine::Core::Error;
@@ -84,6 +85,11 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_FrameResources.emplace_back(m_Device.nativeHandle(),
                                           graphics_queue_family_index);
         }
+    }
+
+    VulkanRenderer::~VulkanRenderer() noexcept {
+        const VkResult result = vkDeviceWaitIdle(m_Device.nativeHandle());
+        static_cast<void>(result);
     }
 
     auto VulkanRenderer::renderFrame() -> void {

@@ -433,10 +433,10 @@
 
 ### Test
 
-- [ ] Run validation layers cleanly
+- [x] Run validation layers cleanly
 - [ ] Run extended frame test
 - [ ] Resize during rendering
-- [ ] Verify clean renderer shutdown
+- [x] Verify clean renderer shutdown
 - [ ] Run sanitizers
 
 ### Architecture
