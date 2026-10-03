@@ -40,6 +40,7 @@ jobs:
             libgtest-dev \
             libvulkan-dev \
             glslc \
+            spirv-tools \
             mesa-vulkan-drivers \
             ninja-build
 
