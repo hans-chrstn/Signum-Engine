@@ -482,14 +482,15 @@
 
 ### Implement
 
+- [ ] Integrate Vulkan Memory Allocator (VMA) as the initial Vulkan allocation backend
 - [ ] Add GPU memory allocation foundation
-- [ ] Add memory-type selection
+- [ ] Add memory-type selection policy through the GPU allocation abstraction
 - [ ] Support buffer allocation
 - [ ] Support image allocation
 - [ ] Add staging-upload path
 - [ ] Add mapped-upload path where appropriate
 - [ ] Add readback path when needed
-- [ ] Add alignment handling
+- [ ] Respect Vulkan resource and allocation alignment requirements
 - [ ] Add memory-budget queries when supported
 - [ ] Add basic allocation statistics
 - [ ] Add deferred resource retirement when frame lifetime requires it
@@ -508,6 +509,9 @@
 
 ### Architecture
 
+- [ ] Keep VMA behind engine-owned GPU allocation/resource abstractions
+- [ ] Do not expose VMA types to normal renderer or game-facing APIs
+- [ ] Keep the allocation backend replaceable without redesigning GPU resource identity or callers
 - [ ] Separate GPU resource identity from memory allocation
 - [ ] Keep allocation backend-specific
 - [ ] Keep allocation policy replaceable without changing resource identity or normal renderer callers
