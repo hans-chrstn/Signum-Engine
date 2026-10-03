@@ -232,6 +232,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanMemoryAllocatorCreationFailed,
             "VulkanMemoryAllocatorCreationFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanBufferCreationFailed,
+            "VulkanBufferCreationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, UnknownErrorCodeHasFallbackName) {

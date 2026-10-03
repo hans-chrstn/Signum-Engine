@@ -453,24 +453,24 @@
 
 ### Learn
 
-- [ ] Vulkan memory heaps
-- [ ] Vulkan memory types
-- [ ] host-visible memory
-- [ ] device-local memory
-- [ ] coherent versus non-coherent memory
-- [ ] memory requirements and alignment
-- [ ] suballocation
-- [ ] dedicated allocations
-- [ ] staging transfers
-- [ ] upload paths
-- [ ] readback paths
-- [ ] deferred destruction
-- [ ] memory budgets
+- [x] Vulkan memory heaps
+- [x] Vulkan memory types
+- [x] host-visible memory
+- [x] device-local memory
+- [x] coherent versus non-coherent memory
+- [x] memory requirements and alignment
+- [x] suballocation
+- [x] dedicated allocations
+- [x] staging transfers
+- [x] upload paths
+- [x] readback paths
+- [x] deferred destruction
+- [x] memory budgets
 
 ### Design
 
-- [ ] Define GPU allocation responsibilities
-- [ ] Define buffer-memory ownership
+- [x] Define GPU allocation responsibilities
+- [x] Define buffer-memory ownership
 - [ ] Define image-memory ownership
 - [ ] Define upload-memory policy
 - [ ] Define readback-memory policy
@@ -483,9 +483,9 @@
 ### Implement
 
 - [x] Integrate Vulkan Memory Allocator (VMA) as the initial Vulkan allocation backend
-- [ ] Add GPU memory allocation foundation
+- [x] Add GPU memory allocation foundation
 - [ ] Add memory-type selection policy through the GPU allocation abstraction
-- [ ] Support buffer allocation
+- [x] Support buffer allocation
 - [ ] Support image allocation
 - [ ] Add staging-upload path
 - [ ] Add mapped-upload path where appropriate
@@ -509,17 +509,17 @@
 
 ### Architecture
 
-- [ ] Keep VMA behind engine-owned GPU allocation/resource abstractions
-- [ ] Do not expose VMA types to normal renderer or game-facing APIs
+- [x] Keep VMA behind engine-owned GPU allocation/resource abstractions
+- [x] Do not expose VMA types to normal renderer or game-facing APIs
 - [ ] Keep the allocation backend replaceable without redesigning GPU resource identity or callers
 - [ ] Separate GPU resource identity from memory allocation
-- [ ] Keep allocation backend-specific
+- [x] Keep allocation backend-specific
 - [ ] Keep allocation policy replaceable without changing resource identity or normal renderer callers
 - [ ] Keep future streaming requirements possible
 - [ ] Keep future memory-budget enforcement possible
 - [ ] Keep future specialized allocator experiments possible
 - [ ] Allow dedicated, suballocated, pooled, and externally managed allocations where concrete workloads justify them
-- [ ] Do not build a complex allocator before measurements justify it
+- [x] Do not build a complex allocator before measurements justify it
 
 ---
 

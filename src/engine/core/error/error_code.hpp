@@ -90,6 +90,9 @@ namespace SNE::Engine::Core::Error {
         VulkanGraphicsPipelineCreationFailed,
         /** Creation of a Vulkan memory allocator failed. */
         VulkanMemoryAllocatorCreationFailed,
+        /** Creation of a Vulkan buffer or its backing memory allocation failed.
+         */
+        VulkanBufferCreationFailed,
     };
 
     /**

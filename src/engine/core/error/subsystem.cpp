@@ -43,6 +43,7 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanPipelineLayoutCreationFailed:
         case Code::VulkanGraphicsPipelineCreationFailed:
         case Code::VulkanMemoryAllocatorCreationFailed:
+        case Code::VulkanBufferCreationFailed:
             return Subsystem::Vulkan;
         }
 
