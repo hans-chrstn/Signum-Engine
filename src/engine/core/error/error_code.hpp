@@ -84,6 +84,10 @@ namespace SNE::Engine::Core::Error {
         VulkanShaderBytecodeLoadFailed,
         /** Creation of a Vulkan shader module failed. */
         VulkanShaderModuleCreationFailed,
+        /** Creation of a Vulkan pipeline layout failed. */
+        VulkanPipelineLayoutCreationFailed,
+        /** Creation of a Vulkan graphics pipeline failed. */
+        VulkanGraphicsPipelineCreationFailed,
     };
 
     /**

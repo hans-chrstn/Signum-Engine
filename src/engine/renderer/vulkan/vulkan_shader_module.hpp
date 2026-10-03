@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <span>
 #include <vulkan/vulkan.h>

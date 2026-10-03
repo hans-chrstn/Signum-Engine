@@ -17,7 +17,7 @@
 - [x] Build engine implementation as reusable library target
 - [x] Add repeatable clean command
 - [x] Verify clean build
-- [ ] Verify clean shutdown
+- [x] Verify clean shutdown
 
 ### Learn
 
@@ -26,21 +26,21 @@
 - [x] constructor/destructor lifetime relationships
 - [x] non-copyable resource owners
 - [x] application composition root
-- [ ] process lifetime
-- [ ] subsystem lifetime
+- [x] process lifetime
+- [x] subsystem lifetime
 
 ### Test
 
-- [ ] Verify Window destruction before GLFW termination
-- [ ] Verify normal window-close path
-- [ ] Verify repeated startup and shutdown
+- [x] Verify Window destruction before GLFW termination
+- [x] Verify normal window-close path
+- [x] Verify repeated startup and shutdown
 
 ### Architecture
 
-- [ ] Keep `Application` as orchestration
-- [ ] Avoid turning `Application` into a global subsystem container
-- [ ] Keep platform lifecycle ownership explicit
-- [ ] Keep subsystem construction and lifetime policy behind composition-root boundaries
+- [x] Keep `Application` as orchestration
+- [x] Avoid turning `Application` into a global subsystem container
+- [x] Keep platform lifecycle ownership explicit
+- [x] Keep subsystem construction and lifetime policy behind composition-root boundaries
 - [ ] Avoid making the current windowed frontend a requirement for reusable engine subsystems
 
 ---
@@ -62,7 +62,7 @@
 - [x] Define recoverable error representation
 - [ ] Define exception policy
 - [ ] Define result-value policy
-- [ ] Avoid generic catch-all handling that discards context
+- [x] Avoid generic catch-all handling that discards context
 
 ### Learn
 
@@ -71,7 +71,7 @@
 - [x] `std::source_location`
 - [x] exception boundaries
 - [ ] exceptions versus explicit result types
-- [ ] runtime errors versus programmer errors
+- [x] runtime errors versus programmer errors
 
 ### Test
 
@@ -85,11 +85,11 @@
 
 ### Architecture
 
-- [ ] Keep error storage separate from formatting
-- [ ] Keep error formatting separate from reporting
-- [ ] Keep recoverability separate from error type
-- [ ] Keep native API information intact
-- [ ] Keep subsystem-specific native failures as context rather than forcing backend details into engine-wide error APIs
+- [x] Keep error storage separate from formatting
+- [x] Keep error formatting separate from reporting
+- [x] Keep recoverability separate from error type
+- [x] Keep native API information intact
+- [x] Keep subsystem-specific native failures as context rather than forcing backend details into engine-wide error APIs
 - [ ] Allow exception and explicit-result policies to evolve without duplicating the engine error model
 
 ---
@@ -136,7 +136,7 @@
 - [ ] Avoid exposing Vulkan types to normal game APIs
 - [x] Keep Vulkan initialization out of gameplay code
 - [x] Keep Vulkan instance and surface ownership in separate RAII components
-- [ ] Prevent Vulkan instance/surface ownership details from defining future backend-independent renderer contracts
+- [x] Prevent Vulkan instance/surface ownership details from defining future backend-independent renderer contracts
 
 ---
 
@@ -149,7 +149,7 @@
 - [x] queue families
 - [x] queues
 - [x] device capabilities
-- [ ] feature negotiation
+- [x] feature negotiation
 - [x] supported features versus enabled features
 - [x] queue-family sharing versus distinct queue families
 
@@ -192,7 +192,7 @@
 - [x] Keep optional GPU capabilities opt-in
 - [x] Do not make renderer startup depend on hardware ray tracing
 - [ ] Keep queue roles and requests extensible beyond the initial graphics/presentation pair
-- [ ] Avoid exposing physical queue topology as a permanent higher-level renderer contract
+- [x] Avoid exposing physical queue topology as a permanent higher-level renderer contract
 
 ---
 
@@ -206,7 +206,7 @@
 - [x] presentation preference versus Vulkan presentation mode
 - [x] FIFO_LATEST_READY behavior and capability requirements
 - [x] image views
-- [ ] swapchain recreation
+- [x] swapchain recreation
 
 ### Implement
 
@@ -251,7 +251,7 @@
 - [x] Keep presentation preference independent from Vulkan presentation-mode enums
 - [x] Keep presentation-mode capability separate from presentation policy
 - [ ] Keep presentation optional so offscreen, headless, and non-presenting renderer frontends remain possible
-- [ ] Keep swapchain-dependent resources distinguishable from device-lifetime renderer resources
+- [x] Keep swapchain-dependent resources distinguishable from device-lifetime renderer resources
 
 ---
 
@@ -324,7 +324,7 @@
 - [x] Avoid global configuration state
 - [x] Avoid speculative abstractions
 - [x] Avoid premature subsystem splitting
-- [ ] Treat current cardinalities, queue roles, frame counts, and feature chains as implementation choices rather than permanent public contracts unless explicitly required
+- [x] Treat current cardinalities, queue roles, frame counts, and feature chains as implementation choices rather than permanent public contracts unless explicitly required
 
 ---
 
@@ -337,7 +337,7 @@
 - [x] selected-resource invariants
 - [x] frame-resource ownership boundaries
 - [x] borrowed views versus owned containers
-- [ ] swapchain recreation ownership requirements
+- [x] swapchain recreation ownership requirements
 - [x] scalable queue-request modeling
 - [x] incremental abstraction versus speculative abstraction
 
@@ -358,8 +358,8 @@
 - [x] Encode selected physical-device guarantees in runtime types
 - [x] Remove hardcoded non-resizable window policy before swapchain recreation work
 - [x] Prepare the application loop for non-blocking rendering
-- [ ] Keep queue-request structures extensible for future compute and transfer queues
-- [ ] Keep logical-device feature negotiation extensible for additional feature chains
+- [x] Keep queue-request structures extensible for future compute and transfer queues
+- [x] Keep logical-device feature negotiation extensible for additional feature chains
 
 ### Test
 
@@ -398,8 +398,8 @@
 - [x] Keep physical-device discovery separate from selected-device guarantees
 - [x] Keep supported capabilities separate from requested and enabled features
 - [x] Keep queue planning separate from logical-device creation
-- [ ] Allow queue requests to evolve without redesigning `VulkanDevice`
-- [ ] Allow additional Vulkan feature structures without redesigning feature negotiation
+- [x] Allow queue requests to evolve without redesigning `VulkanDevice`
+- [x] Allow additional Vulkan feature structures without redesigning feature negotiation
 - [ ] Avoid exposing Vulkan implementation details to game-facing APIs
 - [x] Avoid introducing generic managers or registries without a concrete requirement
 - [x] Prefer focused abstractions over demo-specific shortcuts
@@ -428,7 +428,7 @@
 - [x] Use Vulkan dynamic rendering
 - [x] Poll platform events
 - [x] Clear screen
-- [ ] Render triangle
+- [x] Render triangle
 - [x] Handle frame errors
 
 ### Test

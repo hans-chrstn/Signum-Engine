@@ -40,6 +40,8 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanQueuePresentationFailed:
         case Code::VulkanShaderBytecodeLoadFailed:
         case Code::VulkanShaderModuleCreationFailed:
+        case Code::VulkanPipelineLayoutCreationFailed:
+        case Code::VulkanGraphicsPipelineCreationFailed:
             return Subsystem::Vulkan;
         }
 

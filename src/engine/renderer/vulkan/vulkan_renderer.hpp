@@ -6,6 +6,7 @@
 #include "vulkan_device_features.hpp"
 #include "vulkan_device_selection.hpp"
 #include "vulkan_frame_resources.hpp"
+#include "vulkan_graphics_pipeline.hpp"
 #include "vulkan_instance.hpp"
 #include "vulkan_semaphore.hpp"
 #include "vulkan_surface.hpp"
@@ -19,8 +20,8 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @brief Owns and coordinates the Vulkan renderer runtime.
      *
      * Establishes the lifetime of the Vulkan instance, presentation surface,
-     * selected physical-device state, logical device, swapchain, and command
-     * infrastructure required by the renderer.
+     * selected physical-device state, logical device, swapchain, graphics
+     * pipeline, and command infrastructure required by the renderer.
      *
      * Renderer resources are stored in dependency order so they are constructed
      * from lower-level Vulkan dependencies to higher-level resources and
@@ -88,6 +89,19 @@ namespace SNE::Engine::Renderer::Vulkan {
          * is replaced.
          */
         VulkanSwapchain m_Swapchain;
+        /**
+         * @brief Graphics pipeline owned by the renderer.
+         *
+         * Owns the Vulkan graphics pipeline and pipeline layout used for
+         * graphics command recording.
+         *
+         * The pipeline is created for the swapchain color-attachment format and
+         * must be recreated if pipeline compatibility requirements change.
+         *
+         * The logical device and compatible rendering configuration must
+         * outlive this object.
+         */
+        VulkanGraphicsPipeline m_GraphicsPipeline;
         /**
          * @brief Presentation-wait semaphores associated with swapchain images.
          *

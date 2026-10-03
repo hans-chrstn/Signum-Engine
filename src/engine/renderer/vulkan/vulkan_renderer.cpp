@@ -68,7 +68,9 @@ namespace SNE::Engine::Renderer::Vulkan {
               m_Surface.nativeHandle(), m_PhysicalDevice.queue_families,
               window.framebufferSize(), presentation_preference,
               m_LogicalDeviceFeatureConfiguration.fifo_latest_ready_feature
-                      .presentModeFifoLatestReady == VK_TRUE) {
+                      .presentModeFifoLatestReady == VK_TRUE),
+          m_GraphicsPipeline(m_Device.nativeHandle(),
+                             m_Swapchain.surfaceFormat().format) {
         const std::size_t images = m_Swapchain.images().size();
         m_RenderFinishedSemaphores.reserve(images);
 
@@ -207,6 +209,26 @@ namespace SNE::Engine::Renderer::Vulkan {
         render_info.pColorAttachments = &render_attachment_info;
 
         vkCmdBeginRendering(command_buffer, &render_info);
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          m_GraphicsPipeline.nativeHandle());
+
+        VkViewport viewport{};
+        viewport.x = 0.0F;
+        viewport.y = static_cast<float>(m_Swapchain.extent().height);
+        viewport.width = static_cast<float>(m_Swapchain.extent().width);
+        viewport.height = -static_cast<float>(m_Swapchain.extent().height);
+        viewport.minDepth = 0.0F;
+        viewport.maxDepth = 1.0F;
+        vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
+
+        VkRect2D scissor{};
+        scissor.extent = m_Swapchain.extent();
+        scissor.offset.x = 0;
+        scissor.offset.y = 0;
+        vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
+
+        // 3 vertices, 1 instance, start at vertex 0, start at instance 0
+        vkCmdDraw(command_buffer, 3U, 1U, 0U, 0U);
         vkCmdEndRendering(command_buffer);
 
         VkImageMemoryBarrier2 present_barrier{};

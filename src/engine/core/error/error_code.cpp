@@ -73,6 +73,10 @@ namespace SNE::Engine::Core::Error {
             return "VulkanShaderBytecodeLoadFailed";
         case Code::VulkanShaderModuleCreationFailed:
             return "VulkanShaderModuleCreationFailed";
+        case Code::VulkanPipelineLayoutCreationFailed:
+            return "VulkanPipelineLayoutCreationFailed";
+        case Code::VulkanGraphicsPipelineCreationFailed:
+            return "VulkanGraphicsPipelineCreationFailed";
         }
         return "Unknown";
     }

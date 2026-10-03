@@ -217,6 +217,16 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanShaderModuleCreationFailed,
             "VulkanShaderModuleCreationFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanPipelineLayoutCreationFailed,
+            "VulkanPipelineLayoutCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanGraphicsPipelineCreationFailed,
+            "VulkanGraphicsPipelineCreationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, UnknownErrorCodeHasFallbackName) {
