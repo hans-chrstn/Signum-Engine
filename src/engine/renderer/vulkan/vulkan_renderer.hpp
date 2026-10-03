@@ -8,6 +8,7 @@
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_graphics_pipeline.hpp"
 #include "vulkan_instance.hpp"
+#include "vulkan_memory_allocator.hpp"
 #include "vulkan_semaphore.hpp"
 #include "vulkan_surface.hpp"
 #include "vulkan_swapchain.hpp"
@@ -20,8 +21,9 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @brief Owns and coordinates the Vulkan renderer runtime.
      *
      * Establishes the lifetime of the Vulkan instance, presentation surface,
-     * selected physical-device state, logical device, swapchain, graphics
-     * pipeline, and command infrastructure required by the renderer.
+     * selected physical-device state, logical device, GPU memory allocator,
+     * swapchain, graphics pipeline, and command infrastructure required by the
+     * renderer.
      *
      * Renderer resources are stored in dependency order so they are constructed
      * from lower-level Vulkan dependencies to higher-level resources and
@@ -79,6 +81,19 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The device outlives all renderer resources created from it.
          */
         VulkanDevice m_Device;
+        /**
+         * @brief Vulkan memory allocator owned by the renderer.
+         *
+         * Owns the VMA allocator used to manage memory backing renderer-created
+         * Vulkan buffers and images.
+         *
+         * The Vulkan instance, selected physical device, and logical device are
+         * borrowed by the allocator and must remain valid for its lifetime.
+         *
+         * Resources and allocations created through this allocator must be
+         * released before the allocator is destroyed.
+         */
+        VulkanMemoryAllocator m_MemoryAllocator;
         /**
          * @brief Presentation swapchain owned by the renderer.
          *
@@ -140,8 +155,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * Creates the Vulkan instance and presentation surface, selects a
          * suitable physical device, negotiates logical-device features, creates
-         * the logical device and presentation swapchain, and establishes the
-         * initial command infrastructure.
+         * the logical device and GPU memory allocator, creates the presentation
+         * swapchain and graphics pipeline, and establishes the initial command
+         * infrastructure.
          *
          * @param application_name Name reported to Vulkan for the application.
          * @param window Platform window used for Vulkan surface creation and
@@ -163,8 +179,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Releases the Vulkan renderer runtime.
          *
          * Waits for outstanding Vulkan device work to complete before
-         * renderer-owned frame, synchronization, swapchain, and device
-         * resources are destroyed in reverse dependency order.
+         * renderer-owned frame, synchronization, graphics, swapchain,
+         * memory-allocation, and device resources are destroyed in reverse
+         * dependency order.
          *
          * Shutdown synchronization is best-effort because destruction must not
          * propagate exceptions.

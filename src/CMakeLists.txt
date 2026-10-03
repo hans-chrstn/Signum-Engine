@@ -39,6 +39,7 @@ add_library(
     engine/renderer/vulkan/vulkan_spirv.cpp
     engine/renderer/vulkan/vulkan_shader_module.cpp
     engine/renderer/vulkan/vulkan_graphics_pipeline.cpp
+    engine/renderer/vulkan/vulkan_memory_allocator.cpp
 )
 
 target_include_directories(
@@ -54,6 +55,7 @@ target_link_libraries(
   PRIVATE
     Vulkan::Vulkan
     glfw
+    GPUOpen::VulkanMemoryAllocator
 )
 
 add_executable(

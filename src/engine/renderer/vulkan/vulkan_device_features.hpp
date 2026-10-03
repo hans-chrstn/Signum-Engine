@@ -2,7 +2,6 @@
 
 #include "engine/renderer/presentation_preference.hpp"
 #include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     struct PhysicalDeviceCapabilities;

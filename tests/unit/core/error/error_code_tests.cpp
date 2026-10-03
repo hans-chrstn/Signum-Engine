@@ -227,6 +227,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanGraphicsPipelineCreationFailed,
             "VulkanGraphicsPipelineCreationFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanMemoryAllocatorCreationFailed,
+            "VulkanMemoryAllocatorCreationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, UnknownErrorCodeHasFallbackName) {

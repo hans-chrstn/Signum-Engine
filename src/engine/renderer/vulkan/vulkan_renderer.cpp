@@ -4,6 +4,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/vulkan/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_device_selection.hpp"
@@ -15,7 +16,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan_core.h>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Error = SNE::Engine::Core::Error;
@@ -63,6 +63,8 @@ namespace SNE::Engine::Renderer::Vulkan {
               m_PhysicalDevice.handle, m_PhysicalDevice.queue_families,
               deriveUniqueQueueFamilyRequests(m_PhysicalDevice.queue_families),
               m_LogicalDeviceFeatureConfiguration),
+          m_MemoryAllocator(m_Instance.nativeHandle(), m_PhysicalDevice.handle,
+                            m_Device.nativeHandle(), kRequiredApiVersion),
           m_Swapchain(
               m_PhysicalDevice.handle, m_Device.nativeHandle(),
               m_Surface.nativeHandle(), m_PhysicalDevice.queue_families,

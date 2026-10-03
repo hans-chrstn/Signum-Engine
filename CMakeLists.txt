@@ -17,6 +17,7 @@ option(
 
 find_package(Vulkan REQUIRED)
 find_package(glfw3 3.4 REQUIRED)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 
 add_library(signum_project_options INTERFACE)
 

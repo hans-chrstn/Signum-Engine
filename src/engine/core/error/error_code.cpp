@@ -77,6 +77,8 @@ namespace SNE::Engine::Core::Error {
             return "VulkanPipelineLayoutCreationFailed";
         case Code::VulkanGraphicsPipelineCreationFailed:
             return "VulkanGraphicsPipelineCreationFailed";
+        case Code::VulkanMemoryAllocatorCreationFailed:
+            return "VulkanMemoryAllocatorCreationFailed";
         }
         return "Unknown";
     }

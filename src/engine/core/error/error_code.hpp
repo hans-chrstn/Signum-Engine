@@ -88,6 +88,8 @@ namespace SNE::Engine::Core::Error {
         VulkanPipelineLayoutCreationFailed,
         /** Creation of a Vulkan graphics pipeline failed. */
         VulkanGraphicsPipelineCreationFailed,
+        /** Creation of a Vulkan memory allocator failed. */
+        VulkanMemoryAllocatorCreationFailed,
     };
 
     /**

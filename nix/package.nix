@@ -7,6 +7,7 @@
   glfw,
   vulkan-loader,
   vulkan-headers,
+  vulkan-memory-allocator,
 }:
 stdenv.mkDerivation {
   pname = "signum-engine";
@@ -24,6 +25,7 @@ stdenv.mkDerivation {
     glfw
     vulkan-loader
     vulkan-headers
+    vulkan-memory-allocator
   ];
 
   cmakeFlags = [
