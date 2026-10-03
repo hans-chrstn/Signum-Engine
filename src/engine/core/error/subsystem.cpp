@@ -38,6 +38,8 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanCommandBufferEndFailed:
         case Code::VulkanQueueSubmissionFailed:
         case Code::VulkanQueuePresentationFailed:
+        case Code::VulkanShaderBytecodeLoadFailed:
+        case Code::VulkanShaderModuleCreationFailed:
             return Subsystem::Vulkan;
         }
 

@@ -1,184 +1,225 @@
 #include "engine/core/error/error_code.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <ostream>
+#include <string_view>
 
 namespace Error = SNE::Engine::Core::Error;
-constexpr std::uint8_t kUnknownCodeValue = 255;
 
-TEST(ErrorCodeTests, GlfwInitializationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::GlfwInitializationFailed),
-              "GlfwInitializationFailed");
+namespace {
+    struct ErrorCodeTestCase {
+        Error::Code code;
+        std::string_view expected_name;
+        Error::Subsystem expected_subsystem;
+    };
+
+    [[maybe_unused]] auto PrintTo(const ErrorCodeTestCase &test_case,
+                                  std::ostream *stream) -> void {
+        *stream << "{ code = " << test_case.expected_name
+                << ", expected_name = " << test_case.expected_name
+                << ", expected_subsystem = "
+                << Error::toString(test_case.expected_subsystem) << " }";
+    }
+
+    class ErrorCodeTests : public testing::TestWithParam<ErrorCodeTestCase> {};
+
+    constexpr std::uint8_t kUnknownCodeValue = 255;
+} // namespace
+
+TEST_P(ErrorCodeTests, HasReadableName) {
+    const ErrorCodeTestCase &test_case = GetParam();
+
+    EXPECT_EQ(Error::toString(test_case.code), test_case.expected_name);
 }
 
-TEST(ErrorCodeTests, WindowCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::WindowCreationFailed),
-              "WindowCreationFailed");
+TEST_P(ErrorCodeTests, BelongsToExpectedSubsystem) {
+    const ErrorCodeTestCase &test_case = GetParam();
+
+    EXPECT_EQ(Error::getSubsystemFor(test_case.code),
+              test_case.expected_subsystem);
 }
 
-TEST(ErrorCodeTests, VulkanRequiredExtensionsErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanRequiredExtensionsUnavailable),
-              "VulkanRequiredExtensionsUnavailable");
-}
+INSTANTIATE_TEST_SUITE_P(
+    KnownErrorCodes, ErrorCodeTests,
+    ::testing::Values(
+        ErrorCodeTestCase{
+            Error::Code::GlfwInitializationFailed,
+            "GlfwInitializationFailed",
+            Error::Subsystem::Platform,
+        },
+        ErrorCodeTestCase{
+            Error::Code::WindowCreationFailed,
+            "WindowCreationFailed",
+            Error::Subsystem::Platform,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanRequiredExtensionsUnavailable,
+            "VulkanRequiredExtensionsUnavailable",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanInstanceCreationFailed,
+            "VulkanInstanceCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanLayerEnumerationFailed,
+            "VulkanLayerEnumerationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanValidationLayerUnavailable,
+            "VulkanValidationLayerUnavailable",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDebugMessengerFunctionUnavailable,
+            "VulkanDebugMessengerFunctionUnavailable",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDebugMessengerCreationFailed,
+            "VulkanDebugMessengerCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanExtensionEnumerationFailed,
+            "VulkanExtensionEnumerationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanExtensionSupportUnavailable,
+            "VulkanExtensionSupportUnavailable",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanApiVersionQueryFailed,
+            "VulkanApiVersionQueryFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanApiVersionUnsupported,
+            "VulkanApiVersionUnsupported",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSurfaceCreationFailed,
+            "VulkanSurfaceCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanPhysicalDeviceEnumerationFailed,
+            "VulkanPhysicalDeviceEnumerationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSurfaceSupportQueryFailed,
+            "VulkanSurfaceSupportQueryFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSuitablePhysicalDeviceUnavailable,
+            "VulkanSuitablePhysicalDeviceUnavailable",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDeviceCreationFailed,
+            "VulkanDeviceCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSwapchainSupportQueryFailed,
+            "VulkanSwapchainSupportQueryFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSwapchainCreationFailed,
+            "VulkanSwapchainCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSwapchainImageEnumerationFailed,
+            "VulkanSwapchainImageEnumerationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSwapchainImageViewCreationFailed,
+            "VulkanSwapchainImageViewCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanCommandPoolCreationFailed,
+            "VulkanCommandPoolCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanCommandBufferAllocationFailed,
+            "VulkanCommandBufferAllocationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSemaphoreCreationFailed,
+            "VulkanSemaphoreCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanFenceCreationFailed,
+            "VulkanFenceCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanFenceWaitFailed,
+            "VulkanFenceWaitFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanFenceResetFailed,
+            "VulkanFenceResetFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSwapchainImageAcquisitionFailed,
+            "VulkanSwapchainImageAcquisitionFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanCommandPoolResetFailed,
+            "VulkanCommandPoolResetFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanCommandBufferBeginFailed,
+            "VulkanCommandBufferBeginFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanCommandBufferEndFailed,
+            "VulkanCommandBufferEndFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanQueueSubmissionFailed,
+            "VulkanQueueSubmissionFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanQueuePresentationFailed,
+            "VulkanQueuePresentationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanShaderBytecodeLoadFailed,
+            "VulkanShaderBytecodeLoadFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanShaderModuleCreationFailed,
+            "VulkanShaderModuleCreationFailed",
+            Error::Subsystem::Vulkan,
+        }));
 
-TEST(ErrorCodeTests, VulkanInstanceCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanInstanceCreationFailed),
-              "VulkanInstanceCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanLayerEnumerationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanLayerEnumerationFailed),
-              "VulkanLayerEnumerationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanValidationLayerUnavailableErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanValidationLayerUnavailable),
-              "VulkanValidationLayerUnavailable");
-}
-
-TEST(ErrorCodeTests,
-     VulkanDebugMessengerFunctionUnavailableErrorCodeHasReadableName) {
-    EXPECT_EQ(
-        Error::toString(Error::Code::VulkanDebugMessengerFunctionUnavailable),
-        "VulkanDebugMessengerFunctionUnavailable");
-}
-
-TEST(ErrorCodeTests, VulkanDebugMessengerCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanDebugMessengerCreationFailed),
-              "VulkanDebugMessengerCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanExtensionEnumerationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanExtensionEnumerationFailed),
-              "VulkanExtensionEnumerationFailed");
-}
-
-TEST(ErrorCodeTests,
-     VulkanExtensionSupportUnavailableErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanExtensionSupportUnavailable),
-              "VulkanExtensionSupportUnavailable");
-}
-
-TEST(ErrorCodeTests, VulkanApiVersionQueryErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanApiVersionQueryFailed),
-              "VulkanApiVersionQueryFailed");
-}
-
-TEST(ErrorCodeTests, VulkanApiVersionUnsupportedErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanApiVersionUnsupported),
-              "VulkanApiVersionUnsupported");
-}
-
-TEST(ErrorCodeTests, VulkanSurfaceCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanSurfaceCreationFailed),
-              "VulkanSurfaceCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanPhysicalDeviceEnumerationErrorCodeHasReadableName) {
-    EXPECT_EQ(
-        Error::toString(Error::Code::VulkanPhysicalDeviceEnumerationFailed),
-        "VulkanPhysicalDeviceEnumerationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanSurfaceSupportQueryErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanSurfaceSupportQueryFailed),
-              "VulkanSurfaceSupportQueryFailed");
-}
-
-TEST(ErrorCodeTests, VulkanSuitablePhysicalDeviceErrorCodeHasReadableName) {
-    EXPECT_EQ(
-        Error::toString(Error::Code::VulkanSuitablePhysicalDeviceUnavailable),
-        "VulkanSuitablePhysicalDeviceUnavailable");
-}
-
-TEST(ErrorCodeTests, VulkanDeviceCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanDeviceCreationFailed),
-              "VulkanDeviceCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanSwapchainSupportQueryErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanSwapchainSupportQueryFailed),
-              "VulkanSwapchainSupportQueryFailed");
-}
-
-TEST(ErrorCodeTests, VulkanSwapchainCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanSwapchainCreationFailed),
-              "VulkanSwapchainCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanSwapchainImageEnumerationErrorCodeHasReadableName) {
-    EXPECT_EQ(
-        Error::toString(Error::Code::VulkanSwapchainImageEnumerationFailed),
-        "VulkanSwapchainImageEnumerationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanSwapchainImageViewCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(
-        Error::toString(Error::Code::VulkanSwapchainImageViewCreationFailed),
-        "VulkanSwapchainImageViewCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanCommandPoolCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandPoolCreationFailed),
-              "VulkanCommandPoolCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanCommandBufferAllocationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandBufferAllocationFailed),
-              "VulkanCommandBufferAllocationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanSemaphoreCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanSemaphoreCreationFailed),
-              "VulkanSemaphoreCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanFenceCreationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanFenceCreationFailed),
-              "VulkanFenceCreationFailed");
-}
-
-TEST(ErrorCodeTests, VulkanFenceWaitErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanFenceWaitFailed),
-              "VulkanFenceWaitFailed");
-}
-
-TEST(ErrorCodeTests, VulkanFenceResetErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanFenceResetFailed),
-              "VulkanFenceResetFailed");
-}
-
-TEST(ErrorCodeTests, VulkanSwapchainImageAcquisitionErrorCodeHasReadableName) {
-    EXPECT_EQ(
-        Error::toString(Error::Code::VulkanSwapchainImageAcquisitionFailed),
-        "VulkanSwapchainImageAcquisitionFailed");
-}
-
-TEST(ErrorCodeTests, VulkanCommandPoolResetErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandPoolResetFailed),
-              "VulkanCommandPoolResetFailed");
-}
-
-TEST(ErrorCodeTests, VulkanCommandBufferBeginErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandBufferBeginFailed),
-              "VulkanCommandBufferBeginFailed");
-}
-
-TEST(ErrorCodeTests, VulkanCommandBufferEndErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanCommandBufferEndFailed),
-              "VulkanCommandBufferEndFailed");
-}
-
-TEST(ErrorCodeTests, VulkanQueueSubmissionErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanQueueSubmissionFailed),
-              "VulkanQueueSubmissionFailed");
-}
-
-TEST(ErrorCodeTests, VulkanQueuePresentationErrorCodeHasReadableName) {
-    EXPECT_EQ(Error::toString(Error::Code::VulkanQueuePresentationFailed),
-              "VulkanQueuePresentationFailed");
-}
-
-TEST(ErrorCodeTests, UnknownErrorCodeHasFallbackName) {
+TEST(ErrorCodeFallbackTests, UnknownErrorCodeHasFallbackName) {
     // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
     const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);
 

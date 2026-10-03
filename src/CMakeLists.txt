@@ -36,6 +36,8 @@ add_library(
     engine/renderer/vulkan/vulkan_renderer.cpp
     engine/renderer/vulkan/vulkan_semaphore.cpp
     engine/renderer/vulkan/vulkan_fence.cpp
+    engine/renderer/vulkan/vulkan_spirv.cpp
+    engine/renderer/vulkan/vulkan_shader_module.cpp
 )
 
 target_include_directories(

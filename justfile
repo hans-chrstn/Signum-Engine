@@ -38,6 +38,9 @@ test-integration preset="debug":
 run preset="debug":
     ./scripts/run.sh "{{preset}}"
 
+shaders:
+    ./scripts/shaders.sh
+
 format:
     ./scripts/format.sh
 

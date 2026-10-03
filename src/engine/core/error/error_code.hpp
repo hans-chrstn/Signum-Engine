@@ -80,6 +80,10 @@ namespace SNE::Engine::Core::Error {
         VulkanQueueSubmissionFailed,
         /** Presenting a Vulkan swapchain image failed. */
         VulkanQueuePresentationFailed,
+        /** Loading compiled SPIR-V shader bytecode failed. */
+        VulkanShaderBytecodeLoadFailed,
+        /** Creation of a Vulkan shader module failed. */
+        VulkanShaderModuleCreationFailed,
     };
 
     /**

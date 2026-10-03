@@ -69,6 +69,10 @@ namespace SNE::Engine::Core::Error {
             return "VulkanQueueSubmissionFailed";
         case Code::VulkanQueuePresentationFailed:
             return "VulkanQueuePresentationFailed";
+        case Code::VulkanShaderBytecodeLoadFailed:
+            return "VulkanShaderBytecodeLoadFailed";
+        case Code::VulkanShaderModuleCreationFailed:
+            return "VulkanShaderModuleCreationFailed";
         }
         return "Unknown";
     }
