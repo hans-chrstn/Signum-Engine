@@ -39,6 +39,7 @@ jobs:
             libglfw3-dev \
             libgtest-dev \
             libvulkan-dev \
+            glslc \
             mesa-vulkan-drivers \
             ninja-build
 
