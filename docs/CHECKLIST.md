@@ -552,7 +552,9 @@
 - [ ] Add compute-pipeline support when a real workload requires it
 - [ ] Add material parameter/binding foundation
 - [ ] Add depth buffering
+- [ ] Render first simple 3D reference object
 - [ ] Render multiple objects
+- [ ] Scale the reference rendering workload from one 3D object to multiple independently transformed objects
 - [ ] Separate scene data from GPU resources
 - [ ] Define rendering-facing data contracts
 - [ ] Define GPU resource ownership
@@ -567,6 +569,8 @@
 - [ ] Test material parameter/binding behavior without effect-specific assumptions
 - [ ] Test partial creation failures
 - [ ] Verify destruction ordering
+- [ ] Use a simple sphere, star, or planet-like mesh as reference content without adding celestial concepts to renderer APIs
+- [ ] Increase reference object counts to expose resource, transform, synchronization, and rendering bugs
 - [ ] Run Vulkan validation
 - [ ] Run sanitizers
 
@@ -580,6 +584,7 @@
 - [ ] Avoid baking PBR, shadow, terrain, water, ray-tracing-effect, or other optional-feature semantics into renderer-core resource types
 - [ ] Do not make vertex/index-buffer meshes the only renderable representation
 - [ ] Keep renderer resource mechanisms usable by mesh, procedural, indirect, compute-generated, and future GPU-driven workloads
+- [ ] Keep reference-scene concepts such as stars, planets, systems, and galaxies outside renderer-core types
 
 ---
 
@@ -722,6 +727,7 @@
 - [ ] Display engine diagnostics
 - [ ] Add basic memory/resource counters
 - [ ] Add basic frame counters
+- [ ] Display active renderable counts and draw/submission statistics when available
 - [ ] Add debug visualization toggle infrastructure
 
 ### Test
@@ -731,6 +737,7 @@
 - [ ] Toggle developer UI at runtime
 - [ ] Verify diagnostics appear in log viewer
 - [ ] Verify frame metrics update correctly
+- [ ] Verify renderer statistics remain usable while scaling the current reference rendering workload
 - [ ] Verify developer UI does not own engine diagnostic data
 - [ ] Verify engine can build without developer UI
 - [ ] Verify developer UI shutdown is clean
@@ -764,6 +771,7 @@
 - [ ] Add benchmark target
 - [ ] Add reusable benchmark helpers
 - [ ] Define benchmark result-recording convention
+- [ ] Add repeatable reference-workload configurations for correctness and performance testing
 
 ### Learn
 
@@ -790,6 +798,7 @@
 - [ ] Debug a deliberately failing test
 - [ ] Inspect a thrown exception with debugger
 - [ ] Establish initial benchmark baseline
+- [ ] Record an initial multi-object rendering reference baseline
 
 ### Architecture
 
@@ -797,6 +806,7 @@
 - [ ] Keep driver/OS/hardware behavior in integration tests
 - [ ] Keep benchmarks separate from correctness tests
 - [ ] Make performance comparisons reproducible enough to guide later optimization
+- [ ] Keep reference workloads outside engine-core behavior and reusable as regression inputs as later phases add capabilities
 
 ---
 
@@ -830,6 +840,8 @@
 - [ ] Test scroll input
 - [ ] Test timing utilities
 - [ ] Test event translation
+- [ ] Navigate the current 3D reference workload with test-side camera controls built from engine input and timing APIs
+- [ ] Test rapid camera movement, focus changes, resizing, and long-running movement against the reference workload
 
 ### Architecture
 
@@ -897,6 +909,8 @@
 - [ ] Verify built-in and custom render features use the same registration and resource contracts
 - [ ] Verify built-in render features have no privileged private-core path unavailable to custom features
 - [ ] Verify replacing one render-feature implementation does not require unrelated renderer changes
+- [ ] Run the existing 3D reference workload entirely through backend-independent renderer APIs
+- [ ] Compare reference-workload correctness and basic performance with the pre-abstraction Vulkan path
 - [ ] Benchmark abstraction where useful
 
 ### Architecture
@@ -944,6 +958,7 @@
 - [ ] Test destroyed resources
 - [ ] Test reused IDs
 - [ ] Test stale generations if used
+- [ ] Repeatedly create, destroy, and reuse reference-workload resources to exercise invalid and stale-handle behavior
 
 ### Architecture
 
@@ -1004,6 +1019,8 @@
 - [ ] Test lifetime calculations
 - [ ] Test transient-resource lifetime
 - [ ] Test synchronization planning
+- [ ] Run the existing reference rendering workload through the render graph and verify equivalent output
+- [ ] Scale the reference workload while validating generated dependencies, lifetimes, and synchronization
 - [ ] Test unused-pass removal when implemented
 
 ### Architecture
@@ -1046,6 +1063,7 @@
 - [ ] Add object destruction
 - [ ] Add hierarchy support when needed
 - [ ] Connect world data to renderer through defined contracts
+- [ ] Build the first reusable reference scene from generic World, Scene, Transform, and renderer mechanisms
 
 ### Test
 
@@ -1054,6 +1072,9 @@
 - [ ] Test transforms
 - [ ] Test hierarchy changes
 - [ ] Test invalid references
+- [ ] Build a reference scene containing one project/test-defined celestial body using only generic world, transform, and renderer contracts
+- [ ] Expand the reference scene to a small static star-and-bodies arrangement as hierarchy and transform support becomes available
+- [ ] Verify the same world mechanisms represent non-celestial scenes without special cases
 
 ### Architecture
 
@@ -1061,6 +1082,7 @@
 - [ ] Keep scene ownership independent from renderer ownership
 - [ ] Keep World and Scene APIs independent from a mandatory ECS, object hierarchy, or renderer storage layout
 - [ ] Allow specialized subsystem representations to coexist without making one subsystem's storage the definition of the world
+- [ ] Keep star, planet, moon, orbit, solar-system, and galaxy semantics outside engine-core world types
 
 ---
 
@@ -1107,6 +1129,8 @@
 - [ ] Test component lifetime
 - [ ] Test stale entity access
 - [ ] Test queries
+- [ ] Represent the growing reference-scene bodies with project-defined components and scale entity count
+- [ ] Benchmark iteration using both small and larger reference-scene populations
 - [ ] Benchmark iteration
 
 ### Architecture
@@ -1158,6 +1182,7 @@
 - [ ] missing field tests
 - [ ] version mismatch tests
 - [ ] migration tests
+- [ ] Round-trip the growing reference scene and verify identities, transforms, hierarchy, and project-defined data survive serialization
 
 ### Architecture
 
@@ -1212,6 +1237,7 @@
 - [ ] Test metadata serialization
 - [ ] Test missing/invalid metadata without requiring unrelated systems to fail
 - [ ] Verify reflected IDs remain meaningful across executions and module reloads
+- [ ] Reflect project-defined reference-scene types without adding celestial concepts to engine metadata
 
 ### Architecture
 
@@ -1327,6 +1353,8 @@
 - [ ] Test custom shader/material asset dependencies
 - [ ] Test shader/material assets with built-in rendering modules disabled
 - [ ] Test reload
+- [ ] Share geometry/material resources across many reference-scene objects and verify resource identity and dependency behavior
+- [ ] Repeatedly load and unload reference-scene resources while the scene remains valid
 
 ### Architecture
 
@@ -1389,6 +1417,7 @@
 - [ ] Test corrupted cooked resources
 - [ ] Test unsupported format versions
 - [ ] Test source-file changes rebuild dependent resources
+- [ ] Cook and load reference-scene assets through runtime formats and compare behavior with the imported source path
 
 ### Architecture
 
@@ -1512,6 +1541,8 @@
 - [ ] Add project-defined system example
 - [ ] Add project-defined render feature example when renderer extension API exists
 - [ ] Run project without modifying engine core
+- [ ] Move the growing celestial reference workload into ordinary project/game-module code
+- [ ] Implement simple project-defined orbital motion through generic timing and transform APIs without engine celestial types
 
 ### Test
 
@@ -1524,6 +1555,8 @@
 - [ ] Verify project-defined render feature does not require renderer-core modification
 - [ ] Verify project-defined render feature can use the same render graph, resource, shader, pipeline, binding, and material mechanisms as built-in features
 - [ ] Verify project runs without scripting runtime
+- [ ] Build and run a single reference star system entirely through game-facing APIs
+- [ ] Expand the reference project to multiple systems without modifying engine core
 
 ### Architecture
 
@@ -1532,6 +1565,7 @@
 - [ ] Prefer handles, IDs, opaque ownership, and explicit data contracts where raw C++ layout coupling would make module reload unsafe
 - [ ] Do not require the editor or engine binaries to restart for ordinary game-module rebuild/reload workflows
 - [ ] Keep module/reload capability independent from one reflection-generation implementation
+- [ ] Keep reference-workload gameplay and celestial semantics project-owned even when they are used to stress engine systems
 
 ---
 
@@ -1621,6 +1655,8 @@
 - [ ] Test cancellation
 - [ ] Test shutdown with pending tasks
 - [ ] Add concurrency stress tests
+- [ ] Update increasing numbers of project-defined reference bodies through the task system and compare with the sequential path
+- [ ] Verify scheduled reference-workload updates remain deterministic where determinism is required
 - [ ] Run ThreadSanitizer where supported
 
 ### Architecture
@@ -1655,6 +1691,8 @@
 - [ ] Profile renderer submission
 - [ ] Establish renderer-core baseline with optional rendering features disabled
 - [ ] Add per-render-feature CPU/GPU/resource counters when feature modules exist
+- [ ] Add scalable reference-workload tiers for one object, one system, multiple systems, and a large synthetic population
+- [ ] Record CPU, GPU, memory, allocation, and submission statistics for each reference-workload tier
 
 ### Optimize When Measured
 
@@ -1677,6 +1715,8 @@
 - [ ] Verify optimized behavior remains correct
 - [ ] Measure CPU, GPU, memory, and resource overhead of disabled optional rendering features
 - [ ] Verify disabled optional rendering features remain at the renderer-core baseline within defined tolerances
+- [ ] Increase reference object/system counts until bottlenecks become measurable
+- [ ] Preserve fixed-size reference tiers as regression benchmarks across later optimization phases
 
 ### Architecture
 
@@ -1684,6 +1724,7 @@
 - [ ] Keep optimized fast paths replaceable and comparable with a correct baseline
 - [ ] Prefer specialized coexistence over forcing every workload through one optimization strategy
 - [ ] Keep performance instrumentation independent from one storage, scheduler, renderer, or world architecture
+- [ ] Treat the celestial reference workload as one benchmark family rather than the engine's assumed world or game model
 
 ---
 
@@ -2114,6 +2155,7 @@
 - [ ] Verify runtime library does not require editor
 - [ ] Verify editor displays diagnostics
 - [ ] Verify editor data/model behavior is not owned by Dear ImGui state
+- [ ] Open and run the growing reference project through the editor/runtime separation without adding project-specific editor paths
 
 ### Architecture
 
@@ -2147,6 +2189,7 @@
 - [ ] Test transform edits
 - [ ] Test reflected property editing
 - [ ] Test project-defined component display
+- [ ] Inspect, select, and transform project-defined reference-scene objects without hard-coded celestial editor support
 
 ### Architecture
 
@@ -2326,6 +2369,7 @@
 - [ ] Verify compatible reflected state can be reconstructed after reload when state-preserving reload is implemented
 - [ ] Verify incompatible state migration is rejected rather than corrupting memory
 - [ ] Verify fallback Runtime World reconstruction works when state preservation is unsafe
+- [ ] Use the reference project for repeated build, Play, Stop, and reload cycles as scene complexity grows
 
 ### Architecture
 
@@ -2375,6 +2419,7 @@
 - [ ] Verify tools do not pull editor-only dependencies
 - [ ] Verify non-rendering tools do not require Vulkan
 - [ ] Verify renderer-only tooling does not require a presentation window where supported
+- [ ] Run reference simulation and benchmark logic headlessly when rendering is not part of the measurement
 
 ### Architecture
 
@@ -2428,6 +2473,9 @@
 - [ ] Test transform stability
 - [ ] Test renderer precision
 - [ ] Test physics stability
+- [ ] Expand the reference workload from one system to multiple widely separated systems
+- [ ] Test reference-frame transitions between systems at increasing coordinate magnitudes
+- [ ] Compare rendering and transform stability for nearby and extremely distant reference content
 
 ### Architecture
 
@@ -2528,6 +2576,8 @@
 - [ ] Test shutdown during streaming
 - [ ] Test streaming across large-world reference-frame transitions when applicable
 - [ ] Test that non-spatial resources can use the same generic streaming infrastructure
+- [ ] Stream reference systems in and out while moving across large-world space
+- [ ] Scale streamable reference systems and resources until memory-budget, cancellation, and residency paths are exercised
 
 ### Architecture
 
@@ -2552,6 +2602,8 @@
 - [ ] Support CPU generation
 - [ ] Support GPU compute generation when useful
 - [ ] Support editor generation tools through extensions
+- [ ] Add a project-defined procedural reference generator that uses generic generation contracts
+- [ ] Scale procedural reference generation from one system to many systems and a galaxy-like synthetic dataset
 
 ### Test
 
@@ -2559,6 +2611,8 @@
 - [ ] Test generation cancellation
 - [ ] Test concurrent deterministic behavior
 - [ ] Benchmark generation utilities
+- [ ] Verify fixed seeds reproduce the same generated reference systems across runs
+- [ ] Stress generation, materialization, eviction, and regeneration at increasing reference-workload sizes
 
 ### Architecture
 
@@ -2623,6 +2677,8 @@
 - [ ] Replace one built-in implementation without modifying unrelated renderer systems
 - [ ] Verify render-graph resource dependencies and lifetimes across multiple features
 - [ ] Verify ray-tracing infrastructure can exist without enabling any ray-traced effect module
+- [ ] Run the growing reference scene with optional rendering features independently enabled and disabled
+- [ ] Use larger reference scenes to expose feature interaction, precision, visibility, synchronization, and memory regressions
 
 ### Architecture
 
@@ -2709,6 +2765,7 @@
 - [ ] Add renderer statistics
 - [ ] Add per-render-feature CPU/GPU/resource statistics
 - [ ] Add editor profiling views
+- [ ] Add configurable reference-workload scaling controls for object count, system count, and spatial extent
 
 ### Optimize From Measurements
 
@@ -2737,12 +2794,16 @@
 - [ ] Measure feature activation/deactivation cost
 - [ ] Track per-feature CPU, GPU, memory, descriptor, and resource usage
 - [ ] Track Composable World Model representation/projection/synchronization overhead separately if CWM research is active
+- [ ] Profile fixed reference tiers from a single object through system, multi-system, and galaxy-scale synthetic workloads
+- [ ] Identify CPU, GPU, memory, synchronization, streaming, and submission bottlenecks at each tier
+- [ ] Keep smaller reference tiers so regressions can be localized instead of testing only maximum scale
 
 ### Architecture
 
 - [ ] Keep profiling capable of comparing baseline and replacement implementations under equivalent workloads
 - [ ] Keep performance metrics attributable to subsystems, representations, features, and synchronization boundaries
 - [ ] Use measurements to choose specialization without turning one benchmark winner into a mandatory architecture for unrelated workloads
+- [ ] Treat reference workloads as measurements of engine mechanisms rather than requirements that projects adopt their data model
 
 ---
 
@@ -2767,6 +2828,7 @@
 - [ ] Define latency measurements
 - [ ] Define scaling measurements
 - [ ] Define correctness criteria
+- [ ] Reuse fixed reference-workload tiers for A/B comparisons between baseline and experimental implementations
 
 ### Experimental Renderer Work
 
@@ -2853,6 +2915,7 @@
 - [ ] Add property tests where useful
 - [ ] Test partial initialization failures
 - [ ] Test abnormal shutdown
+- [ ] Run long-duration reference-scene stress tests across increasing workload tiers
 
 ### Compatibility
 
@@ -2870,6 +2933,7 @@
 - [ ] Track frame time
 - [ ] Track memory usage
 - [ ] Track asset load time
+- [ ] Track fixed reference-workload regression baselines across supported configurations
 
 ### Release
 
@@ -2915,6 +2979,9 @@
 - [ ] Keep experimental architecture measurable with explicit acceptance, rejection, and redesign criteria
 - [ ] Prefer correctness and safe fallback over preserving an abstraction, optimization, or hot-reload path that cannot prove its invariants
 - [ ] Keep architecture documents and roadmap decisions revisable as requirements and evidence change
+- [ ] Grow representative reference workloads as new engine capabilities become available instead of deferring integration until the engine is feature-complete
+- [ ] Keep domain-specific reference content outside engine-core APIs while using it to validate general-purpose mechanisms
+- [ ] Preserve small, medium, and stress reference tiers so correctness and performance regressions can be isolated
 
 ### Rendering Principles
 
