@@ -1,4 +1,6 @@
 #pragma once
+
+#include "engine/renderer/gpu_memory_usage.hpp"
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -6,12 +8,11 @@ namespace SNE::Engine::Renderer::Vulkan {
     /**
      * @brief Describes the creation requirements for a Vulkan buffer.
      *
-     * Specifies the size and intended Vulkan usage of a buffer together with
-     * the required and preferred memory properties used when selecting its
-     * backing allocation.
+     * Specifies the size and intended Vulkan usage of a buffer together
+     * with the engine-level memory usage policy for its backing allocation.
      *
-     * This structure describes creation policy only and does not own Vulkan or
-     * VMA resources.
+     * This structure describes creation policy only and does not own Vulkan
+     * or VMA resources.
      */
     struct VulkanBufferCreateInfo {
         /**
@@ -23,17 +24,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Vulkan usage flags describing how the buffer may be used.
          */
         VkBufferUsageFlags usage{0};
-
         /**
-         * @brief Memory properties that the backing allocation must satisfy.
+         * @brief Intended CPU/GPU access pattern for the backing allocation.
          */
-        VkMemoryPropertyFlags required_memory_properties{0};
-
-        /**
-         * @brief Memory properties that should be preferred for the backing
-         * allocation when available.
-         */
-        VkMemoryPropertyFlags preferred_memory_properties{0};
+        GpuMemoryUsage memory_usage = GpuMemoryUsage::Device;
     };
 
     /**
@@ -70,7 +64,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param allocator VMA allocator used to create and destroy the buffer
          * and its backing allocation.
          * @param create_info Description of the buffer and its memory
-         * requirements.
+         * usage policy.
          *
          * @throws Core::Error::EngineError if buffer creation or memory
          * allocation fails.

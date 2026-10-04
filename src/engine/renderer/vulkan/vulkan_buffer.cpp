@@ -6,6 +6,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/vulkan/vulkan_result.hpp"
+#include "vulkan_memory_policy.hpp"
 #include <string>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -39,12 +40,12 @@ namespace SNE::Engine::Renderer::Vulkan {
         buffer_create_info.usage = create_info.usage;
         buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+        const VulkanMemoryPolicy memory_policy =
+            selectVulkanMemoryPolicy(create_info.memory_usage);
+
         VmaAllocationCreateInfo allocation_create_info{};
-        allocation_create_info.usage = VMA_MEMORY_USAGE_AUTO;
-        allocation_create_info.requiredFlags =
-            create_info.required_memory_properties;
-        allocation_create_info.preferredFlags =
-            create_info.preferred_memory_properties;
+        allocation_create_info.usage = memory_policy.usage;
+        allocation_create_info.flags = memory_policy.flags;
 
         const VkResult buffer_result = vmaCreateBuffer(
             m_Allocator, &buffer_create_info, &allocation_create_info,

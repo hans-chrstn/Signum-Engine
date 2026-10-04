@@ -1,3 +1,4 @@
+#include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/vulkan/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
@@ -117,8 +118,7 @@ TEST_F(VulkanBufferIntegrationTests, CreatesAndDestroysVmaBackedBuffer) {
     const Vulkan::VulkanBufferCreateInfo buffer_info{
         .size = 256U,
         .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        .required_memory_properties = 0U,
-        .preferred_memory_properties = 0U,
+        .memory_usage = SNE::Engine::Renderer::GpuMemoryUsage::Device,
     };
 
     if (!m_MemoryAllocator.has_value()) {

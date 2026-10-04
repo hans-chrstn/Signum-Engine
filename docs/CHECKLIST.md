@@ -484,7 +484,7 @@
 
 - [x] Integrate Vulkan Memory Allocator (VMA) as the initial Vulkan allocation backend
 - [x] Add GPU memory allocation foundation
-- [ ] Add memory-type selection policy through the GPU allocation abstraction
+- [x] Add memory-type selection policy through the GPU allocation abstraction
 - [x] Support buffer allocation
 - [ ] Support image allocation
 - [ ] Add staging-upload path
