@@ -1,7 +1,6 @@
 #include "engine/core/application.hpp"
 #include "engine/core/error/diagnostic_writer.hpp"
 #include "engine/core/error/engine_error.hpp"
-#include "engine/core/error/error_code.hpp"
 #include <cstdlib>
 #include <iostream>
 

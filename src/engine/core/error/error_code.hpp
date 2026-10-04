@@ -99,6 +99,7 @@ namespace SNE::Engine::Core::Error {
         VulkanImageCreationFailed,
         /** Failed to map Vulkan buffer. */
         VulkanBufferMappingFailed,
+        /** Flushing a mapped Vulkan buffer allocation failed. */
         VulkanBufferFlushFailed,
     };
 
