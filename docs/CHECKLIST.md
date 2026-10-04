@@ -497,7 +497,7 @@
 
 ### Test
 
-- [ ] Test memory-type selection
+- [x] Test memory-type selection
 - [ ] Test alignment calculations
 - [x] Test buffer allocation lifecycle
 - [ ] Test image allocation lifecycle
