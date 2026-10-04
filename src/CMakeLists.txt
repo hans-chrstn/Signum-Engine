@@ -42,6 +42,7 @@ add_library(
     engine/renderer/vulkan/vulkan_memory_allocator.cpp
     engine/renderer/vulkan/vulkan_buffer.cpp
     engine/renderer/vulkan/vulkan_memory_policy.cpp
+    engine/renderer/vulkan/vulkan_image.cpp
 )
 
 target_include_directories(

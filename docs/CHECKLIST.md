@@ -471,7 +471,7 @@
 
 - [x] Define GPU allocation responsibilities
 - [x] Define buffer-memory ownership
-- [ ] Define image-memory ownership
+- [x] Define image-memory ownership
 - [ ] Define upload-memory policy
 - [ ] Define readback-memory policy
 - [ ] Define persistent-mapping policy
@@ -486,7 +486,7 @@
 - [x] Add GPU memory allocation foundation
 - [x] Add memory-type selection policy through the GPU allocation abstraction
 - [x] Support buffer allocation
-- [ ] Support image allocation
+- [x] Support image allocation
 - [ ] Add staging-upload path
 - [ ] Add mapped-upload path where appropriate
 - [ ] Add readback path when needed

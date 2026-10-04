@@ -27,7 +27,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         /**
          * @brief Intended CPU/GPU access pattern for the backing allocation.
          */
-        GpuMemoryUsage memory_usage = GpuMemoryUsage::Device;
+        GpuMemoryUsage memory_usage{GpuMemoryUsage::Device};
     };
 
     /**

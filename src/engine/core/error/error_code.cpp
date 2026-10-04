@@ -81,6 +81,8 @@ namespace SNE::Engine::Core::Error {
             return "VulkanMemoryAllocatorCreationFailed";
         case Code::VulkanBufferCreationFailed:
             return "VulkanBufferCreationFailed";
+        case Code::VulkanImageCreationFailed:
+            return "VulkanImageCreationFailed";
         }
         return "Unknown";
     }

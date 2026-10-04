@@ -93,6 +93,10 @@ namespace SNE::Engine::Core::Error {
         /** Creation of a Vulkan buffer or its backing memory allocation failed.
          */
         VulkanBufferCreationFailed,
+        /**
+         * Creation of a Vulkan image or its backing memory allocation failed.
+         */
+        VulkanImageCreationFailed,
     };
 
     /**

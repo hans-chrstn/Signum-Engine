@@ -237,6 +237,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanBufferCreationFailed,
             "VulkanBufferCreationFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanImageCreationFailed,
+            "VulkanImageCreationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, UnknownErrorCodeHasFallbackName) {
