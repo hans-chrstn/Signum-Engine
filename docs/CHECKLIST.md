@@ -500,7 +500,7 @@
 - [x] Test memory-type selection
 - [ ] Test alignment calculations
 - [x] Test buffer allocation lifecycle
-- [ ] Test image allocation lifecycle
+- [x] Test image allocation lifecycle
 - [ ] Test upload correctness
 - [ ] Test partial allocation failure
 - [ ] Test deferred retirement
