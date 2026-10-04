@@ -12,6 +12,11 @@
 #include <cstring>
 #include <string>
 
+namespace Vulkan = SNE::Engine::Renderer::Vulkan;
+namespace Core = SNE::Engine::Core;
+
+namespace {} // namespace
+
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanBuffer::VulkanBuffer(VmaAllocator allocator,
                                const VulkanBufferCreateInfo &create_info)
@@ -136,5 +141,13 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(flush_result))),
                 "Flush Vulkan Buffer Allocation");
         }
+    }
+
+    auto VulkanBuffer::nativeHandle() const noexcept -> VkBuffer {
+        return m_Buffer;
+    }
+
+    auto VulkanBuffer::size() const noexcept -> VkDeviceSize {
+        return m_Size;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

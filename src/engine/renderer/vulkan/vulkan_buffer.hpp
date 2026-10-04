@@ -108,5 +108,22 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         auto write(std::span<const std::byte> bytes, VkDeviceSize offset = 0U)
             -> void;
+
+        /**
+         * @brief Returns the underlying Vulkan buffer handle.
+         *
+         * The returned handle is non-owning and remains valid only while this
+         * VulkanBuffer owns the underlying buffer.
+         *
+         * @return Vulkan buffer handle owned by this object.
+         */
+        [[nodiscard]] auto nativeHandle() const noexcept -> VkBuffer;
+
+        /**
+         * @brief Returns the size of the Vulkan buffer in bytes.
+         *
+         * @return Size of the owned buffer in bytes.
+         */
+        [[nodiscard]] auto size() const noexcept -> VkDeviceSize;
     };
 } // namespace SNE::Engine::Renderer::Vulkan
