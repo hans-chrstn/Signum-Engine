@@ -472,7 +472,7 @@
 - [x] Define GPU allocation responsibilities
 - [x] Define buffer-memory ownership
 - [x] Define image-memory ownership
-- [ ] Define upload-memory policy
+- [x] Define upload-memory policy
 - [ ] Define readback-memory policy
 - [ ] Define persistent-mapping policy
 - [ ] Define resource-retirement policy
@@ -488,7 +488,7 @@
 - [x] Support buffer allocation
 - [x] Support image allocation
 - [ ] Add staging-upload path
-- [ ] Add mapped-upload path where appropriate
+- [x] Add mapped-upload path where appropriate
 - [ ] Add readback path when needed
 - [ ] Respect Vulkan resource and allocation alignment requirements
 - [ ] Add memory-budget queries when supported

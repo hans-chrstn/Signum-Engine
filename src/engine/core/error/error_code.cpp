@@ -83,6 +83,10 @@ namespace SNE::Engine::Core::Error {
             return "VulkanBufferCreationFailed";
         case Code::VulkanImageCreationFailed:
             return "VulkanImageCreationFailed";
+        case Code::VulkanBufferMappingFailed:
+            return "VulkanBufferMappingFailed";
+        case Code::VulkanBufferFlushFailed:
+            return "VulkanBufferFlushFailed";
         }
         return "Unknown";
     }

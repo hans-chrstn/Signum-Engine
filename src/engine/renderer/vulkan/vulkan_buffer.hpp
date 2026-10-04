@@ -1,6 +1,8 @@
 #pragma once
 
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include <cstddef>
+#include <span>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -19,7 +21,6 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Size of the buffer in bytes.
          */
         VkDeviceSize size{0};
-
         /**
          * @brief Vulkan usage flags describing how the buffer may be used.
          */
@@ -50,6 +51,14 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkBuffer m_Buffer{VK_NULL_HANDLE};
         /** VMA allocation backing the owned Vulkan buffer. */
         VmaAllocation m_Allocation{nullptr};
+        /**
+         * @brief Size of the owned Vulkan buffer in bytes.
+         */
+        VkDeviceSize m_Size{0};
+        /**
+         * @brief Engine-level CPU/GPU access intent for the backing allocation.
+         */
+        GpuMemoryUsage m_MemoryUsage{GpuMemoryUsage::Device};
 
       public:
         /**
@@ -80,5 +89,24 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanBuffer(const VulkanBuffer &) = delete;
 
         auto operator=(const VulkanBuffer &) -> VulkanBuffer & = delete;
+
+        /**
+         * @brief Writes CPU data into this upload buffer.
+         *
+         * Copies the supplied bytes into the buffer's backing allocation
+         * beginning at the specified byte offset.
+         *
+         * This operation is valid only for buffers created with
+         * GpuMemoryUsage::Upload.
+         *
+         * @param bytes Bytes to write into the buffer.
+         * @param offset Byte offset within the buffer at which writing begins.
+         *
+         * @pre The supplied byte span is not empty.
+         * @pre The supplied byte range fits entirely within the buffer.
+         * @pre This buffer was created with GpuMemoryUsage::Upload.
+         */
+        auto write(std::span<const std::byte> bytes, VkDeviceSize offset = 0U)
+            -> void;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

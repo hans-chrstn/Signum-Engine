@@ -45,6 +45,8 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanMemoryAllocatorCreationFailed:
         case Code::VulkanBufferCreationFailed:
         case Code::VulkanImageCreationFailed:
+        case Code::VulkanBufferMappingFailed:
+        case Code::VulkanBufferFlushFailed:
             return Subsystem::Vulkan;
         }
 

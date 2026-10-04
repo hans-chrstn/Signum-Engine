@@ -97,6 +97,9 @@ namespace SNE::Engine::Core::Error {
          * Creation of a Vulkan image or its backing memory allocation failed.
          */
         VulkanImageCreationFailed,
+        /** Failed to map Vulkan buffer. */
+        VulkanBufferMappingFailed,
+        VulkanBufferFlushFailed,
     };
 
     /**

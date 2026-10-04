@@ -4,6 +4,7 @@
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/vulkan_memory_allocator.hpp"
 #include "engine/renderer/vulkan/vulkan_queue_families.hpp"
+#include <array>
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <optional>
@@ -115,7 +116,7 @@ TEST_F(VulkanBufferIntegrationTests, CreatesAndDestroysVmaBackedBuffer) {
     ASSERT_NE(m_PhysicalDevice, VK_NULL_HANDLE);
     ASSERT_NE(m_Device, VK_NULL_HANDLE);
 
-    const Vulkan::VulkanBufferCreateInfo buffer_info{
+    const Vulkan::VulkanBufferCreateInfo buffer_create_info{
         .size = 256U,
         .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         .memory_usage = SNE::Engine::Renderer::GpuMemoryUsage::Device,
@@ -126,5 +127,33 @@ TEST_F(VulkanBufferIntegrationTests, CreatesAndDestroysVmaBackedBuffer) {
     }
 
     Vulkan::VulkanBuffer buffer = Vulkan::VulkanBuffer(
-        m_MemoryAllocator.value().nativeHandle(), buffer_info);
+        m_MemoryAllocator.value().nativeHandle(), buffer_create_info);
+}
+
+TEST_F(VulkanBufferIntegrationTests, WritesToVmaBackedUploadBuffer) {
+    ASSERT_NE(m_Instance, VK_NULL_HANDLE);
+    ASSERT_NE(m_PhysicalDevice, VK_NULL_HANDLE);
+    ASSERT_NE(m_Device, VK_NULL_HANDLE);
+
+    if (!m_MemoryAllocator.has_value()) {
+        FAIL() << "Failed to get a value for memory allocator";
+    }
+
+    std::array<std::byte, 4> bytes{
+        std::byte{0x01},
+        std::byte{0x02},
+        std::byte{0x03},
+        std::byte{0x04},
+    };
+
+    Vulkan::VulkanBufferCreateInfo buffer_create_info{};
+    buffer_create_info.size = static_cast<VkDeviceSize>(bytes.size());
+    buffer_create_info.memory_usage =
+        SNE::Engine::Renderer::GpuMemoryUsage::Upload;
+    buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    Vulkan::VulkanBuffer buffer = Vulkan::VulkanBuffer(
+        m_MemoryAllocator.value().nativeHandle(), buffer_create_info);
+
+    buffer.write(bytes);
 }
