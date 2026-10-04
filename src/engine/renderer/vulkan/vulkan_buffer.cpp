@@ -1,7 +1,10 @@
 #include "vulkan_buffer.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/vulkan/vulkan_result.hpp"
 #include <string>
 
@@ -9,6 +12,27 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanBuffer::VulkanBuffer(VmaAllocator allocator,
                                const VulkanBufferCreateInfo &create_info)
         : m_Allocator(allocator) {
+        if (allocator == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanBuffer requires a valid VMA allocator");
+        }
+
+        if (create_info.size == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanBuffer requires a non-zero buffer size");
+        }
+
+        if (create_info.usage == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanBuffer requires at least one buffer usage flag");
+        }
+
         VkBufferCreateInfo buffer_create_info{};
         buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_create_info.size = create_info.size;

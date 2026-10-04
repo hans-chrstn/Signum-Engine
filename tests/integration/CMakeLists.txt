@@ -1,6 +1,7 @@
 add_executable(
   signum_integration_tests
   renderer/vulkan/vulkan_device_capabilities_integration_tests.cpp
+  renderer/vulkan/vulkan_buffer_integration_tests.cpp
 )
 
 target_link_libraries(
