@@ -487,7 +487,7 @@
 - [x] Add memory-type selection policy through the GPU allocation abstraction
 - [x] Support buffer allocation
 - [x] Support image allocation
-- [ ] Add staging-upload path
+- [x] Add staging-upload path
 - [x] Add mapped-upload path where appropriate
 - [ ] Add readback path when needed
 - [ ] Respect Vulkan resource and allocation alignment requirements

@@ -7,6 +7,7 @@
 #include "vulkan_device_selection.hpp"
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_graphics_pipeline.hpp"
+#include "vulkan_immediate_submission.hpp"
 #include "vulkan_instance.hpp"
 #include "vulkan_memory_allocator.hpp"
 #include "vulkan_semaphore.hpp"
@@ -81,6 +82,16 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The device outlives all renderer resources created from it.
          */
         VulkanDevice m_Device;
+        /**
+         * @brief Immediate submission resources owned by the renderer.
+         *
+         * Owns a command pool, command buffer, and fence used to execute
+         * synchronous one-time Vulkan work on the graphics queue.
+         *
+         * The graphics queue is borrowed from the logical device. The logical
+         * device and queue must remain valid for the lifetime of this object.
+         */
+        VulkanImmediateSubmission m_ImmediateSubmission;
         /**
          * @brief Vulkan memory allocator owned by the renderer.
          *

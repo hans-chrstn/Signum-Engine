@@ -44,6 +44,8 @@ add_library(
     engine/renderer/vulkan/vulkan_memory_policy.cpp
     engine/renderer/vulkan/vulkan_image.cpp
     engine/renderer/vulkan/vulkan_transfer_commands.cpp
+    engine/renderer/vulkan/vulkan_immediate_submission.cpp
+    engine/renderer/vulkan/vulkan_upload.cpp
 )
 
 target_include_directories(
