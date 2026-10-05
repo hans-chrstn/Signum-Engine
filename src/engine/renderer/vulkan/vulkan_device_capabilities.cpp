@@ -54,6 +54,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         bool has_acceleration_structure_support = false;
         bool has_ray_tracing_pipeline_support = false;
         bool has_ray_query_support = false;
+        bool has_memory_budget_extension_support = false;
 
         for (const VkExtensionProperties &extension_property :
              extension_properties) {
@@ -79,6 +80,11 @@ namespace SNE::Engine::Renderer::Vulkan {
                             VK_KHR_RAY_QUERY_EXTENSION_NAME) == 0) {
                 has_ray_query_support = true;
             }
+
+            if (std::strcmp(extension_property.extensionName,
+                            VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) == 0) {
+                has_memory_budget_extension_support = true;
+            }
         }
 
         const bool acceleration_structures_supported =
@@ -100,6 +106,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 has_fifo_latest_ready_extension_support,
             .fifo_latest_ready_feature_supported = static_cast<bool>(
                 fifo_latest_ready_feature.presentModeFifoLatestReady),
+            .memory_budget_extension_supported =
+                has_memory_budget_extension_support,
         };
 
         return result;

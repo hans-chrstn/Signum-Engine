@@ -103,7 +103,7 @@ auto VulkanBufferIntegrationTests::SetUp() -> void {
     ASSERT_EQ(device_result, VK_SUCCESS);
 
     m_MemoryAllocator.emplace(m_Instance, m_PhysicalDevice, m_Device,
-                              Vulkan::kRequiredApiVersion);
+                              Vulkan::kRequiredApiVersion, false);
 }
 
 auto VulkanBufferIntegrationTests::TearDown() -> void {
@@ -219,4 +219,26 @@ TEST_F(VulkanBufferIntegrationTests, UploadsAndReadsBackBufferData) {
                            device_buffer, output_bytes);
 
     EXPECT_EQ(input_bytes, output_bytes);
+}
+
+TEST_F(VulkanBufferIntegrationTests, QueriesMemoryHeapBudgets) {
+    ASSERT_NE(m_Instance, VK_NULL_HANDLE);
+    ASSERT_NE(m_PhysicalDevice, VK_NULL_HANDLE);
+    ASSERT_NE(m_Device, VK_NULL_HANDLE);
+
+    if (!m_MemoryAllocator.has_value()) {
+        FAIL() << "Failed to get a value for memory allocator";
+    }
+
+    VkPhysicalDeviceMemoryProperties memory_properties{};
+    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memory_properties);
+
+    const std::vector<Vulkan::VulkanMemoryHeapBudget> memory_heap_budgets =
+        m_MemoryAllocator->queryMemoryHeapBudgets();
+
+    ASSERT_EQ(memory_heap_budgets.size(), memory_properties.memoryHeapCount);
+
+    for (const Vulkan::VulkanMemoryHeapBudget &budget : memory_heap_budgets) {
+        EXPECT_NE(budget.budget, 0);
+    }
 }

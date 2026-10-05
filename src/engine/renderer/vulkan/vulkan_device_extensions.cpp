@@ -2,12 +2,14 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/renderer/vulkan/vulkan_device_capabilities.hpp"
 #include "vulkan_device_features.hpp"
 #include "vulkan_result.hpp"
 #include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace {
     constexpr std::array<const char *, 1> kRequiredDeviceExtensions{
@@ -69,7 +71,8 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto deriveEnabledDeviceExtensions(
-        const LogicalDeviceFeatureConfiguration &configuration)
+        const LogicalDeviceFeatureConfiguration &configuration,
+        const OptionalDeviceCapabilities &optional_capabilities)
         -> std::vector<const char *> {
         const std::span<const char *const> required_extensions =
             requiredDeviceExtensions();
@@ -79,12 +82,16 @@ namespace SNE::Engine::Renderer::Vulkan {
             required_extensions.end(),
         };
 
-        extensions.reserve(extensions.size() + 1);
+        extensions.reserve(extensions.size() + 2);
 
         if (configuration.fifo_latest_ready_feature
                 .presentModeFifoLatestReady == VK_TRUE) {
             extensions.push_back(
                 VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME);
+        }
+
+        if (optional_capabilities.memory_budget_extension_supported) {
+            extensions.push_back(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
         }
 
         return extensions;

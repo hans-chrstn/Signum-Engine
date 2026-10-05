@@ -25,6 +25,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         /** Whether FIFO latest-ready presentation is supported by the device.
          */
         bool fifo_latest_ready_feature_supported = false;
+        /** Whether the Vulkan memory-budget extension is supported. */
+        bool memory_budget_extension_supported = false;
     };
 
     /**
@@ -88,16 +90,18 @@ namespace SNE::Engine::Renderer::Vulkan {
         -> VkPhysicalDeviceFeatures;
 
     /**
-     * @brief Queries optional hardware capabilities supported by a Vulkan
-     * physical device.
+     * @brief Queries optional Vulkan capabilities supported by a physical
+     * device.
      *
-     * Discovers optional Vulkan features that Signum may use when available but
-     * does not require for physical-device suitability or renderer startup.
+     * Discovers optional Vulkan functionality that Signum may use when
+     * available but does not require for physical-device suitability or
+     * renderer startup.
      *
      * Combines Vulkan feature support with the supplied device-extension
      * information to determine whether optional capabilities such as FIFO
-     * latest-ready presentation, acceleration structures, ray-tracing
-     * pipelines, and ray queries are reported as supported.
+     * latest-ready presentation, memory-budget reporting, acceleration
+     * structures, ray-tracing pipelines, and ray queries are reported as
+     * supported.
      *
      * @param device Physical device whose optional capabilities are queried.
      * @param extension_properties Device extensions previously discovered for

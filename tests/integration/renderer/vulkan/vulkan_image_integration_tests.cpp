@@ -91,7 +91,7 @@ auto VulkanImageIntegrationTests::SetUp() -> void {
     ASSERT_EQ(device_result, VK_SUCCESS);
 
     m_MemoryAllocator.emplace(m_Instance, m_PhysicalDevice, m_Device,
-                              Vulkan::kRequiredApiVersion);
+                              Vulkan::kRequiredApiVersion, false);
 }
 
 auto VulkanImageIntegrationTests::TearDown() -> void {

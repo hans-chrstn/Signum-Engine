@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    struct OptionalDeviceCapabilities;
     struct LogicalDeviceFeatureConfiguration;
 
     /**
@@ -39,23 +40,27 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     /**
      * @brief Derives the Vulkan device extensions enabled for logical-device
-     *        creation.
+     * creation.
      *
      * Begins with the device extensions required by Signum and adds optional
-     * extensions needed by features selected in the supplied logical-device
-     * feature configuration.
+     * extensions needed by selected Vulkan features or supported renderer
+     * capabilities.
      *
-     * Optional extensions are enabled only when their corresponding feature has
-     * already been selected for enablement. Capability discovery and feature
-     * negotiation are expected to occur before this function is called.
+     * Feature-dependent extensions are enabled only when their corresponding
+     * feature has already been selected for enablement. Optional capability
+     * extensions may be enabled when the selected physical device reports
+     * support.
      *
      * @param configuration Vulkan features selected for logical-device
      * creation.
+     * @param optional_capabilities Optional capabilities reported by the
+     * selected physical device.
      *
      * @return Vulkan device-extension names that should be enabled when
      * creating the logical device.
      */
     [[nodiscard]] auto deriveEnabledDeviceExtensions(
-        const LogicalDeviceFeatureConfiguration &configuration)
+        const LogicalDeviceFeatureConfiguration &configuration,
+        const OptionalDeviceCapabilities &optional_capabilities)
         -> std::vector<const char *>;
 } // namespace SNE::Engine::Renderer::Vulkan

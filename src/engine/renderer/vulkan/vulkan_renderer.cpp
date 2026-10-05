@@ -62,12 +62,15 @@ namespace SNE::Engine::Renderer::Vulkan {
           m_Device(
               m_PhysicalDevice.handle, m_PhysicalDevice.queue_families,
               deriveUniqueQueueFamilyRequests(m_PhysicalDevice.queue_families),
-              m_LogicalDeviceFeatureConfiguration),
+              m_LogicalDeviceFeatureConfiguration,
+              m_PhysicalDevice.capabilities.optional_capabilities),
           m_ImmediateSubmission(
               m_Device.nativeHandle(), m_Device.graphicsQueue(),
               m_PhysicalDevice.queue_families.graphics_family.family_index),
           m_MemoryAllocator(m_Instance.nativeHandle(), m_PhysicalDevice.handle,
-                            m_Device.nativeHandle(), kRequiredApiVersion),
+                            m_Device.nativeHandle(), kRequiredApiVersion,
+                            m_PhysicalDevice.capabilities.optional_capabilities
+                                .memory_budget_extension_supported),
           m_Swapchain(
               m_PhysicalDevice.handle, m_Device.nativeHandle(),
               m_Surface.nativeHandle(), m_PhysicalDevice.queue_families,

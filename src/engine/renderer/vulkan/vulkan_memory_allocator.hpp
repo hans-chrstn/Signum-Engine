@@ -1,10 +1,29 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    /**
+     * @brief Describes current memory usage and budget for a Vulkan memory
+     * heap.
+     *
+     * Represents allocator-visible memory consumption together with the current
+     * budget available for the corresponding physical-device memory heap.
+     *
+     * Budget information may use VK_EXT_memory_budget when the extension was
+     * enabled for the allocator. Otherwise the allocation backend may provide a
+     * less precise estimate.
+     */
+    struct VulkanMemoryHeapBudget {
+        /** Current memory usage associated with the heap, in bytes. */
+        VkDeviceSize usage = 0U;
+        /** Current memory budget available for the heap, in bytes. */
+        VkDeviceSize budget = 0U;
+    };
+
     /**
      * @brief Owns the Vulkan Memory Allocator used by the Vulkan renderer.
      *
@@ -32,13 +51,17 @@ namespace SNE::Engine::Renderer::Vulkan {
          * used.
          * @param device Logical device used for Vulkan memory operations.
          * @param api_version Vulkan API version used by the renderer.
+         * @param memory_budget_extension_enabled Whether VK_EXT_memory_budget
+         * was enabled for the supplied logical device and may be used by the
+         * allocator.
          *
          * @throws Core::Error::EngineError if the VMA allocator cannot be
          * created.
          */
         VulkanMemoryAllocator(VkInstance instance,
                               VkPhysicalDevice physical_device, VkDevice device,
-                              std::uint32_t api_version);
+                              std::uint32_t api_version,
+                              bool memory_budget_extension_enabled);
 
         /**
          * @brief Releases the owned VMA allocator.
@@ -58,5 +81,21 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @return VMA allocator owned by this object.
          */
         [[nodiscard]] auto nativeHandle() const noexcept -> VmaAllocator;
+
+        /**
+         * @brief Queries the current memory usage and budget for Vulkan memory
+         * heaps.
+         *
+         * Retrieves allocator-visible memory usage and budget information for
+         * each memory heap reported by the physical device.
+         *
+         * The returned information is a snapshot and may change as allocations
+         * are created, destroyed, or external memory pressure changes.
+         *
+         * @return Current usage and budget information for each Vulkan memory
+         * heap.
+         */
+        [[nodiscard]] auto queryMemoryHeapBudgets() const
+            -> std::vector<VulkanMemoryHeapBudget>;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

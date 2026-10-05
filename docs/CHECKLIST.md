@@ -491,7 +491,7 @@
 - [x] Add mapped-upload path where appropriate
 - [x] Add readback path when needed
 - [x] Respect Vulkan resource and allocation alignment requirements
-- [ ] Add memory-budget queries when supported
+- [x] Add memory-budget queries when supported
 - [ ] Add basic allocation statistics
 - [ ] Add deferred resource retirement when frame lifetime requires it
 

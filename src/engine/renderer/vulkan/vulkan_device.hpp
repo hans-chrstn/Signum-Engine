@@ -6,6 +6,7 @@
 namespace SNE::Engine::Renderer::Vulkan {
     struct SelectedQueueFamilies;
     struct LogicalDeviceFeatureConfiguration;
+    struct OptionalDeviceCapabilities;
 
     /**
      * @brief Owns the engine's Vulkan logical device.
@@ -51,6 +52,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * the queues to create and their priorities.
          * @param logical_device_configuration Vulkan features selected for
          * logical-device creation.
+         * @param optional_capabilities Optional capabilities reported by the
+         * selected physical device and used when selecting optional device
+         * extensions to enable.
          *
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * logical device.
@@ -60,7 +64,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             const SelectedQueueFamilies &queue_families,
             const std::vector<QueueFamilyRequest> &queue_family_requests,
             const LogicalDeviceFeatureConfiguration
-                &logical_device_configuration);
+                &logical_device_configuration,
+            const OptionalDeviceCapabilities &optional_capabilities);
 
         /**
          * @brief Destroys the owned Vulkan logical device.

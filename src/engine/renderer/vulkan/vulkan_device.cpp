@@ -5,6 +5,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/renderer/vulkan/vulkan_device_capabilities.hpp"
 #include "vulkan_device_extensions.hpp"
 #include "vulkan_device_features.hpp"
 #include "vulkan_queue_families.hpp"
@@ -22,7 +23,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkPhysicalDevice physical_device,
         const SelectedQueueFamilies &queue_families,
         const std::vector<QueueFamilyRequest> &queue_family_requests,
-        const LogicalDeviceFeatureConfiguration &logical_device_configuration) {
+        const LogicalDeviceFeatureConfiguration &logical_device_configuration,
+        const OptionalDeviceCapabilities &optional_capabilities) {
 
         if (physical_device == VK_NULL_HANDLE) {
             Core::Assertion::failAssertion(
@@ -131,7 +133,8 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         VkDeviceCreateInfo device_create_info{};
         const std::vector<const char *> extensions =
-            deriveEnabledDeviceExtensions(logical_device_configuration);
+            deriveEnabledDeviceExtensions(logical_device_configuration,
+                                          optional_capabilities);
         device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         device_create_info.queueCreateInfoCount =
             static_cast<std::uint32_t>(queue_create_infos.size());

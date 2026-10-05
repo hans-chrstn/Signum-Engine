@@ -1,7 +1,9 @@
 #include "engine/renderer/vulkan/vulkan_device.hpp"
+#include "engine/renderer/vulkan/vulkan_device_capabilities.hpp"
 #include "engine/renderer/vulkan/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/vulkan_queue_families.hpp"
 #include "engine/renderer/vulkan/vulkan_queue_requests.hpp"
+#include <cstddef>
 #include <gtest/gtest.h>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -36,11 +38,12 @@ TEST(VulkanDeviceTests, RequiresGraphicsQueueRequest) {
 
     const Vulkan::LogicalDeviceFeatureConfiguration
         logical_device_configuration{};
+    const Vulkan::OptionalDeviceCapabilities optional_capabilities{};
 
     ASSERT_DEATH(
-        Vulkan::VulkanDevice(physical_device, queue_families,
-                             queue_family_requests,
-                             logical_device_configuration),
+        Vulkan::VulkanDevice(
+            physical_device, queue_families, queue_family_requests,
+            logical_device_configuration, optional_capabilities),
         "VulkanDevice requires queue requests for graphics and presentation "
         "families");
 }
@@ -73,11 +76,12 @@ TEST(VulkanDeviceTests, RequiresPresentationQueueRequest) {
 
     const Vulkan::LogicalDeviceFeatureConfiguration
         logical_device_configuration{};
+    const Vulkan::OptionalDeviceCapabilities optional_capabilities{};
 
     ASSERT_DEATH(
-        Vulkan::VulkanDevice(physical_device, queue_families,
-                             queue_family_requests,
-                             logical_device_configuration),
+        Vulkan::VulkanDevice(
+            physical_device, queue_families, queue_family_requests,
+            logical_device_configuration, optional_capabilities),
         "VulkanDevice requires queue requests for graphics and presentation "
         "families");
 }

@@ -5,15 +5,19 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/vulkan/vulkan_result.hpp"
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
+#include <vulkan/vulkan_core.h>
 #define VMA_IMPLEMENTATION
 #include "vulkan_memory_allocator.hpp"
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanMemoryAllocator::VulkanMemoryAllocator(
         VkInstance instance, VkPhysicalDevice physical_device, VkDevice device,
-        std::uint32_t api_version) {
+        std::uint32_t api_version, bool memory_budget_extension_enabled) {
         if (instance == VK_NULL_HANDLE) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
@@ -41,7 +45,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         allocator_create_info.physicalDevice = physical_device;
         allocator_create_info.device = device;
         allocator_create_info.vulkanApiVersion = api_version;
-
+        if (memory_budget_extension_enabled) {
+            allocator_create_info.flags |=
+                VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+        }
         const VkResult result =
             vmaCreateAllocator(&allocator_create_info, &m_Allocator);
 
@@ -64,5 +71,24 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto VulkanMemoryAllocator::nativeHandle() const noexcept -> VmaAllocator {
         return m_Allocator;
+    }
+
+    auto VulkanMemoryAllocator::queryMemoryHeapBudgets() const
+        -> std::vector<VulkanMemoryHeapBudget> {
+        std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> budgets{{}};
+        vmaGetHeapBudgets(m_Allocator, budgets.data());
+        const VkPhysicalDeviceMemoryProperties *memory_properties{};
+        vmaGetMemoryProperties(m_Allocator, &memory_properties);
+        const std::uint32_t heap_count = memory_properties->memoryHeapCount;
+        std::vector<VulkanMemoryHeapBudget> memory_heap_budgets{};
+        memory_heap_budgets.reserve(heap_count);
+
+        for (std::size_t i{}; i < heap_count; ++i) {
+            VulkanMemoryHeapBudget budget{};
+            budget.usage = budgets[i].usage;
+            budget.budget = budgets[i].budget;
+            memory_heap_budgets.push_back(budget);
+        }
+        return memory_heap_budgets;
     }
 } // namespace SNE::Engine::Renderer::Vulkan
