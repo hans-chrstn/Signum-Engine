@@ -527,8 +527,8 @@
 
 ### Learn
 
-- [ ] Review preconditions, postconditions, and invariants
-- [ ] Review programmer errors versus runtime failures
+- [x] Review preconditions, postconditions, and invariants
+- [x] Review programmer errors versus runtime failures
 - [ ] Review exception safety for reusable engine operations
 - [ ] Review Vulkan queue host-synchronization requirements
 - [ ] Review Vulkan queue-family resource ownership
@@ -538,8 +538,8 @@
 
 ### Design
 
-- [ ] Define consistent rules for `Precondition`, `Invariant`, and `Postcondition`
-- [ ] Define when failures use `EngineError` versus `failAssertion`
+- [x] Define consistent rules for `Precondition`, `Invariant`, and `Postcondition`
+- [x] Define when failures use `EngineError` versus `failAssertion`
 - [ ] Define reusable byte-range validation
 - [ ] Define checked Vulkan count/index conversion policy
 - [ ] Define Vulkan buffer usage introspection
@@ -559,8 +559,8 @@
 
 ### Implement
 
-- [ ] Audit existing `failAssertion` calls for correct assertion type
-- [ ] Add missing preconditions to backend-facing operations
+- [x] Audit existing `failAssertion` calls for correct assertion type
+- [x] Add missing preconditions to backend-facing operations
 - [ ] Add invariants for internal assumptions that must always hold
 - [ ] Add postconditions where successful operations establish required state
 - [ ] Remove redundant contract checks already guaranteed by lower-level ownership
@@ -581,7 +581,7 @@
 - [ ] Keep transfer recording separate from transfer submission
 - [ ] Keep graphics-queue transfers as the current baseline
 - [ ] Prevent adding a dedicated transfer queue without resource ownership handling
-- [ ] Validate selected queue-family capacity
+- [x] Validate selected queue-family capacity
 - [ ] Verify retrieved queues satisfy selected-device guarantees
 - [ ] Assert frame command-buffer availability before using `.front()`
 - [ ] Harden swapchain selection against invalid or empty inputs

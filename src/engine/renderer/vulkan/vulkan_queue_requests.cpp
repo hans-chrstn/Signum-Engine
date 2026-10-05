@@ -16,7 +16,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (static_cast<std::uint32_t>(priorities.size()) >
             queue_families.graphics_family.available_queue_count) {
             Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
+                Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
                 "Graphics queue request exceeds the selected queue family's "
                 "available capacity");
@@ -33,7 +33,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             if (static_cast<std::uint32_t>(priorities.size()) >
                 queue_families.presentation_family.available_queue_count) {
                 Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Precondition,
+                    Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
                     "Presentation queue request exceeds the selected queue "
                     "family's available capacity");
