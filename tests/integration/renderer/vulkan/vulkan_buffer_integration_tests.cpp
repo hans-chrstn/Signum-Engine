@@ -136,8 +136,8 @@ TEST_F(VulkanBufferIntegrationTests, CreatesAndDestroysVmaBackedBuffer) {
         FAIL() << "Failed to get a value for memory allocator";
     }
 
-    Vulkan::VulkanBuffer buffer = Vulkan::VulkanBuffer(
-        m_MemoryAllocator.value().nativeHandle(), buffer_create_info);
+    Vulkan::VulkanBuffer buffer =
+        Vulkan::VulkanBuffer(m_MemoryAllocator.value(), buffer_create_info);
 }
 
 TEST_F(VulkanBufferIntegrationTests, WritesToVmaBackedUploadBuffer) {
@@ -161,8 +161,8 @@ TEST_F(VulkanBufferIntegrationTests, WritesToVmaBackedUploadBuffer) {
     buffer_create_info.memory_usage = Renderer::GpuMemoryUsage::Upload;
     buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-    Vulkan::VulkanBuffer buffer = Vulkan::VulkanBuffer(
-        m_MemoryAllocator.value().nativeHandle(), buffer_create_info);
+    Vulkan::VulkanBuffer buffer =
+        Vulkan::VulkanBuffer(m_MemoryAllocator.value(), buffer_create_info);
 
     buffer.write(bytes);
 }
@@ -209,14 +209,14 @@ TEST_F(VulkanBufferIntegrationTests, UploadsAndReadsBackBufferData) {
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     buffer_create_info.memory_usage = Renderer::GpuMemoryUsage::Device;
 
-    Vulkan::VulkanBuffer device_buffer = Vulkan::VulkanBuffer(
-        m_MemoryAllocator.value().nativeHandle(), buffer_create_info);
+    Vulkan::VulkanBuffer device_buffer =
+        Vulkan::VulkanBuffer(m_MemoryAllocator.value(), buffer_create_info);
 
-    Vulkan::uploadBufferData(m_MemoryAllocator.value().nativeHandle(),
-                             immediate_submission, device_buffer, input_bytes);
+    Vulkan::uploadBufferData(m_MemoryAllocator.value(), immediate_submission,
+                             device_buffer, input_bytes);
 
-    Vulkan::readBufferData(m_MemoryAllocator.value().nativeHandle(),
-                           immediate_submission, device_buffer, output_bytes);
+    Vulkan::readBufferData(m_MemoryAllocator.value(), immediate_submission,
+                           device_buffer, output_bytes);
 
     EXPECT_EQ(input_bytes, output_bytes);
 }

@@ -1,9 +1,9 @@
 #pragma once
 #include "vulkan_buffer.hpp"
 #include "vulkan_immediate_submission.hpp"
+#include "vulkan_memory_allocator.hpp"
 #include <cstddef>
 #include <span>
-#include <vk_mem_alloc.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
@@ -16,8 +16,11 @@ namespace SNE::Engine::Renderer::Vulkan {
      * The temporary upload buffer remains alive until the GPU transfer has
      * completed.
      *
-     * @param allocator VMA allocator used to create the temporary upload
-     * buffer.
+     * The VulkanMemoryAllocator is borrowed and must remain valid for the
+     * duration of this operation.
+     *
+     * @param allocator Engine-owned Vulkan memory allocator used to create the
+     * temporary upload buffer.
      * @param immediate_submission Submission context used to execute the
      * transfer.
      * @param destination Buffer that receives the uploaded data.
@@ -25,13 +28,13 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @param destination_offset Byte offset within the destination buffer at
      * which the uploaded data is written.
      *
-     * @pre allocator must be a valid VMA allocator.
+     * @pre allocator must contain a valid underlying allocation backend.
      * @pre bytes must not be empty.
      * @pre The destination range must fit within the destination buffer.
      * @pre destination must have been created with
      * VK_BUFFER_USAGE_TRANSFER_DST_BIT.
      */
-    auto uploadBufferData(VmaAllocator allocator,
+    auto uploadBufferData(const VulkanMemoryAllocator &allocator,
                           VulkanImmediateSubmission &immediate_submission,
                           const VulkanBuffer &destination,
                           std::span<const std::byte> bytes,

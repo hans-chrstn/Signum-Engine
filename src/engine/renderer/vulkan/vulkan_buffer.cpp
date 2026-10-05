@@ -6,8 +6,8 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
-#include "engine/renderer/vulkan/vulkan_result.hpp"
 #include "vulkan_memory_policy.hpp"
+#include "vulkan_result.hpp"
 #include <cstddef>
 #include <cstring>
 #include <string>
@@ -16,15 +16,15 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Core = SNE::Engine::Core;
 
 namespace SNE::Engine::Renderer::Vulkan {
-    VulkanBuffer::VulkanBuffer(VmaAllocator allocator,
+    VulkanBuffer::VulkanBuffer(const VulkanMemoryAllocator &allocator,
                                const VulkanBufferCreateInfo &create_info)
-        : m_Allocator(allocator), m_Size(create_info.size),
+        : m_Allocator(allocator.nativeHandle()), m_Size(create_info.size),
           m_MemoryUsage(create_info.memory_usage) {
-        if (allocator == nullptr) {
+        if (allocator.nativeHandle() == nullptr) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanBuffer requires a valid VMA allocator");
+                "VulkanBuffer requires a valid Vulkan memory allocator");
         }
 
         if (create_info.size == 0U) {

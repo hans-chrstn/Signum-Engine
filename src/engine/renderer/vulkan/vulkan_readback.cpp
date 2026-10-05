@@ -7,16 +7,16 @@
 #include "vulkan_transfer_commands.hpp"
 
 namespace SNE::Engine::Renderer::Vulkan {
-    auto readBufferData(VmaAllocator allocator,
+    auto readBufferData(const VulkanMemoryAllocator &allocator,
                         VulkanImmediateSubmission &immediate_submission,
                         const VulkanBuffer &source, std::span<std::byte> output,
                         VkDeviceSize source_offset) -> void {
 
-        if (allocator == nullptr) {
+        if (allocator.nativeHandle() == nullptr) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "readBufferData requires a valid VMA allocator");
+                "readBufferData requires a valid Vulkan memory allocator");
         }
 
         if (output.empty()) {

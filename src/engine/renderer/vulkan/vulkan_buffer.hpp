@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/vulkan/vulkan_memory_allocator.hpp"
 #include <cstddef>
 #include <span>
 #include <vk_mem_alloc.h>
@@ -37,15 +38,22 @@ namespace SNE::Engine::Renderer::Vulkan {
      * Creates and manages the lifetime of a Vulkan buffer together with the
      * allocation that provides its backing memory.
      *
-     * The supplied VMA allocator is borrowed and must remain valid for the
-     * lifetime of this object.
+     * The supplied VulkanMemoryAllocator is borrowed. The allocator and its
+     * underlying allocation backend must remain valid for the lifetime of this
+     * object.
      *
      * The type is non-copyable because it exclusively owns the Vulkan buffer
      * and its associated allocation.
      */
     class VulkanBuffer {
       private:
-        /** Non-owning VMA allocator used to manage the buffer allocation. */
+        /**
+         * @brief Non-owning native allocator handle used internally for buffer
+         * memory operations.
+         *
+         * Obtained from the borrowed VulkanMemoryAllocator during construction.
+         * The originating VulkanMemoryAllocator must outlive this VulkanBuffer.
+         */
         VmaAllocator m_Allocator{nullptr};
         /** Vulkan buffer handle owned by this object. */
         VkBuffer m_Buffer{VK_NULL_HANDLE};
@@ -62,23 +70,23 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan buffer with VMA-managed backing memory.
+         * @brief Creates a Vulkan buffer with allocator-managed backing memory.
          *
          * Creates the Vulkan buffer and its associated memory allocation
          * according to the supplied creation description.
          *
-         * The allocator is borrowed and must remain valid for the lifetime of
-         * this VulkanBuffer.
+         * The VulkanMemoryAllocator is borrowed and must remain valid for the
+         * lifetime of this VulkanBuffer.
          *
-         * @param allocator VMA allocator used to create and destroy the buffer
-         * and its backing allocation.
-         * @param create_info Description of the buffer and its memory
-         * usage policy.
+         * @param allocator Engine-owned Vulkan memory allocator used to create
+         * and destroy the buffer and its backing allocation.
+         * @param create_info Description of the buffer and its memory usage
+         * policy.
          *
          * @throws Core::Error::EngineError if buffer creation or memory
          * allocation fails.
          */
-        VulkanBuffer(VmaAllocator allocator,
+        VulkanBuffer(const VulkanMemoryAllocator &allocator,
                      const VulkanBufferCreateInfo &create_info);
 
         /**

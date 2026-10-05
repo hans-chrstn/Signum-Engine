@@ -134,6 +134,6 @@ TEST_F(VulkanImageIntegrationTests, CreatesAndDestroysVmaBackedImage) {
         FAIL() << "Failed to get a value for memory allocator";
     }
 
-    Vulkan::VulkanImage image = Vulkan::VulkanImage(
-        m_MemoryAllocator.value().nativeHandle(), image_create_info);
+    Vulkan::VulkanImage image =
+        Vulkan::VulkanImage(m_MemoryAllocator.value(), image_create_info);
 }

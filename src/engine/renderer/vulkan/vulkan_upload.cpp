@@ -6,12 +6,12 @@
 #include "vulkan_transfer_commands.hpp"
 
 namespace SNE::Engine::Renderer::Vulkan {
-    auto uploadBufferData(VmaAllocator allocator,
+    auto uploadBufferData(const VulkanMemoryAllocator &allocator,
                           VulkanImmediateSubmission &immediate_submission,
                           const VulkanBuffer &destination,
                           std::span<const std::byte> bytes,
                           VkDeviceSize destination_offset) -> void {
-        if (allocator == nullptr) {
+        if (allocator.nativeHandle() == nullptr) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,

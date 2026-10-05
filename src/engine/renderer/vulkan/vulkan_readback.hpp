@@ -2,6 +2,7 @@
 
 #include "vulkan_buffer.hpp"
 #include "vulkan_immediate_submission.hpp"
+#include "vulkan_memory_allocator.hpp"
 #include <cstddef>
 #include <span>
 #include <vulkan/vulkan.h>
@@ -17,8 +18,11 @@ namespace SNE::Engine::Renderer::Vulkan {
      * The temporary readback buffer remains alive until the GPU transfer has
      * completed and its contents have been copied into CPU memory.
      *
-     * @param allocator VMA allocator used to create the temporary readback
-     * buffer.
+     * The VulkanMemoryAllocator is borrowed and must remain valid for the
+     * duration of this operation.
+     *
+     * @param allocator Engine-owned Vulkan memory allocator used to create the
+     * temporary readback buffer.
      * @param immediate_submission Submission context used to execute the
      * transfer.
      * @param source Buffer whose contents are read back.
@@ -26,14 +30,14 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @param source_offset Byte offset within the source buffer at which
      * reading begins.
      *
-     * @pre allocator must be a valid VMA allocator.
+     * @pre allocator must contain a valid underlying allocation backend.
      * @pre output must not be empty.
      * @pre The requested source range must fit entirely within the source
      * buffer.
      * @pre source must have been created with
      * VK_BUFFER_USAGE_TRANSFER_SRC_BIT.
      */
-    auto readBufferData(VmaAllocator allocator,
+    auto readBufferData(const VulkanMemoryAllocator &allocator,
                         VulkanImmediateSubmission &immediate_submission,
                         const VulkanBuffer &source, std::span<std::byte> output,
                         VkDeviceSize source_offset = 0U) -> void;

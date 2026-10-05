@@ -474,11 +474,11 @@
 - [x] Define image-memory ownership
 - [x] Define upload-memory policy
 - [x] Define readback-memory policy
-- [ ] Define persistent-mapping policy
-- [ ] Define resource-retirement policy
-- [ ] Define allocation diagnostics
-- [ ] Keep allocation implementation replaceable
-- [ ] Avoid exposing allocator implementation to normal renderer callers
+- [x] Define persistent-mapping policy
+- [x] Define resource-retirement policy
+- [x] Define allocation diagnostics
+- [x] Keep allocation implementation replaceable
+- [x] Avoid exposing allocator implementation to normal renderer callers
 
 ### Implement
 
@@ -490,7 +490,7 @@
 - [x] Add staging-upload path
 - [x] Add mapped-upload path where appropriate
 - [x] Add readback path when needed
-- [ ] Respect Vulkan resource and allocation alignment requirements
+- [x] Respect Vulkan resource and allocation alignment requirements
 - [ ] Add memory-budget queries when supported
 - [ ] Add basic allocation statistics
 - [ ] Add deferred resource retirement when frame lifetime requires it
@@ -511,7 +511,7 @@
 
 - [x] Keep VMA behind engine-owned GPU allocation/resource abstractions
 - [x] Do not expose VMA types to normal renderer or game-facing APIs
-- [ ] Keep the allocation backend replaceable without redesigning GPU resource identity or callers
+- [x] Keep the allocation backend replaceable without redesigning GPU resource identity or callers
 - [ ] Separate GPU resource identity from memory allocation
 - [x] Keep allocation backend-specific
 - [ ] Keep allocation policy replaceable without changing resource identity or normal renderer callers

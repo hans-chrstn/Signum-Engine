@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vulkan_memory_allocator.hpp"
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -10,8 +11,8 @@ namespace SNE::Engine::Renderer::Vulkan {
      * Specifies the image type, extent, format, intended Vulkan usage for an
      * image and its backing allocation.
      *
-     * This structure describes creation policy only and does not own Vulkan or
-     * VMA resources.
+     * This structure describes creation policy only and does not own Vulkan
+     * resources or backing allocations.
      */
     struct VulkanImageCreateInfo {
         /**
@@ -36,13 +37,14 @@ namespace SNE::Engine::Renderer::Vulkan {
     };
 
     /**
-     * @brief Owns a Vulkan image and its VMA-backed memory allocation.
+     * @brief Owns a Vulkan image and its allocator-managed memory allocation.
      *
      * Creates and manages the lifetime of a Vulkan image together with the
      * allocation that provides its backing memory.
      *
-     * The supplied VMA allocator is borrowed and must remain valid for the
-     * lifetime of this object.
+     * The supplied VulkanMemoryAllocator is borrowed. The allocator and its
+     * underlying allocation backend must remain valid for the lifetime of this
+     * object.
      *
      * The type is non-copyable because it exclusively owns the Vulkan image
      * and its associated allocation.
@@ -50,7 +52,11 @@ namespace SNE::Engine::Renderer::Vulkan {
     class VulkanImage {
       private:
         /**
-         * @brief Non-owning VMA allocator used to manage the image allocation.
+         * @brief Non-owning native allocator handle used internally for image
+         * memory operations.
+         *
+         * Obtained from the borrowed VulkanMemoryAllocator during construction.
+         * The originating VulkanMemoryAllocator must outlive this VulkanImage.
          */
         VmaAllocator m_Allocator{nullptr};
 
@@ -66,22 +72,22 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan image with VMA-managed backing memory.
+         * @brief Creates a Vulkan image with allocator-managed backing memory.
          *
          * Creates the Vulkan image and its associated memory allocation
          * according to the supplied creation description.
          *
-         * The allocator is borrowed and must remain valid for the lifetime of
-         * this VulkanImage.
+         * The VulkanMemoryAllocator is borrowed and must remain valid for the
+         * lifetime of this VulkanImage.
          *
-         * @param allocator VMA allocator used to create and destroy the image
-         * and its backing allocation.
-         * @param image_info Description of the image
+         * @param allocator Engine-owned Vulkan memory allocator used to create
+         * and destroy the image and its backing allocation.
+         * @param image_info Description of the image.
          *
          * @throws Core::Error::EngineError if image creation or memory
          * allocation fails.
          */
-        VulkanImage(VmaAllocator allocator,
+        VulkanImage(const VulkanMemoryAllocator &allocator,
                     const VulkanImageCreateInfo &image_info);
 
         /**
