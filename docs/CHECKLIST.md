@@ -523,6 +523,178 @@
 
 ---
 
+## Phase 6.75 — Foundation Hardening
+
+### Learn
+
+- [ ] Review preconditions, postconditions, and invariants
+- [ ] Review programmer errors versus runtime failures
+- [ ] Review exception safety for reusable engine operations
+- [ ] Review Vulkan queue host-synchronization requirements
+- [ ] Review Vulkan queue-family resource ownership
+- [ ] Review integer narrowing at Vulkan API boundaries
+- [ ] Review RAII move semantics for GPU resources
+- [ ] Review shutdown and destructor error handling
+
+### Design
+
+- [ ] Define consistent rules for `Precondition`, `Invariant`, and `Postcondition`
+- [ ] Define when failures use `EngineError` versus `failAssertion`
+- [ ] Define reusable byte-range validation
+- [ ] Define checked Vulkan count/index conversion policy
+- [ ] Define Vulkan buffer usage introspection
+- [ ] Define immediate-submission threading and reuse policy
+- [ ] Define queue submission ownership and synchronization policy
+- [ ] Define requirements for future dedicated transfer queues
+- [ ] Define queue-family ownership-transfer policy
+- [ ] Define swapchain recreation behavior
+- [ ] Define minimized-window and zero-framebuffer behavior
+- [ ] Define `VK_ERROR_OUT_OF_DATE_KHR` handling
+- [ ] Define `VK_SUBOPTIMAL_KHR` handling
+- [ ] Define GPU resource move-semantics policy
+- [ ] Define application-level exception boundary
+- [ ] Define scalable error-code metadata handling
+- [ ] Define consistent warnings-as-errors policy
+- [ ] Define reusable Vulkan integration-test infrastructure
+
+### Implement
+
+- [ ] Audit existing `failAssertion` calls for correct assertion type
+- [ ] Add missing preconditions to backend-facing operations
+- [ ] Add invariants for internal assumptions that must always hold
+- [ ] Add postconditions where successful operations establish required state
+- [ ] Remove redundant contract checks already guaranteed by lower-level ownership
+- [ ] Add reusable overflow-safe byte-range validation
+- [ ] Replace duplicated buffer range calculations with the shared helper
+- [ ] Add checked conversion for Vulkan count fields
+- [ ] Replace unchecked `size_t` to Vulkan count conversions
+- [ ] Store Vulkan usage flags in `VulkanBuffer`
+- [ ] Add backend-local buffer usage access
+- [ ] Validate `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` before buffer copies
+- [ ] Validate `VK_BUFFER_USAGE_TRANSFER_DST_BIT` before buffer copies
+- [ ] Reject invalid overlapping copies when source and destination are the same buffer
+- [ ] Harden `VulkanImmediateSubmission` reuse
+- [ ] Prevent invalid or recursive immediate submission
+- [ ] Document immediate-submission thread-safety requirements
+- [ ] Keep staging resources alive until submitted GPU work finishes
+- [ ] Keep immediate submission generic instead of upload-specific
+- [ ] Keep transfer recording separate from transfer submission
+- [ ] Keep graphics-queue transfers as the current baseline
+- [ ] Prevent adding a dedicated transfer queue without resource ownership handling
+- [ ] Validate selected queue-family capacity
+- [ ] Verify retrieved queues satisfy selected-device guarantees
+- [ ] Assert frame command-buffer availability before using `.front()`
+- [ ] Harden swapchain selection against invalid or empty inputs
+- [ ] Handle zero-sized framebuffer state
+- [ ] Add swapchain recreation after acquire-time out-of-date results
+- [ ] Add swapchain recreation after present-time out-of-date results
+- [ ] Handle suboptimal swapchains consistently
+- [ ] Recreate swapchain-dependent resources in dependency order
+- [ ] Re-query framebuffer and surface capabilities during recreation
+- [ ] Preserve valid frame-fence state through swapchain recreation
+- [ ] Audit Vulkan wrappers for owned-versus-borrowed lifetime correctness
+- [ ] Audit destructors for safe partially constructed or empty state
+- [ ] Review GPU resource wrappers for move support required by future containers
+- [ ] Add move semantics only where a concrete ownership requirement exists
+- [ ] Verify successful VMA buffer creation produces valid buffer/allocation state
+- [ ] Verify successful VMA image creation produces valid image/allocation state
+- [ ] Verify command-buffer allocation returns the requested number of handles
+- [ ] Widen `Core::Error::Code` storage beyond `std::uint8_t`
+- [ ] Prevent error-code string mappings from silently becoming incomplete
+- [ ] Prevent error-code subsystem mappings from silently becoming incomplete
+- [ ] Add final handling for unexpected `std::exception`
+- [ ] Add final handling for unknown exceptions if needed
+- [ ] Keep assertion failures separate from recoverable exception handling
+- [ ] Document failures that cannot be propagated from destructors
+- [ ] Add reusable Vulkan integration-test setup for instance, device, queue, and allocator
+- [ ] Add immediate-submission support to Vulkan integration-test infrastructure
+- [ ] Remove duplicated Vulkan setup from buffer and image integration tests
+- [ ] Remove unused `Window::waitEvents()` if no longer needed
+- [ ] Remove empty `application_configuration.cpp`
+- [ ] Remove stale empty namespaces, aliases, and includes
+- [ ] Make warnings-as-errors consistent between local builds and CI
+- [ ] Keep CMake source lists synchronized with renderer files
+- [ ] Keep Doxygen ownership, lifetime, and contract documentation current
+
+### Test
+
+- [ ] Test byte-range validation
+- [ ] Test exact-end byte ranges
+- [ ] Test zero-size ranges
+- [ ] Test invalid offsets
+- [ ] Test overflow-resistant range checks
+- [ ] Test checked Vulkan count conversion
+- [ ] Test buffer usage tracking
+- [ ] Test invalid transfer source usage
+- [ ] Test invalid transfer destination usage
+- [ ] Test overlapping same-buffer copies
+- [ ] Test immediate submission callback execution
+- [ ] Test repeated immediate submissions
+- [ ] Test immediate command-pool reuse
+- [ ] Test immediate fence reuse
+- [ ] Test immediate submission recovery after recording failure where supported
+- [ ] Test complete staging upload
+- [ ] Test staging upload with destination offsets
+- [ ] Test staging upload range boundaries
+- [ ] Test upload correctness through readback
+- [ ] Test CPU -> upload -> device -> readback -> CPU round trip
+- [ ] Test partial transfer correctness
+- [ ] Test minimized-window behavior
+- [ ] Test repeated window resizing
+- [ ] Test swapchain recreation
+- [ ] Test acquire-time out-of-date handling
+- [ ] Test present-time out-of-date handling where reproducible
+- [ ] Test frame-resource reuse after early returns
+- [ ] Test swapchain-dependent destruction ordering
+- [ ] Add representative assertion death tests
+- [ ] Test every error code has a valid string
+- [ ] Test every error code has a valid subsystem
+- [ ] Test error metadata completeness
+- [ ] Run clean Debug build
+- [ ] Run unit tests
+- [ ] Run Vulkan integration tests
+- [ ] Run ASan/UBSan
+- [ ] Run Valgrind
+- [ ] Run Clang-Tidy
+- [ ] Run formatting checks
+- [ ] Run warnings-as-errors build
+- [ ] Run Vulkan validation cleanly
+- [ ] Generate Doxygen without warnings
+- [ ] Verify CI from a clean checkout
+
+### Architecture
+
+- [ ] Preserve explicit RAII ownership
+- [ ] Preserve dependency-ordered destruction
+- [ ] Keep programmer errors separate from runtime failures
+- [ ] Keep native runtime failures out of assertions
+- [ ] Keep assertions out of normal control flow
+- [ ] Detect invalid internal state close to where it originates
+- [ ] Prefer small correctness helpers over repeated subtle logic
+- [ ] Keep Vulkan-specific validity checks inside the Vulkan backend
+- [ ] Keep VMA details out of normal renderer-facing APIs
+- [ ] Keep transfer recording independent from submission policy
+- [ ] Keep upload policy independent from transfer-command construction
+- [ ] Keep synchronous immediate submission replaceable by future asynchronous paths
+- [ ] Keep future streaming uploads possible
+- [ ] Keep graphics, compute, and transfer queue roles extensible
+- [ ] Do not add dedicated transfer queues without queue-family ownership support
+- [ ] Do not assume queue submission will permanently remain single-threaded
+- [ ] Keep swapchain recreation inside renderer/presentation ownership
+- [ ] Keep frame-resource identity separate from swapchain-image identity
+- [ ] Keep resource ownership valid when resources move between containers
+- [ ] Keep error metadata scalable as error counts grow
+- [ ] Preserve one clear runtime exception boundary
+- [ ] Keep assertion reporting separate from runtime error reporting
+- [ ] Keep deterministic logic in unit tests
+- [ ] Keep Vulkan driver and lifetime behavior in integration tests
+- [ ] Reuse Vulkan integration-test infrastructure
+- [ ] Keep test helpers out of production architecture
+- [ ] Avoid generic managers, service locators, or registries without a concrete need
+- [ ] Avoid introducing the renderer abstraction before Phase 12
+
+---
+
 ## Phase 7 — Rendering Resource Foundation
 
 ### Learn
