@@ -91,4 +91,19 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
         return memory_heap_budgets;
     }
+
+    auto VulkanMemoryAllocator::queryMemoryAllocationStatistics() const
+        -> VulkanMemoryAllocationStatistics {
+        VmaTotalStatistics total_statistics{};
+        vmaCalculateStatistics(m_Allocator, &total_statistics);
+        const VmaStatistics &statistics = total_statistics.total.statistics;
+
+        VulkanMemoryAllocationStatistics memory_allocation_statistics{};
+        memory_allocation_statistics.allocation_bytes =
+            statistics.allocationBytes;
+        memory_allocation_statistics.allocation_count =
+            statistics.allocationCount;
+        memory_allocation_statistics.block_count = statistics.blockCount;
+        return memory_allocation_statistics;
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

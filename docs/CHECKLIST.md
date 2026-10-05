@@ -492,7 +492,7 @@
 - [x] Add readback path when needed
 - [x] Respect Vulkan resource and allocation alignment requirements
 - [x] Add memory-budget queries when supported
-- [ ] Add basic allocation statistics
+- [x] Add basic allocation statistics
 - [ ] Add deferred resource retirement when frame lifetime requires it
 
 ### Test
@@ -514,7 +514,7 @@
 - [x] Keep the allocation backend replaceable without redesigning GPU resource identity or callers
 - [ ] Separate GPU resource identity from memory allocation
 - [x] Keep allocation backend-specific
-- [ ] Keep allocation policy replaceable without changing resource identity or normal renderer callers
+- [x] Keep allocation policy replaceable without changing resource identity or normal renderer callers
 - [ ] Keep future streaming requirements possible
 - [ ] Keep future memory-budget enforcement possible
 - [ ] Keep future specialized allocator experiments possible

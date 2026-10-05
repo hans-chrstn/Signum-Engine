@@ -242,3 +242,34 @@ TEST_F(VulkanBufferIntegrationTests, QueriesMemoryHeapBudgets) {
         EXPECT_NE(budget.budget, 0);
     }
 }
+
+TEST_F(VulkanBufferIntegrationTests, QueriesMemoryAllocationStatistics) {
+    ASSERT_NE(m_Instance, VK_NULL_HANDLE);
+    ASSERT_NE(m_PhysicalDevice, VK_NULL_HANDLE);
+    ASSERT_NE(m_Device, VK_NULL_HANDLE);
+
+    if (!m_MemoryAllocator.has_value()) {
+        FAIL() << "Failed to get a value for memory allocator";
+    }
+
+    const Vulkan::VulkanMemoryAllocationStatistics memory_allocation_before =
+        m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+    Vulkan::VulkanBufferCreateInfo buffer_create_info{};
+    buffer_create_info.size = 1U;
+    buffer_create_info.usage =
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buffer_create_info.memory_usage = Renderer::GpuMemoryUsage::Device;
+
+    Vulkan::VulkanBuffer device_buffer =
+        Vulkan::VulkanBuffer(m_MemoryAllocator.value(), buffer_create_info);
+
+    const Vulkan::VulkanMemoryAllocationStatistics memory_allocation_after =
+        m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+    EXPECT_GT(memory_allocation_after.block_count, 0U);
+    EXPECT_GT(memory_allocation_after.allocation_count,
+              memory_allocation_before.allocation_count);
+    EXPECT_GT(memory_allocation_after.allocation_bytes,
+              memory_allocation_before.allocation_bytes);
+}

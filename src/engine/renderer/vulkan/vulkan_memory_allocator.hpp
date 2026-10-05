@@ -7,6 +7,28 @@
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
+     * @brief Describes basic allocator-wide Vulkan memory allocation
+     * statistics.
+     *
+     * Represents a snapshot of the number of active allocations, the total
+     * number of bytes associated with those allocations, and the number of
+     * memory blocks currently owned by the allocation backend.
+     *
+     * The reported values are diagnostic information and may change as
+     * resources are created and destroyed.
+     */
+    struct VulkanMemoryAllocationStatistics {
+        /** Number of active Vulkan memory allocations. */
+        std::uint32_t allocation_count{};
+
+        /** Total number of bytes associated with active allocations. */
+        VkDeviceSize allocation_bytes{};
+
+        /** Number of Vulkan memory blocks currently owned by the allocator. */
+        std::uint32_t block_count{};
+    };
+
+    /**
      * @brief Describes current memory usage and budget for a Vulkan memory
      * heap.
      *
@@ -19,9 +41,9 @@ namespace SNE::Engine::Renderer::Vulkan {
      */
     struct VulkanMemoryHeapBudget {
         /** Current memory usage associated with the heap, in bytes. */
-        VkDeviceSize usage = 0U;
+        VkDeviceSize usage{};
         /** Current memory budget available for the heap, in bytes. */
-        VkDeviceSize budget = 0U;
+        VkDeviceSize budget{};
     };
 
     /**
@@ -97,5 +119,21 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto queryMemoryHeapBudgets() const
             -> std::vector<VulkanMemoryHeapBudget>;
+
+        /**
+         * @brief Queries basic allocator-wide Vulkan memory allocation
+         * statistics.
+         *
+         * Calculates a snapshot of the allocator's current memory statistics
+         * and returns the allocator-wide totals using an engine-owned
+         * representation.
+         *
+         * The returned values are intended for diagnostics and may change as
+         * Vulkan resources are created and destroyed.
+         *
+         * @return Current allocator-wide Vulkan memory allocation statistics.
+         */
+        [[nodiscard]] auto queryMemoryAllocationStatistics() const
+            -> VulkanMemoryAllocationStatistics;
     };
 } // namespace SNE::Engine::Renderer::Vulkan
