@@ -86,10 +86,16 @@ auto VulkanBufferIntegrationTests::SetUp() -> void {
     device_queue_info.queueCount = 1U;
     device_queue_info.pQueuePriorities = &priority;
 
+    VkPhysicalDeviceVulkan13Features vulkan13_features{};
+    vulkan13_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    vulkan13_features.synchronization2 = VK_TRUE;
+
     VkDeviceCreateInfo device_info{};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_info.queueCreateInfoCount = 1U;
     device_info.pQueueCreateInfos = &device_queue_info;
+    device_info.pNext = &vulkan13_features;
 
     const VkResult device_result =
         vkCreateDevice(m_PhysicalDevice, &device_info, nullptr, &m_Device);
