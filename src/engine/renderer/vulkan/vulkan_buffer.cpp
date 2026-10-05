@@ -15,8 +15,6 @@
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Core = SNE::Engine::Core;
 
-namespace {} // namespace
-
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanBuffer::VulkanBuffer(VmaAllocator allocator,
                                const VulkanBufferCreateInfo &create_info)
@@ -96,8 +94,9 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanBuffer::write requires non-empty data");
         }
 
-        if (offset > m_Size ||
-            static_cast<VkDeviceSize>(bytes.size()) > m_Size - offset) {
+        const auto bytes_size = static_cast<VkDeviceSize>(bytes.size());
+
+        if (offset > m_Size || bytes_size > m_Size - offset) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
@@ -123,12 +122,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto *mapped_byte = static_cast<std::byte *>(mapped_data) + offset;
 
         // copy the caller's bytes into the mapped allocation
-        std::memcpy(mapped_byte, bytes.data(), bytes.size());
+        std::memcpy(mapped_byte, bytes.data(), bytes_size);
 
         // make cpu writes visible to the gpu for non coherent memory
         const VkResult flush_result =
-            vmaFlushAllocation(m_Allocator, m_Allocation, offset,
-                               static_cast<VkDeviceSize>(bytes.size()));
+            vmaFlushAllocation(m_Allocator, m_Allocation, offset, bytes_size);
 
         // temporary cpu mapping is not needed anymore since we already wrote it
         vmaUnmapMemory(m_Allocator, m_Allocation);
@@ -149,5 +147,63 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto VulkanBuffer::size() const noexcept -> VkDeviceSize {
         return m_Size;
+    }
+
+    auto VulkanBuffer::read(std::span<std::byte> output, VkDeviceSize offset)
+        -> void {
+        if (m_MemoryUsage != GpuMemoryUsage::Readback) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanBuffer::read requires GpuMemoryUsage::Readback");
+        }
+
+        if (output.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanBuffer::read requires a non-empty output span");
+        }
+
+        const auto output_size = static_cast<VkDeviceSize>(output.size());
+
+        if (offset > m_Size || output_size > m_Size - offset) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanBuffer::read range exceeds the buffer size");
+        }
+
+        void *mapped_data = nullptr;
+        const VkResult map_result =
+            vmaMapMemory(m_Allocator, m_Allocation, &mapped_data);
+
+        if (map_result != VK_SUCCESS) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanBufferMappingFailed,
+                "Failed to map Vulkan buffer allocation",
+                Core::Error::NativeError(static_cast<int>(map_result),
+                                         std::string(toString(map_result))),
+                "Map Vulkan Buffer Allocation");
+        }
+
+        const VkResult invalidate_result = vmaInvalidateAllocation(
+            m_Allocator, m_Allocation, offset, output_size);
+
+        if (invalidate_result != VK_SUCCESS) {
+            vmaUnmapMemory(m_Allocator, m_Allocation);
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanBufferInvalidationFailed,
+                "Failed to invalidate Vulkan buffer allocation",
+                Core::Error::NativeError(
+                    static_cast<int>(invalidate_result),
+                    std::string(toString(invalidate_result))),
+                "Invalidate Vulkan Buffer Allocation");
+        }
+
+        auto *mapped_byte = static_cast<std::byte *>(mapped_data) + offset;
+
+        std::memcpy(output.data(), mapped_byte, output_size);
+        vmaUnmapMemory(m_Allocator, m_Allocation);
     }
 } // namespace SNE::Engine::Renderer::Vulkan

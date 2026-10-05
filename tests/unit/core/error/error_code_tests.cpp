@@ -252,6 +252,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanBufferFlushFailed,
             "VulkanBufferFlushFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanBufferInvalidationFailed,
+            "VulkanBufferInvalidationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, UnknownErrorCodeHasFallbackName) {

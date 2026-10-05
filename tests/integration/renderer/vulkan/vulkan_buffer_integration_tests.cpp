@@ -2,8 +2,11 @@
 #include "engine/renderer/vulkan/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/vulkan_device_discovery.hpp"
+#include "engine/renderer/vulkan/vulkan_immediate_submission.hpp"
 #include "engine/renderer/vulkan/vulkan_memory_allocator.hpp"
 #include "engine/renderer/vulkan/vulkan_queue_families.hpp"
+#include "engine/renderer/vulkan/vulkan_readback.hpp"
+#include "engine/renderer/vulkan/vulkan_upload.hpp"
 #include <array>
 #include <cstdint>
 #include <gtest/gtest.h>
@@ -11,7 +14,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-namespace Vulkan = SNE::Engine::Renderer::Vulkan;
+namespace Renderer = SNE::Engine::Renderer;
+namespace Vulkan = Renderer::Vulkan;
 
 class VulkanBufferIntegrationTests : public ::testing::Test {
   protected:
@@ -119,7 +123,7 @@ TEST_F(VulkanBufferIntegrationTests, CreatesAndDestroysVmaBackedBuffer) {
     const Vulkan::VulkanBufferCreateInfo buffer_create_info{
         .size = 256U,
         .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        .memory_usage = SNE::Engine::Renderer::GpuMemoryUsage::Device,
+        .memory_usage = Renderer::GpuMemoryUsage::Device,
     };
 
     if (!m_MemoryAllocator.has_value()) {
@@ -148,12 +152,65 @@ TEST_F(VulkanBufferIntegrationTests, WritesToVmaBackedUploadBuffer) {
 
     Vulkan::VulkanBufferCreateInfo buffer_create_info{};
     buffer_create_info.size = static_cast<VkDeviceSize>(bytes.size());
-    buffer_create_info.memory_usage =
-        SNE::Engine::Renderer::GpuMemoryUsage::Upload;
+    buffer_create_info.memory_usage = Renderer::GpuMemoryUsage::Upload;
     buffer_create_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
     Vulkan::VulkanBuffer buffer = Vulkan::VulkanBuffer(
         m_MemoryAllocator.value().nativeHandle(), buffer_create_info);
 
     buffer.write(bytes);
+}
+
+TEST_F(VulkanBufferIntegrationTests, UploadsAndReadsBackBufferData) {
+    ASSERT_NE(m_Instance, VK_NULL_HANDLE);
+    ASSERT_NE(m_PhysicalDevice, VK_NULL_HANDLE);
+    ASSERT_NE(m_Device, VK_NULL_HANDLE);
+
+    if (!m_MemoryAllocator.has_value()) {
+        FAIL() << "Failed to get a value for memory allocator";
+    }
+
+    std::array<std::byte, 4> input_bytes{
+        std::byte{0x01},
+        std::byte{0x02},
+        std::byte{0x03},
+        std::byte{0x04},
+    };
+
+    std::array<std::byte, 4> output_bytes{
+        std::byte{0x00},
+        std::byte{0x00},
+        std::byte{0x00},
+        std::byte{0x00},
+    };
+
+    VkQueue graphics_queue{VK_NULL_HANDLE};
+
+    vkGetDeviceQueue(m_Device, m_SelectedQueueFamily.family_index, 0U,
+                     &graphics_queue);
+
+    ASSERT_NE(graphics_queue, VK_NULL_HANDLE);
+
+    Vulkan::VulkanImmediateSubmission immediate_submission =
+        Vulkan::VulkanImmediateSubmission(m_Device, graphics_queue,
+                                          m_SelectedQueueFamily.family_index);
+
+    const auto input_size = static_cast<VkDeviceSize>(input_bytes.size());
+
+    Vulkan::VulkanBufferCreateInfo buffer_create_info{};
+    buffer_create_info.size = input_size;
+    buffer_create_info.usage =
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    buffer_create_info.memory_usage = Renderer::GpuMemoryUsage::Device;
+
+    Vulkan::VulkanBuffer device_buffer = Vulkan::VulkanBuffer(
+        m_MemoryAllocator.value().nativeHandle(), buffer_create_info);
+
+    Vulkan::uploadBufferData(m_MemoryAllocator.value().nativeHandle(),
+                             immediate_submission, device_buffer, input_bytes);
+
+    Vulkan::readBufferData(m_MemoryAllocator.value().nativeHandle(),
+                           immediate_submission, device_buffer, output_bytes);
+
+    EXPECT_EQ(input_bytes, output_bytes);
 }

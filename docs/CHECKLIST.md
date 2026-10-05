@@ -473,7 +473,7 @@
 - [x] Define buffer-memory ownership
 - [x] Define image-memory ownership
 - [x] Define upload-memory policy
-- [ ] Define readback-memory policy
+- [x] Define readback-memory policy
 - [ ] Define persistent-mapping policy
 - [ ] Define resource-retirement policy
 - [ ] Define allocation diagnostics
@@ -489,7 +489,7 @@
 - [x] Support image allocation
 - [x] Add staging-upload path
 - [x] Add mapped-upload path where appropriate
-- [ ] Add readback path when needed
+- [x] Add readback path when needed
 - [ ] Respect Vulkan resource and allocation alignment requirements
 - [ ] Add memory-budget queries when supported
 - [ ] Add basic allocation statistics
@@ -501,7 +501,7 @@
 - [ ] Test alignment calculations
 - [x] Test buffer allocation lifecycle
 - [x] Test image allocation lifecycle
-- [ ] Test upload correctness
+- [x] Test upload correctness
 - [ ] Test partial allocation failure
 - [ ] Test deferred retirement
 - [ ] Run Vulkan validation
@@ -637,7 +637,7 @@
 - [ ] Test staging upload with destination offsets
 - [ ] Test staging upload range boundaries
 - [ ] Test upload correctness through readback
-- [ ] Test CPU -> upload -> device -> readback -> CPU round trip
+- [x] Test CPU -> upload -> device -> readback -> CPU round trip
 - [ ] Test partial transfer correctness
 - [ ] Test minimized-window behavior
 - [ ] Test repeated window resizing

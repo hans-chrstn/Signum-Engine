@@ -101,6 +101,8 @@ namespace SNE::Engine::Core::Error {
         VulkanBufferMappingFailed,
         /** Flushing a mapped Vulkan buffer allocation failed. */
         VulkanBufferFlushFailed,
+        /** Failed to invalidate Vulkan buffer. */
+        VulkanBufferInvalidationFailed,
     };
 
     /**

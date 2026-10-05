@@ -33,7 +33,7 @@ namespace SNE::Engine::Renderer::Vulkan {
      */
     auto uploadBufferData(VmaAllocator allocator,
                           VulkanImmediateSubmission &immediate_submission,
-                          VulkanBuffer &destination,
+                          const VulkanBuffer &destination,
                           std::span<const std::byte> bytes,
                           VkDeviceSize destination_offset = 0U) -> void;
 } // namespace SNE::Engine::Renderer::Vulkan

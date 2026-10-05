@@ -110,6 +110,26 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> void;
 
         /**
+         * @brief Reads data from this readback buffer into CPU memory.
+         *
+         * Copies bytes from the buffer's backing allocation into the supplied
+         * output span beginning at the specified byte offset.
+         *
+         * This operation is valid only for buffers created with
+         * GpuMemoryUsage::Readback.
+         *
+         * @param output Destination span that receives the bytes read from the
+         * buffer.
+         * @param offset Byte offset within the buffer at which reading begins.
+         *
+         * @pre The supplied output span is not empty.
+         * @pre The requested byte range fits entirely within the buffer.
+         * @pre This buffer was created with GpuMemoryUsage::Readback.
+         */
+        auto read(std::span<std::byte> output, VkDeviceSize offset = 0U)
+            -> void;
+
+        /**
          * @brief Returns the underlying Vulkan buffer handle.
          *
          * The returned handle is non-owning and remains valid only while this

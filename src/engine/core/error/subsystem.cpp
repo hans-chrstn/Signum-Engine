@@ -47,6 +47,7 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanImageCreationFailed:
         case Code::VulkanBufferMappingFailed:
         case Code::VulkanBufferFlushFailed:
+        case Code::VulkanBufferInvalidationFailed:
             return Subsystem::Vulkan;
         }
 
