@@ -61,10 +61,15 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param development_diagnostics_enabled Whether development-oriented
          * Vulkan diagnostics should be enabled.
          *
+         * @post Successful construction produces a non-null Vulkan instance
+         * handle.
+         * @post When development diagnostics are enabled, successful
+         * construction produces a non-null Vulkan debug-messenger handle.
+         *
          * @throws Core::Error::EngineError if required instance configuration,
-         *         extension discovery or validation, API-version discovery or
-         *         validation, Vulkan instance creation, or enabled diagnostic
-         *         setup fails.
+         * extension discovery or validation, API-version discovery or
+         * validation, Vulkan instance creation, or enabled diagnostic setup
+         * fails.
          */
         explicit VulkanInstance(const std::string &application_name,
                                 bool development_diagnostics_enabled);

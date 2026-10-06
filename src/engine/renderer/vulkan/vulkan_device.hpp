@@ -56,6 +56,21 @@ namespace SNE::Engine::Renderer::Vulkan {
          * selected physical device and used when selecting optional device
          * extensions to enable.
          *
+         * @pre physical_device must be a valid Vulkan physical-device handle.
+         * @pre queue_family_requests must contain requests for the selected
+         * graphics and presentation queue families.
+         * @pre Each queue-family request must use a unique queue-family index.
+         * @pre Each queue-family request must contain at least one priority.
+         * @pre Each queue-family request count must be representable by
+         * std::uint32_t.
+         * @pre Each queue priority must be within the range [0.0, 1.0].
+         *
+         * @post Successful construction owns a non-null Vulkan logical-device
+         * handle.
+         * @post Successful construction provides a valid graphics queue handle.
+         * @post Successful construction provides a valid presentation queue
+         * handle.
+         *
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * logical device.
          */

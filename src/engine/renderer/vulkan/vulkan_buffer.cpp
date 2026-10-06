@@ -66,6 +66,22 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(buffer_result))),
                 "Create Vulkan Buffer");
         }
+
+        if (m_Buffer == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful VMA buffer creation must produce a non-null Vulkan "
+                "buffer handle");
+        }
+
+        if (m_Allocation == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful VMA buffer creation must produce a valid VMA "
+                "allocation");
+        }
     }
 
     VulkanBuffer::~VulkanBuffer() noexcept {

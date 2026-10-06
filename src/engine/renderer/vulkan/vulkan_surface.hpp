@@ -24,11 +24,22 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan surface for a GLFW window.
+         * @brief Creates a Vulkan presentation surface for a GLFW window.
+         *
+         * Creates and owns a Vulkan surface associated with the supplied GLFW
+         * window.
+         *
+         * The Vulkan instance and GLFW window are borrowed dependencies and
+         * must remain valid for the lifetime of this surface.
          *
          * @param instance Vulkan instance used to create and later destroy the
          * surface.
          * @param window GLFW window associated with the surface.
+         *
+         * @pre instance must be a valid Vulkan instance handle.
+         * @pre window must point to a valid GLFW window.
+         *
+         * @post Successful creation produces a non-null Vulkan surface handle.
          *
          * @throws Core::Error::EngineError if the Vulkan surface cannot be
          * created.

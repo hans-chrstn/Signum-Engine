@@ -39,13 +39,28 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Creates a Vulkan graphics pipeline for the supplied color
          * attachment format.
          *
+         * Creates and owns the pipeline layout and graphics pipeline used for
+         * Vulkan dynamic rendering with the supplied color-attachment format.
+         *
+         * The logical device is borrowed and must remain valid for the lifetime
+         * of this object.
+         *
          * @param device Logical device used to create and destroy pipeline
          * resources.
          * @param color_attachment_format Format of the color attachment used
          * with the graphics pipeline.
          *
-         * @throws Core::Error::EngineError if creation of the pipeline layout
-         * or graphics pipeline fails.
+         * @pre device must be a valid Vulkan logical-device handle.
+         * @pre color_attachment_format must not be VK_FORMAT_UNDEFINED.
+         *
+         * @post Successful pipeline-layout creation produces a non-null Vulkan
+         * pipeline-layout handle.
+         * @post Successful graphics-pipeline creation produces a non-null
+         * Vulkan graphics-pipeline handle.
+         *
+         * @throws Core::Error::EngineError if shader loading, shader-module
+         * creation, pipeline-layout creation, or graphics-pipeline creation
+         * fails.
          */
         VulkanGraphicsPipeline(VkDevice device,
                                VkFormat color_attachment_format);

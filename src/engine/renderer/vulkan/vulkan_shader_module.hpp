@@ -34,11 +34,24 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan shader module from compiled SPIR-V bytecode.
+         * @brief Creates a Vulkan shader module from SPIR-V bytecode.
          *
-         * @param device Logical device used to create and destroy the shader
-         * module.
-         * @param spirv Compiled SPIR-V words used to create the shader module.
+         * Creates and owns a Vulkan shader module using the supplied logical
+         * device and SPIR-V code.
+         *
+         * The logical device is borrowed and must remain valid for the lifetime
+         * of this shader module. The supplied SPIR-V data is borrowed only
+         * during construction and is not retained.
+         *
+         * @param device Logical device used to create and later destroy the
+         * shader module.
+         * @param spirv SPIR-V code used to create the shader module.
+         *
+         * @pre device must be a valid Vulkan logical-device handle.
+         * @pre spirv must not be empty.
+         *
+         * @post Successful creation produces a non-null Vulkan shader-module
+         * handle.
          *
          * @throws Core::Error::EngineError if Vulkan fails to create the shader
          * module.

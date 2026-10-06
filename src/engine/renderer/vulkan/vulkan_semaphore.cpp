@@ -31,6 +31,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(result))),
                 "Create Vulkan Semaphore");
         }
+
+        if (m_Semaphore == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan semaphore creation must produce a non-null "
+                "semaphore handle");
+        }
     }
 
     auto VulkanSemaphore::destroy() noexcept -> void {

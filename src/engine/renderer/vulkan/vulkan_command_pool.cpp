@@ -40,6 +40,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                     std::string(toString(command_pool_result))),
                 "Create Vulkan Command Pool");
         }
+
+        if (m_CommandPool == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan command-pool creation must produce a "
+                "non-null command pool handle");
+        }
     }
 
     VulkanCommandPool::~VulkanCommandPool() noexcept {
@@ -111,6 +119,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::NativeError(static_cast<int>(result),
                                          std::string(toString(result))),
                 "Allocate Vulkan Command Buffers");
+        }
+
+        for (const VkCommandBuffer &command_buffer : command_buffers) {
+            if (command_buffer == VK_NULL_HANDLE) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Postcondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Successful Vulkan command-buffer allocation must produce "
+                    "non-null command buffer handles");
+            }
         }
 
         return command_buffers;

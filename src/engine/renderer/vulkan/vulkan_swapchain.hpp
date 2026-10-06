@@ -66,8 +66,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @param physical_device Physical device whose surface capabilities,
          * formats, and presentation modes are used to configure the swapchain.
-         * @param device Logical device used to create and later destroy
-         * the swapchain.
+         * @param device Logical device used to create and later destroy the
+         * swapchain.
          * @param surface Vulkan surface to which swapchain images will be
          * presented.
          * @param queue_families Selected graphics and presentation queue
@@ -79,6 +79,17 @@ namespace SNE::Engine::Renderer::Vulkan {
          * behavior requested from the renderer.
          * @param fifo_latest_ready_enabled Whether FIFO latest-ready
          * presentation is enabled on the logical device.
+         *
+         * @pre physical_device must be a valid Vulkan physical-device handle.
+         * @pre device must be a valid Vulkan logical-device handle.
+         * @pre surface must be a valid Vulkan surface handle.
+         *
+         * @post Successful construction produces a non-null Vulkan swapchain
+         * handle.
+         * @post Successful swapchain image enumeration produces at least one
+         * image.
+         * @post Every enumerated swapchain image handle is non-null.
+         * @post Every created swapchain image-view handle is non-null.
          *
          * @throws Core::Error::EngineError if swapchain support cannot be
          * queried, swapchain creation fails, swapchain images cannot be

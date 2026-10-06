@@ -37,6 +37,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(result))),
                 "Create Vulkan Window Surface");
         }
+
+        if (m_Surface == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan surface creation must produce a non-null "
+                "surface handle");
+        }
     }
 
     VulkanSurface::~VulkanSurface() {

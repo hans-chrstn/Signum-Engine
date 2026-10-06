@@ -72,23 +72,35 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan image with allocator-managed backing memory.
+         * @brief Creates a Vulkan image and its backing allocation.
          *
-         * Creates the Vulkan image and its associated memory allocation
-         * according to the supplied creation description.
+         * Creates a Vulkan image using the supplied memory allocator and
+         * allocates device-oriented backing memory according to the engine's
+         * Vulkan memory policy.
          *
-         * The VulkanMemoryAllocator is borrowed and must remain valid for the
-         * lifetime of this VulkanImage.
+         * The allocator is borrowed and must remain valid for the lifetime of
+         * this image.
          *
-         * @param allocator Engine-owned Vulkan memory allocator used to create
-         * and destroy the image and its backing allocation.
-         * @param image_info Description of the image.
+         * @param allocator Vulkan memory allocator used to create and destroy
+         * the image allocation.
+         * @param create_info Image type, extent, format, and Vulkan usage
+         * flags.
          *
-         * @throws Core::Error::EngineError if image creation or memory
-         * allocation fails.
+         * @pre allocator must own a valid VMA allocator.
+         * @pre create_info.image_type must be a supported Vulkan image type.
+         * @pre create_info.extent must satisfy the dimensional requirements of
+         * the requested image type.
+         * @pre create_info.format must not be VK_FORMAT_UNDEFINED.
+         * @pre create_info.usage must contain at least one Vulkan image usage
+         * flag.
+         *
+         * @post Successful creation produces a non-null Vulkan image handle.
+         * @post Successful creation produces a valid VMA allocation.
+         *
+         * @throws Core::Error::EngineError if VMA fails to create the image.
          */
         VulkanImage(const VulkanMemoryAllocator &allocator,
-                    const VulkanImageCreateInfo &image_info);
+                    const VulkanImageCreateInfo &create_info);
 
         /**
          * @brief Releases the owned Vulkan image and its backing allocation.

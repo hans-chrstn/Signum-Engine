@@ -157,11 +157,33 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Create Vulkan Device");
         }
 
+        if (m_Device == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan device creation must produce a non-null "
+                "logical device handle");
+        }
+
         vkGetDeviceQueue(m_Device, graphics_family, std::uint32_t{0},
                          &m_GraphicsQueue);
 
         vkGetDeviceQueue(m_Device, presentation_family, std::uint32_t{0},
                          &m_PresentationQueue);
+
+        if (m_GraphicsQueue == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanDevice must retrieve a valid graphics queue");
+        }
+
+        if (m_PresentationQueue == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanDevice must retrieve a valid presentation queue");
+        }
     }
 
     VulkanDevice::~VulkanDevice() noexcept {

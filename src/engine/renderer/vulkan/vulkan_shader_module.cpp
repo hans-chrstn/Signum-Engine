@@ -44,6 +44,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(result))),
                 "Create Vulkan Shader Module");
         }
+
+        if (m_ShaderModule == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan shader-module creation must produce a "
+                "non-null shader module handle");
+        }
     }
 
     VulkanShaderModule::~VulkanShaderModule() noexcept {

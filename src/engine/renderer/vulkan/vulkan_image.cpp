@@ -12,7 +12,7 @@
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanImage::VulkanImage(const VulkanMemoryAllocator &allocator,
-                             const VulkanImageCreateInfo &image_info)
+                             const VulkanImageCreateInfo &create_info)
         : m_Allocator(allocator.nativeHandle()) {
         if (allocator.nativeHandle() == nullptr) {
             Core::Assertion::failAssertion(
@@ -21,23 +21,23 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanImage requires a valid Vulkan memory allocator");
         }
 
-        switch (image_info.image_type) {
+        switch (create_info.image_type) {
         case VK_IMAGE_TYPE_1D:
-            if (image_info.extent.width == 0U) {
+            if (create_info.extent.width == 0U) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Precondition,
                     Core::Error::Subsystem::Vulkan,
                     "VulkanImage requires a non-zero width for 1D images");
             }
 
-            if (image_info.extent.height != 1U) {
+            if (create_info.extent.height != 1U) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Precondition,
                     Core::Error::Subsystem::Vulkan,
                     "VulkanImage requires a height of one for 1D images");
             }
 
-            if (image_info.extent.depth != 1U) {
+            if (create_info.extent.depth != 1U) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Precondition,
                     Core::Error::Subsystem::Vulkan,
@@ -45,8 +45,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             }
             break;
         case VK_IMAGE_TYPE_2D:
-            if (image_info.extent.width == 0U ||
-                image_info.extent.height == 0U) {
+            if (create_info.extent.width == 0U ||
+                create_info.extent.height == 0U) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Precondition,
                     Core::Error::Subsystem::Vulkan,
@@ -54,7 +54,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                     "images");
             }
 
-            if (image_info.extent.depth != 1U) {
+            if (create_info.extent.depth != 1U) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Precondition,
                     Core::Error::Subsystem::Vulkan,
@@ -62,9 +62,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             }
             break;
         case VK_IMAGE_TYPE_3D:
-            if (image_info.extent.width == 0U ||
-                image_info.extent.height == 0U ||
-                image_info.extent.depth == 0U) {
+            if (create_info.extent.width == 0U ||
+                create_info.extent.height == 0U ||
+                create_info.extent.depth == 0U) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Precondition,
                     Core::Error::Subsystem::Vulkan,
@@ -78,14 +78,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanImage requires a supported image type");
         }
 
-        if (image_info.format == VK_FORMAT_UNDEFINED) {
+        if (create_info.format == VK_FORMAT_UNDEFINED) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
                 "VulkanImage requires a defined image format");
         }
 
-        if (image_info.usage == 0U) {
+        if (create_info.usage == 0U) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
@@ -94,14 +94,14 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         VkImageCreateInfo image_create_info{};
         image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        image_create_info.imageType = image_info.image_type;
-        image_create_info.extent = image_info.extent;
+        image_create_info.imageType = create_info.image_type;
+        image_create_info.extent = create_info.extent;
         image_create_info.mipLevels = 1U;
         image_create_info.arrayLayers = 1U;
-        image_create_info.format = image_info.format;
+        image_create_info.format = create_info.format;
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        image_create_info.usage = image_info.usage;
+        image_create_info.usage = create_info.usage;
         image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -123,6 +123,22 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::NativeError(static_cast<int>(result),
                                          std::string(toString(result))),
                 "Create Vulkan Image");
+        }
+
+        if (m_Image == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful VMA image creation must produce a non-null Vulkan "
+                "image handle");
+        }
+
+        if (m_Allocation == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful VMA image creation must produce a valid VMA "
+                "allocation");
         }
     }
 

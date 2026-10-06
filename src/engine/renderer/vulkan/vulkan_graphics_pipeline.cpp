@@ -181,6 +181,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Create Vulkan Pipeline Layout");
         }
 
+        if (m_PipelineLayout == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan pipeline-layout creation must produce a "
+                "non-null pipeline layout handle");
+        }
+
         VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{};
         graphics_pipeline_create_info.sType =
             VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -224,6 +232,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::NativeError(static_cast<int>(result),
                                          std::string(toString(result))),
                 "Create Vulkan Graphics Pipeline");
+        }
+
+        if (m_Pipeline == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan graphics-pipeline creation must produce a "
+                "non-null graphics pipeline handle");
         }
     }
 

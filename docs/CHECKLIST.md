@@ -561,8 +561,8 @@
 
 - [x] Audit existing `failAssertion` calls for correct assertion type
 - [x] Add missing preconditions to backend-facing operations
-- [ ] Add invariants for internal assumptions that must always hold
-- [ ] Add postconditions where successful operations establish required state
+- [x] Add invariants for internal assumptions that must always hold
+- [x] Add postconditions where successful operations establish required state
 - [ ] Remove redundant contract checks already guaranteed by lower-level ownership
 - [ ] Add reusable overflow-safe byte-range validation
 - [ ] Replace duplicated buffer range calculations with the shared helper
@@ -582,8 +582,8 @@
 - [ ] Keep graphics-queue transfers as the current baseline
 - [ ] Prevent adding a dedicated transfer queue without resource ownership handling
 - [x] Validate selected queue-family capacity
-- [ ] Verify retrieved queues satisfy selected-device guarantees
-- [ ] Assert frame command-buffer availability before using `.front()`
+- [x] Verify retrieved queues satisfy selected-device guarantees
+- [x] Assert frame command-buffer availability before using `.front()`
 - [ ] Harden swapchain selection against invalid or empty inputs
 - [ ] Handle zero-sized framebuffer state
 - [ ] Add swapchain recreation after acquire-time out-of-date results
@@ -596,9 +596,9 @@
 - [ ] Audit destructors for safe partially constructed or empty state
 - [ ] Review GPU resource wrappers for move support required by future containers
 - [ ] Add move semantics only where a concrete ownership requirement exists
-- [ ] Verify successful VMA buffer creation produces valid buffer/allocation state
-- [ ] Verify successful VMA image creation produces valid image/allocation state
-- [ ] Verify command-buffer allocation returns the requested number of handles
+- [x] Verify successful VMA buffer creation produces valid buffer/allocation state
+- [x] Verify successful VMA image creation produces valid image/allocation state
+- [x] Verify command-buffer allocation returns the requested number of handles
 - [ ] Widen `Core::Error::Code` storage beyond `std::uint8_t`
 - [ ] Prevent error-code string mappings from silently becoming incomplete
 - [ ] Prevent error-code subsystem mappings from silently becoming incomplete
@@ -650,13 +650,13 @@
 - [ ] Test every error code has a valid string
 - [ ] Test every error code has a valid subsystem
 - [ ] Test error metadata completeness
-- [ ] Run clean Debug build
-- [ ] Run unit tests
-- [ ] Run Vulkan integration tests
-- [ ] Run ASan/UBSan
-- [ ] Run Valgrind
-- [ ] Run Clang-Tidy
-- [ ] Run formatting checks
+- [x] Run clean Debug build
+- [x] Run unit tests
+- [x] Run Vulkan integration tests
+- [x] Run ASan/UBSan
+- [x] Run Valgrind
+- [x] Run Clang-Tidy
+- [x] Run formatting checks
 - [ ] Run warnings-as-errors build
 - [ ] Run Vulkan validation cleanly
 - [ ] Generate Doxygen without warnings

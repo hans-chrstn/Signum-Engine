@@ -15,6 +15,41 @@
 #include <span>
 #include <string>
 
+namespace Core = SNE::Engine::Core;
+
+namespace {
+    /**
+     * @brief Validates the images returned by Vulkan swapchain enumeration.
+     *
+     * Verifies that successful swapchain image enumeration produced at least
+     * one image and that every returned Vulkan image handle is non-null.
+     *
+     * @param images Swapchain image handles returned by Vulkan.
+     *
+     * @post images contains at least one image.
+     * @post Every image handle in images is non-null.
+     */
+    auto validateSwapchainImages(std::span<const VkImage> images) -> void {
+        if (images.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan swapchain image enumeration must "
+                "produce at least one image");
+        }
+
+        for (const VkImage &image : images) {
+            if (image == VK_NULL_HANDLE) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Postcondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Successful Vulkan swapchain image enumeration must "
+                    "produce non-null image handles");
+            }
+        }
+    }
+} // namespace
+
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanSwapchain::VulkanSwapchain(
         VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface,
@@ -112,6 +147,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Create Vulkan Swapchain");
         }
 
+        if (m_Swapchain == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan swapchain creation must produce a non-null "
+                "swapchain handle");
+        }
+
         try {
             while (true) {
                 std::uint32_t swapchain_image_count{};
@@ -156,6 +199,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                     "Enumerate Vulkan Swapchain Images");
             }
 
+            validateSwapchainImages(m_Images);
+
             m_ImageViews.reserve(m_Images.size());
 
             for (std::size_t i{}; i < m_Images.size(); ++i) {
@@ -194,6 +239,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                             static_cast<int>(image_view_result),
                             std::string(toString(image_view_result))),
                         "Create Vulkan Image Views");
+                }
+
+                if (temporary_image_view == VK_NULL_HANDLE) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Postcondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "Successful Vulkan swapchain image-view creation must "
+                        "produce a non-null image view handle");
                 }
 
                 m_ImageViews.push_back(temporary_image_view);

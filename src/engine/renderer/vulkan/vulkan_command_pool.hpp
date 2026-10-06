@@ -37,12 +37,21 @@ namespace SNE::Engine::Renderer::Vulkan {
         /**
          * @brief Creates a Vulkan command pool for a queue family.
          *
+         * Creates and owns a Vulkan command pool associated with the supplied
+         * queue family.
+         *
+         * The logical device is borrowed and must remain valid for the lifetime
+         * of this command pool.
+         *
          * @param device Logical device used to create and later destroy the
          * command pool.
          * @param queue_family_index Queue-family index with which allocated
          * command buffers will be associated.
          *
          * @pre device must be a valid Vulkan logical-device handle.
+         *
+         * @post Successful creation produces a non-null Vulkan command-pool
+         * handle.
          *
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * command pool.
@@ -108,6 +117,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @pre This object must own a valid Vulkan command pool.
          * @pre count must be greater than zero.
+         *
+         * @post Every returned command-buffer handle is non-null after a
+         * successful Vulkan allocation.
          *
          * @return Command-buffer handles allocated from this command pool.
          *

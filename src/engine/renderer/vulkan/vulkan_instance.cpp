@@ -1,7 +1,10 @@
 #include "vulkan_instance.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "vulkan_api_version.hpp"
 #include "vulkan_extension_support.hpp"
 #include "vulkan_result.hpp"
@@ -110,6 +113,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::NativeError(static_cast<int>(result),
                                          std::string(toString(result))),
                 "Create Vulkan Instance");
+        }
+
+        if (m_Instance == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan instance creation must produce a non-null "
+                "instance handle");
         }
     }
 
@@ -292,6 +303,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::NativeError(static_cast<int>(result),
                                          std::string(toString(result))),
                 "Create Vulkan Debug Messenger");
+        }
+
+        if (m_DebugMessenger == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan debug-messenger creation must produce a "
+                "non-null debug messenger handle");
         }
     }
 

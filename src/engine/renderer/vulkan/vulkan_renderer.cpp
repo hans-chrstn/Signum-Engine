@@ -1,7 +1,10 @@
 #include "vulkan_renderer.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/vulkan_api_version.hpp"
@@ -109,6 +112,14 @@ namespace SNE::Engine::Renderer::Vulkan {
         current_frame.inFlightFence().wait();
 
         current_frame.resetCommandResources();
+
+        if (current_frame.commandBuffers().empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires the current frame to contain at least "
+                "one command buffer");
+        }
 
         const VkCommandBuffer command_buffer =
             current_frame.commandBuffers().front();

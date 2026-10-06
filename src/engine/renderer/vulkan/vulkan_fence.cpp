@@ -38,6 +38,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(result))),
                 "Create Vulkan Fence");
         }
+
+        if (m_Fence == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful Vulkan fence creation must produce a non-null "
+                "fence handle");
+        }
     }
 
     auto VulkanFence::destroy() noexcept -> void {

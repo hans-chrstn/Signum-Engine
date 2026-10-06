@@ -68,6 +68,12 @@ namespace SNE::Engine::Renderer::Vulkan {
         /**
          * @brief Creates the Vulkan memory allocator.
          *
+         * Creates and owns a VMA allocator associated with the supplied Vulkan
+         * instance, physical device, and logical device.
+         *
+         * The Vulkan handles are borrowed and must remain valid for the
+         * lifetime of this allocator.
+         *
          * @param instance Vulkan instance used by the allocator.
          * @param physical_device Physical device whose memory capabilities are
          * used.
@@ -76,6 +82,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param memory_budget_extension_enabled Whether VK_EXT_memory_budget
          * was enabled for the supplied logical device and may be used by the
          * allocator.
+         *
+         * @pre instance must be a valid Vulkan instance handle.
+         * @pre physical_device must be a valid Vulkan physical-device handle.
+         * @pre device must be a valid Vulkan logical-device handle.
+         *
+         * @post Successful creation produces a valid VMA allocator.
          *
          * @throws Core::Error::EngineError if the VMA allocator cannot be
          * created.

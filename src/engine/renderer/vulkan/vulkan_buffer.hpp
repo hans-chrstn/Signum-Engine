@@ -70,21 +70,28 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan buffer with allocator-managed backing memory.
+         * @brief Creates a Vulkan buffer and its backing allocation.
          *
-         * Creates the Vulkan buffer and its associated memory allocation
-         * according to the supplied creation description.
+         * Creates a Vulkan buffer using the supplied memory allocator and
+         * applies the engine memory policy derived from the requested GPU
+         * memory usage.
          *
-         * The VulkanMemoryAllocator is borrowed and must remain valid for the
-         * lifetime of this VulkanBuffer.
+         * The allocator is borrowed and must remain valid for the lifetime of
+         * this buffer.
          *
-         * @param allocator Engine-owned Vulkan memory allocator used to create
-         * and destroy the buffer and its backing allocation.
-         * @param create_info Description of the buffer and its memory usage
-         * policy.
+         * @param allocator Vulkan memory allocator used to create and destroy
+         * the buffer allocation.
+         * @param create_info Buffer size, usage flags, and memory-usage policy.
          *
-         * @throws Core::Error::EngineError if buffer creation or memory
-         * allocation fails.
+         * @pre allocator must own a valid VMA allocator.
+         * @pre create_info.size must be greater than zero.
+         * @pre create_info.usage must contain at least one Vulkan buffer usage
+         * flag.
+         *
+         * @post Successful creation produces a non-null Vulkan buffer handle.
+         * @post Successful creation produces a valid VMA allocation.
+         *
+         * @throws Core::Error::EngineError if VMA fails to create the buffer.
          */
         VulkanBuffer(const VulkanMemoryAllocator &allocator,
                      const VulkanBufferCreateInfo &create_info);

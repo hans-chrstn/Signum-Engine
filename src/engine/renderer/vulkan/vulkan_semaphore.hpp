@@ -33,18 +33,21 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan binary semaphore.
+         * @brief Creates a Vulkan semaphore.
          *
-         * Creates an unsignaled binary semaphore using the supplied logical
+         * Creates and owns a Vulkan semaphore using the supplied logical
          * device.
          *
          * The logical device is borrowed and must remain valid for the lifetime
-         * of this object.
+         * of this semaphore.
          *
          * @param device Logical device used to create and later destroy the
          * semaphore.
          *
          * @pre device must be a valid Vulkan logical-device handle.
+         *
+         * @post Successful creation produces a non-null Vulkan semaphore
+         * handle.
          *
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * semaphore.

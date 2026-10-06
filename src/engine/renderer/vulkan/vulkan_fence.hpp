@@ -34,21 +34,22 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan fence with the requested initial state.
+         * @brief Creates a Vulkan fence.
          *
-         * Creates a fence using the supplied logical device. The fence begins
-         * in the signaled state when initially_signaled is true and in the
-         * unsignaled state otherwise.
+         * Creates and owns a Vulkan fence using the supplied logical device.
+         * The fence may optionally be created in the signaled state.
          *
          * The logical device is borrowed and must remain valid for the lifetime
-         * of this object.
+         * of this fence.
          *
          * @param device Logical device used to create and later destroy the
          * fence.
-         * @param initially_signaled Whether the fence should begin in the
-         * signaled state.
+         * @param initially_signaled Whether the fence should initially be in
+         * the signaled state.
          *
          * @pre device must be a valid Vulkan logical-device handle.
+         *
+         * @post Successful creation produces a non-null Vulkan fence handle.
          *
          * @throws Core::Error::EngineError if Vulkan fails to create the fence.
          */

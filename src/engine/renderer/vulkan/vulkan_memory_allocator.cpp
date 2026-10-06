@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan_core.h>
 #define VMA_IMPLEMENTATION
 #include "vulkan_memory_allocator.hpp"
 
@@ -59,6 +58,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::NativeError(static_cast<int>(result),
                                          std::string(toString(result))),
                 "Create Vulkan Memory Allocator");
+        }
+
+        if (m_Allocator == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Postcondition,
+                Core::Error::Subsystem::Vulkan,
+                "Successful VMA allocator creation must produce a valid "
+                "allocator");
         }
     }
 
