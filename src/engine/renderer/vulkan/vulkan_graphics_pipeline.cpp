@@ -33,9 +33,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         std::vector<std::uint32_t> vertex =
-            loadSpirv("build/shaders/triangle.vert.spv");
+            loadSpirv("build/shaders/blackhole.vert.spv");
         std::vector<std::uint32_t> fragment =
-            loadSpirv("build/shaders/triangle.frag.spv");
+            loadSpirv("build/shaders/blackhole.frag.spv");
 
         VulkanShaderModule vertex_shader = VulkanShaderModule(m_Device, vertex);
         VulkanShaderModule fragment_shader =

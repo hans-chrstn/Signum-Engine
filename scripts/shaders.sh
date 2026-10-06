@@ -11,14 +11,14 @@ shader_output_dir="${project_root}/build/shaders"
 mkdir -p -- "${shader_output_dir}"
 
 glslc \
-    "${shader_source_dir}/triangle.vert" \
-    -o "${shader_output_dir}/triangle.vert.spv"
+    "${shader_source_dir}/blackhole.vert" \
+    -o "${shader_output_dir}/blackhole.vert.spv"
 
 glslc \
-    "${shader_source_dir}/triangle.frag" \
-    -o "${shader_output_dir}/triangle.frag.spv"
+    "${shader_source_dir}/blackhole.frag" \
+    -o "${shader_output_dir}/blackhole.frag.spv"
 
-spirv-val "${shader_output_dir}/triangle.vert.spv"
-spirv-val "${shader_output_dir}/triangle.frag.spv"
+spirv-val "${shader_output_dir}/blackhole.vert.spv"
+spirv-val "${shader_output_dir}/blackhole.frag.spv"
 
 printf 'Compiled and validated shaders: %s\n' "${shader_output_dir}"
