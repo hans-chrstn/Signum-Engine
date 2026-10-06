@@ -30,14 +30,11 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v22
 
-      - name: Install Vulkan software driver
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes \
-            mesa-vulkan-drivers
+      - name: Verify Vulkan software driver
+        run: nix develop .#ci --command vulkaninfo --summary
 
       - name: Verify development environment
-        run: nix develop --command just doctor
+        run: nix develop .#ci --command just doctor
 
       - name: Run Vulkan integration tests
-        run: nix develop --command just test-integration debug
+        run: nix develop .#ci --command just test-integration debug

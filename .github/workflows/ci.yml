@@ -59,7 +59,7 @@ jobs:
         run: nix develop --command just build experimental
 
       - name: Test experimental C++26 configuration
-        run: nix develop --command ctest --preset experimental
+        run: nix develop --command ctest --preset experimental -L "^unit$"
 
       - name: Build with AddressSanitizer and UndefinedBehaviorSanitizer
         run: nix develop --command just build asan

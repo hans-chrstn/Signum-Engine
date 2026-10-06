@@ -40,12 +40,8 @@
       vulkan-validation-layers
       freetype
     ];
-  in {
-    packages.${system}.default = pkgs.callPackage ./nix/package.nix {
-      stdenv = gccStdenv;
-    };
 
-    devShells.${system}.default =
+    mkDevShell = extraPackages:
       pkgs.mkShell.override {
         stdenv = gccStdenv;
       } {
@@ -75,7 +71,7 @@
           spirv-tools
           vulkan-tools
           renderdoc
-        ];
+        ] ++ extraPackages;
 
         buildInputs = with pkgs; [
           # Tests
@@ -115,6 +111,15 @@
           just --version
         '';
       };
+  in {
+    packages.${system}.default = pkgs.callPackage ./nix/package.nix {
+      stdenv = gccStdenv;
+    };
+
+    devShells.${system} = {
+      default = mkDevShell [];
+      ci = mkDevShell [pkgs.mesa.llvmpipeHook];
+    };
 
     apps.${system}.default = {
       type = "app";
