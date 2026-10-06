@@ -22,7 +22,16 @@
       enableLibcxx = false;
     };
 
-    clangTools = pkgs.lib.hiPrio clangToolsBase;
+    clangTools = pkgs.lib.hiPrio (clangToolsBase.overrideAttrs (oldAttrs: {
+      postInstall =
+        (oldAttrs.postInstall or "")
+        + ''
+          for tool in clangd clang-tidy clang-format; do
+            substituteInPlace "$out/bin/$tool" \
+              --replace-fail '#!/bin/sh' '#!${pkgs.bash}/bin/bash'
+          done
+        '';
+    }));
 
     runtimeLibraries = with pkgs; [
       glfw
