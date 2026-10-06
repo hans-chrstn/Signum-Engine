@@ -1,6 +1,6 @@
 # Signum Engine
 
-Game engine using C++23 built around Vulkan.
+Game engine using C++26 built around Vulkan.
 
 [![CI](https://github.com/hans-chrstn/Signum-Engine/actions/workflows/ci.yml/badge.svg)](https://github.com/hans-chrstn/Signum-Engine/actions/workflows/ci.yml)
 [![Vulkan Integration](https://github.com/hans-chrstn/Signum-Engine/actions/workflows/vulkan-integration.yml/badge.svg)](https://github.com/hans-chrstn/Signum-Engine/actions/workflows/vulkan-integration.yml)
@@ -15,8 +15,8 @@ The current development environment targets only Linux.
 
 Core requirements:
 
-- C++23
-- Clang 23
+- C++26
+- GCC 16
 - CMake 3.28+
 - Ninja
 - just
@@ -26,8 +26,7 @@ Core requirements:
 
 Development tooling also uses:
 
-- clang-format
-- clang-tidy
+- Clang 23 tools (clangd, clang-format, and clang-tidy)
 - Doxygen
 - Valgrind
 
@@ -58,6 +57,15 @@ Equivalent:
 ```bash
 just build debug
 ```
+
+Build with the experimental GCC 16 reflection and contracts support:
+
+```bash
+just build experimental
+```
+
+The regular Debug preset keeps those experimental features disabled so clangd
+and clang-tidy can use `build/debug/compile_commands.json`.
 
 ## Run
 
@@ -139,9 +147,12 @@ build/docs/doxygen/html/
 just doctor             Check the local development environment
 just configure          Configure the Debug preset
 just build              Build the Debug preset
+just build experimental Build with experimental reflection and contracts
 just release            Build the Release preset
 just run                Run the Debug executable
+just run experimental   Run the experimental executable
 just test               Run all tests
+just test experimental  Run tests with reflection and contracts enabled
 just test-unit          Run unit tests
 just test-integration   Run Vulkan integration tests
 just asan               Run tests with ASan and UBSan

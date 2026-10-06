@@ -30,7 +30,7 @@ jobs:
       - name: Show toolchain versions
         run: |
           nix develop --command bash -c '
-            clang++ --version
+            g++ --version
             clang-format --version
             clang-tidy --version
             cmake --version
@@ -54,6 +54,12 @@ jobs:
 
       - name: Run Clang-Tidy
         run: nix develop --command just tidy
+
+      - name: Build experimental C++26 configuration
+        run: nix develop --command just build experimental
+
+      - name: Test experimental C++26 configuration
+        run: nix develop --command ctest --preset experimental
 
       - name: Build with AddressSanitizer and UndefinedBehaviorSanitizer
         run: nix develop --command just build asan

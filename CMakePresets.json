@@ -22,7 +22,20 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "SIGNUM_ENABLE_SANITIZERS": false
+        "SIGNUM_ENABLE_SANITIZERS": false,
+        "SIGNUM_ENABLE_REFLECTION": false,
+        "SIGNUM_ENABLE_CONTRACTS": false
+      }
+    },
+    {
+      "name": "experimental",
+      "displayName": "Debug with C++26 experiments",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SIGNUM_ENABLE_SANITIZERS": false,
+        "SIGNUM_ENABLE_REFLECTION": true,
+        "SIGNUM_ENABLE_CONTRACTS": true
       }
     },
     {
@@ -51,6 +64,10 @@
       "configurePreset": "debug"
     },
     {
+      "name": "experimental",
+      "configurePreset": "experimental"
+    },
+    {
       "name": "asan",
       "configurePreset": "asan"
     },
@@ -63,6 +80,13 @@
     {
       "name": "debug",
       "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "experimental",
+      "configurePreset": "experimental",
       "output": {
         "outputOnFailure": true
       }

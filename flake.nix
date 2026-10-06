@@ -17,31 +17,12 @@
     };
 
     llvm = pkgs.llvmPackages_23;
-
+    gccStdenv = pkgs.gcc16Stdenv;
     clangToolsBase = llvm.clang-tools.override {
       enableLibcxx = false;
     };
 
-    clangTools = pkgs.lib.hiPrio (pkgs.symlinkJoin {
-      name = "signum-clang-tools";
-
-      paths = [
-        clangToolsBase
-      ];
-
-      nativeBuildInputs = [
-        pkgs.makeWrapper
-      ];
-
-      postBuild = ''
-        for tool in clangd clang-tidy clang-format; do
-          rm -f "$out/bin/$tool"
-
-          makeWrapper ${pkgs.bash}/bin/bash "$out/bin/$tool" \
-            --add-flags "${clangToolsBase}/bin/$tool"
-        done
-      '';
-    });
+    clangTools = pkgs.lib.hiPrio clangToolsBase;
 
     runtimeLibraries = with pkgs; [
       glfw
@@ -52,12 +33,12 @@
     ];
   in {
     packages.${system}.default = pkgs.callPackage ./nix/package.nix {
-      stdenv = llvm.stdenv;
+      stdenv = gccStdenv;
     };
 
     devShells.${system}.default =
       pkgs.mkShell.override {
-        stdenv = llvm.stdenv;
+        stdenv = gccStdenv;
       } {
         name = "signum-engine-dev";
 
@@ -71,7 +52,6 @@
           # LLVM tooling
           clangTools
           llvm.lldb
-          llvm.libstdcxxClang
 
           # Development tools
           gdb
@@ -118,7 +98,7 @@
         shellHook = ''
           echo "Signum Engine dev shell"
           echo
-          clang++ --version | head -n 1
+          g++ --version | head -n 1
           clangd --version | head -n 1
           clang-tidy --version | head -n 1
           cmake --version | head -n 1

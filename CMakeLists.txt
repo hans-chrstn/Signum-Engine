@@ -24,8 +24,52 @@ add_library(signum_project_options INTERFACE)
 target_compile_features(
   signum_project_options
   INTERFACE
-    cxx_std_23
+    cxx_std_26
 )
+
+option(
+  SIGNUM_ENABLE_REFLECTION
+  "Enable experimental C++26 reflection"
+  OFF
+)
+
+option(
+  SIGNUM_ENABLE_CONTRACTS
+  "Enable experimental C++26 contracts"
+  OFF
+)
+
+if(SIGNUM_ENABLE_REFLECTION OR SIGNUM_ENABLE_CONTRACTS)
+  if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(
+      FATAL_ERROR
+      "Experimental reflection/contracts currently require GCC"
+    )
+  endif()
+
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+    message(
+      FATAL_ERROR
+      "Experimental reflection/contracts require GCC 16 or newer"
+    )
+  endif()
+endif()
+
+if(SIGNUM_ENABLE_REFLECTION)
+  target_compile_options(
+    signum_project_options
+    INTERFACE
+      -freflection
+  )
+endif()
+
+if(SIGNUM_ENABLE_CONTRACTS)
+  target_compile_options(
+    signum_project_options
+    INTERFACE
+      -fcontracts
+  )
+endif()
 
 if(MSVC)
   target_compile_options(
