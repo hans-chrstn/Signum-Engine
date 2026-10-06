@@ -5,17 +5,17 @@
 #include "engine/platform/window.hpp"
 #include <algorithm>
 #include <cstdint>
-#include <vector>
+#include <span>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto containsPresentationMode(
-        const std::vector<VkPresentModeKHR> &presentation_modes,
+        std::span<const VkPresentModeKHR> presentation_modes,
         VkPresentModeKHR presentation_mode) -> bool {
         return std::ranges::contains(presentation_modes, presentation_mode);
     }
 
     auto
-    selectSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &surface_formats)
+    selectSurfaceFormat(std::span<const VkSurfaceFormatKHR> surface_formats)
         -> VkSurfaceFormatKHR {
         const VkSurfaceFormatKHR preferred_format{
             .format = VK_FORMAT_B8G8R8A8_SRGB,
@@ -31,10 +31,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         return surface_formats.front();
     }
 
-    auto selectPresentationMode(
-        PresentationPreference presentation_preference,
-        const std::vector<VkPresentModeKHR> &presentation_modes,
-        bool fifo_latest_ready_enabled) -> VkPresentModeKHR {
+    auto
+    selectPresentationMode(PresentationPreference presentation_preference,
+                           std::span<const VkPresentModeKHR> presentation_modes,
+                           bool fifo_latest_ready_enabled) -> VkPresentModeKHR {
         switch (presentation_preference) {
         case PresentationPreference::VSync:
             return VK_PRESENT_MODE_FIFO_KHR;

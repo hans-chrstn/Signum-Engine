@@ -3,6 +3,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "vulkan_result.hpp"
+#include <span>
 #include <string>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -38,8 +39,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         return properties;
     }
 
-    auto findGraphicsQueueFamily(
-        const std::vector<VkQueueFamilyProperties> &properties)
+    auto
+    findGraphicsQueueFamily(std::span<const VkQueueFamilyProperties> properties)
         -> std::optional<std::uint32_t> {
         for (std::size_t i{}; i < properties.size(); ++i) {
             // VK_QUEUE_GRAPHICS_BIT occupies the 0001 bit.
@@ -74,7 +75,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto findPresentationQueueFamily(
         VkPhysicalDevice device, VkSurfaceKHR surface,
-        const std::vector<VkQueueFamilyProperties> &properties)
+        std::span<const VkQueueFamilyProperties> properties)
         -> std::optional<std::uint32_t> {
 
         for (std::size_t i{}; i < properties.size(); ++i) {
@@ -87,9 +88,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         return std::nullopt;
     }
 
-    auto findQueueFamilyIndices(
-        VkPhysicalDevice device, VkSurfaceKHR surface,
-        const std::vector<VkQueueFamilyProperties> &properties)
+    auto
+    findQueueFamilyIndices(VkPhysicalDevice device, VkSurfaceKHR surface,
+                           std::span<const VkQueueFamilyProperties> properties)
         -> QueueFamilyIndices {
         const std::optional<std::uint32_t> graphics_family =
             findGraphicsQueueFamily(properties);

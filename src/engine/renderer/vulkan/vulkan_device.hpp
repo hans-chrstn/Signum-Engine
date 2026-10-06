@@ -1,6 +1,6 @@
 #pragma once
 #include "vulkan_queue_requests.hpp"
-#include <vector>
+#include <span>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -48,8 +48,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * is created.
          * @param queue_families Selected graphics and presentation queue
          * families used to retrieve their corresponding logical-device queues.
-         * @param queue_family_requests Unique queue-family requests describing
-         * the queues to create and their priorities.
+         * @param queue_family_requests Contiguous sequence of unique
+         * queue-family requests describing the queues to create and their
+         * priorities.
          * @param logical_device_configuration Vulkan features selected for
          * logical-device creation.
          * @param optional_capabilities Optional capabilities reported by the
@@ -74,13 +75,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @throws Core::Error::EngineError if Vulkan fails to create the
          * logical device.
          */
-        VulkanDevice(
-            VkPhysicalDevice physical_device,
-            const SelectedQueueFamilies &queue_families,
-            const std::vector<QueueFamilyRequest> &queue_family_requests,
-            const LogicalDeviceFeatureConfiguration
-                &logical_device_configuration,
-            const OptionalDeviceCapabilities &optional_capabilities);
+        VulkanDevice(VkPhysicalDevice physical_device,
+                     const SelectedQueueFamilies &queue_families,
+                     std::span<const QueueFamilyRequest> queue_family_requests,
+                     const LogicalDeviceFeatureConfiguration
+                         &logical_device_configuration,
+                     const OptionalDeviceCapabilities &optional_capabilities);
 
         /**
          * @brief Destroys the owned Vulkan logical device.

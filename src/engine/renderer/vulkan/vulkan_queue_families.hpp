@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -78,18 +79,20 @@ namespace SNE::Engine::Renderer::Vulkan {
         -> std::vector<VkQueueFamilyProperties>;
 
     /**
-     * @brief Finds a queue family that supports graphics operations.
+     * @brief Finds the first queue family supporting graphics operations.
      *
-     * Searches the supplied queue-family properties for the first family whose
-     * queue flags contain VK_QUEUE_GRAPHICS_BIT.
+     * Examines the supplied queue-family properties in Vulkan queue-family
+     * order and returns the index of the first family advertising graphics
+     * capability.
      *
-     * @param properties Queue-family properties to search.
+     * @param properties Contiguous sequence of queue-family properties reported
+     * by the physical device.
      *
-     * @return The queue-family index when a graphics-capable family is found,
-     *         or std::nullopt when none is available.
+     * @return Index of the first graphics-capable queue family, or std::nullopt
+     * if no graphics-capable family is available.
      */
-    [[nodiscard]] auto findGraphicsQueueFamily(
-        const std::vector<VkQueueFamilyProperties> &properties)
+    [[nodiscard]] auto
+    findGraphicsQueueFamily(std::span<const VkQueueFamilyProperties> properties)
         -> std::optional<std::uint32_t>;
 
     /**
@@ -114,52 +117,49 @@ namespace SNE::Engine::Renderer::Vulkan {
                                             VkSurfaceKHR surface) -> bool;
 
     /**
-     * @brief Finds a queue family that supports presentation to a Vulkan
-     * surface.
+     * @brief Finds the first queue family supporting presentation to a surface.
      *
-     * Searches the supplied queue families and returns the first family whose
-     * queue can present to the specified surface.
+     * Queries presentation support for each supplied queue-family index and
+     * returns the first family capable of presenting to the supplied surface.
      *
-     * @param device Physical device that owns the queue families.
-     * @param surface Vulkan surface against which presentation support is
-     * tested.
-     * @param properties Queue-family properties used to determine valid family
-     *                   indices.
+     * @param device Physical device whose queue families are evaluated.
+     * @param surface Surface against which presentation support is queried.
+     * @param properties Contiguous sequence of queue-family properties reported
+     * by the physical device.
      *
-     * @return The queue-family index when a presentation-capable family is
-     * found, or std::nullopt when none is available.
+     * @return Index of the first presentation-capable queue family, or
+     * std::nullopt if no suitable family is available.
      *
-     * @throws Core::Error::EngineError if Vulkan fails to query presentation
-     *         support for a queue family.
+     * @throws Core::Error::EngineError if Vulkan fails while querying surface
+     * presentation support.
      */
     [[nodiscard]] auto findPresentationQueueFamily(
         VkPhysicalDevice device, VkSurfaceKHR surface,
-        const std::vector<VkQueueFamilyProperties> &properties)
+        std::span<const VkQueueFamilyProperties> properties)
         -> std::optional<std::uint32_t>;
 
     /**
-     * @brief Finds the graphics and presentation queue-family indices for a
-     * device.
+     * @brief Finds the graphics and presentation queue families required by the
+     * renderer.
      *
-     * Searches the supplied queue-family properties for a graphics-capable
-     * family and queries presentation support against the specified Vulkan
-     * surface.
+     * Searches the supplied queue-family properties for graphics support and
+     * presentation support for the supplied Vulkan surface.
      *
-     * Missing queue-family capabilities are represented by empty std::optional
-     * values in the returned QueueFamilyIndices structure.
+     * Graphics and presentation roles may resolve to the same queue family.
      *
-     * @param device Physical device that owns the queue families.
-     * @param surface Vulkan surface used when checking presentation support.
-     * @param properties Queue-family properties to search.
+     * @param device Physical device whose queue families are evaluated.
+     * @param surface Surface against which presentation support is queried.
+     * @param properties Contiguous sequence of queue-family properties reported
+     * by the physical device.
      *
-     * @return Graphics and presentation queue-family indices discovered for the
-     *         physical device and surface.
+     * @return Discovered graphics and presentation queue-family indices. Either
+     * index may be empty when the corresponding capability is unavailable.
      *
-     * @throws Core::Error::EngineError if Vulkan fails to query presentation
-     *         support for a queue family.
+     * @throws Core::Error::EngineError if Vulkan fails while querying surface
+     * presentation support.
      */
-    [[nodiscard]] auto findQueueFamilyIndices(
-        VkPhysicalDevice device, VkSurfaceKHR surface,
-        const std::vector<VkQueueFamilyProperties> &properties)
+    [[nodiscard]] auto
+    findQueueFamilyIndices(VkPhysicalDevice device, VkSurfaceKHR surface,
+                           std::span<const VkQueueFamilyProperties> properties)
         -> QueueFamilyIndices;
 } // namespace SNE::Engine::Renderer::Vulkan

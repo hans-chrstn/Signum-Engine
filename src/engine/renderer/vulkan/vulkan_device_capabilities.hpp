@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <span>
 #include <vulkan/vulkan.h>
 namespace SNE::Engine::Renderer::Vulkan {
     /**
@@ -104,14 +104,14 @@ namespace SNE::Engine::Renderer::Vulkan {
      * supported.
      *
      * @param device Physical device whose optional capabilities are queried.
-     * @param extension_properties Device extensions previously discovered for
-     * the physical device.
+     * @param extension_properties Contiguous sequence of device-extension
+     * properties previously discovered for the physical device.
      *
      * @return Optional capabilities supported by the physical device.
      */
     [[nodiscard]] auto queryOptionalDeviceCapabilities(
         VkPhysicalDevice device,
-        const std::vector<VkExtensionProperties> &extension_properties)
+        std::span<const VkExtensionProperties> extension_properties)
         -> OptionalDeviceCapabilities;
 
     /**
@@ -149,13 +149,13 @@ namespace SNE::Engine::Renderer::Vulkan {
      * capability support.
      *
      * @param device Physical device whose capabilities are queried.
-     * @param extension_properties Device extensions previously discovered for
-     * the physical device.
+     * @param extension_properties Contiguous sequence of device-extension
+     * properties previously discovered for the physical device.
      *
      * @return Capability information reported for the physical device.
      */
     [[nodiscard]] auto queryPhysicalDeviceCapabilities(
         VkPhysicalDevice device,
-        const std::vector<VkExtensionProperties> &extension_properties)
+        std::span<const VkExtensionProperties> extension_properties)
         -> PhysicalDeviceCapabilities;
 } // namespace SNE::Engine::Renderer::Vulkan

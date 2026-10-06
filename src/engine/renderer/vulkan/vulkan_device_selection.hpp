@@ -4,6 +4,7 @@
 #include "engine/renderer/vulkan/vulkan_queue_families.hpp"
 #include "vulkan_swapchain_support.hpp"
 #include <optional>
+#include <span>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -80,16 +81,16 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     /**
      * @brief Determines whether the available device extensions satisfy the
-     *        renderer's required device-extension policy.
+     * renderer's required device-extension policy.
      *
-     * @param available_extensions Device extensions reported by a physical
-     * device.
+     * @param available_extensions Contiguous sequence of device-extension
+     * properties reported by a physical device.
      *
      * @return true if all required device extensions are available; otherwise
-     *         false.
+     * false.
      */
     [[nodiscard]] auto supportsRequiredDeviceExtensions(
-        const std::vector<VkExtensionProperties> &available_extensions) -> bool;
+        std::span<const VkExtensionProperties> available_extensions) -> bool;
 
     /**
      * @brief Determines whether swapchain support satisfies the renderer's
@@ -121,7 +122,8 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * @param queue_family_indices Queue-family indices discovered for the
      * device.
-     * @param available_extensions Device extensions reported by the device.
+     * @param available_extensions Contiguous sequence of device-extension
+     * properties reported by the device.
      * @param capabilities Capability information discovered for the device,
      * including mandatory renderer feature support.
      * @param swapchain_support Swapchain support discovered for the physical
@@ -132,7 +134,7 @@ namespace SNE::Engine::Renderer::Vulkan {
      */
     [[nodiscard]] auto isPhysicalDeviceSuitable(
         const QueueFamilyIndices &queue_family_indices,
-        const std::vector<VkExtensionProperties> &available_extensions,
+        std::span<const VkExtensionProperties> available_extensions,
         const PhysicalDeviceCapabilities &capabilities,
         const SwapchainSupportDetails &swapchain_support) -> bool;
 
@@ -147,14 +149,14 @@ namespace SNE::Engine::Renderer::Vulkan {
      * capabilities. Physical-device inspection is expected to occur before
      * selection.
      *
-     * @param discovered_devices Physical devices previously inspected for
-     * renderer-relevant capabilities.
+     * @param discovered_devices Contiguous sequence of physical devices
+     * previously inspected for renderer-relevant capabilities.
      *
      * @return Selected physical-device state when a suitable device is
      * available; otherwise std::nullopt.
      */
     [[nodiscard]] auto selectPhysicalDevice(
-        const std::vector<DiscoveredPhysicalDevice> &discovered_devices)
+        std::span<const DiscoveredPhysicalDevice> discovered_devices)
         -> std::optional<SelectedPhysicalDevice>;
 
     /**
@@ -169,8 +171,8 @@ namespace SNE::Engine::Renderer::Vulkan {
      * Suitability evaluation is performed separately by the physical-device
      * selection policy.
      *
-     * @param devices Physical-device handles enumerated from the Vulkan
-     * instance.
+     * @param devices Contiguous sequence of physical-device handles enumerated
+     * from the Vulkan instance.
      * @param surface Vulkan surface used to evaluate presentation support and
      * discover swapchain capabilities.
      *
@@ -180,7 +182,7 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @throws Core::Error::EngineError if required Vulkan queries fail.
      */
     [[nodiscard]] auto
-    inspectPhysicalDevices(const std::vector<VkPhysicalDevice> &devices,
+    inspectPhysicalDevices(std::span<const VkPhysicalDevice> devices,
                            VkSurfaceKHR surface)
         -> std::vector<DiscoveredPhysicalDevice>;
 } // namespace SNE::Engine::Renderer::Vulkan

@@ -2,7 +2,7 @@
 
 #include "engine/renderer/presentation_preference.hpp"
 #include <cstdint>
-#include <vector>
+#include <span>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Platform {
@@ -16,15 +16,15 @@ namespace SNE::Engine::Renderer::Vulkan {
      * Searches the presentation modes reported for the Vulkan surface for the
      * requested presentation mode.
      *
-     * @param presentation_modes Presentation modes reported as available for
-     * the Vulkan surface.
+     * @param presentation_modes Contiguous sequence of presentation modes
+     * reported as available for the Vulkan surface.
      * @param presentation_mode Presentation mode to search for.
      *
      * @return true if the requested presentation mode is available; otherwise
      * false.
      */
     [[nodiscard]] auto containsPresentationMode(
-        const std::vector<VkPresentModeKHR> &presentation_modes,
+        std::span<const VkPresentModeKHR> presentation_modes,
         VkPresentModeKHR presentation_mode) -> bool;
 
     /**
@@ -33,17 +33,18 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * Applies the renderer's swapchain surface-format selection policy. The
      * preferred SDR format and color-space combination is selected when
-     * available; otherwise, the function selects a deterministic fallback.
+     * available; otherwise, the first supplied format is selected as the
+     * deterministic fallback.
      *
-     * The supplied collection must contain at least one surface format.
+     * @param surface_formats Contiguous sequence of surface formats reported as
+     * available for the Vulkan surface.
      *
-     * @param surface_formats Surface formats reported as available for the
-     * Vulkan surface.
+     * @pre surface_formats must not be empty.
      *
      * @return Surface format selected for swapchain creation.
      */
     [[nodiscard]] auto
-    selectSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &surface_formats)
+    selectSurfaceFormat(std::span<const VkSurfaceFormatKHR> surface_formats)
         -> VkSurfaceFormatKHR;
 
     /**
@@ -52,29 +53,28 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * Applies the Vulkan backend's presentation-mode selection policy using the
      * presentation modes available for the surface. Preferred modes are
-     * selected when they are available and usable; otherwise, the policy
-     * selects an appropriate fallback.
+     * selected when available and usable; otherwise, the policy selects an
+     * appropriate fallback.
      *
      * FIFO latest-ready presentation is considered usable only when its
      * required device feature is enabled.
      *
-     * The supplied collection must contain the presentation modes reported for
-     * a valid Vulkan surface. FIFO presentation is guaranteed by Vulkan and
-     * serves as the baseline fallback mode.
+     * FIFO presentation serves as the baseline fallback because Vulkan
+     * guarantees support for VK_PRESENT_MODE_FIFO_KHR for a valid surface.
      *
      * @param presentation_preference Backend-independent presentation behavior
      * requested from the renderer.
-     * @param presentation_modes Presentation modes reported as available for
-     * the Vulkan surface.
+     * @param presentation_modes Contiguous sequence of presentation modes
+     * reported as available for the Vulkan surface.
      * @param fifo_latest_ready_enabled Whether FIFO latest-ready presentation
      * is enabled on the Vulkan logical device.
      *
      * @return Vulkan presentation mode selected for swapchain creation.
      */
-    [[nodiscard]] auto selectPresentationMode(
-        PresentationPreference presentation_preference,
-        const std::vector<VkPresentModeKHR> &presentation_modes,
-        bool fifo_latest_ready_enabled) -> VkPresentModeKHR;
+    [[nodiscard]] auto
+    selectPresentationMode(PresentationPreference presentation_preference,
+                           std::span<const VkPresentModeKHR> presentation_modes,
+                           bool fifo_latest_ready_enabled) -> VkPresentModeKHR;
 
     /**
      * @brief Selects the swapchain image extent for the Vulkan surface.

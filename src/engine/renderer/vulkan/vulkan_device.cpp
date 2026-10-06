@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -22,7 +23,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanDevice::VulkanDevice(
         VkPhysicalDevice physical_device,
         const SelectedQueueFamilies &queue_families,
-        const std::vector<QueueFamilyRequest> &queue_family_requests,
+        std::span<const QueueFamilyRequest> queue_family_requests,
         const LogicalDeviceFeatureConfiguration &logical_device_configuration,
         const OptionalDeviceCapabilities &optional_capabilities) {
 

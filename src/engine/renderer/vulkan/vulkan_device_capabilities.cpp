@@ -21,7 +21,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto queryOptionalDeviceCapabilities(
         VkPhysicalDevice device,
-        const std::vector<VkExtensionProperties> &extension_properties)
+        std::span<const VkExtensionProperties> extension_properties)
         -> OptionalDeviceCapabilities {
         VkPhysicalDeviceRayQueryFeaturesKHR ray_query_feature{};
         ray_query_feature.sType =
@@ -134,7 +134,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto queryPhysicalDeviceCapabilities(
         VkPhysicalDevice device,
-        const std::vector<VkExtensionProperties> &extension_properties)
+        std::span<const VkExtensionProperties> extension_properties)
         -> PhysicalDeviceCapabilities {
         const VkPhysicalDeviceProperties properties =
             queryPhysicalDeviceProperties(device);

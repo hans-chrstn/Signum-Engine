@@ -11,7 +11,9 @@
 #include <GLFW/glfw3.h>
 #include <cstring>
 #include <iostream>
+#include <span>
 #include <string>
+#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
@@ -194,8 +196,14 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         std::vector<const char *> required_extensions;
 
-        for (std::uint32_t i{}; i < glfw_extension_count; ++i) {
-            required_extensions.push_back(glfw_extensions[i]);
+        const std::span<const char *const> glfw_required_extensions{
+            glfw_extensions, glfw_extension_count};
+
+        required_extensions.reserve(
+            glfw_extension_count + (development_diagnostics_enabled ? 1U : 0U));
+
+        for (const char *extension : glfw_required_extensions) {
+            required_extensions.push_back(extension);
         }
 
         if (development_diagnostics_enabled) {
@@ -206,7 +214,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanInstance::checkRequiredExtensionSupport(
-        const std::vector<const char *> &required_extensions) -> bool {
+        std::span<const char *const> required_extensions) -> bool {
 
         std::vector<VkExtensionProperties> available_extensions;
         while (true) {

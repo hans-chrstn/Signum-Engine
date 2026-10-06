@@ -11,9 +11,10 @@
 
 namespace {
 
-    [[nodiscard]] auto findQueueFamilyProperty(
-        const std::vector<VkQueueFamilyProperties> &properties,
-        std::uint32_t family_index) -> const VkQueueFamilyProperties * {
+    [[nodiscard]] auto
+    findQueueFamilyProperty(std::span<const VkQueueFamilyProperties> properties,
+                            std::uint32_t family_index)
+        -> const VkQueueFamilyProperties * {
 
         if (family_index >= properties.size()) {
             return nullptr;
@@ -32,15 +33,14 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto supportsRequiredDeviceExtensions(
-        const std::vector<VkExtensionProperties> &available_extensions)
-        -> bool {
+        std::span<const VkExtensionProperties> available_extensions) -> bool {
         return hasRequiredExtensions(requiredDeviceExtensions(),
                                      available_extensions);
     }
 
     auto isPhysicalDeviceSuitable(
         const QueueFamilyIndices &queue_family_indices,
-        const std::vector<VkExtensionProperties> &available_extensions,
+        std::span<const VkExtensionProperties> available_extensions,
         const PhysicalDeviceCapabilities &capabilities,
         const SwapchainSupportDetails &swapchain_support) -> bool {
         return queue_family_indices.graphics_family.has_value() &&
@@ -53,7 +53,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto selectPhysicalDevice(
-        const std::vector<DiscoveredPhysicalDevice> &discovered_devices)
+        std::span<const DiscoveredPhysicalDevice> discovered_devices)
         -> std::optional<SelectedPhysicalDevice> {
         for (const DiscoveredPhysicalDevice &device : discovered_devices) {
             const std::optional<std::uint32_t> &graphics_family =
@@ -111,7 +111,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         return std::nullopt;
     }
 
-    auto inspectPhysicalDevices(const std::vector<VkPhysicalDevice> &devices,
+    auto inspectPhysicalDevices(std::span<const VkPhysicalDevice> devices,
                                 VkSurfaceKHR surface)
         -> std::vector<DiscoveredPhysicalDevice> {
         std::vector<DiscoveredPhysicalDevice> discovered_devices{};

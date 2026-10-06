@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -44,7 +45,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] static auto makeDebugMessengerCreateInfo()
             -> VkDebugUtilsMessengerCreateInfoEXT;
         [[nodiscard]] static auto checkRequiredExtensionSupport(
-            const std::vector<const char *> &required_extensions) -> bool;
+            std::span<const char *const> required_extensions) -> bool;
         [[nodiscard]] static auto querySupportedApiVersion() -> std::uint32_t;
 
       public:
