@@ -5,8 +5,9 @@ add_executable(
   renderer/vulkan/memory/vulkan_buffer_integration_tests.cpp
   renderer/vulkan/memory/vulkan_memory_allocator_integration_tests.cpp
   renderer/vulkan/memory/vulkan_transfer_integration_tests.cpp
-  renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
   renderer/vulkan/memory/vulkan_image_integration_tests.cpp
+  renderer/vulkan/command/vulkan_immediate_submission_integration_tests.cpp
+  renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
 )
 
 target_link_libraries(

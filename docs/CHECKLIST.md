@@ -543,7 +543,7 @@
 - [x] Define reusable byte-range validation
 - [x] Define checked Vulkan count/index conversion policy
 - [x] Define Vulkan buffer usage introspection
-- [ ] Define immediate-submission threading and reuse policy
+- [x] Define immediate-submission threading and reuse policy
 - [ ] Define queue submission ownership and synchronization policy
 - [ ] Define requirements for future dedicated transfer queues
 - [ ] Define queue-family ownership-transfer policy
@@ -572,14 +572,14 @@
 - [x] Add backend-local buffer usage access
 - [x] Validate `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` before buffer copies
 - [x] Validate `VK_BUFFER_USAGE_TRANSFER_DST_BIT` before buffer copies
-- [ ] Reject invalid overlapping copies when source and destination are the same buffer
-- [ ] Harden `VulkanImmediateSubmission` reuse
-- [ ] Prevent invalid or recursive immediate submission
-- [ ] Document immediate-submission thread-safety requirements
-- [ ] Keep staging resources alive until submitted GPU work finishes
-- [ ] Keep immediate submission generic instead of upload-specific
-- [ ] Keep transfer recording separate from transfer submission
-- [ ] Keep graphics-queue transfers as the current baseline
+- [x] Reject invalid overlapping copies when source and destination are the same buffer
+- [x] Harden `VulkanImmediateSubmission` reuse
+- [x] Prevent invalid or recursive immediate submission
+- [x] Document immediate-submission thread-safety requirements
+- [x] Keep staging resources alive until submitted GPU work finishes
+- [x] Keep immediate submission generic instead of upload-specific
+- [x] Keep transfer recording separate from transfer submission
+- [x] Keep graphics-queue transfers as the current baseline
 - [ ] Prevent adding a dedicated transfer queue without resource ownership handling
 - [x] Validate selected queue-family capacity
 - [x] Verify retrieved queues satisfy selected-device guarantees
@@ -625,18 +625,18 @@
 - [x] Test overflow-resistant range checks
 - [x] Test checked Vulkan count conversion
 - [ ] Test buffer usage tracking
-- [ ] Test invalid transfer source usage
-- [ ] Test invalid transfer destination usage
-- [ ] Test overlapping same-buffer copies
-- [ ] Test immediate submission callback execution
-- [ ] Test repeated immediate submissions
-- [ ] Test immediate command-pool reuse
-- [ ] Test immediate fence reuse
-- [ ] Test immediate submission recovery after recording failure where supported
-- [ ] Test complete staging upload
+- [x] Test invalid transfer source usage
+- [x] Test invalid transfer destination usage
+- [x] Test overlapping same-buffer copies
+- [x] Test immediate submission callback execution
+- [x] Test repeated immediate submissions
+- [x] Test immediate command-pool reuse
+- [x] Test immediate fence reuse
+- [x] Test immediate submission recovery after recording failure where supported
+- [x] Test complete staging upload
 - [ ] Test staging upload with destination offsets
 - [ ] Test staging upload range boundaries
-- [ ] Test upload correctness through readback
+- [x] Test upload correctness through readback
 - [x] Test CPU -> upload -> device -> readback -> CPU round trip
 - [ ] Test partial transfer correctness
 - [ ] Test minimized-window behavior
@@ -646,7 +646,7 @@
 - [ ] Test present-time out-of-date handling where reproducible
 - [ ] Test frame-resource reuse after early returns
 - [ ] Test swapchain-dependent destruction ordering
-- [ ] Add representative assertion death tests
+- [x] Add representative assertion death tests
 - [ ] Test every error code has a valid string
 - [ ] Test every error code has a valid subsystem
 - [ ] Test error metadata completeness
