@@ -547,11 +547,11 @@
 - [x] Define queue submission ownership and synchronization policy
 - [x] Define requirements for future dedicated transfer queues
 - [x] Define queue-family ownership-transfer policy
-- [ ] Define swapchain recreation behavior
-- [ ] Define minimized-window and zero-framebuffer behavior
-- [ ] Define `VK_ERROR_OUT_OF_DATE_KHR` handling
-- [ ] Define `VK_SUBOPTIMAL_KHR` handling
-- [ ] Define GPU resource move-semantics policy
+- [x] Define swapchain recreation behavior
+- [x] Define minimized-window and zero-framebuffer behavior
+- [x] Define `VK_ERROR_OUT_OF_DATE_KHR` handling
+- [x] Define `VK_SUBOPTIMAL_KHR` handling
+- [x] Define GPU resource move-semantics policy
 - [ ] Define application-level exception boundary
 - [ ] Define scalable error-code metadata handling
 - [ ] Define consistent warnings-as-errors policy
@@ -585,13 +585,13 @@
 - [x] Verify retrieved queues satisfy selected-device guarantees
 - [x] Assert frame command-buffer availability before using `.front()`
 - [ ] Harden swapchain selection against invalid or empty inputs
-- [ ] Handle zero-sized framebuffer state
-- [ ] Add swapchain recreation after acquire-time out-of-date results
-- [ ] Add swapchain recreation after present-time out-of-date results
-- [ ] Handle suboptimal swapchains consistently
-- [ ] Recreate swapchain-dependent resources in dependency order
-- [ ] Re-query framebuffer and surface capabilities during recreation
-- [ ] Preserve valid frame-fence state through swapchain recreation
+- [x] Handle zero-sized framebuffer state
+- [x] Add swapchain recreation after acquire-time out-of-date results
+- [x] Add swapchain recreation after present-time out-of-date results
+- [x] Handle suboptimal swapchains consistently
+- [x] Recreate swapchain-dependent resources in dependency order
+- [x] Re-query framebuffer and surface capabilities during recreation
+- [x] Preserve valid frame-fence state through swapchain recreation
 - [ ] Audit Vulkan wrappers for owned-versus-borrowed lifetime correctness
 - [ ] Audit destructors for safe partially constructed or empty state
 - [ ] Review GPU resource wrappers for move support required by future containers
@@ -640,8 +640,8 @@
 - [x] Test CPU -> upload -> device -> readback -> CPU round trip
 - [ ] Test partial transfer correctness
 - [ ] Test minimized-window behavior
-- [ ] Test repeated window resizing
-- [ ] Test swapchain recreation
+- [x] Test repeated window resizing
+- [x] Test swapchain recreation
 - [ ] Test acquire-time out-of-date handling
 - [ ] Test present-time out-of-date handling where reproducible
 - [ ] Test frame-resource reuse after early returns
