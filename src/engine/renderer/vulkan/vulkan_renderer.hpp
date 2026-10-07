@@ -228,9 +228,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * Creates the Vulkan instance and presentation surface, selects a
          * suitable physical device, negotiates logical-device features, creates
-         * the logical device and GPU memory allocator, creates the presentation
-         * swapchain and graphics pipeline, and establishes the initial command
-         * infrastructure.
+         * the logical device and GPU memory allocator, and establishes the
+         * initial command infrastructure.
+         *
+         * Swapchain-dependent resources are created during initialization when
+         * the application framebuffer is drawable. If the framebuffer is not
+         * drawable, their creation is deferred until rendering can begin.
          *
          * @param application_name Name reported to Vulkan for the application.
          * @param window Platform window used for Vulkan surface creation and
