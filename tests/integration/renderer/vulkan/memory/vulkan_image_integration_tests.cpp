@@ -137,3 +137,112 @@ TEST_F(VulkanImageIntegrationTests, CreatesAndDestroysVmaBackedImage) {
     Vulkan::VulkanImage image =
         Vulkan::VulkanImage(m_MemoryAllocator.value(), image_create_info);
 }
+
+TEST_F(VulkanImageIntegrationTests, MoveConstructsVmaBackedImage) {
+    const Vulkan::VulkanImageCreateInfo image_create_info{
+        .extent =
+            {
+                .width = 64U,
+                .height = 64U,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
+    if (!m_MemoryAllocator.has_value()) {
+        FAIL() << "Failed to get a value for memory allocator";
+    }
+
+    const Vulkan::VulkanMemoryAllocationStatistics statistics_before =
+        m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+    {
+        Vulkan::VulkanImage source{m_MemoryAllocator.value(),
+                                   image_create_info};
+
+        const Vulkan::VulkanMemoryAllocationStatistics statistics_before_move =
+            m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+        EXPECT_EQ(statistics_before_move.allocation_count,
+                  statistics_before.allocation_count + 1U);
+
+        Vulkan::VulkanImage destination{std::move(source)};
+
+        const Vulkan::VulkanMemoryAllocationStatistics statistics_after_move =
+            m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+        EXPECT_EQ(statistics_after_move.allocation_count,
+                  statistics_before.allocation_count + 1U);
+    }
+
+    const Vulkan::VulkanMemoryAllocationStatistics
+        statistics_after_destruction =
+            m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+    EXPECT_EQ(statistics_after_destruction.allocation_count,
+              statistics_before.allocation_count);
+}
+
+TEST_F(VulkanImageIntegrationTests, MoveAssignsVmaBackedImage) {
+    const Vulkan::VulkanImageCreateInfo source_create_info{
+        .extent =
+            {
+                .width = 64U,
+                .height = 64U,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
+    const Vulkan::VulkanImageCreateInfo destination_create_info{
+        .extent =
+            {
+                .width = 32U,
+                .height = 32U,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+    };
+
+    if (!m_MemoryAllocator.has_value()) {
+        FAIL() << "Failed to get a value for memory allocator";
+    }
+
+    const Vulkan::VulkanMemoryAllocationStatistics statistics_before =
+        m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+    {
+        Vulkan::VulkanImage source{m_MemoryAllocator.value(),
+                                   source_create_info};
+
+        Vulkan::VulkanImage destination{m_MemoryAllocator.value(),
+                                        destination_create_info};
+
+        const Vulkan::VulkanMemoryAllocationStatistics statistics_before_move =
+            m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+        EXPECT_EQ(statistics_before_move.allocation_count,
+                  statistics_before.allocation_count + 2U);
+
+        destination = std::move(source);
+
+        const Vulkan::VulkanMemoryAllocationStatistics statistics_after_move =
+            m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+        EXPECT_EQ(statistics_after_move.allocation_count,
+                  statistics_before.allocation_count + 1U);
+    }
+
+    const Vulkan::VulkanMemoryAllocationStatistics
+        statistics_after_destruction =
+            m_MemoryAllocator->queryMemoryAllocationStatistics();
+
+    EXPECT_EQ(statistics_after_destruction.allocation_count,
+              statistics_before.allocation_count);
+}

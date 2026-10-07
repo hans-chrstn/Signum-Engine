@@ -594,8 +594,8 @@
 - [x] Preserve valid frame-fence state through swapchain recreation
 - [ ] Audit Vulkan wrappers for owned-versus-borrowed lifetime correctness
 - [ ] Audit destructors for safe partially constructed or empty state
-- [ ] Review GPU resource wrappers for move support required by future containers
-- [ ] Add move semantics only where a concrete ownership requirement exists
+- [x] Review GPU resource wrappers for move support required by future containers
+- [x] Add move semantics only where a concrete ownership requirement exists
 - [x] Verify successful VMA buffer creation produces valid buffer/allocation state
 - [x] Verify successful VMA image creation produces valid image/allocation state
 - [x] Verify command-buffer allocation returns the requested number of handles

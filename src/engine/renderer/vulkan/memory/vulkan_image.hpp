@@ -70,6 +70,18 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         VmaAllocation m_Allocation{nullptr};
 
+        /**
+         * @brief Releases the currently owned Vulkan image and backing
+         * allocation.
+         *
+         * Destroys the owned image and its VMA allocation when present, then
+         * resets the stored allocator handle, Vulkan image handle, and
+         * allocation handle to their empty defaults.
+         *
+         * Safe to call when no image resources are owned.
+         */
+        auto destroy() noexcept -> void;
+
       public:
         /**
          * @brief Creates a Vulkan image and its backing allocation.
@@ -119,5 +131,38 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @return This object if assignment were supported.
          */
         auto operator=(const VulkanImage &) -> VulkanImage & = delete;
+
+        /**
+         * @brief Transfers ownership of a Vulkan image and its backing
+         * allocation.
+         *
+         * Transfers the allocator reference, Vulkan image handle, and VMA
+         * allocation from the source object.
+         *
+         * The source object is left in a valid empty state containing no owned
+         * Vulkan image or allocation.
+         *
+         * @param other Image object whose resources are transferred.
+         */
+        VulkanImage(VulkanImage &&other) noexcept;
+
+        /**
+         * @brief Replaces the currently owned image by moving from another
+         * object.
+         *
+         * Releases any image resources currently owned by this object before
+         * transferring the source object's allocator reference, Vulkan image
+         * handle, and VMA allocation.
+         *
+         * Self-move assignment has no effect.
+         *
+         * The source object is left in a valid empty state containing no owned
+         * Vulkan image or allocation.
+         *
+         * @param other Image object whose resources are transferred.
+         *
+         * @return Reference to this image object.
+         */
+        auto operator=(VulkanImage &&other) noexcept -> VulkanImage &;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

@@ -9,6 +9,7 @@
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include "vulkan_memory_policy.hpp"
 #include <string>
+#include <utility>
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanImage::VulkanImage(const VulkanMemoryAllocator &allocator,
@@ -135,7 +136,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
-    VulkanImage::~VulkanImage() noexcept {
+    auto VulkanImage::destroy() noexcept -> void {
         if (m_Image != VK_NULL_HANDLE && m_Allocation != nullptr) {
             vmaDestroyImage(m_Allocator, m_Image, m_Allocation);
         }
@@ -143,5 +144,28 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_Image = VK_NULL_HANDLE;
         m_Allocation = nullptr;
         m_Allocator = nullptr;
+    }
+
+    VulkanImage::~VulkanImage() noexcept {
+        destroy();
+    }
+
+    VulkanImage::VulkanImage(VulkanImage &&other) noexcept
+        : m_Allocator(std::exchange(other.m_Allocator, nullptr)),
+          m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)),
+          m_Allocation(std::exchange(other.m_Allocation, nullptr)) {}
+
+    auto VulkanImage::operator=(VulkanImage &&other) noexcept -> VulkanImage & {
+        if (this == &other) {
+            return *this;
+        }
+
+        destroy();
+
+        m_Allocator = std::exchange(other.m_Allocator, nullptr);
+        m_Image = std::exchange(other.m_Image, VK_NULL_HANDLE);
+        m_Allocation = std::exchange(other.m_Allocation, nullptr);
+
+        return *this;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

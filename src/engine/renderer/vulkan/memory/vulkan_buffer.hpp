@@ -73,6 +73,18 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         GpuMemoryUsage m_MemoryUsage{GpuMemoryUsage::Device};
 
+        /**
+         * @brief Releases the currently owned Vulkan buffer and backing
+         * allocation.
+         *
+         * Destroys the owned buffer and its VMA allocation when present, then
+         * resets the stored allocator handle, Vulkan buffer handle, allocation
+         * handle, and associated metadata to their empty defaults.
+         *
+         * Safe to call when no buffer resources are owned.
+         */
+        auto destroy() noexcept -> void;
+
       public:
         /**
          * @brief Creates a Vulkan buffer and its backing allocation.
@@ -108,6 +120,39 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanBuffer(const VulkanBuffer &) = delete;
 
         auto operator=(const VulkanBuffer &) -> VulkanBuffer & = delete;
+
+        /**
+         * @brief Transfers ownership of a Vulkan buffer and its backing
+         * allocation.
+         *
+         * Transfers the allocator reference, Vulkan buffer handle, VMA
+         * allocation, and associated buffer metadata from the source object.
+         *
+         * The source object is left in a valid empty state containing no owned
+         * Vulkan buffer or allocation.
+         *
+         * @param other Buffer object whose resources are transferred.
+         */
+        VulkanBuffer(VulkanBuffer &&other) noexcept;
+
+        /**
+         * @brief Replaces the currently owned buffer by moving from another
+         * object.
+         *
+         * Releases any buffer resources currently owned by this object before
+         * transferring the source object's allocator reference, Vulkan buffer,
+         * VMA allocation, and associated metadata.
+         *
+         * Self-move assignment has no effect.
+         *
+         * The source object is left in a valid empty state containing no owned
+         * Vulkan buffer or allocation.
+         *
+         * @param other Buffer object whose resources are transferred.
+         *
+         * @return Reference to this buffer object.
+         */
+        auto operator=(VulkanBuffer &&other) noexcept -> VulkanBuffer &;
 
         /**
          * @brief Writes CPU data into this upload buffer.

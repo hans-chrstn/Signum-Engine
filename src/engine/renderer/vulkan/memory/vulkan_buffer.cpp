@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstring>
 #include <string>
+#include <utility>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Core = SNE::Engine::Core;
@@ -79,7 +80,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
-    VulkanBuffer::~VulkanBuffer() noexcept {
+    auto VulkanBuffer::destroy() noexcept -> void {
         if (m_Buffer != VK_NULL_HANDLE && m_Allocation != nullptr) {
             vmaDestroyBuffer(m_Allocator, m_Buffer, m_Allocation);
         }
@@ -87,6 +88,41 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_Buffer = VK_NULL_HANDLE;
         m_Allocation = nullptr;
         m_Allocator = nullptr;
+        m_Size = 0U;
+        m_Usage = {};
+        m_MemoryUsage = GpuMemoryUsage::Device;
+    }
+
+    VulkanBuffer::~VulkanBuffer() noexcept {
+        destroy();
+    }
+
+    VulkanBuffer::VulkanBuffer(VulkanBuffer &&other) noexcept
+        : m_Allocator(std::exchange(other.m_Allocator, nullptr)),
+          m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)),
+          m_Allocation(std::exchange(other.m_Allocation, nullptr)),
+          m_Size(std::exchange(other.m_Size, VkDeviceSize{})),
+          m_Usage(std::exchange(other.m_Usage, VkBufferUsageFlags{})),
+          m_MemoryUsage(
+              std::exchange(other.m_MemoryUsage, GpuMemoryUsage::Device)) {}
+
+    auto VulkanBuffer::operator=(VulkanBuffer &&other) noexcept
+        -> VulkanBuffer & {
+        if (this == &other) {
+            return *this;
+        }
+
+        destroy();
+
+        m_Allocator = std::exchange(other.m_Allocator, nullptr);
+        m_Buffer = std::exchange(other.m_Buffer, VK_NULL_HANDLE);
+        m_Allocation = std::exchange(other.m_Allocation, nullptr);
+        m_Size = std::exchange(other.m_Size, VkDeviceSize{});
+        m_Usage = std::exchange(other.m_Usage, VkBufferUsageFlags{});
+        m_MemoryUsage =
+            std::exchange(other.m_MemoryUsage, GpuMemoryUsage::Device);
+
+        return *this;
     }
 
     auto VulkanBuffer::write(std::span<const std::byte> bytes,

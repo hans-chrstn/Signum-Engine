@@ -58,5 +58,8 @@ clean:
 
 all:
     ./scripts/clean.sh
+    ./scripts/format.sh
     ./scripts/check.sh
-    ./scripts/test.sh asan
+    ./scripts/test.sh asan all
+    ./scripts/build.sh debug
+    ./scripts/memcheck.sh
