@@ -36,9 +36,15 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * @pre command_buffer must be a valid Vulkan command buffer.
      * @pre buffer_copy_request.size must be greater than zero.
+     * @pre The source buffer must have been created with
+     * VK_BUFFER_USAGE_TRANSFER_SRC_BIT.
+     * @pre The destination buffer must have been created with
+     * VK_BUFFER_USAGE_TRANSFER_DST_BIT.
      * @pre The requested source range must fit within the source buffer.
      * @pre The requested destination range must fit within the destination
      * buffer.
+     * @pre When the source and destination refer to the same Vulkan buffer, the
+     * requested source and destination ranges must not overlap.
      */
     auto recordBufferCopy(VkCommandBuffer command_buffer,
                           const BufferCopyRequest &buffer_copy_request) -> void;

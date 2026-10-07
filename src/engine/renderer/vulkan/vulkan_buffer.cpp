@@ -20,7 +20,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanBuffer::VulkanBuffer(const VulkanMemoryAllocator &allocator,
                                const VulkanBufferCreateInfo &create_info)
         : m_Allocator(allocator.nativeHandle()), m_Size(create_info.size),
-          m_MemoryUsage(create_info.memory_usage) {
+          m_Usage(create_info.usage), m_MemoryUsage(create_info.memory_usage) {
 
         if (create_info.size == 0U) {
             Core::Assertion::failAssertion(
@@ -226,5 +226,9 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         std::memcpy(output.data(), mapped_byte, output_size);
         vmaUnmapMemory(m_Allocator, m_Allocation);
+    }
+
+    auto VulkanBuffer::usage() const noexcept -> VkBufferUsageFlags {
+        return m_Usage;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

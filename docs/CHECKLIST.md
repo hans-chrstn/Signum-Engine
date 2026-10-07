@@ -542,7 +542,7 @@
 - [x] Define when failures use `EngineError` versus `failAssertion`
 - [x] Define reusable byte-range validation
 - [x] Define checked Vulkan count/index conversion policy
-- [ ] Define Vulkan buffer usage introspection
+- [x] Define Vulkan buffer usage introspection
 - [ ] Define immediate-submission threading and reuse policy
 - [ ] Define queue submission ownership and synchronization policy
 - [ ] Define requirements for future dedicated transfer queues
@@ -568,10 +568,10 @@
 - [x] Replace duplicated buffer range calculations with the shared helper
 - [x] Add checked conversion for Vulkan count fields
 - [x] Replace unchecked `size_t` to Vulkan count conversions
-- [ ] Store Vulkan usage flags in `VulkanBuffer`
-- [ ] Add backend-local buffer usage access
-- [ ] Validate `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` before buffer copies
-- [ ] Validate `VK_BUFFER_USAGE_TRANSFER_DST_BIT` before buffer copies
+- [x] Store Vulkan usage flags in `VulkanBuffer`
+- [x] Add backend-local buffer usage access
+- [x] Validate `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` before buffer copies
+- [x] Validate `VK_BUFFER_USAGE_TRANSFER_DST_BIT` before buffer copies
 - [ ] Reject invalid overlapping copies when source and destination are the same buffer
 - [ ] Harden `VulkanImmediateSubmission` reuse
 - [ ] Prevent invalid or recursive immediate submission

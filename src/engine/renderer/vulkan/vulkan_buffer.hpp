@@ -64,6 +64,11 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         VkDeviceSize m_Size{0};
         /**
+         * @brief Vulkan usage flags describing the operations permitted for
+         * this buffer.
+         */
+        VkBufferUsageFlags m_Usage{};
+        /**
          * @brief Engine-level CPU/GPU access intent for the backing allocation.
          */
         GpuMemoryUsage m_MemoryUsage{GpuMemoryUsage::Device};
@@ -159,5 +164,16 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @return Size of the owned buffer in bytes.
          */
         [[nodiscard]] auto size() const noexcept -> VkDeviceSize;
+
+        /**
+         * @brief Returns the Vulkan usage flags assigned to this buffer.
+         *
+         * The returned flags describe the Vulkan operations for which the
+         * buffer was created, such as transfer source, transfer destination,
+         * vertex-buffer, or index-buffer usage.
+         *
+         * @return Vulkan buffer usage flags assigned during construction.
+         */
+        [[nodiscard]] auto usage() const noexcept -> VkBufferUsageFlags;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

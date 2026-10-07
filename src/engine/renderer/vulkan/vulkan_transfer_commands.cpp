@@ -22,6 +22,24 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "recordBufferCopy requires a non-zero copy size");
         }
 
+        if ((buffer_copy_request.source.usage() &
+             VK_BUFFER_USAGE_TRANSFER_SRC_BIT) == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "recordBufferCopy requires the source buffer to support "
+                "transfer-source usage");
+        }
+
+        if ((buffer_copy_request.destination.usage() &
+             VK_BUFFER_USAGE_TRANSFER_DST_BIT) == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "recordBufferCopy requires the destination buffer to support "
+                "transfer-destination usage");
+        }
+
         const ByteRange source_range{
             .offset = buffer_copy_request.source_offset,
             .size = buffer_copy_request.size,
@@ -46,6 +64,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::Subsystem::Vulkan,
                 "recordBufferCopy destination range exceeds the destination "
                 "buffer size");
+        }
+
+        if (buffer_copy_request.source.nativeHandle() ==
+                buffer_copy_request.destination.nativeHandle() &&
+            source_range.overlaps(destination_range)) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "recordBufferCopy requires non-overlapping ranges when copying "
+                "within the same buffer");
         }
 
         VkBufferCopy2 buffer_copy{};

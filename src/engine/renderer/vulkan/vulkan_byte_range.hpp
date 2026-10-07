@@ -38,5 +38,23 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto fitsWithin(VkDeviceSize total_size) const noexcept
             -> bool;
+
+        /**
+         * @brief Determines whether this byte range overlaps another byte
+         * range.
+         *
+         * Treats both ranges as half-open intervals. Two ranges that only touch
+         * at their boundaries do not overlap. A zero-sized range does not
+         * overlap any range.
+         *
+         * The overlap test avoids arithmetic that could overflow VkDeviceSize.
+         *
+         * @param other Byte range to compare against this range.
+         *
+         * @return true when the ranges share at least one byte; otherwise
+         * false.
+         */
+        [[nodiscard]] auto overlaps(const ByteRange &other) const noexcept
+            -> bool;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

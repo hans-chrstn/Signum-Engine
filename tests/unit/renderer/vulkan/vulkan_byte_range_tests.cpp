@@ -70,3 +70,131 @@ TEST(ByteRangeTests, FitsWithinHandlesLargeValuesWithoutOverflow) {
 
     EXPECT_FALSE(byte_range.fitsWithin(max));
 }
+
+TEST(ByteRangeTests, OverlapsReturnsTrueForPartialOverlap) {
+    const Vulkan::ByteRange first{
+        .offset = 0U,
+        .size = 8U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = 4U,
+        .size = 8U,
+    };
+
+    EXPECT_TRUE(first.overlaps(second));
+}
+
+TEST(ByteRangeTests, OverlapsReturnsTrueForIdenticalRanges) {
+    const Vulkan::ByteRange first{
+        .offset = 4U,
+        .size = 8U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = 4U,
+        .size = 8U,
+    };
+
+    EXPECT_TRUE(first.overlaps(second));
+}
+
+TEST(ByteRangeTests, OverlapsReturnsTrueWhenThisContainsOther) {
+    const Vulkan::ByteRange first{
+        .offset = 0U,
+        .size = 16U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = 4U,
+        .size = 4U,
+    };
+
+    EXPECT_TRUE(first.overlaps(second));
+}
+
+TEST(ByteRangeTests, OverlapsReturnsTrueWhenOtherContainsThis) {
+    const Vulkan::ByteRange first{
+        .offset = 4U,
+        .size = 4U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = 0U,
+        .size = 16U,
+    };
+
+    EXPECT_TRUE(first.overlaps(second));
+}
+
+TEST(ByteRangeTests, OverlapsReturnsFalseForTouchingRanges) {
+    const Vulkan::ByteRange first{
+        .offset = 0U,
+        .size = 4U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = 4U,
+        .size = 4U,
+    };
+
+    EXPECT_FALSE(first.overlaps(second));
+}
+
+TEST(ByteRangeTests, OverlapsReturnsFalseForSeparatedRanges) {
+    const Vulkan::ByteRange first{
+        .offset = 0U,
+        .size = 4U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = 8U,
+        .size = 4U,
+    };
+
+    EXPECT_FALSE(first.overlaps(second));
+}
+
+TEST(ByteRangeTests, OverlapsReturnsFalseWhenThisRangeIsEmpty) {
+    const Vulkan::ByteRange first{
+        .offset = 4U,
+        .size = 0U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = 0U,
+        .size = 8U,
+    };
+
+    EXPECT_FALSE(first.overlaps(second));
+}
+
+TEST(ByteRangeTests, OverlapsReturnsFalseWhenOtherRangeIsEmpty) {
+    const Vulkan::ByteRange first{
+        .offset = 0U,
+        .size = 8U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = 4U,
+        .size = 0U,
+    };
+
+    EXPECT_FALSE(first.overlaps(second));
+}
+
+TEST(ByteRangeTests, OverlapsHandlesLargeValuesWithoutOverflow) {
+    constexpr VkDeviceSize max = std::numeric_limits<VkDeviceSize>::max();
+
+    const Vulkan::ByteRange first{
+        .offset = max - 3U,
+        .size = 4U,
+    };
+
+    const Vulkan::ByteRange second{
+        .offset = max - 1U,
+        .size = 2U,
+    };
+
+    EXPECT_TRUE(first.overlaps(second));
+}
