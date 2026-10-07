@@ -18,7 +18,6 @@
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <optional>
 #include <string>
 #include <utility>
@@ -173,13 +172,6 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::renderFrame() -> void {
-        const Platform::FramebufferSize framebuffer_size =
-            m_Window->framebufferSize();
-
-        if (framebuffer_size.width <= 1 || framebuffer_size.height <= 1) {
-            std::cout << "width: " << framebuffer_size.width << '\n'
-                      << "height: " << framebuffer_size.height << '\n';
-        }
         if (!m_SwapchainResources.has_value() &&
             !recreateSwapchainResources()) {
             return;
