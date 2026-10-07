@@ -13,6 +13,7 @@ add_library(
     engine/core/assert/assertion_formatter.cpp
     engine/core/assert/assertion_writer.cpp
     engine/core/assert/assertion_handler.cpp
+    engine/core/numeric/checked_conversion.cpp
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp

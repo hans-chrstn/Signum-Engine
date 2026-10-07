@@ -88,6 +88,9 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @param properties Contiguous sequence of queue-family properties reported
      * by the physical device.
      *
+     * @pre Any graphics queue-family index returned from properties must be
+     * representable by std::uint32_t.
+     *
      * @return Index of the first graphics-capable queue family, or std::nullopt
      * if no graphics-capable family is available.
      */
@@ -130,6 +133,9 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @return Index of the first presentation-capable queue family, or
      * std::nullopt if no suitable family is available.
      *
+     * @pre Every queue-family index used to query presentation support must be
+     * representable by std::uint32_t.
+     *
      * @throws Core::Error::EngineError if Vulkan fails while querying surface
      * presentation support.
      */
@@ -151,6 +157,9 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @param surface Surface against which presentation support is queried.
      * @param properties Contiguous sequence of queue-family properties reported
      * by the physical device.
+     *
+     * @pre Every queue-family index examined from properties must be
+     * representable by std::uint32_t.
      *
      * @return Discovered graphics and presentation queue-family indices. Either
      * index may be empty when the corresponding capability is unavailable.

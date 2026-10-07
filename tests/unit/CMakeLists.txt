@@ -11,6 +11,7 @@ add_executable(
   core/assert/assertion_formatter_tests.cpp
   core/assert/assertion_writer_tests.cpp
   core/assert/assertion_handler_tests.cpp
+  core/numeric/checked_conversion_tests.cpp
   renderer/vulkan/vulkan_result_tests.cpp
   renderer/vulkan/vulkan_extension_support_tests.cpp
   renderer/vulkan/vulkan_queue_families_tests.cpp

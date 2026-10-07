@@ -529,19 +529,19 @@
 
 - [x] Review preconditions, postconditions, and invariants
 - [x] Review programmer errors versus runtime failures
-- [ ] Review exception safety for reusable engine operations
-- [ ] Review Vulkan queue host-synchronization requirements
-- [ ] Review Vulkan queue-family resource ownership
-- [ ] Review integer narrowing at Vulkan API boundaries
-- [ ] Review RAII move semantics for GPU resources
-- [ ] Review shutdown and destructor error handling
+- [x] Review exception safety for reusable engine operations
+- [x] Review Vulkan queue host-synchronization requirements
+- [x] Review Vulkan queue-family resource ownership
+- [x] Review integer narrowing at Vulkan API boundaries
+- [x] Review RAII move semantics for GPU resources
+- [x] Review shutdown and destructor error handling
 
 ### Design
 
 - [x] Define consistent rules for `Precondition`, `Invariant`, and `Postcondition`
 - [x] Define when failures use `EngineError` versus `failAssertion`
 - [x] Define reusable byte-range validation
-- [ ] Define checked Vulkan count/index conversion policy
+- [x] Define checked Vulkan count/index conversion policy
 - [ ] Define Vulkan buffer usage introspection
 - [ ] Define immediate-submission threading and reuse policy
 - [ ] Define queue submission ownership and synchronization policy
@@ -564,10 +564,10 @@
 - [x] Add invariants for internal assumptions that must always hold
 - [x] Add postconditions where successful operations establish required state
 - [x] Remove redundant contract checks already guaranteed by lower-level ownership
-- [ ] Add reusable overflow-safe byte-range validation
-- [ ] Replace duplicated buffer range calculations with the shared helper
-- [ ] Add checked conversion for Vulkan count fields
-- [ ] Replace unchecked `size_t` to Vulkan count conversions
+- [x] Add reusable overflow-safe byte-range validation
+- [x] Replace duplicated buffer range calculations with the shared helper
+- [x] Add checked conversion for Vulkan count fields
+- [x] Replace unchecked `size_t` to Vulkan count conversions
 - [ ] Store Vulkan usage flags in `VulkanBuffer`
 - [ ] Add backend-local buffer usage access
 - [ ] Validate `VK_BUFFER_USAGE_TRANSFER_SRC_BIT` before buffer copies
@@ -618,12 +618,12 @@
 
 ### Test
 
-- [ ] Test byte-range validation
-- [ ] Test exact-end byte ranges
-- [ ] Test zero-size ranges
-- [ ] Test invalid offsets
-- [ ] Test overflow-resistant range checks
-- [ ] Test checked Vulkan count conversion
+- [x] Test byte-range validation
+- [x] Test exact-end byte ranges
+- [x] Test zero-size ranges
+- [x] Test invalid offsets
+- [x] Test overflow-resistant range checks
+- [x] Test checked Vulkan count conversion
 - [ ] Test buffer usage tracking
 - [ ] Test invalid transfer source usage
 - [ ] Test invalid transfer destination usage

@@ -5,12 +5,14 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/numeric/checked_conversion.hpp"
 #include "vulkan_api_version.hpp"
 #include "vulkan_extension_support.hpp"
 #include "vulkan_result.hpp"
 #include <GLFW/glfw3.h>
 #include <cstring>
 #include <iostream>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -88,8 +90,17 @@ namespace SNE::Engine::Renderer::Vulkan {
         instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         instance_create_info.pApplicationInfo = &application_info;
         instance_create_info.ppEnabledExtensionNames = extensions.data();
-        instance_create_info.enabledExtensionCount =
-            static_cast<std::uint32_t>(extensions.size());
+
+        const std::optional<std::uint32_t> extension_count =
+            Core::Numeric::tryConvertToUint32(extensions.size());
+        if (!extension_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanInstance enabled-extension count exceeds the Vulkan "
+                "count representation");
+        }
+        instance_create_info.enabledExtensionCount = extension_count.value();
 
         if (development_diagnostics_enabled) {
             instance_create_info.ppEnabledLayerNames = &kValidationLayerName;

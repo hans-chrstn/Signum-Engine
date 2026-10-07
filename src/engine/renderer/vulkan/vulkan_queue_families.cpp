@@ -1,8 +1,15 @@
 #include "vulkan_queue_families.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
+#include "engine/core/error/subsystem.hpp"
+#include "engine/core/numeric/checked_conversion.hpp"
 #include "vulkan_result.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 
@@ -47,7 +54,16 @@ namespace SNE::Engine::Renderer::Vulkan {
             // Bitwise AND checks whether that capability is present in
             // queueFlags.
             if ((properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
-                return static_cast<std::uint32_t>(i);
+                const std::optional<std::uint32_t> converted =
+                    Core::Numeric::tryConvertToUint32(i);
+                if (!converted.has_value()) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "findGraphicsQueueFamily requires queue-family indices "
+                        "to be representable by std::uint32_t");
+                }
+                return converted;
             }
         }
 
@@ -79,9 +95,17 @@ namespace SNE::Engine::Renderer::Vulkan {
         -> std::optional<std::uint32_t> {
 
         for (std::size_t i{}; i < properties.size(); ++i) {
-            const auto queue_family_index = static_cast<std::uint32_t>(i);
-            if (supportsPresentation(device, queue_family_index, surface)) {
-                return queue_family_index;
+            const std::optional<std::uint32_t> converted =
+                Core::Numeric::tryConvertToUint32(i);
+            if (!converted.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "findPresentationQueueFamily requires queue-family indices "
+                    "to be representable by std::uint32_t");
+            }
+            if (supportsPresentation(device, converted.value(), surface)) {
+                return converted;
             }
         }
 

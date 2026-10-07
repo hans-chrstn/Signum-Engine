@@ -5,7 +5,9 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/vulkan/vulkan_device_capabilities.hpp"
+#include "engine/renderer/vulkan/vulkan_queue_requests.hpp"
 #include "vulkan_device_extensions.hpp"
 #include "vulkan_device_features.hpp"
 #include "vulkan_queue_families.hpp"
@@ -14,10 +16,69 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
+
+namespace Core = SNE::Engine::Core;
+namespace Vulkan = SNE::Engine::Renderer::Vulkan;
+
+namespace {
+    [[nodiscard]] auto buildQueueCreateInfos(
+        std::span<const Vulkan::QueueFamilyRequest> queue_family_requests)
+        -> std::vector<VkDeviceQueueCreateInfo> {
+        std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
+        queue_create_infos.reserve(queue_family_requests.size());
+
+        for (const Vulkan::QueueFamilyRequest &queue_family_request :
+             queue_family_requests) {
+            VkDeviceQueueCreateInfo queue_create_info{};
+            queue_create_info.sType =
+                VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+
+            if (queue_family_request.priorities.empty()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanDevice requires each queue-family request to "
+                    "contain at least one queue priority");
+            }
+
+            const std::optional<std::uint32_t> queue_count =
+                Core::Numeric::tryConvertToUint32(
+                    queue_family_request.priorities.size());
+
+            if (!queue_count.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanDevice queue-family request count exceeds the "
+                    "Vulkan queue-count representation");
+            }
+
+            for (const float &priority : queue_family_request.priorities) {
+                if (std::isnan(priority) || priority < 0.0F ||
+                    priority > 1.0F) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "VulkanDevice requires each queue priority to be "
+                        "within the range [0.0, 1.0]");
+                }
+            }
+
+            queue_create_info.queueCount = queue_count.value();
+            queue_create_info.queueFamilyIndex =
+                queue_family_request.family_index;
+            queue_create_info.pQueuePriorities =
+                queue_family_request.priorities.data();
+            queue_create_infos.push_back(queue_create_info);
+        }
+
+        return queue_create_infos;
+    }
+} // namespace
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanDevice::VulkanDevice(
@@ -72,53 +133,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             }
         }
 
-        std::vector<VkDeviceQueueCreateInfo> queue_create_infos{};
-        queue_create_infos.reserve(queue_family_requests.size());
-
-        for (const QueueFamilyRequest &queue_family_request :
-             queue_family_requests) {
-            VkDeviceQueueCreateInfo queue_create_info{};
-            queue_create_info.sType =
-                VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-
-            if (queue_family_request.priorities.empty()) {
-                Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Precondition,
-                    Core::Error::Subsystem::Vulkan,
-                    "VulkanDevice requires each queue-family request to "
-                    "contain at least one queue priority");
-            }
-
-            if (queue_family_request.priorities.size() >
-                std::numeric_limits<std::uint32_t>::max()) {
-                Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Precondition,
-                    Core::Error::Subsystem::Vulkan,
-                    "VulkanDevice queue-family request count exceeds the "
-                    "Vulkan queue-count representation");
-            }
-
-            for (const float &priority : queue_family_request.priorities) {
-                if (std::isnan(priority) || priority < 0.0F ||
-                    priority > 1.0F) {
-                    Core::Assertion::failAssertion(
-                        Core::Assertion::AssertionType::Precondition,
-                        Core::Error::Subsystem::Vulkan,
-                        "VulkanDevice requires each queue priority to be "
-                        "within the range [0.0, 1.0]");
-                }
-            }
-
-            const auto queue_count = static_cast<std::uint32_t>(
-                queue_family_request.priorities.size());
-
-            queue_create_info.queueCount = queue_count;
-            queue_create_info.queueFamilyIndex =
-                queue_family_request.family_index;
-            queue_create_info.pQueuePriorities =
-                queue_family_request.priorities.data();
-            queue_create_infos.push_back(queue_create_info);
-        }
+        const std::vector<VkDeviceQueueCreateInfo> queue_create_infos =
+            buildQueueCreateInfos(queue_family_requests);
 
         LogicalDeviceFeatureConfiguration creation_features =
             logical_device_configuration;
@@ -137,12 +153,32 @@ namespace SNE::Engine::Renderer::Vulkan {
             deriveEnabledDeviceExtensions(logical_device_configuration,
                                           optional_capabilities);
         device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+        const std::optional<std::uint32_t> queue_create_info_count =
+            Core::Numeric::tryConvertToUint32(queue_create_infos.size());
+        if (!queue_create_info_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanDevice queue-create-info count exceeds the Vulkan count "
+                "representation");
+        }
         device_create_info.queueCreateInfoCount =
-            static_cast<std::uint32_t>(queue_create_infos.size());
+            queue_create_info_count.value();
         device_create_info.pQueueCreateInfos = queue_create_infos.data();
-        device_create_info.enabledExtensionCount =
-            static_cast<std::uint32_t>(extensions.size());
+
+        const std::optional<std::uint32_t> extension_count =
+            Core::Numeric::tryConvertToUint32(extensions.size());
+        if (!extension_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanDevice enabled-extension count exceeds the Vulkan count "
+                "representation");
+        }
+        device_create_info.enabledExtensionCount = extension_count.value();
         device_create_info.ppEnabledExtensionNames = extensions.data();
+
         device_create_info.pNext = &creation_features.feature_chain_root;
         device_create_info.pEnabledFeatures = nullptr;
 

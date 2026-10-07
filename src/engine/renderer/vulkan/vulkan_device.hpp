@@ -60,10 +60,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @pre physical_device must be a valid Vulkan physical-device handle.
          * @pre queue_family_requests must contain requests for the selected
          * graphics and presentation queue families.
+         * @pre The number of queue-family requests must be representable by
+         * std::uint32_t.
          * @pre Each queue-family request must use a unique queue-family index.
          * @pre Each queue-family request must contain at least one priority.
-         * @pre Each queue-family request count must be representable by
-         * std::uint32_t.
+         * @pre The number of queue priorities in each queue-family request must
+         * be representable by std::uint32_t.
          * @pre Each queue priority must be within the range [0.0, 1.0].
          *
          * @post Successful construction owns a non-null Vulkan logical-device

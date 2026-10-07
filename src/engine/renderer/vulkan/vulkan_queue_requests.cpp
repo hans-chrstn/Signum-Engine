@@ -3,6 +3,7 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "vulkan_queue_families.hpp"
+#include <cstddef>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -13,8 +14,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         priorities.push_back(1.0F);
         std::vector<QueueFamilyRequest> requests{};
 
-        if (static_cast<std::uint32_t>(priorities.size()) >
-            queue_families.graphics_family.available_queue_count) {
+        if (priorities.size() >
+            static_cast<std::size_t>(
+                queue_families.graphics_family.available_queue_count)) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
@@ -30,8 +32,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (queue_families.presentation_family.family_index !=
             queue_families.graphics_family.family_index) {
 
-            if (static_cast<std::uint32_t>(priorities.size()) >
-                queue_families.presentation_family.available_queue_count) {
+            if (priorities.size() >
+                static_cast<std::size_t>(
+                    queue_families.presentation_family.available_queue_count)) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
