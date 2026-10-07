@@ -541,11 +541,122 @@ TEST(VulkanSwapchainSelectionTests,
 }
 
 TEST(VulkanSwapchainSelectionTests,
-     SelectCompositeAlphaFailsWhenNoRecognizedModeIsSupported) {
+     SelectCompositeAlphaRejectsMissingSupportedMode) {
     VkSurfaceCapabilitiesKHR capabilities{};
     capabilities.supportedCompositeAlpha = 0U;
 
     ASSERT_DEATH(
         static_cast<void>(Vulkan::selectCompositeAlpha(capabilities)),
-        "VulkanSwapchain could not select a supported composite-alpha mode");
+        "Composite-alpha selection requires at least one supported mode");
+}
+
+TEST(VulkanSwapchainSelectionTests, SelectSurfaceFormatRejectsEmptyFormatList) {
+    const std::vector<VkSurfaceFormatKHR> surface_formats{};
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::selectSurfaceFormat(surface_formats)),
+        "Surface-format selection requires at least one available format");
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectPresentationModeRejectsEmptyPresentationModeList) {
+    const std::vector<VkPresentModeKHR> presentation_modes{};
+
+    ASSERT_DEATH(static_cast<void>(Vulkan::selectPresentationMode(
+                     Renderer::PresentationPreference::VSync,
+                     presentation_modes, false)),
+                 "Presentation-mode selection requires FIFO support");
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectPresentationModeRejectsMissingFifoSupport) {
+    const std::vector<VkPresentModeKHR> presentation_modes{
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+    };
+
+    ASSERT_DEATH(static_cast<void>(Vulkan::selectPresentationMode(
+                     Renderer::PresentationPreference::LowLatencyVSync,
+                     presentation_modes, false)),
+                 "Presentation-mode selection requires FIFO support");
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapExtentRejectsInvalidSupportedExtentRange) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.currentExtent = {
+        .width = UINT32_MAX,
+        .height = UINT32_MAX,
+    };
+    capabilities.minImageExtent = {
+        .width = 2U,
+        .height = 2U,
+    };
+    capabilities.maxImageExtent = {
+        .width = 1U,
+        .height = 1U,
+    };
+
+    constexpr Platform::FramebufferSize framebuffer_size{
+        .width = 1,
+        .height = 1,
+    };
+
+    ASSERT_DEATH(
+        static_cast<void>(
+            Vulkan::selectSwapExtent(capabilities, framebuffer_size)),
+        "Swap-extent selection requires valid minimum and maximum extents");
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapExtentRejectsNegativeFramebufferDimensions) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.currentExtent = {
+        .width = UINT32_MAX,
+        .height = UINT32_MAX,
+    };
+    capabilities.minImageExtent = {
+        .width = 1U,
+        .height = 1U,
+    };
+    capabilities.maxImageExtent = {
+        .width = 2U,
+        .height = 2U,
+    };
+
+    constexpr Platform::FramebufferSize framebuffer_size{
+        .width = -1,
+        .height = 1,
+    };
+
+    ASSERT_DEATH(
+        static_cast<void>(
+            Vulkan::selectSwapExtent(capabilities, framebuffer_size)),
+        "Swap-extent selection requires non-negative framebuffer dimensions");
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapchainImageCountRejectsInvalidImageCountRange) {
+    constexpr std::uint32_t minimum_image_count = 2U;
+    constexpr std::uint32_t maximum_image_count = 1U;
+
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.minImageCount = minimum_image_count;
+    capabilities.maxImageCount = maximum_image_count;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::selectSwapchainImageCount(capabilities)),
+        "Swapchain image-count selection requires a valid minimum and maximum "
+        "image count");
+}
+
+TEST(VulkanSwapchainSelectionTests,
+     SelectSwapchainImageCountRejectsMinimumCountOverflow) {
+    VkSurfaceCapabilitiesKHR capabilities{};
+    capabilities.minImageCount = UINT32_MAX;
+    capabilities.maxImageCount = 0U;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::selectSwapchainImageCount(capabilities)),
+        "Swapchain minimum image count cannot be incremented safely");
 }

@@ -553,7 +553,7 @@
 - [x] Define `VK_SUBOPTIMAL_KHR` handling
 - [x] Define GPU resource move-semantics policy
 - [ ] Define application-level exception boundary
-- [ ] Define scalable error-code metadata handling
+- [x] Define scalable error-code metadata handling
 - [ ] Define consistent warnings-as-errors policy
 - [ ] Define reusable Vulkan integration-test infrastructure
 
@@ -580,11 +580,11 @@
 - [x] Keep immediate submission generic instead of upload-specific
 - [x] Keep transfer recording separate from transfer submission
 - [x] Keep graphics-queue transfers as the current baseline
-- [ ] Prevent adding a dedicated transfer queue without resource ownership handling
+- [x] Prevent adding a dedicated transfer queue without resource ownership handling
 - [x] Validate selected queue-family capacity
 - [x] Verify retrieved queues satisfy selected-device guarantees
 - [x] Assert frame command-buffer availability before using `.front()`
-- [ ] Harden swapchain selection against invalid or empty inputs
+- [x] Harden swapchain selection against invalid or empty inputs
 - [x] Handle zero-sized framebuffer state
 - [x] Add swapchain recreation after acquire-time out-of-date results
 - [x] Add swapchain recreation after present-time out-of-date results
@@ -592,16 +592,16 @@
 - [x] Recreate swapchain-dependent resources in dependency order
 - [x] Re-query framebuffer and surface capabilities during recreation
 - [x] Preserve valid frame-fence state through swapchain recreation
-- [ ] Audit Vulkan wrappers for owned-versus-borrowed lifetime correctness
-- [ ] Audit destructors for safe partially constructed or empty state
+- [x] Audit Vulkan wrappers for owned-versus-borrowed lifetime correctness
+- [x] Audit destructors for safe partially constructed or empty state
 - [x] Review GPU resource wrappers for move support required by future containers
 - [x] Add move semantics only where a concrete ownership requirement exists
 - [x] Verify successful VMA buffer creation produces valid buffer/allocation state
 - [x] Verify successful VMA image creation produces valid image/allocation state
 - [x] Verify command-buffer allocation returns the requested number of handles
-- [ ] Widen `Core::Error::Code` storage beyond `std::uint8_t`
-- [ ] Prevent error-code string mappings from silently becoming incomplete
-- [ ] Prevent error-code subsystem mappings from silently becoming incomplete
+- [x] Widen `Core::Error::Code` storage beyond `std::uint8_t`
+- [x] Prevent error-code string mappings from silently becoming incomplete
+- [x] Prevent error-code subsystem mappings from silently becoming incomplete
 - [ ] Add final handling for unexpected `std::exception`
 - [ ] Add final handling for unknown exceptions if needed
 - [ ] Keep assertion failures separate from recoverable exception handling
@@ -647,9 +647,9 @@
 - [ ] Test frame-resource reuse after early returns
 - [ ] Test swapchain-dependent destruction ordering
 - [x] Add representative assertion death tests
-- [ ] Test every error code has a valid string
-- [ ] Test every error code has a valid subsystem
-- [ ] Test error metadata completeness
+- [x] Test every error code has a valid string
+- [x] Test every error code has a valid subsystem
+- [x] Test error metadata completeness
 - [x] Run clean Debug build
 - [x] Run unit tests
 - [x] Run Vulkan integration tests
@@ -678,12 +678,12 @@
 - [ ] Keep synchronous immediate submission replaceable by future asynchronous paths
 - [ ] Keep future streaming uploads possible
 - [ ] Keep graphics, compute, and transfer queue roles extensible
-- [ ] Do not add dedicated transfer queues without queue-family ownership support
+- [x] Do not add dedicated transfer queues without queue-family ownership support
 - [ ] Do not assume queue submission will permanently remain single-threaded
 - [x] Keep swapchain recreation inside renderer/presentation ownership
 - [x] Keep frame-resource identity separate from swapchain-image identity
 - [x] Keep resource ownership valid when resources move between containers
-- [ ] Keep error metadata scalable as error counts grow
+- [x] Keep error metadata scalable as error counts grow
 - [ ] Preserve one clear runtime exception boundary
 - [ ] Keep assertion reporting separate from runtime error reporting
 - [ ] Keep deterministic logic in unit tests

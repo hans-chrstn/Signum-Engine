@@ -69,6 +69,8 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @param fifo_latest_ready_enabled Whether FIFO latest-ready presentation
      * is enabled on the Vulkan logical device.
      *
+     * @pre presentation_modes must contain VK_PRESENT_MODE_FIFO_KHR.
+     *
      * @return Vulkan presentation mode selected for swapchain creation.
      */
     [[nodiscard]] auto
@@ -86,6 +88,11 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * @param capabilities Surface capabilities reported for the Vulkan surface.
      * @param framebuffer_size Current framebuffer dimensions in pixels.
+     *
+     * @pre When the surface does not provide a fixed extent,
+     *      minImageExtent must not exceed maxImageExtent.
+     * @pre When the surface does not provide a fixed extent,
+     *      framebuffer dimensions must be non-negative.
      *
      * @return Extent selected for swapchain images.
      */
@@ -106,6 +113,11 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * @param capabilities Surface capabilities reported for the Vulkan surface.
      *
+     * @pre maxImageCount must be zero or greater than or equal to
+     *      minImageCount.
+     * @pre minImageCount must allow one additional image to be represented by
+     *      std::uint32_t.
+     *
      * @return Number of swapchain images to request during swapchain creation.
      */
     [[nodiscard]] auto
@@ -122,8 +134,8 @@ namespace SNE::Engine::Renderer::Vulkan {
      *
      * @return Composite-alpha mode selected for swapchain creation.
      *
-     * @note An assertion failure is reported if the supplied capabilities
-     * contain no recognized supported composite-alpha mode.
+     * @pre supportedCompositeAlpha must contain at least one recognized
+     * composite-alpha mode.
      */
     [[nodiscard]] auto
     selectCompositeAlpha(const VkSurfaceCapabilitiesKHR &capabilities)

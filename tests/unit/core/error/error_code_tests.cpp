@@ -1,6 +1,7 @@
 #include "engine/core/error/error_code.hpp"
+#include "engine/core/error/error_metadata.hpp"
 #include "engine/core/error/subsystem.hpp"
-#include <cstdint>
+#include <cstddef>
 #include <gtest/gtest.h>
 #include <ostream>
 #include <string_view>
@@ -23,8 +24,6 @@ namespace {
     }
 
     class ErrorCodeTests : public testing::TestWithParam<ErrorCodeTestCase> {};
-
-    constexpr std::uint8_t kUnknownCodeValue = 255;
 } // namespace
 
 TEST_P(ErrorCodeTests, HasReadableName) {
@@ -264,9 +263,48 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Subsystem::Vulkan,
         }));
 
-TEST(ErrorCodeFallbackTests, UnknownErrorCodeHasFallbackName) {
-    // NOLINTNEXTLINE(clang-analyzer-optin.core.EnumCastOutOfRange)
-    const auto invalid_code = static_cast<Error::Code>(kUnknownCodeValue);
+TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {
+    EXPECT_EQ(Error::toString(Error::Code::Count), "Unknown");
+}
 
-    EXPECT_EQ(Error::toString(invalid_code), "Unknown");
+TEST(ErrorCodeFallbackTests, CountSentinelHasNoMetadata) {
+    EXPECT_EQ(Error::findErrorMetadata(Error::Code::Count), nullptr);
+}
+
+TEST(ErrorCodeCompletenessTests, EveryErrorCodeHasValidString) {
+    const auto code_count = static_cast<std::size_t>(Error::Code::Count);
+
+    for (std::size_t i{}; i < code_count; ++i) {
+        SCOPED_TRACE(i);
+
+        const auto code = static_cast<Error::Code>(i);
+
+        EXPECT_FALSE(Error::toString(code).empty());
+        EXPECT_NE(Error::toString(code), "Unknown");
+    }
+}
+
+TEST(ErrorCodeCompletenessTests, EveryErrorCodeHasValidSubsystem) {
+    const auto code_count = static_cast<std::size_t>(Error::Code::Count);
+
+    for (std::size_t i{}; i < code_count; ++i) {
+        SCOPED_TRACE(i);
+
+        const auto code = static_cast<Error::Code>(i);
+        const Error::Subsystem subsystem = Error::getSubsystemFor(code);
+
+        EXPECT_NE(Error::toString(subsystem), "Unknown");
+    }
+}
+
+TEST(ErrorCodeCompletenessTests, EveryErrorCodeHasCompleteMetadata) {
+    const auto code_count = static_cast<std::size_t>(Error::Code::Count);
+
+    for (std::size_t i{}; i < code_count; ++i) {
+        SCOPED_TRACE(i);
+
+        const auto code = static_cast<Error::Code>(i);
+
+        EXPECT_NE(Error::findErrorMetadata(code), nullptr);
+    }
 }

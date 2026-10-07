@@ -10,7 +10,7 @@ namespace SNE::Engine::Core::Error {
      * level. An EngineError may additionally contain native error information
      * reported by an underlying API.
      */
-    enum class Code : std::uint8_t {
+    enum class Code : std::uint16_t { // NOLINT(performance-enum-size)
         /** GLFW initialization failed. */
         GlfwInitializationFailed,
         /** Creation of a platform window failed. */
@@ -105,6 +105,14 @@ namespace SNE::Engine::Core::Error {
         VulkanBufferInvalidationFailed,
         /** Failed to wait for Vulkan device. */
         VulkanDeviceWaitIdleFailed,
+        /**
+         * @brief Sentinel representing the number of valid engine error codes.
+         *
+         * This enumerator is used for metadata sizing and completeness
+         * validation. It must remain the final enumerator in Code and is not
+         * itself a reportable engine error.
+         */
+        Count,
     };
 
     /**

@@ -17,6 +17,14 @@ namespace SNE::Engine::Renderer::Vulkan {
     auto
     selectSurfaceFormat(std::span<const VkSurfaceFormatKHR> surface_formats)
         -> VkSurfaceFormatKHR {
+        if (surface_formats.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Surface-format selection requires at least one available "
+                "format");
+        }
+
         const VkSurfaceFormatKHR preferred_format{
             .format = VK_FORMAT_B8G8R8A8_SRGB,
             .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
@@ -28,6 +36,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                 return surface_format;
             }
         }
+
         return surface_formats.front();
     }
 
@@ -35,6 +44,14 @@ namespace SNE::Engine::Renderer::Vulkan {
     selectPresentationMode(PresentationPreference presentation_preference,
                            std::span<const VkPresentModeKHR> presentation_modes,
                            bool fifo_latest_ready_enabled) -> VkPresentModeKHR {
+        if (!containsPresentationMode(presentation_modes,
+                                      VK_PRESENT_MODE_FIFO_KHR)) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Presentation-mode selection requires FIFO support");
+        }
+
         switch (presentation_preference) {
         case PresentationPreference::VSync:
             return VK_PRESENT_MODE_FIFO_KHR;
@@ -83,6 +100,25 @@ namespace SNE::Engine::Renderer::Vulkan {
             return capabilities.currentExtent;
         }
 
+        if (capabilities.minImageExtent.width >
+                capabilities.maxImageExtent.width ||
+            capabilities.minImageExtent.height >
+                capabilities.maxImageExtent.height) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Swap-extent selection requires valid minimum and maximum "
+                "extents");
+        }
+
+        if (framebuffer_size.width < 0 || framebuffer_size.height < 0) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Swap-extent selection requires non-negative framebuffer "
+                "dimensions");
+        }
+
         return {
             .width =
                 std::clamp(static_cast<std::uint32_t>(framebuffer_size.width),
@@ -97,6 +133,22 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto selectSwapchainImageCount(const VkSurfaceCapabilitiesKHR &capabilities)
         -> std::uint32_t {
+        if (capabilities.maxImageCount != 0U &&
+            capabilities.maxImageCount < capabilities.minImageCount) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Swapchain image-count selection requires a valid minimum and "
+                "maximum image count");
+        }
+
+        if (capabilities.minImageCount == UINT32_MAX) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Swapchain minimum image count cannot be incremented safely");
+        }
+
         const std::uint32_t preferred_count = capabilities.minImageCount + 1U;
         // A maximum of zero means the surface imposes no explicit image-count
         // limit.
@@ -131,9 +183,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         Core::Assertion::failAssertion(
-            Core::Assertion::AssertionType::Invariant,
+            Core::Assertion::AssertionType::Precondition,
             Core::Error::Subsystem::Vulkan,
-            "VulkanSwapchain could not select a supported composite-alpha "
-            "mode");
+            "Composite-alpha selection requires at least one supported mode");
     }
 } // namespace SNE::Engine::Renderer::Vulkan

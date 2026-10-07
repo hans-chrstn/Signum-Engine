@@ -1,55 +1,12 @@
 #include "subsystem.hpp"
+#include "error_metadata.hpp"
 #include <exception>
 
 namespace SNE::Engine::Core::Error {
     auto getSubsystemFor(Code code) noexcept -> Subsystem {
-        switch (code) {
-        case Code::GlfwInitializationFailed:
-        case Code::WindowCreationFailed:
-            return Subsystem::Platform;
-        case Code::VulkanRequiredExtensionsUnavailable:
-        case Code::VulkanInstanceCreationFailed:
-        case Code::VulkanLayerEnumerationFailed:
-        case Code::VulkanValidationLayerUnavailable:
-        case Code::VulkanDebugMessengerFunctionUnavailable:
-        case Code::VulkanDebugMessengerCreationFailed:
-        case Code::VulkanExtensionEnumerationFailed:
-        case Code::VulkanExtensionSupportUnavailable:
-        case Code::VulkanApiVersionQueryFailed:
-        case Code::VulkanApiVersionUnsupported:
-        case Code::VulkanSurfaceCreationFailed:
-        case Code::VulkanPhysicalDeviceEnumerationFailed:
-        case Code::VulkanSurfaceSupportQueryFailed:
-        case Code::VulkanSuitablePhysicalDeviceUnavailable:
-        case Code::VulkanDeviceCreationFailed:
-        case Code::VulkanSwapchainSupportQueryFailed:
-        case Code::VulkanSwapchainCreationFailed:
-        case Code::VulkanSwapchainImageEnumerationFailed:
-        case Code::VulkanSwapchainImageViewCreationFailed:
-        case Code::VulkanCommandPoolCreationFailed:
-        case Code::VulkanCommandBufferAllocationFailed:
-        case Code::VulkanSemaphoreCreationFailed:
-        case Code::VulkanFenceCreationFailed:
-        case Code::VulkanFenceWaitFailed:
-        case Code::VulkanFenceResetFailed:
-        case Code::VulkanSwapchainImageAcquisitionFailed:
-        case Code::VulkanCommandPoolResetFailed:
-        case Code::VulkanCommandBufferBeginFailed:
-        case Code::VulkanCommandBufferEndFailed:
-        case Code::VulkanQueueSubmissionFailed:
-        case Code::VulkanQueuePresentationFailed:
-        case Code::VulkanShaderBytecodeLoadFailed:
-        case Code::VulkanShaderModuleCreationFailed:
-        case Code::VulkanPipelineLayoutCreationFailed:
-        case Code::VulkanGraphicsPipelineCreationFailed:
-        case Code::VulkanMemoryAllocatorCreationFailed:
-        case Code::VulkanBufferCreationFailed:
-        case Code::VulkanImageCreationFailed:
-        case Code::VulkanBufferMappingFailed:
-        case Code::VulkanBufferFlushFailed:
-        case Code::VulkanBufferInvalidationFailed:
-        case Code::VulkanDeviceWaitIdleFailed:
-            return Subsystem::Vulkan;
+        const ErrorMetadata *metadata = findErrorMetadata(code);
+        if (metadata != nullptr) {
+            return metadata->subsystem;
         }
 
         std::terminate();

@@ -1,97 +1,13 @@
 #include "error_code.hpp"
+#include "error_metadata.hpp"
 
 namespace SNE::Engine::Core::Error {
     auto toString(Code code) noexcept -> std::string_view {
-        switch (code) {
-        case Code::GlfwInitializationFailed:
-            return "GlfwInitializationFailed";
-        case Code::WindowCreationFailed:
-            return "WindowCreationFailed";
-        case Code::VulkanRequiredExtensionsUnavailable:
-            return "VulkanRequiredExtensionsUnavailable";
-        case Code::VulkanInstanceCreationFailed:
-            return "VulkanInstanceCreationFailed";
-        case Code::VulkanLayerEnumerationFailed:
-            return "VulkanLayerEnumerationFailed";
-        case Code::VulkanValidationLayerUnavailable:
-            return "VulkanValidationLayerUnavailable";
-        case Code::VulkanDebugMessengerFunctionUnavailable:
-            return "VulkanDebugMessengerFunctionUnavailable";
-        case Code::VulkanDebugMessengerCreationFailed:
-            return "VulkanDebugMessengerCreationFailed";
-        case Code::VulkanExtensionEnumerationFailed:
-            return "VulkanExtensionEnumerationFailed";
-        case Code::VulkanExtensionSupportUnavailable:
-            return "VulkanExtensionSupportUnavailable";
-        case Code::VulkanApiVersionQueryFailed:
-            return "VulkanApiVersionQueryFailed";
-        case Code::VulkanApiVersionUnsupported:
-            return "VulkanApiVersionUnsupported";
-        case Code::VulkanSurfaceCreationFailed:
-            return "VulkanSurfaceCreationFailed";
-        case Code::VulkanPhysicalDeviceEnumerationFailed:
-            return "VulkanPhysicalDeviceEnumerationFailed";
-        case Code::VulkanSurfaceSupportQueryFailed:
-            return "VulkanSurfaceSupportQueryFailed";
-        case Code::VulkanSuitablePhysicalDeviceUnavailable:
-            return "VulkanSuitablePhysicalDeviceUnavailable";
-        case Code::VulkanDeviceCreationFailed:
-            return "VulkanDeviceCreationFailed";
-        case Code::VulkanSwapchainSupportQueryFailed:
-            return "VulkanSwapchainSupportQueryFailed";
-        case Code::VulkanSwapchainCreationFailed:
-            return "VulkanSwapchainCreationFailed";
-        case Code::VulkanSwapchainImageEnumerationFailed:
-            return "VulkanSwapchainImageEnumerationFailed";
-        case Code::VulkanSwapchainImageViewCreationFailed:
-            return "VulkanSwapchainImageViewCreationFailed";
-        case Code::VulkanCommandPoolCreationFailed:
-            return "VulkanCommandPoolCreationFailed";
-        case Code::VulkanCommandBufferAllocationFailed:
-            return "VulkanCommandBufferAllocationFailed";
-        case Code::VulkanSemaphoreCreationFailed:
-            return "VulkanSemaphoreCreationFailed";
-        case Code::VulkanFenceCreationFailed:
-            return "VulkanFenceCreationFailed";
-        case Code::VulkanFenceWaitFailed:
-            return "VulkanFenceWaitFailed";
-        case Code::VulkanFenceResetFailed:
-            return "VulkanFenceResetFailed";
-        case Code::VulkanSwapchainImageAcquisitionFailed:
-            return "VulkanSwapchainImageAcquisitionFailed";
-        case Code::VulkanCommandPoolResetFailed:
-            return "VulkanCommandPoolResetFailed";
-        case Code::VulkanCommandBufferBeginFailed:
-            return "VulkanCommandBufferBeginFailed";
-        case Code::VulkanCommandBufferEndFailed:
-            return "VulkanCommandBufferEndFailed";
-        case Code::VulkanQueueSubmissionFailed:
-            return "VulkanQueueSubmissionFailed";
-        case Code::VulkanQueuePresentationFailed:
-            return "VulkanQueuePresentationFailed";
-        case Code::VulkanShaderBytecodeLoadFailed:
-            return "VulkanShaderBytecodeLoadFailed";
-        case Code::VulkanShaderModuleCreationFailed:
-            return "VulkanShaderModuleCreationFailed";
-        case Code::VulkanPipelineLayoutCreationFailed:
-            return "VulkanPipelineLayoutCreationFailed";
-        case Code::VulkanGraphicsPipelineCreationFailed:
-            return "VulkanGraphicsPipelineCreationFailed";
-        case Code::VulkanMemoryAllocatorCreationFailed:
-            return "VulkanMemoryAllocatorCreationFailed";
-        case Code::VulkanBufferCreationFailed:
-            return "VulkanBufferCreationFailed";
-        case Code::VulkanImageCreationFailed:
-            return "VulkanImageCreationFailed";
-        case Code::VulkanBufferMappingFailed:
-            return "VulkanBufferMappingFailed";
-        case Code::VulkanBufferFlushFailed:
-            return "VulkanBufferFlushFailed";
-        case Code::VulkanBufferInvalidationFailed:
-            return "VulkanBufferInvalidationFailed";
-        case Code::VulkanDeviceWaitIdleFailed:
-            return "VulkanDeviceWaitIdleFailed";
+        const ErrorMetadata *metadata = findErrorMetadata(code);
+        if (metadata != nullptr) {
+            return metadata->name;
         }
+
         return "Unknown";
     }
 } // namespace SNE::Engine::Core::Error
