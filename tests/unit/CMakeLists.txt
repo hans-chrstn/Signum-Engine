@@ -12,18 +12,18 @@ add_executable(
   core/assert/assertion_writer_tests.cpp
   core/assert/assertion_handler_tests.cpp
   core/numeric/checked_conversion_tests.cpp
-  renderer/vulkan/vulkan_result_tests.cpp
-  renderer/vulkan/vulkan_extension_support_tests.cpp
-  renderer/vulkan/vulkan_queue_families_tests.cpp
-  renderer/vulkan/vulkan_device_selection_tests.cpp
-  renderer/vulkan/vulkan_api_version_tests.cpp
-  renderer/vulkan/vulkan_queue_requests_tests.cpp
-  renderer/vulkan/vulkan_swapchain_selection_tests.cpp
-  renderer/vulkan/vulkan_device_tests.cpp
-  renderer/vulkan/vulkan_device_features_tests.cpp
-  renderer/vulkan/vulkan_memory_policy_tests.cpp
-  renderer/vulkan/vulkan_device_extensions_tests.cpp
-  renderer/vulkan/vulkan_byte_range_tests.cpp
+  renderer/vulkan/common/vulkan_result_tests.cpp
+  renderer/vulkan/common/vulkan_extension_support_tests.cpp
+  renderer/vulkan/device/vulkan_queue_families_tests.cpp
+  renderer/vulkan/device/vulkan_device_selection_tests.cpp
+  renderer/vulkan/common/vulkan_api_version_tests.cpp
+  renderer/vulkan/device/vulkan_queue_requests_tests.cpp
+  renderer/vulkan/presentation/vulkan_swapchain_selection_tests.cpp
+  renderer/vulkan/device/vulkan_device_tests.cpp
+  renderer/vulkan/device/vulkan_device_features_tests.cpp
+  renderer/vulkan/memory/vulkan_memory_policy_tests.cpp
+  renderer/vulkan/device/vulkan_device_extensions_tests.cpp
+  renderer/vulkan/memory/vulkan_byte_range_tests.cpp
 )
 
 target_link_libraries(

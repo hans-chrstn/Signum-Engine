@@ -6,9 +6,9 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
-#include "vulkan_api_version.hpp"
-#include "vulkan_extension_support.hpp"
-#include "vulkan_result.hpp"
+#include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
+#include "engine/renderer/vulkan/common/vulkan_extension_support.hpp"
+#include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include <GLFW/glfw3.h>
 #include <cstring>
 #include <iostream>

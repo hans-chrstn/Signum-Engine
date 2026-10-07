@@ -1,7 +1,7 @@
 #pragma once
 
-#include "engine/renderer/vulkan/vulkan_memory_allocator.hpp"
-#include "engine/renderer/vulkan/vulkan_queue_families.hpp"
+#include "engine/renderer/vulkan/device/vulkan_queue_families.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
 #include <gtest/gtest.h>
 #include <optional>
 #include <vulkan/vulkan.h>

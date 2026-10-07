@@ -2,17 +2,17 @@
 
 #include "engine/platform/window.hpp"
 #include "engine/renderer/presentation_preference.hpp"
-#include "vulkan_device.hpp"
-#include "vulkan_device_features.hpp"
-#include "vulkan_device_selection.hpp"
+#include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
+#include "engine/renderer/vulkan/device/vulkan_device.hpp"
+#include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
+#include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
+#include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
+#include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
+#include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include "vulkan_frame_resources.hpp"
-#include "vulkan_graphics_pipeline.hpp"
-#include "vulkan_immediate_submission.hpp"
 #include "vulkan_instance.hpp"
-#include "vulkan_memory_allocator.hpp"
-#include "vulkan_semaphore.hpp"
-#include "vulkan_surface.hpp"
-#include "vulkan_swapchain.hpp"
 #include <cstddef>
 #include <string>
 #include <vector>

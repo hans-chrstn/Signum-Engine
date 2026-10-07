@@ -1,15 +1,29 @@
-#include "vulkan_integration_test_fixture.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/device/vulkan_queue_families.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_image.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
 #include <cstdint>
-#include <stdexcept>
+#include <gtest/gtest.h>
+#include <optional>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
-auto VulkanIntegrationTest::SetUp() -> void {
+class VulkanImageIntegrationTests : public ::testing::Test {
+  protected:
+    VkInstance m_Instance{VK_NULL_HANDLE};
+    VkPhysicalDevice m_PhysicalDevice{VK_NULL_HANDLE};
+    Vulkan::SelectedQueueFamily m_SelectedQueueFamily{};
+    VkDevice m_Device{VK_NULL_HANDLE};
+    std::optional<Vulkan::VulkanMemoryAllocator> m_MemoryAllocator;
+
+    auto SetUp() -> void override;
+    auto TearDown() -> void override;
+};
+
+auto VulkanImageIntegrationTests::SetUp() -> void {
     std::uint32_t supported_api_version{};
     const VkResult api_result =
         vkEnumerateInstanceVersion(&supported_api_version);
@@ -27,14 +41,14 @@ auto VulkanIntegrationTest::SetUp() -> void {
     application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     application_info.apiVersion = Vulkan::kRequiredApiVersion;
 
-    VkInstanceCreateInfo instance_create_info{};
-    instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instance_create_info.pApplicationInfo = &application_info;
+    VkInstanceCreateInfo create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    create_info.pApplicationInfo = &application_info;
 
-    const VkResult instance_result =
-        vkCreateInstance(&instance_create_info, nullptr, &m_Instance);
+    const VkResult result =
+        vkCreateInstance(&create_info, nullptr, &m_Instance);
 
-    ASSERT_EQ(instance_result, VK_SUCCESS);
+    ASSERT_EQ(result, VK_SUCCESS);
 
     const std::vector<VkPhysicalDevice> devices =
         Vulkan::enumeratePhysicalDevices(m_Instance);
@@ -55,33 +69,24 @@ auto VulkanIntegrationTest::SetUp() -> void {
         FAIL() << "Failed to find a graphics queue family";
     }
 
-    const std::uint32_t graphics_family_index = graphics_family.value();
-
-    m_SelectedQueueFamily.family_index = graphics_family_index;
+    m_SelectedQueueFamily.family_index = graphics_family.value();
     m_SelectedQueueFamily.available_queue_count =
-        queue_family_properties[graphics_family_index].queueCount;
+        queue_family_properties[graphics_family.value()].queueCount;
 
     const float priority = 1.0F;
-
     VkDeviceQueueCreateInfo device_queue_info{};
     device_queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    device_queue_info.queueFamilyIndex = graphics_family_index;
+    device_queue_info.queueFamilyIndex = m_SelectedQueueFamily.family_index;
     device_queue_info.queueCount = 1U;
     device_queue_info.pQueuePriorities = &priority;
 
-    VkPhysicalDeviceVulkan13Features vulkan13_features{};
-    vulkan13_features.sType =
-        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    vulkan13_features.synchronization2 = VK_TRUE;
+    VkDeviceCreateInfo device_info{};
+    device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_info.queueCreateInfoCount = 1U;
+    device_info.pQueueCreateInfos = &device_queue_info;
 
-    VkDeviceCreateInfo device_create_info{};
-    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.queueCreateInfoCount = 1U;
-    device_create_info.pQueueCreateInfos = &device_queue_info;
-    device_create_info.pNext = &vulkan13_features;
-
-    const VkResult device_result = vkCreateDevice(
-        m_PhysicalDevice, &device_create_info, nullptr, &m_Device);
+    const VkResult device_result =
+        vkCreateDevice(m_PhysicalDevice, &device_info, nullptr, &m_Device);
 
     ASSERT_EQ(device_result, VK_SUCCESS);
 
@@ -89,9 +94,8 @@ auto VulkanIntegrationTest::SetUp() -> void {
                               Vulkan::kRequiredApiVersion, false);
 }
 
-auto VulkanIntegrationTest::TearDown() -> void {
+auto VulkanImageIntegrationTests::TearDown() -> void {
     m_MemoryAllocator.reset();
-
     if (m_Device != VK_NULL_HANDLE) {
         vkDestroyDevice(m_Device, nullptr);
     }
@@ -105,12 +109,31 @@ auto VulkanIntegrationTest::TearDown() -> void {
     m_Instance = VK_NULL_HANDLE;
 }
 
-auto VulkanIntegrationTest::memoryAllocator()
-    -> Vulkan::VulkanMemoryAllocator & {
+TEST_F(VulkanImageIntegrationTests, CreatesAndDestroysVmaBackedImage) {
+    ASSERT_NE(m_Instance, VK_NULL_HANDLE);
+    ASSERT_NE(m_PhysicalDevice, VK_NULL_HANDLE);
+    ASSERT_NE(m_Device, VK_NULL_HANDLE);
+
+    const std::uint32_t width = 64U;
+    const std::uint32_t height = 64U;
+    const std::uint32_t depth = 1U;
+
+    const Vulkan::VulkanImageCreateInfo image_create_info{
+        .extent =
+            {
+                .width = width,
+                .height = height,
+                .depth = depth,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
     if (!m_MemoryAllocator.has_value()) {
-        throw std::logic_error(
-            "VulkanIntegrationTest requires an initialized memory allocator");
+        FAIL() << "Failed to get a value for memory allocator";
     }
 
-    return m_MemoryAllocator.value();
+    Vulkan::VulkanImage image =
+        Vulkan::VulkanImage(m_MemoryAllocator.value(), image_create_info);
 }

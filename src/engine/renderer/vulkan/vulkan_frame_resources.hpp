@@ -1,8 +1,8 @@
 #pragma once
 
-#include "engine/renderer/vulkan/vulkan_command_pool.hpp"
-#include "engine/renderer/vulkan/vulkan_fence.hpp"
-#include "engine/renderer/vulkan/vulkan_semaphore.hpp"
+#include "engine/renderer/vulkan/command/vulkan_command_pool.hpp"
+#include "engine/renderer/vulkan/synchronization/vulkan_fence.hpp"
+#include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include <cstdint>
 #include <span>
 #include <vector>
