@@ -563,7 +563,7 @@
 - [x] Add missing preconditions to backend-facing operations
 - [x] Add invariants for internal assumptions that must always hold
 - [x] Add postconditions where successful operations establish required state
-- [ ] Remove redundant contract checks already guaranteed by lower-level ownership
+- [x] Remove redundant contract checks already guaranteed by lower-level ownership
 - [ ] Add reusable overflow-safe byte-range validation
 - [ ] Replace duplicated buffer range calculations with the shared helper
 - [ ] Add checked conversion for Vulkan count fields

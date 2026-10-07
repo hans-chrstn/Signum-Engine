@@ -11,13 +11,6 @@ namespace SNE::Engine::Renderer::Vulkan {
                           const VulkanBuffer &destination,
                           std::span<const std::byte> bytes,
                           VkDeviceSize destination_offset) -> void {
-        if (allocator.nativeHandle() == nullptr) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "uploadBufferData requires a valid VMA allocator");
-        }
-
         if (bytes.empty()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,

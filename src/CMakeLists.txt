@@ -47,6 +47,7 @@ add_library(
     engine/renderer/vulkan/vulkan_immediate_submission.cpp
     engine/renderer/vulkan/vulkan_upload.cpp
     engine/renderer/vulkan/vulkan_readback.cpp
+    engine/renderer/vulkan/vulkan_byte_range.cpp
 )
 
 target_include_directories(

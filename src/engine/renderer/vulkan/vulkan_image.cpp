@@ -14,13 +14,6 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanImage::VulkanImage(const VulkanMemoryAllocator &allocator,
                              const VulkanImageCreateInfo &create_info)
         : m_Allocator(allocator.nativeHandle()) {
-        if (allocator.nativeHandle() == nullptr) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanImage requires a valid Vulkan memory allocator");
-        }
-
         switch (create_info.image_type) {
         case VK_IMAGE_TYPE_1D:
             if (create_info.extent.width == 0U) {

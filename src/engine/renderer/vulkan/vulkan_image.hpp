@@ -86,7 +86,6 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param create_info Image type, extent, format, and Vulkan usage
          * flags.
          *
-         * @pre allocator must own a valid VMA allocator.
          * @pre create_info.image_type must be a supported Vulkan image type.
          * @pre create_info.extent must satisfy the dimensional requirements of
          * the requested image type.

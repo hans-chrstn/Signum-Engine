@@ -22,6 +22,7 @@ add_executable(
   renderer/vulkan/vulkan_device_features_tests.cpp
   renderer/vulkan/vulkan_memory_policy_tests.cpp
   renderer/vulkan/vulkan_device_extensions_tests.cpp
+  renderer/vulkan/vulkan_byte_range_tests.cpp
 )
 
 target_link_libraries(

@@ -83,7 +83,6 @@ namespace SNE::Engine::Renderer::Vulkan {
          * the buffer allocation.
          * @param create_info Buffer size, usage flags, and memory-usage policy.
          *
-         * @pre allocator must own a valid VMA allocator.
          * @pre create_info.size must be greater than zero.
          * @pre create_info.usage must contain at least one Vulkan buffer usage
          * flag.

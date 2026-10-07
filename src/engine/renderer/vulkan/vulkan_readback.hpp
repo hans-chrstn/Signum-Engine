@@ -30,7 +30,6 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @param source_offset Byte offset within the source buffer at which
      * reading begins.
      *
-     * @pre allocator must contain a valid underlying allocation backend.
      * @pre output must not be empty.
      * @pre The requested source range must fit entirely within the source
      * buffer.

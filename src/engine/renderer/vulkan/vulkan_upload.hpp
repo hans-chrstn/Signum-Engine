@@ -28,7 +28,6 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @param destination_offset Byte offset within the destination buffer at
      * which the uploaded data is written.
      *
-     * @pre allocator must contain a valid underlying allocation backend.
      * @pre bytes must not be empty.
      * @pre The destination range must fit within the destination buffer.
      * @pre destination must have been created with

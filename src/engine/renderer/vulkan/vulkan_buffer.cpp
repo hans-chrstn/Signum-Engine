@@ -20,12 +20,6 @@ namespace SNE::Engine::Renderer::Vulkan {
                                const VulkanBufferCreateInfo &create_info)
         : m_Allocator(allocator.nativeHandle()), m_Size(create_info.size),
           m_MemoryUsage(create_info.memory_usage) {
-        if (allocator.nativeHandle() == nullptr) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanBuffer requires a valid Vulkan memory allocator");
-        }
 
         if (create_info.size == 0U) {
             Core::Assertion::failAssertion(
