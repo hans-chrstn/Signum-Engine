@@ -224,10 +224,10 @@
 - [x] Select swapchain image count
 - [x] Select composite-alpha mode
 - [x] Create image views
-- [ ] Handle out-of-date swapchain
-- [ ] Handle suboptimal swapchain
-- [ ] Handle minimized windows
-- [ ] Recreate dependent resources safely
+- [x] Handle out-of-date swapchain
+- [x] Handle suboptimal swapchain
+- [x] Handle minimized windows
+- [x] Recreate dependent resources safely
 
 ### Test
 
@@ -241,8 +241,8 @@
 - [x] Test extent selection
 - [x] Test swapchain image-count selection
 - [x] Test composite-alpha selection
-- [ ] Resize repeatedly
-- [ ] Minimize and restore repeatedly
+- [x] Resize repeatedly
+- [x] Minimize and restore repeatedly
 
 ### Architecture
 
@@ -504,8 +504,8 @@
 - [x] Test upload correctness
 - [ ] Test partial allocation failure
 - [ ] Test deferred retirement
-- [ ] Run Vulkan validation
-- [ ] Run sanitizers
+- [x] Run Vulkan validation
+- [x] Run sanitizers
 
 ### Architecture
 
@@ -658,7 +658,7 @@
 - [x] Run Clang-Tidy
 - [x] Run formatting checks
 - [ ] Run warnings-as-errors build
-- [ ] Run Vulkan validation cleanly
+- [x] Run Vulkan validation cleanly
 - [ ] Generate Doxygen without warnings
 - [ ] Verify CI from a clean checkout
 
@@ -680,9 +680,9 @@
 - [ ] Keep graphics, compute, and transfer queue roles extensible
 - [ ] Do not add dedicated transfer queues without queue-family ownership support
 - [ ] Do not assume queue submission will permanently remain single-threaded
-- [ ] Keep swapchain recreation inside renderer/presentation ownership
-- [ ] Keep frame-resource identity separate from swapchain-image identity
-- [ ] Keep resource ownership valid when resources move between containers
+- [x] Keep swapchain recreation inside renderer/presentation ownership
+- [x] Keep frame-resource identity separate from swapchain-image identity
+- [x] Keep resource ownership valid when resources move between containers
 - [ ] Keep error metadata scalable as error counts grow
 - [ ] Preserve one clear runtime exception boundary
 - [ ] Keep assertion reporting separate from runtime error reporting
