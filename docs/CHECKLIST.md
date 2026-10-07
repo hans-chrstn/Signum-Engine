@@ -540,7 +540,7 @@
 
 - [x] Define consistent rules for `Precondition`, `Invariant`, and `Postcondition`
 - [x] Define when failures use `EngineError` versus `failAssertion`
-- [ ] Define reusable byte-range validation
+- [x] Define reusable byte-range validation
 - [ ] Define checked Vulkan count/index conversion policy
 - [ ] Define Vulkan buffer usage introspection
 - [ ] Define immediate-submission threading and reuse policy

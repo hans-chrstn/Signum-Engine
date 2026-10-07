@@ -6,6 +6,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "vulkan_byte_range.hpp"
 #include "vulkan_memory_policy.hpp"
 #include "vulkan_result.hpp"
 #include <cstddef>
@@ -106,7 +107,12 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const auto bytes_size = static_cast<VkDeviceSize>(bytes.size());
 
-        if (offset > m_Size || bytes_size > m_Size - offset) {
+        const ByteRange write_range{
+            .offset = offset,
+            .size = bytes_size,
+        };
+
+        if (!write_range.fitsWithin(m_Size)) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
@@ -177,7 +183,12 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const auto output_size = static_cast<VkDeviceSize>(output.size());
 
-        if (offset > m_Size || output_size > m_Size - offset) {
+        const ByteRange read_range{
+            .offset = offset,
+            .size = output_size,
+        };
+
+        if (!read_range.fitsWithin(m_Size)) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,

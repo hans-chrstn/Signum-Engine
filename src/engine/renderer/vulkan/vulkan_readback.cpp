@@ -4,6 +4,7 @@
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "vulkan_buffer.hpp"
+#include "vulkan_byte_range.hpp"
 #include "vulkan_transfer_commands.hpp"
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -20,8 +21,12 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const auto output_size = static_cast<VkDeviceSize>(output.size());
 
-        if (source_offset > source.size() ||
-            output_size > source.size() - source_offset) {
+        const ByteRange read_range{
+            .offset = source_offset,
+            .size = output_size,
+        };
+
+        if (!read_range.fitsWithin(source.size())) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,

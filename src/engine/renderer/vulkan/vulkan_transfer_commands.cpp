@@ -2,6 +2,7 @@
 #include "engine/core/assert/assertion_handler.hpp"
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "vulkan_byte_range.hpp"
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto recordBufferCopy(VkCommandBuffer command_buffer,
@@ -21,21 +22,25 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "recordBufferCopy requires a non-zero copy size");
         }
 
-        if (buffer_copy_request.source_offset >
-                buffer_copy_request.source.size() ||
-            buffer_copy_request.size > buffer_copy_request.source.size() -
-                                           buffer_copy_request.source_offset) {
+        const ByteRange source_range{
+            .offset = buffer_copy_request.source_offset,
+            .size = buffer_copy_request.size,
+        };
+
+        if (!source_range.fitsWithin(buffer_copy_request.source.size())) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
                 "recordBufferCopy source range exceeds the source buffer size");
         }
 
-        if (buffer_copy_request.destination_offset >
-                buffer_copy_request.destination.size() ||
-            buffer_copy_request.size >
-                buffer_copy_request.destination.size() -
-                    buffer_copy_request.destination_offset) {
+        const ByteRange destination_range{
+            .offset = buffer_copy_request.destination_offset,
+            .size = buffer_copy_request.size,
+        };
+
+        if (!destination_range.fitsWithin(
+                buffer_copy_request.destination.size())) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,

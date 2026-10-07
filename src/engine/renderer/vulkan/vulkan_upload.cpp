@@ -3,6 +3,7 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "vulkan_byte_range.hpp"
 #include "vulkan_transfer_commands.hpp"
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -20,8 +21,12 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const auto bytes_size = static_cast<VkDeviceSize>(bytes.size());
 
-        if (destination_offset > destination.size() ||
-            bytes_size > destination.size() - destination_offset) {
+        const ByteRange upload_range{
+            .offset = destination_offset,
+            .size = bytes_size,
+        };
+
+        if (!upload_range.fitsWithin(destination.size())) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
