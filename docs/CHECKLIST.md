@@ -544,9 +544,9 @@
 - [x] Define checked Vulkan count/index conversion policy
 - [x] Define Vulkan buffer usage introspection
 - [x] Define immediate-submission threading and reuse policy
-- [ ] Define queue submission ownership and synchronization policy
-- [ ] Define requirements for future dedicated transfer queues
-- [ ] Define queue-family ownership-transfer policy
+- [x] Define queue submission ownership and synchronization policy
+- [x] Define requirements for future dedicated transfer queues
+- [x] Define queue-family ownership-transfer policy
 - [ ] Define swapchain recreation behavior
 - [ ] Define minimized-window and zero-framebuffer behavior
 - [ ] Define `VK_ERROR_OUT_OF_DATE_KHR` handling

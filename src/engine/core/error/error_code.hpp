@@ -103,6 +103,8 @@ namespace SNE::Engine::Core::Error {
         VulkanBufferFlushFailed,
         /** Failed to invalidate Vulkan buffer. */
         VulkanBufferInvalidationFailed,
+        /** Failed to wait for Vulkan device. */
+        VulkanDeviceWaitIdleFailed,
     };
 
     /**

@@ -21,6 +21,10 @@ namespace SNE::Engine::Renderer::Vulkan {
      * An instance permits only one active execution at a time. Concurrent or
      * recursive calls to execute() on the same instance are contract
      * violations.
+     *
+     * Queue access is not synchronized against other users of the borrowed
+     * queue. The caller must ensure that host access to the queue is externally
+     * synchronized while execute() performs queue operations.
      */
     class VulkanImmediateSubmission {
       private:
@@ -85,6 +89,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @pre No other execution may currently be active on this
          * immediate-submission object, including recursive execution from the
          * recording callback.
+         * @pre Host access to the borrowed Vulkan queue must be externally
+         * synchronized for the duration of this operation.
          *
          * @throws Core::Error::EngineError if Vulkan fails while resetting,
          * beginning, ending, submitting, or waiting for the immediate work.

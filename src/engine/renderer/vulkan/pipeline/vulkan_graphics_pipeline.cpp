@@ -11,6 +11,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -181,69 +182,73 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Create Vulkan Pipeline Layout");
         }
 
-        if (m_PipelineLayout == VK_NULL_HANDLE) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Postcondition,
-                Core::Error::Subsystem::Vulkan,
-                "Successful Vulkan pipeline-layout creation must produce a "
-                "non-null pipeline layout handle");
-        }
+        try {
+            if (m_PipelineLayout == VK_NULL_HANDLE) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Postcondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Successful Vulkan pipeline-layout creation must produce a "
+                    "non-null pipeline layout handle");
+            }
 
-        VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{};
-        graphics_pipeline_create_info.sType =
-            VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        graphics_pipeline_create_info.pNext = &rendering_create_info;
-        graphics_pipeline_create_info.stageCount = 2U;
-        const std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{
-            {vertex_stage_description, fragment_stage_description},
-        };
-        graphics_pipeline_create_info.pStages = shader_stages.data();
-        graphics_pipeline_create_info.pVertexInputState =
-            &vertex_input_state_create_info;
-        graphics_pipeline_create_info.pInputAssemblyState =
-            &input_assembly_state_create_info;
-        graphics_pipeline_create_info.pViewportState =
-            &viewport_state_create_info;
-        graphics_pipeline_create_info.pRasterizationState =
-            &raster_state_create_info;
-        graphics_pipeline_create_info.pMultisampleState =
-            &multisample_state_create_info;
-        graphics_pipeline_create_info.pDepthStencilState = nullptr;
-        graphics_pipeline_create_info.pColorBlendState =
-            &color_blend_state_create_info;
-        graphics_pipeline_create_info.pDynamicState =
-            &dynamic_state_create_info;
-        graphics_pipeline_create_info.layout = m_PipelineLayout;
-        graphics_pipeline_create_info.renderPass = VK_NULL_HANDLE;
-        graphics_pipeline_create_info.subpass = 0U;
-        graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
-        graphics_pipeline_create_info.basePipelineIndex = -1;
+            VkGraphicsPipelineCreateInfo graphics_pipeline_create_info{};
+            graphics_pipeline_create_info.sType =
+                VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+            graphics_pipeline_create_info.pNext = &rendering_create_info;
+            graphics_pipeline_create_info.stageCount = 2U;
+            const std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{
+                {vertex_stage_description, fragment_stage_description},
+            };
+            graphics_pipeline_create_info.pStages = shader_stages.data();
+            graphics_pipeline_create_info.pVertexInputState =
+                &vertex_input_state_create_info;
+            graphics_pipeline_create_info.pInputAssemblyState =
+                &input_assembly_state_create_info;
+            graphics_pipeline_create_info.pViewportState =
+                &viewport_state_create_info;
+            graphics_pipeline_create_info.pRasterizationState =
+                &raster_state_create_info;
+            graphics_pipeline_create_info.pMultisampleState =
+                &multisample_state_create_info;
+            graphics_pipeline_create_info.pDepthStencilState = nullptr;
+            graphics_pipeline_create_info.pColorBlendState =
+                &color_blend_state_create_info;
+            graphics_pipeline_create_info.pDynamicState =
+                &dynamic_state_create_info;
+            graphics_pipeline_create_info.layout = m_PipelineLayout;
+            graphics_pipeline_create_info.renderPass = VK_NULL_HANDLE;
+            graphics_pipeline_create_info.subpass = 0U;
+            graphics_pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+            graphics_pipeline_create_info.basePipelineIndex = -1;
 
-        const VkResult result = vkCreateGraphicsPipelines(
-            m_Device, VK_NULL_HANDLE, 1U, &graphics_pipeline_create_info,
-            nullptr, &m_Pipeline);
+            const VkResult result = vkCreateGraphicsPipelines(
+                m_Device, VK_NULL_HANDLE, 1U, &graphics_pipeline_create_info,
+                nullptr, &m_Pipeline);
 
-        if (result != VK_SUCCESS) {
-            vkDestroyPipelineLayout(m_Device, m_PipelineLayout, nullptr);
-            m_PipelineLayout = VK_NULL_HANDLE;
-            throw Core::Error::EngineError(
-                Core::Error::Code::VulkanGraphicsPipelineCreationFailed,
-                "Failed to create Vulkan graphics pipeline",
-                Core::Error::NativeError(static_cast<int>(result),
-                                         std::string(toString(result))),
-                "Create Vulkan Graphics Pipeline");
-        }
+            if (result != VK_SUCCESS) {
+                throw Core::Error::EngineError(
+                    Core::Error::Code::VulkanGraphicsPipelineCreationFailed,
+                    "Failed to create Vulkan graphics pipeline",
+                    Core::Error::NativeError(static_cast<int>(result),
+                                             std::string(toString(result))),
+                    "Create Vulkan Graphics Pipeline");
+            }
 
-        if (m_Pipeline == VK_NULL_HANDLE) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Postcondition,
-                Core::Error::Subsystem::Vulkan,
-                "Successful Vulkan graphics-pipeline creation must produce a "
-                "non-null graphics pipeline handle");
+            if (m_Pipeline == VK_NULL_HANDLE) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Postcondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Successful Vulkan graphics-pipeline creation must produce "
+                    "a "
+                    "non-null graphics pipeline handle");
+            }
+        } catch (...) {
+            destroy();
+            throw;
         }
     }
 
-    VulkanGraphicsPipeline::~VulkanGraphicsPipeline() noexcept {
+    auto VulkanGraphicsPipeline::destroy() noexcept -> void {
         if (m_Pipeline != VK_NULL_HANDLE) {
             vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
         }
@@ -256,6 +261,34 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         m_PipelineLayout = VK_NULL_HANDLE;
         m_Device = VK_NULL_HANDLE;
+    }
+
+    VulkanGraphicsPipeline::~VulkanGraphicsPipeline() noexcept {
+        destroy();
+    }
+
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(
+        VulkanGraphicsPipeline &&other) noexcept
+        : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)),
+          m_PipelineLayout(
+              std::exchange(other.m_PipelineLayout, VK_NULL_HANDLE)),
+          m_Pipeline(std::exchange(other.m_Pipeline, VK_NULL_HANDLE)) {}
+
+    auto
+    VulkanGraphicsPipeline::operator=(VulkanGraphicsPipeline &&other) noexcept
+        -> VulkanGraphicsPipeline & {
+        if (this == &other) {
+            return *this;
+        }
+
+        destroy();
+
+        m_Device = std::exchange(other.m_Device, VK_NULL_HANDLE);
+        m_PipelineLayout =
+            std::exchange(other.m_PipelineLayout, VK_NULL_HANDLE);
+        m_Pipeline = std::exchange(other.m_Pipeline, VK_NULL_HANDLE);
+
+        return *this;
     }
 
     auto VulkanGraphicsPipeline::nativeHandle() const noexcept -> VkPipeline {

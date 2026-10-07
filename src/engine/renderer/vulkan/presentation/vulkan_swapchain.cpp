@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <utility>
 
 namespace Core = SNE::Engine::Core;
 
@@ -56,7 +57,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         const SelectedQueueFamilies &queue_families,
         const Platform::FramebufferSize &framebuffer_size,
         PresentationPreference presentation_preference,
-        bool fifo_latest_ready_enabled)
+        bool fifo_latest_ready_enabled, VkSwapchainKHR old_swapchain)
         : m_Device(device) {
         if (physical_device == VK_NULL_HANDLE) {
             Core::Assertion::failAssertion(
@@ -133,7 +134,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             selectCompositeAlpha(swapchain_support.surface_capabilities);
 
         swapchain_create_info.clipped = VK_TRUE;
-        swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
+        swapchain_create_info.oldSwapchain = old_swapchain;
 
         const VkResult result = vkCreateSwapchainKHR(
             m_Device, &swapchain_create_info, nullptr, &m_Swapchain);
@@ -146,16 +147,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                                          std::string(toString(result))),
                 "Create Vulkan Swapchain");
         }
-
-        if (m_Swapchain == VK_NULL_HANDLE) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Postcondition,
-                Core::Error::Subsystem::Vulkan,
-                "Successful Vulkan swapchain creation must produce a non-null "
-                "swapchain handle");
-        }
-
         try {
+            if (m_Swapchain == VK_NULL_HANDLE) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Postcondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Successful Vulkan swapchain creation must produce a "
+                    "non-null "
+                    "swapchain handle");
+            }
+
             while (true) {
                 std::uint32_t swapchain_image_count{};
                 const VkResult swapchain_image_count_result =
@@ -252,23 +253,61 @@ namespace SNE::Engine::Renderer::Vulkan {
                 m_ImageViews.push_back(temporary_image_view);
             }
         } catch (...) {
-            for (const VkImageView &image_view : m_ImageViews) {
-                vkDestroyImageView(m_Device, image_view, nullptr);
-            }
-            vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
-            m_Swapchain = VK_NULL_HANDLE;
+            destroy();
             throw;
         }
     }
 
-    VulkanSwapchain::~VulkanSwapchain() noexcept {
+    auto VulkanSwapchain::destroy() noexcept -> void {
+        for (const VkImageView &image_view : m_ImageViews) {
+            vkDestroyImageView(m_Device, image_view, nullptr);
+        }
+
         if (m_Swapchain != VK_NULL_HANDLE) {
-            for (const VkImageView &image_view : m_ImageViews) {
-                vkDestroyImageView(m_Device, image_view, nullptr);
-            }
             vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
         }
+
+        m_Device = VK_NULL_HANDLE;
         m_Swapchain = VK_NULL_HANDLE;
+        m_Images.clear();
+        m_ImageViews.clear();
+        m_Extent = {};
+        m_SurfaceFormat = {};
+    }
+
+    VulkanSwapchain::~VulkanSwapchain() noexcept {
+        destroy();
+    }
+
+    VulkanSwapchain::VulkanSwapchain(VulkanSwapchain &&other) noexcept
+        : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)),
+          m_Swapchain(std::exchange(other.m_Swapchain, VK_NULL_HANDLE)),
+          m_Images(std::move(other.m_Images)),
+          m_ImageViews(std::move(other.m_ImageViews)),
+          m_SurfaceFormat(std::exchange(other.m_SurfaceFormat, {})),
+          m_Extent(std::exchange(other.m_Extent, {})) {
+        other.m_Images.clear();
+        other.m_ImageViews.clear();
+    }
+
+    auto VulkanSwapchain::operator=(VulkanSwapchain &&other) noexcept
+        -> VulkanSwapchain & {
+        if (this == &other) {
+            return *this;
+        }
+
+        destroy();
+
+        m_Device = std::exchange(other.m_Device, VK_NULL_HANDLE);
+        m_Swapchain = std::exchange(other.m_Swapchain, VK_NULL_HANDLE);
+        m_Images = std::move(other.m_Images);
+        other.m_Images.clear();
+        m_ImageViews = std::move(other.m_ImageViews);
+        other.m_ImageViews.clear();
+        m_SurfaceFormat = std::exchange(other.m_SurfaceFormat, {});
+        m_Extent = std::exchange(other.m_Extent, {});
+
+        return *this;
     }
 
     auto VulkanSwapchain::nativeHandle() const noexcept -> VkSwapchainKHR {

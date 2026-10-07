@@ -13,11 +13,15 @@
 #include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/device/vulkan_queue_requests.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
+#include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
@@ -54,10 +58,12 @@ namespace SNE::Engine::Renderer::Vulkan {
         const std::string &application_name, const Platform::Window &window,
         PresentationPreference presentation_preference,
         bool development_diagnostics_enabled)
-        : m_Instance(application_name, development_diagnostics_enabled),
+        : m_Window(&window),
+          m_Instance(application_name, development_diagnostics_enabled),
           m_Surface(m_Instance.nativeHandle(), window.nativeHandle()),
           m_PhysicalDevice(selectRequiredPhysicalDevice(
               m_Instance.nativeHandle(), m_Surface.nativeHandle())),
+          m_PresentationPreference(presentation_preference),
           m_LogicalDeviceFeatureConfiguration(
               deriveLogicalDeviceFeatureConfiguration(
                   deriveLogicalDeviceFeatureRequest(presentation_preference),
@@ -73,22 +79,7 @@ namespace SNE::Engine::Renderer::Vulkan {
           m_MemoryAllocator(m_Instance.nativeHandle(), m_PhysicalDevice.handle,
                             m_Device.nativeHandle(), kRequiredApiVersion,
                             m_PhysicalDevice.capabilities.optional_capabilities
-                                .memory_budget_extension_supported),
-          m_Swapchain(
-              m_PhysicalDevice.handle, m_Device.nativeHandle(),
-              m_Surface.nativeHandle(), m_PhysicalDevice.queue_families,
-              window.framebufferSize(), presentation_preference,
-              m_LogicalDeviceFeatureConfiguration.fifo_latest_ready_feature
-                      .presentModeFifoLatestReady == VK_TRUE),
-          m_GraphicsPipeline(m_Device.nativeHandle(),
-                             m_Swapchain.surfaceFormat().format) {
-        const std::size_t images = m_Swapchain.images().size();
-        m_RenderFinishedSemaphores.reserve(images);
-
-        for (std::size_t i{}; i < images; ++i) {
-            m_RenderFinishedSemaphores.emplace_back(m_Device.nativeHandle());
-        }
-
+                                .memory_budget_extension_supported) {
         const std::uint32_t graphics_queue_family_index =
             m_PhysicalDevice.queue_families.graphics_family.family_index;
 
@@ -98,6 +89,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_FrameResources.emplace_back(m_Device.nativeHandle(),
                                           graphics_queue_family_index);
         }
+
+        if (isFramebufferDrawable()) {
+            static_cast<void>(recreateSwapchainResources());
+        }
     }
 
     VulkanRenderer::~VulkanRenderer() noexcept {
@@ -105,11 +100,161 @@ namespace SNE::Engine::Renderer::Vulkan {
         static_cast<void>(result);
     }
 
+    auto VulkanRenderer::waitForDrawableFramebuffer() const -> bool {
+        while (!isFramebufferDrawable() && !m_Window->shouldClose()) {
+            Platform::Window::waitEvents();
+        }
+
+        return isFramebufferDrawable();
+    }
+
+    auto VulkanRenderer::isFramebufferDrawable() const -> bool {
+        const Platform::FramebufferSize framebuffer_size =
+            m_Window->framebufferSize();
+        return framebuffer_size.width > 0 && framebuffer_size.height > 0;
+    }
+
+    auto VulkanRenderer::recreateSwapchainResources() -> bool {
+        if (!waitForDrawableFramebuffer()) {
+            return false;
+        }
+
+        m_Device.waitIdle();
+
+        VkSwapchainKHR old_swapchain = VK_NULL_HANDLE;
+        if (m_SwapchainResources.has_value()) {
+            old_swapchain =
+                m_SwapchainResources.value().m_VulkanSwapchain.nativeHandle();
+        }
+
+        const Platform::FramebufferSize new_framebuffer_size =
+            m_Window->framebufferSize();
+
+        VulkanSwapchain new_swapchain = VulkanSwapchain(
+            m_PhysicalDevice.handle, m_Device.nativeHandle(),
+            m_Surface.nativeHandle(), m_PhysicalDevice.queue_families,
+            new_framebuffer_size, m_PresentationPreference,
+            m_LogicalDeviceFeatureConfiguration.fifo_latest_ready_feature
+                    .presentModeFifoLatestReady == VK_TRUE,
+            old_swapchain);
+
+        std::optional<VulkanGraphicsPipeline> new_graphics_pipeline{};
+
+        if (!m_SwapchainResources.has_value() ||
+            new_swapchain.surfaceFormat().format !=
+                m_SwapchainResources.value()
+                    .m_VulkanSwapchain.surfaceFormat()
+                    .format) {
+            new_graphics_pipeline.emplace(m_Device.nativeHandle(),
+                                          new_swapchain.surfaceFormat().format);
+        }
+
+        std::vector<VulkanSemaphore> new_render_finished_semaphores;
+        new_render_finished_semaphores.reserve(new_swapchain.images().size());
+
+        for (std::size_t i{}; i < new_swapchain.images().size(); ++i) {
+            new_render_finished_semaphores.emplace_back(
+                m_Device.nativeHandle());
+        }
+
+        if (!new_graphics_pipeline.has_value()) {
+            new_graphics_pipeline.emplace(
+                std::move(m_SwapchainResources->m_VulkanGraphicsPipeline));
+        }
+
+        m_SwapchainResources.emplace(SwapchainResources{
+            .m_VulkanSwapchain = std::move(new_swapchain),
+            .m_VulkanGraphicsPipeline =
+                std::move(new_graphics_pipeline.value()),
+            .m_VulkanSemaphores = std::move(new_render_finished_semaphores),
+        });
+
+        return true;
+    }
+
     auto VulkanRenderer::renderFrame() -> void {
+        const Platform::FramebufferSize framebuffer_size =
+            m_Window->framebufferSize();
+
+        if (framebuffer_size.width <= 1 || framebuffer_size.height <= 1) {
+            std::cout << "width: " << framebuffer_size.width << '\n'
+                      << "height: " << framebuffer_size.height << '\n';
+        }
+        if (!m_SwapchainResources.has_value() &&
+            !recreateSwapchainResources()) {
+            return;
+        }
+
+        if (!m_SwapchainResources.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires swapchain resources after successful "
+                "creation");
+        }
+
+        SwapchainResources &swapchain_resources = m_SwapchainResources.value();
+
         VulkanFrameResources &current_frame =
             m_FrameResources[m_CurrentFrameIndex];
 
         current_frame.inFlightFence().wait();
+
+        std::uint32_t image_index{};
+        const VkSwapchainKHR swapchain_handle =
+            swapchain_resources.m_VulkanSwapchain.nativeHandle();
+        const VulkanSwapchain &swapchain =
+            swapchain_resources.m_VulkanSwapchain;
+        const VulkanGraphicsPipeline &graphics_pipeline =
+            swapchain_resources.m_VulkanGraphicsPipeline;
+        const auto &semaphores = swapchain_resources.m_VulkanSemaphores;
+
+        const VkResult image_result = vkAcquireNextImageKHR(
+            m_Device.nativeHandle(), swapchain_handle, UINT32_MAX,
+            current_frame.imageAvailableSemaphore().nativeHandle(),
+            VK_NULL_HANDLE, &image_index);
+
+        bool swapchain_recreation_requested = false;
+
+        switch (image_result) {
+        case VK_SUCCESS:
+            break;
+        case VK_SUBOPTIMAL_KHR:
+            swapchain_recreation_requested = true;
+            break;
+        case VK_TIMEOUT:
+        case VK_NOT_READY:
+            return;
+        case VK_ERROR_OUT_OF_DATE_KHR:
+            static_cast<void>(recreateSwapchainResources());
+            return;
+        default:
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanSwapchainImageAcquisitionFailed,
+                "Failed to acquire Vulkan swapchain image",
+                Core::Error::NativeError(static_cast<int>(image_result),
+                                         std::string(toString(image_result))),
+                "Acquire Vulkan Swapchain Image");
+        }
+
+        if (swapchain.images().size() != swapchain.imageViews().size() ||
+            swapchain.images().size() != semaphores.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires swapchain images, image views, and "
+                "render-finished semaphores to have matching counts");
+        }
+
+        const auto acquired_image_index = static_cast<std::size_t>(image_index);
+
+        if (acquired_image_index >= swapchain.images().size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer acquired a swapchain image index outside the "
+                "tracked swapchain image range");
+        }
 
         current_frame.resetCommandResources();
 
@@ -141,32 +286,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Begin Vulkan Command Buffer");
         }
 
-        std::uint32_t image_index{};
-        const VkSwapchainKHR swapchain_handle = m_Swapchain.nativeHandle();
-
-        const VkResult image_result = vkAcquireNextImageKHR(
-            m_Device.nativeHandle(), swapchain_handle, UINT32_MAX,
-            current_frame.imageAvailableSemaphore().nativeHandle(),
-            VK_NULL_HANDLE, &image_index);
-
-        switch (image_result) {
-        case VK_SUCCESS:
-        case VK_SUBOPTIMAL_KHR:
-            break;
-        case VK_TIMEOUT:
-        case VK_NOT_READY:
-        case VK_ERROR_OUT_OF_DATE_KHR:
-            return;
-        default:
-            throw Core::Error::EngineError(
-                Core::Error::Code::VulkanSwapchainImageAcquisitionFailed,
-                "Failed to acquire Vulkan swapchain image",
-                Core::Error::NativeError(static_cast<int>(image_result),
-                                         std::string(toString(image_result))),
-                "Acquire Vulkan Swapchain Image");
-        }
-
-        const VkImage acquired_image = m_Swapchain.images()[image_index];
+        const VkImage acquired_image = swapchain.images()[acquired_image_index];
 
         VkImageMemoryBarrier2 color_attachment_barrier{};
         color_attachment_barrier.sType =
@@ -202,7 +322,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                               &color_attachment_dependency_info);
 
         const VkImageView acquired_image_view =
-            m_Swapchain.imageViews()[image_index];
+            swapchain.imageViews()[acquired_image_index];
 
         VkRenderingAttachmentInfo render_attachment_info{};
         render_attachment_info.sType =
@@ -221,7 +341,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
         render_info.renderArea = {
             .offset = {.x = 0, .y = 0},
-            .extent = m_Swapchain.extent(),
+            .extent = swapchain.extent(),
         };
         render_info.layerCount = 1U;
         render_info.colorAttachmentCount = 1U;
@@ -229,19 +349,19 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdBeginRendering(command_buffer, &render_info);
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          m_GraphicsPipeline.nativeHandle());
+                          graphics_pipeline.nativeHandle());
 
         VkViewport viewport{};
         viewport.x = 0.0F;
-        viewport.y = static_cast<float>(m_Swapchain.extent().height);
-        viewport.width = static_cast<float>(m_Swapchain.extent().width);
-        viewport.height = -static_cast<float>(m_Swapchain.extent().height);
+        viewport.y = static_cast<float>(swapchain.extent().height);
+        viewport.width = static_cast<float>(swapchain.extent().width);
+        viewport.height = -static_cast<float>(swapchain.extent().height);
         viewport.minDepth = 0.0F;
         viewport.maxDepth = 1.0F;
         vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
 
         VkRect2D scissor{};
-        scissor.extent = m_Swapchain.extent();
+        scissor.extent = swapchain.extent();
         scissor.offset.x = 0;
         scissor.offset.y = 0;
         vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
@@ -291,7 +411,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         const VulkanSemaphore &render_finished_semaphore =
-            m_RenderFinishedSemaphores[image_index];
+            semaphores[acquired_image_index];
         const VkSemaphore render_finished_handle =
             render_finished_semaphore.nativeHandle();
 
@@ -358,9 +478,12 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         switch (queue_present_result) {
         case VK_SUCCESS:
+            break;
         case VK_SUBOPTIMAL_KHR:
+            swapchain_recreation_requested = true;
             break;
         case VK_ERROR_OUT_OF_DATE_KHR:
+            static_cast<void>(recreateSwapchainResources());
             return;
         default:
             throw Core::Error::EngineError(
@@ -370,6 +493,10 @@ namespace SNE::Engine::Renderer::Vulkan {
                     static_cast<int>(queue_present_result),
                     std::string(toString(queue_present_result))),
                 "Present Vulkan Swapchain Image");
+        }
+
+        if (swapchain_recreation_requested) {
+            static_cast<void>(recreateSwapchainResources());
         }
 
         m_CurrentFrameIndex =

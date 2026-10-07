@@ -240,4 +240,23 @@ namespace SNE::Engine::Renderer::Vulkan {
     auto VulkanDevice::presentationQueue() const noexcept -> VkQueue {
         return m_PresentationQueue;
     }
+
+    auto VulkanDevice::waitIdle() const -> void {
+        if (m_Device == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanDevice::waitIdle requires a valid logical device");
+        }
+
+        const VkResult result = vkDeviceWaitIdle(m_Device);
+        if (result != VK_SUCCESS) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanDeviceWaitIdleFailed,
+                "Failed to wait for the Vulkan device to become idle",
+                Core::Error::NativeError(static_cast<int>(result),
+                                         std::string(toString(result))),
+                "Wait for Vulkan Device Idle");
+        }
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

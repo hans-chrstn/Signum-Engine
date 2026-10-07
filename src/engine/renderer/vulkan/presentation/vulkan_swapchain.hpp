@@ -31,7 +31,9 @@ namespace SNE::Engine::Renderer::Vulkan {
      * owned VkSwapchainKHR. The logical device, physical device, surface, and
      * swapchain-provided images are not owned by this object.
      *
-     * The type is non-copyable because it owns Vulkan resource handles.
+     * The type is non-copyable because it exclusively owns Vulkan resource
+     * handles. Ownership may be transferred through move construction or move
+     * assignment.
      */
     class VulkanSwapchain {
       private:
@@ -48,6 +50,16 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkSurfaceFormatKHR m_SurfaceFormat{};
         /** Extent selected for the swapchain images. */
         VkExtent2D m_Extent{};
+        /**
+         * @brief Releases the currently owned swapchain resources.
+         *
+         * Destroys all owned swapchain image views before destroying the owned
+         * swapchain handle, then resets the stored swapchain state to an empty
+         * non-owning state.
+         *
+         * Safe to call when no swapchain resources are currently owned.
+         */
+        auto destroy() noexcept -> void;
 
       public:
         /**
@@ -79,10 +91,16 @@ namespace SNE::Engine::Renderer::Vulkan {
          * behavior requested from the renderer.
          * @param fifo_latest_ready_enabled Whether FIFO latest-ready
          * presentation is enabled on the logical device.
+         * @param old_swapchain Existing swapchain being replaced during
+         * recreation. May be VK_NULL_HANDLE when creating the initial
+         * swapchain. The handle is borrowed and is not destroyed directly by
+         * this constructor.
          *
          * @pre physical_device must be a valid Vulkan physical-device handle.
          * @pre device must be a valid Vulkan logical-device handle.
          * @pre surface must be a valid Vulkan surface handle.
+         * @pre old_swapchain must be VK_NULL_HANDLE or a valid swapchain being
+         * replaced for the supplied surface.
          *
          * @post Successful construction produces a non-null Vulkan swapchain
          * handle.
@@ -100,7 +118,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                         const SelectedQueueFamilies &queue_families,
                         const Platform::FramebufferSize &framebuffer_size,
                         PresentationPreference presentation_preference,
-                        bool fifo_latest_ready_enabled);
+                        bool fifo_latest_ready_enabled,
+                        VkSwapchainKHR old_swapchain = VK_NULL_HANDLE);
 
         /**
          * @brief Destroys the owned Vulkan image views and swapchain.
@@ -115,6 +134,35 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         VulkanSwapchain(const VulkanSwapchain &) = delete;
         auto operator=(const VulkanSwapchain &) -> VulkanSwapchain & = delete;
+
+        /**
+         * @brief Transfers swapchain ownership from another object.
+         *
+         * Transfers the borrowed logical-device handle, owned swapchain handle,
+         * swapchain-image state, owned image views, selected surface format,
+         * and extent from the source object.
+         *
+         * The source object is left in an empty state that is safe to destroy.
+         *
+         * @param other Swapchain owner from which ownership is transferred.
+         */
+        VulkanSwapchain(VulkanSwapchain &&other) noexcept;
+
+        /**
+         * @brief Replaces the currently owned swapchain by transferring
+         * ownership from another object.
+         *
+         * Releases any swapchain resources currently owned by this object
+         * before taking ownership of the source object's swapchain state.
+         *
+         * Self-move assignment has no effect. The source object is left in an
+         * empty state that is safe to destroy.
+         *
+         * @param other Swapchain owner from which ownership is transferred.
+         *
+         * @return Reference to this object.
+         */
+        auto operator=(VulkanSwapchain &&other) noexcept -> VulkanSwapchain &;
 
         /**
          * @brief Returns the underlying Vulkan swapchain handle.

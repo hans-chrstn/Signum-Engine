@@ -34,6 +34,17 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         VkPipeline m_Pipeline{VK_NULL_HANDLE};
 
+        /**
+         * @brief Releases the currently owned pipeline resources.
+         *
+         * Destroys the owned graphics pipeline before destroying the owned
+         * pipeline layout, then resets all stored Vulkan handles to an empty
+         * non-owning state.
+         *
+         * Safe to call when no pipeline resources are owned.
+         */
+        auto destroy() noexcept -> void;
+
       public:
         /**
          * @brief Creates a Vulkan graphics pipeline for the supplied color
@@ -69,6 +80,39 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         auto operator=(const VulkanGraphicsPipeline &)
             -> VulkanGraphicsPipeline & = delete;
+
+        /**
+         * @brief Transfers ownership of graphics-pipeline resources.
+         *
+         * Transfers the logical-device handle, pipeline layout, and graphics
+         * pipeline from the source object.
+         *
+         * The source object is left in a valid moved-from state containing no
+         * owned Vulkan pipeline resources.
+         *
+         * @param other Pipeline object whose resources are transferred.
+         */
+        VulkanGraphicsPipeline(VulkanGraphicsPipeline &&other) noexcept;
+
+        /**
+         * @brief Replaces the currently owned resources by moving from another
+         * pipeline object.
+         *
+         * Releases any pipeline resources currently owned by this object before
+         * transferring the source object's logical-device handle, pipeline
+         * layout, and graphics pipeline.
+         *
+         * Self-move assignment has no effect.
+         *
+         * The source object is left in a valid moved-from state containing no
+         * owned Vulkan pipeline resources.
+         *
+         * @param other Pipeline object whose resources are transferred.
+         *
+         * @return Reference to this pipeline object.
+         */
+        auto operator=(VulkanGraphicsPipeline &&other) noexcept
+            -> VulkanGraphicsPipeline &;
 
         /**
          * @brief Destroys the owned graphics pipeline and pipeline layout.

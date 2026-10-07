@@ -89,6 +89,8 @@ namespace SNE::Engine::Core::Error {
             return "VulkanBufferFlushFailed";
         case Code::VulkanBufferInvalidationFailed:
             return "VulkanBufferInvalidationFailed";
+        case Code::VulkanDeviceWaitIdleFailed:
+            return "VulkanDeviceWaitIdleFailed";
         }
         return "Unknown";
     }

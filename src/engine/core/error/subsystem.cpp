@@ -48,6 +48,7 @@ namespace SNE::Engine::Core::Error {
         case Code::VulkanBufferMappingFailed:
         case Code::VulkanBufferFlushFailed:
         case Code::VulkanBufferInvalidationFailed:
+        case Code::VulkanDeviceWaitIdleFailed:
             return Subsystem::Vulkan;
         }
 

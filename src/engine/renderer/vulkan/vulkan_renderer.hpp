@@ -14,6 +14,7 @@
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_instance.hpp"
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -33,11 +34,30 @@ namespace SNE::Engine::Renderer::Vulkan {
      * The application window is borrowed during renderer initialization and
      * must outlive the renderer.
      *
+     * Renderer queue operations are currently performed serially by the
+     * renderer-owning thread. Renderer queues must not be accessed concurrently
+     * by other host threads.
+     *
      * The type is non-copyable because it owns Vulkan resources with exclusive
      * lifetimes.
      */
     class VulkanRenderer {
       private:
+        struct SwapchainResources {
+            VulkanSwapchain m_VulkanSwapchain;
+            VulkanGraphicsPipeline m_VulkanGraphicsPipeline;
+            std::vector<VulkanSemaphore> m_VulkanSemaphores;
+        };
+        /**
+         * @brief Application window borrowed by the renderer.
+         *
+         * Provides access to the current framebuffer dimensions required for
+         * presentation and swapchain recreation.
+         *
+         * The window is not owned by the renderer and must remain valid for the
+         * entire lifetime of this VulkanRenderer.
+         */
+        const Platform::Window *m_Window{nullptr};
         /**
          * @brief Vulkan instance owned by the renderer.
          *
@@ -63,6 +83,20 @@ namespace SNE::Engine::Renderer::Vulkan {
          * than by this object.
          */
         SelectedPhysicalDevice m_PhysicalDevice;
+
+        /**
+         * @brief Presentation behavior requested from the renderer.
+         *
+         * Stores the backend-independent presentation preference used when
+         * creating the initial swapchain and when recreating
+         * swapchain-dependent resources.
+         *
+         * The preference is retained for the lifetime of the renderer so
+         * presentation mode selection remains consistent across swapchain
+         * recreation.
+         */
+        PresentationPreference m_PresentationPreference;
+
         /**
          * @brief Vulkan features selected for logical-device creation.
          *
@@ -106,39 +140,20 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         VulkanMemoryAllocator m_MemoryAllocator;
         /**
-         * @brief Presentation swapchain owned by the renderer.
+         * @brief Swapchain-dependent renderer resources when presentation is
+         * available.
          *
-         * Owns the swapchain and its image views while exposing the
-         * swapchain-provided images as non-owning handles.
+         * Owns the presentation swapchain, compatible graphics pipeline, and
+         * render-finished semaphores associated with swapchain images.
          *
-         * Swapchain-dependent resources must be recreated when this swapchain
-         * is replaced.
+         * The optional is empty while no drawable framebuffer is available,
+         * allowing the renderer to remain initialized without presentation
+         * resources.
+         *
+         * When present, all swapchain-dependent resources exist together and
+         * are recreated as a single logical resource group.
          */
-        VulkanSwapchain m_Swapchain;
-        /**
-         * @brief Graphics pipeline owned by the renderer.
-         *
-         * Owns the Vulkan graphics pipeline and pipeline layout used for
-         * graphics command recording.
-         *
-         * The pipeline is created for the swapchain color-attachment format and
-         * must be recreated if pipeline compatibility requirements change.
-         *
-         * The logical device and compatible rendering configuration must
-         * outlive this object.
-         */
-        VulkanGraphicsPipeline m_GraphicsPipeline;
-        /**
-         * @brief Presentation-wait semaphores associated with swapchain images.
-         *
-         * Stores one semaphore for each swapchain image. The semaphore selected
-         * by an acquired image index is signaled when rendering for that image
-         * completes and is subsequently waited on by presentation.
-         *
-         * The collection follows swapchain-image lifetime and must be recreated
-         * when the corresponding swapchain images are replaced.
-         */
-        std::vector<VulkanSemaphore> m_RenderFinishedSemaphores;
+        std::optional<SwapchainResources> m_SwapchainResources;
         /**
          * @brief Reusable resource sets for frames that may be in flight
          * concurrently.
@@ -159,6 +174,53 @@ namespace SNE::Engine::Renderer::Vulkan {
          * through the available frame-resource slots.
          */
         std::size_t m_CurrentFrameIndex{};
+
+        /**
+         * @brief Waits until the application framebuffer becomes drawable.
+         *
+         * Blocks on platform window events while the framebuffer has a
+         * non-positive width or height.
+         *
+         * Waiting stops when the framebuffer becomes drawable or when the
+         * application window is requested to close.
+         *
+         * @return true if the framebuffer is drawable when waiting ends;
+         * otherwise false if the window is closing.
+         */
+        [[nodiscard]] auto waitForDrawableFramebuffer() const -> bool;
+
+        /**
+         * @brief Reports whether the application framebuffer can currently be
+         * rendered to.
+         *
+         * Queries the borrowed application window's current framebuffer
+         * dimensions. A framebuffer is drawable only when both its width and
+         * height are greater than zero.
+         *
+         * @return true when both framebuffer dimensions are positive; otherwise
+         * false.
+         */
+        [[nodiscard]] auto isFramebufferDrawable() const -> bool;
+
+        /**
+         * @brief Recreates resources that depend on the presentation swapchain.
+         *
+         * Waits until the application framebuffer is drawable, synchronizes
+         * with outstanding device work, and rebuilds swapchain-dependent
+         * renderer resources using the current framebuffer dimensions and
+         * presentation configuration.
+         *
+         * Frame-in-flight resources are preserved because their lifetime is
+         * independent of swapchain image count.
+         *
+         * @return true if swapchain-dependent resources were successfully
+         * recreated; otherwise false if recreation was abandoned because the
+         * window is closing.
+         *
+         * @throws Core::Error::EngineError if required Vulkan synchronization
+         * or resource recreation fails.
+         */
+        [[nodiscard]] auto recreateSwapchainResources() -> bool;
 
       public:
         /**

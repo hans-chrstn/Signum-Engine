@@ -257,6 +257,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanBufferInvalidationFailed,
             "VulkanBufferInvalidationFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDeviceWaitIdleFailed,
+            "VulkanDeviceWaitIdleFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, UnknownErrorCodeHasFallbackName) {

@@ -106,10 +106,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         /**
          * @brief Returns the graphics queue associated with the logical device.
          *
-         * The returned handle is non-owning and remains valid only while this
-         * VulkanDevice object remains alive.
+         * The returned queue handle is borrowed and remains valid only while
+         * this VulkanDevice object and its logical device remain alive.
          *
-         * @return Graphics queue retrieved from the logical device.
+         * The caller is responsible for satisfying Vulkan's
+         * host-synchronization requirements when performing operations that
+         * access the returned queue.
+         *
+         * @return Non-owning graphics queue handle retrieved from the logical
+         * device.
          */
         [[nodiscard]] auto graphicsQueue() const noexcept -> VkQueue;
 
@@ -117,11 +122,31 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Returns the presentation queue associated with the logical
          * device.
          *
-         * The returned handle is non-owning and remains valid only while this
-         * VulkanDevice object remains alive.
+         * The returned queue handle is borrowed and remains valid only while
+         * this VulkanDevice object and its logical device remain alive.
          *
-         * @return Presentation queue retrieved from the logical device.
+         * The caller is responsible for satisfying Vulkan's
+         * host-synchronization requirements when performing operations that
+         * access the returned queue.
+         *
+         * @return Non-owning presentation queue handle retrieved from the
+         * logical device.
          */
         [[nodiscard]] auto presentationQueue() const noexcept -> VkQueue;
+
+        /**
+         * @brief Waits until all work submitted to the logical device has
+         * completed.
+         *
+         * Blocks until all previously submitted commands on every queue
+         * belonging to this logical device have finished execution.
+         *
+         * This operation is intended for infrequent whole-device
+         * synchronization such as swapchain-dependent resource recreation.
+         *
+         * @throws Core::Error::EngineError if Vulkan fails while waiting for
+         * the logical device to become idle.
+         */
+        auto waitIdle() const -> void;
     };
 } // namespace SNE::Engine::Renderer::Vulkan
