@@ -2,6 +2,7 @@
 #include "engine/core/error/diagnostic_writer.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 
 auto main() -> int {
@@ -10,6 +11,12 @@ auto main() -> int {
         application.run();
     } catch (const SNE::Engine::Core::Error::EngineError &engine_error) {
         SNE::Engine::Core::Error::writeDiagnostic(std::cerr, engine_error);
+        return EXIT_FAILURE;
+    } catch (const std::exception &error) {
+        std::cerr << "Unexpected standard exception: " << error.what() << '\n';
+        return EXIT_FAILURE;
+    } catch (...) {
+        std::cerr << "Unknown exception reached application boundary" << '\n';
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;

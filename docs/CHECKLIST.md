@@ -552,7 +552,7 @@
 - [x] Define `VK_ERROR_OUT_OF_DATE_KHR` handling
 - [x] Define `VK_SUBOPTIMAL_KHR` handling
 - [x] Define GPU resource move-semantics policy
-- [ ] Define application-level exception boundary
+- [x] Define application-level exception boundary
 - [x] Define scalable error-code metadata handling
 - [ ] Define consistent warnings-as-errors policy
 - [ ] Define reusable Vulkan integration-test infrastructure
@@ -602,9 +602,9 @@
 - [x] Widen `Core::Error::Code` storage beyond `std::uint8_t`
 - [x] Prevent error-code string mappings from silently becoming incomplete
 - [x] Prevent error-code subsystem mappings from silently becoming incomplete
-- [ ] Add final handling for unexpected `std::exception`
-- [ ] Add final handling for unknown exceptions if needed
-- [ ] Keep assertion failures separate from recoverable exception handling
+- [x] Add final handling for unexpected `std::exception`
+- [x] Add final handling for unknown exceptions if needed
+- [x] Keep assertion failures separate from recoverable exception handling
 - [ ] Document failures that cannot be propagated from destructors
 - [ ] Add reusable Vulkan integration-test setup for instance, device, queue, and allocator
 - [ ] Add immediate-submission support to Vulkan integration-test infrastructure
@@ -684,8 +684,8 @@
 - [x] Keep frame-resource identity separate from swapchain-image identity
 - [x] Keep resource ownership valid when resources move between containers
 - [x] Keep error metadata scalable as error counts grow
-- [ ] Preserve one clear runtime exception boundary
-- [ ] Keep assertion reporting separate from runtime error reporting
+- [x] Preserve one clear runtime exception boundary
+- [x] Keep assertion reporting separate from runtime error reporting
 - [ ] Keep deterministic logic in unit tests
 - [ ] Keep Vulkan driver and lifetime behavior in integration tests
 - [ ] Reuse Vulkan integration-test infrastructure
