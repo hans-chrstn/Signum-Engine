@@ -5,18 +5,20 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include "vulkan_shader_module.hpp"
-#include "vulkan_spirv.hpp"
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(
-        VkDevice device, VkFormat color_attachment_format)
+        VkDevice device, VkFormat color_attachment_format,
+        const GraphicsShaderData &graphics_shader_data,
+        const GraphicsVertexInputData &graphics_vertex_input_data)
         : m_Device(device) {
         if (device == VK_NULL_HANDLE) {
             Core::Assertion::failAssertion(
@@ -33,14 +35,10 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "format");
         }
 
-        std::vector<std::uint32_t> vertex =
-            loadSpirv("build/shaders/blackhole.vert.spv");
-        std::vector<std::uint32_t> fragment =
-            loadSpirv("build/shaders/blackhole.frag.spv");
-
-        VulkanShaderModule vertex_shader = VulkanShaderModule(m_Device, vertex);
+        VulkanShaderModule vertex_shader =
+            VulkanShaderModule(m_Device, graphics_shader_data.vertex_data);
         VulkanShaderModule fragment_shader =
-            VulkanShaderModule(m_Device, fragment);
+            VulkanShaderModule(m_Device, graphics_shader_data.fragment_data);
 
         VkPipelineShaderStageCreateInfo vertex_stage_description{};
         vertex_stage_description.sType =
@@ -65,12 +63,35 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
         vertex_input_state_create_info.sType =
             VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        // No vertex buffers for our gl_VertexIndex triangle, for now
-        vertex_input_state_create_info.vertexBindingDescriptionCount = 0U;
-        vertex_input_state_create_info.pVertexBindingDescriptions = nullptr;
-        // No vertex attributes such as position/UV/normal coming from buffers
-        vertex_input_state_create_info.vertexAttributeDescriptionCount = 0U;
-        vertex_input_state_create_info.pVertexAttributeDescriptions = nullptr;
+
+        const std::optional<std::uint32_t> binding_count =
+            Core::Numeric::tryConvertToUint32(
+                graphics_vertex_input_data.bindings.size());
+        if (!binding_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline vertex binding count exceeds uint32_t");
+        }
+        vertex_input_state_create_info.vertexBindingDescriptionCount =
+            binding_count.value();
+        vertex_input_state_create_info.pVertexBindingDescriptions =
+            graphics_vertex_input_data.bindings.data();
+
+        const std::optional<std::uint32_t> attribute_count =
+            Core::Numeric::tryConvertToUint32(
+                graphics_vertex_input_data.attributes.size());
+        if (!attribute_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline vertex attribute count exceeds "
+                "uint32_t");
+        }
+        vertex_input_state_create_info.vertexAttributeDescriptionCount =
+            attribute_count.value();
+        vertex_input_state_create_info.pVertexAttributeDescriptions =
+            graphics_vertex_input_data.attributes.data();
 
         VkPipelineInputAssemblyStateCreateInfo
             input_assembly_state_create_info{};

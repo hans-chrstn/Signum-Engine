@@ -5,6 +5,7 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd -- "${script_dir}/.." && pwd)"
 
+slang_shader_source_dir="${project_root}/shaders/slang/basic"
 shader_source_dir="${project_root}/shaders/basic"
 shader_output_dir="${project_root}/build/shaders"
 
@@ -20,5 +21,19 @@ glslc \
 
 spirv-val "${shader_output_dir}/blackhole.vert.spv"
 spirv-val "${shader_output_dir}/blackhole.frag.spv"
+
+slangc "${slang_shader_source_dir}/triangle.slang" \
+    -target spirv \
+    -entry vertexMain \
+    -stage vertex \
+    -o "${shader_output_dir}/triangle.vert.spv"
+spirv-val "${shader_output_dir}/triangle.vert.spv"
+
+slangc "${slang_shader_source_dir}/triangle.slang" \
+          -target spirv \
+          -entry fragmentMain \
+          -stage fragment \
+          -o "${shader_output_dir}/triangle.frag.spv"
+spirv-val "${shader_output_dir}/triangle.frag.spv"
 
 printf 'Compiled and validated shaders: %s\n' "${shader_output_dir}"

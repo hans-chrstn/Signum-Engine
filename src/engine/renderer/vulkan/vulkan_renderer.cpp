@@ -14,11 +14,14 @@
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/device/vulkan_queue_requests.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -28,6 +31,34 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Error = SNE::Engine::Core::Error;
 
 namespace {
+    struct TriangleVertex {
+        std::array<float, 2> position;
+        std::array<float, 3> color;
+    };
+
+    [[maybe_unused]]
+    constexpr std::array<TriangleVertex, 3> kTriangleVertices{
+        {
+            {
+
+                .position = {-0.5F, -0.5F},
+                .color = {1.0F, 0.0F, 0.0F},
+            },
+            {
+                .position = {0.5F, -0.5F},
+                .color = {0.0F, 1.0F, 0.0F},
+            },
+            {
+                .position = {0.0F, 0.5F},
+                .color = {0.0F, 0.0F, 1.0F},
+            },
+        },
+    };
+
+    static_assert(sizeof(TriangleVertex) <=
+                      std::numeric_limits<std::uint32_t>::max(),
+                  "TriangleVertex size exceeds uint32_t");
+
     [[nodiscard]] auto selectRequiredPhysicalDevice(VkInstance instance,
                                                     VkSurfaceKHR surface)
         -> Vulkan::SelectedPhysicalDevice {
@@ -145,8 +176,65 @@ namespace SNE::Engine::Renderer::Vulkan {
                 m_SwapchainResources.value()
                     .m_VulkanSwapchain.surfaceFormat()
                     .format) {
+            const auto fragment_data =
+                loadSpirv("build/shaders/triangle.frag.spv");
+            const auto vertex_data =
+                loadSpirv("build/shaders/triangle.vert.spv");
+            const GraphicsShaderData graphics_data{
+                .vertex_data = vertex_data,
+                .fragment_data = fragment_data,
+            };
+
+            VkVertexInputBindingDescription vertex_binding{};
+            // binding slot, not vertex index
+            vertex_binding.binding = 0U;
+            // stride to reach next vertex: 20
+            // since TriangleVertex contains arrays of float size 2 and float
+            // size 3 where float is 4 bytes: 4 x 2 + 4 x 3 = 20
+            vertex_binding.stride =
+                static_cast<std::uint32_t>(sizeof(TriangleVertex));
+            // advances by set of vertex data rather than each instance
+            vertex_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+            VkVertexInputAttributeDescription position_attribute{};
+            // shader input location
+            position_attribute.location = 0U;
+            // reads from vertex-buffer binding 0
+            position_attribute.binding = 0U;
+            // two 32 bit floating point components TriangleVertex.position
+            position_attribute.format = VK_FORMAT_R32G32_SFLOAT;
+            // Position starts at byte 0 within each vertex.
+            position_attribute.offset =
+                static_cast<std::uint32_t>(offsetof(TriangleVertex, position));
+
+            VkVertexInputAttributeDescription color_attribute{};
+            // position is already using location = 0, so we use next position
+            color_attribute.location = 1U;
+            // both color and position attribute share the same vertex buffer
+            color_attribute.binding = 0U;
+            // three 32 bit floats R,G,B
+            color_attribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+            // color starts at byte 8
+            color_attribute.offset =
+                static_cast<std::uint32_t>(offsetof(TriangleVertex, color));
+
+            const std::array<VkVertexInputBindingDescription, 1>
+                vertex_bindings{vertex_binding};
+
+            const std::array<VkVertexInputAttributeDescription, 2>
+                vertex_attributes{
+                    position_attribute,
+                    color_attribute,
+            };
+
+            const GraphicsVertexInputData vertex_input_data{
+                .bindings = vertex_bindings,
+                .attributes = vertex_attributes,
+            };
+
             new_graphics_pipeline.emplace(m_Device.nativeHandle(),
-                                          new_swapchain.surfaceFormat().format);
+                                          new_swapchain.surfaceFormat().format,
+                                          graphics_data, vertex_input_data);
         }
 
         std::vector<VulkanSemaphore> new_render_finished_semaphores;

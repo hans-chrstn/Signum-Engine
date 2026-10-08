@@ -1,7 +1,59 @@
 #pragma once
+#include <cstdint>
+#include <span>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    /**
+     * @brief Describes vertex input bindings and attributes for a graphics
+     * pipeline.
+     *
+     * Contains non-owning views of Vulkan vertex binding and attribute
+     * descriptions.
+     *
+     * The caller retains ownership of the underlying descriptions and must keep
+     * them valid throughout graphics-pipeline construction.
+     *
+     * Empty spans indicate that no vertex bindings or attributes are required.
+     *
+     * The descriptions are not retained after pipeline creation.
+     */
+    struct GraphicsVertexInputData {
+        /**
+         * @brief Borrowed vertex binding descriptions defining buffer slots,
+         * strides, and input rates.
+         */
+        std::span<const VkVertexInputBindingDescription> bindings;
+
+        /**
+         * @brief Borrowed vertex attribute descriptions defining shader input
+         * locations, formats, bindings, and byte offsets.
+         */
+        std::span<const VkVertexInputAttributeDescription> attributes;
+    };
+
+    /**
+     * @brief Describes compiled shader data used to create a graphics pipeline.
+     *
+     * Contains non-owning views of the SPIR-V bytecode for the vertex and
+     * fragment shader stages.
+     *
+     * The caller retains ownership of the underlying bytecode and must keep
+     * it valid throughout graphics-pipeline construction.
+     *
+     * The shader data is not retained after pipeline creation.
+     */
+    struct GraphicsShaderData {
+        /**
+         * @brief Borrowed SPIR-V bytecode for the vertex shader stage.
+         */
+        std::span<const std::uint32_t> vertex_data;
+
+        /**
+         * @brief Borrowed SPIR-V bytecode for the fragment shader stage.
+         */
+        std::span<const std::uint32_t> fragment_data;
+    };
     /**
      * @brief Owns a Vulkan graphics pipeline and its pipeline layout.
      *
@@ -47,8 +99,8 @@ namespace SNE::Engine::Renderer::Vulkan {
 
       public:
         /**
-         * @brief Creates a Vulkan graphics pipeline for the supplied color
-         * attachment format.
+         * @brief Creates a Vulkan graphics pipeline using supplied SPIR-V
+         * shaders and vertex input descriptions.
          *
          * Creates and owns the pipeline layout and graphics pipeline used for
          * Vulkan dynamic rendering with the supplied color-attachment format.
@@ -56,25 +108,35 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The logical device is borrowed and must remain valid for the lifetime
          * of this object.
          *
+         * Shader data and vertex input descriptions are borrowed only during
+         * construction and are not retained by the graphics pipeline.
+         *
          * @param device Logical device used to create and destroy pipeline
          * resources.
          * @param color_attachment_format Format of the color attachment used
          * with the graphics pipeline.
+         * @param graphics_shader_data Borrowed SPIR-V bytecode for the vertex
+         * and fragment shader stages.
+         * @param graphics_vertex_input_data Borrowed vertex input binding and
+         * attribute descriptions.
          *
          * @pre device must be a valid Vulkan logical-device handle.
          * @pre color_attachment_format must not be VK_FORMAT_UNDEFINED.
+         * @pre graphics_shader_data.vertex_data must contain valid, nonempty
+         * vertex shader SPIR-V.
+         * @pre graphics_shader_data.fragment_data must contain valid, nonempty
+         * fragment shader SPIR-V.
          *
-         * @post Successful pipeline-layout creation produces a non-null Vulkan
-         * pipeline-layout handle.
-         * @post Successful graphics-pipeline creation produces a non-null
-         * Vulkan graphics-pipeline handle.
+         * @post Successful construction produces a non-null Vulkan pipeline
+         * layout and graphics pipeline.
          *
-         * @throws Core::Error::EngineError if shader loading, shader-module
-         * creation, pipeline-layout creation, or graphics-pipeline creation
-         * fails.
+         * @throws Core::Error::EngineError if shader-module creation,
+         * pipeline-layout creation, or graphics-pipeline creation fails.
          */
-        VulkanGraphicsPipeline(VkDevice device,
-                               VkFormat color_attachment_format);
+        VulkanGraphicsPipeline(
+            VkDevice device, VkFormat color_attachment_format,
+            const GraphicsShaderData &graphics_shader_data,
+            const GraphicsVertexInputData &graphics_vertex_input_data);
 
         VulkanGraphicsPipeline(const VulkanGraphicsPipeline &) = delete;
 
