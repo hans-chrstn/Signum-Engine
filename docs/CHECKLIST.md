@@ -555,7 +555,7 @@
 - [x] Define application-level exception boundary
 - [x] Define scalable error-code metadata handling
 - [ ] Define consistent warnings-as-errors policy
-- [ ] Define reusable Vulkan integration-test infrastructure
+- [x] Define reusable Vulkan integration-test infrastructure
 
 ### Implement
 
@@ -606,9 +606,9 @@
 - [x] Add final handling for unknown exceptions if needed
 - [x] Keep assertion failures separate from recoverable exception handling
 - [ ] Document failures that cannot be propagated from destructors
-- [ ] Add reusable Vulkan integration-test setup for instance, device, queue, and allocator
-- [ ] Add immediate-submission support to Vulkan integration-test infrastructure
-- [ ] Remove duplicated Vulkan setup from buffer and image integration tests
+- [x] Add reusable Vulkan integration-test setup for instance, device, queue, and allocator
+- [x] Add immediate-submission support to Vulkan integration-test infrastructure
+- [x] Remove duplicated Vulkan setup from buffer and image integration tests
 - [ ] Remove unused `Window::waitEvents()` if no longer needed
 - [ ] Remove empty `application_configuration.cpp`
 - [ ] Remove stale empty namespaces, aliases, and includes
@@ -688,8 +688,8 @@
 - [x] Keep assertion reporting separate from runtime error reporting
 - [ ] Keep deterministic logic in unit tests
 - [ ] Keep Vulkan driver and lifetime behavior in integration tests
-- [ ] Reuse Vulkan integration-test infrastructure
-- [ ] Keep test helpers out of production architecture
+- [x] Reuse Vulkan integration-test infrastructure
+- [x] Keep test helpers out of production architecture
 - [ ] Avoid generic managers, service locators, or registries without a concrete need
 - [ ] Avoid introducing the renderer abstraction before Phase 12
 

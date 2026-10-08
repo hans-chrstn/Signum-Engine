@@ -1,6 +1,5 @@
 #include "../vulkan_integration_test_fixture.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
-#include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_readback.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
@@ -29,19 +28,6 @@ TEST_F(VulkanIntegrationTest, UploadsAndReadsBackBufferData) {
         std::byte{0x00},
     };
 
-    VkQueue graphics_queue{VK_NULL_HANDLE};
-
-    vkGetDeviceQueue(m_Device, m_SelectedQueueFamily.family_index, 0U,
-                     &graphics_queue);
-
-    ASSERT_NE(graphics_queue, VK_NULL_HANDLE);
-
-    Vulkan::VulkanImmediateSubmission immediate_submission{
-        m_Device,
-        graphics_queue,
-        m_SelectedQueueFamily.family_index,
-    };
-
     const auto input_size = static_cast<VkDeviceSize>(input_bytes.size());
 
     const Vulkan::VulkanBufferCreateInfo buffer_create_info{
@@ -53,10 +39,10 @@ TEST_F(VulkanIntegrationTest, UploadsAndReadsBackBufferData) {
 
     Vulkan::VulkanBuffer device_buffer{memory_allocator, buffer_create_info};
 
-    Vulkan::uploadBufferData(memory_allocator, immediate_submission,
+    Vulkan::uploadBufferData(memory_allocator, immediateSubmission(),
                              device_buffer, input_bytes);
 
-    Vulkan::readBufferData(memory_allocator, immediate_submission,
+    Vulkan::readBufferData(memory_allocator, immediateSubmission(),
                            device_buffer, output_bytes);
 
     EXPECT_EQ(input_bytes, output_bytes);

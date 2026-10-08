@@ -1,6 +1,5 @@
 #include "../vulkan_integration_test_fixture.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
-#include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
 #include "engine/renderer/vulkan/command/vulkan_transfer_commands.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
 #include <cstddef>
@@ -116,19 +115,6 @@ TEST_F(VulkanIntegrationTest,
        RecordBufferCopyAllowsNonOverlappingSameBufferRanges) {
     Vulkan::VulkanMemoryAllocator &memory_allocator = memoryAllocator();
 
-    VkQueue graphics_queue{VK_NULL_HANDLE};
-
-    vkGetDeviceQueue(m_Device, m_SelectedQueueFamily.family_index, 0U,
-                     &graphics_queue);
-
-    ASSERT_NE(graphics_queue, VK_NULL_HANDLE);
-
-    Vulkan::VulkanImmediateSubmission immediate_submission{
-        m_Device,
-        graphics_queue,
-        m_SelectedQueueFamily.family_index,
-    };
-
     const Vulkan::VulkanBufferCreateInfo buffer_create_info{
         .size = 8U,
         .usage =
@@ -146,7 +132,7 @@ TEST_F(VulkanIntegrationTest,
         .size = 4U,
     };
 
-    EXPECT_NO_THROW(immediate_submission.execute(
+    EXPECT_NO_THROW(immediateSubmission().execute(
         [&](VkCommandBuffer command_buffer) -> void {
             Vulkan::recordBufferCopy(command_buffer, copy_request);
         }));

@@ -85,11 +85,21 @@ auto VulkanIntegrationTest::SetUp() -> void {
 
     ASSERT_EQ(device_result, VK_SUCCESS);
 
+    vkGetDeviceQueue(m_Device, m_SelectedQueueFamily.family_index, 0U,
+                     &m_GraphicsQueue);
+
+    ASSERT_NE(m_GraphicsQueue, VK_NULL_HANDLE);
+
     m_MemoryAllocator.emplace(m_Instance, m_PhysicalDevice, m_Device,
                               Vulkan::kRequiredApiVersion, false);
+
+    m_ImmediateSubmission.emplace(m_Device, m_GraphicsQueue,
+                                  m_SelectedQueueFamily.family_index);
 }
 
 auto VulkanIntegrationTest::TearDown() -> void {
+    m_ImmediateSubmission.reset();
+
     m_MemoryAllocator.reset();
 
     if (m_Device != VK_NULL_HANDLE) {
@@ -100,6 +110,7 @@ auto VulkanIntegrationTest::TearDown() -> void {
         vkDestroyInstance(m_Instance, nullptr);
     }
 
+    m_GraphicsQueue = VK_NULL_HANDLE;
     m_PhysicalDevice = VK_NULL_HANDLE;
     m_Device = VK_NULL_HANDLE;
     m_Instance = VK_NULL_HANDLE;
@@ -113,4 +124,14 @@ auto VulkanIntegrationTest::memoryAllocator()
     }
 
     return m_MemoryAllocator.value();
+}
+
+auto VulkanIntegrationTest::immediateSubmission()
+    -> Vulkan::VulkanImmediateSubmission & {
+    if (!m_ImmediateSubmission.has_value()) {
+        throw std::logic_error("VulkanIntegrationTest requires an initialized "
+                               "immediate submission");
+    }
+
+    return m_ImmediateSubmission.value();
 }
