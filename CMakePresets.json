@@ -28,6 +28,18 @@
       }
     },
     {
+      "name": "warnings",
+      "displayName": "Debug with warnings as errors",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SIGNUM_ENABLE_SANITIZERS": false,
+        "SIGNUM_ENABLE_REFLECTION": false,
+        "SIGNUM_ENABLE_CONTRACTS": false,
+        "SIGNUM_WARNINGS_AS_ERRORS": true
+      }
+    },
+    {
       "name": "experimental",
       "displayName": "Debug with C++26 experiments",
       "inherits": "base",
@@ -64,6 +76,10 @@
       "configurePreset": "debug"
     },
     {
+      "name": "warnings",
+      "configurePreset": "warnings"
+    },
+    {
       "name": "experimental",
       "configurePreset": "experimental"
     },
@@ -80,6 +96,13 @@
     {
       "name": "debug",
       "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "warnings",
+      "configurePreset": "warnings",
       "output": {
         "outputOnFailure": true
       }

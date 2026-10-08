@@ -49,8 +49,14 @@ jobs:
           nix develop --command just clean
           nix develop --command just build debug
 
+      - name: Build with warnings as errors
+        run: nix develop --command just build warnings
+
       - name: Run unit tests
         run: nix develop --command just test-unit debug
+
+      - name: Run warnings-as-errors unit tests
+        run: nix develop --command ctest --preset warnings -L "^unit$"
 
       - name: Run Clang-Tidy
         run: nix develop --command just tidy

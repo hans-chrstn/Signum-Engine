@@ -15,6 +15,12 @@ option(
   OFF
 )
 
+option(
+  SIGNUM_WARNINGS_AS_ERRORS
+  "Treat compiler warnings as errors"
+  OFF
+)
+
 find_package(Vulkan REQUIRED)
 find_package(glfw3 3.4 REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
@@ -88,6 +94,22 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
       -Wconversion
       -Wsign-conversion
   )
+endif()
+
+if(SIGNUM_WARNINGS_AS_ERRORS)
+  if(MSVC)
+    target_compile_options(
+      signum_project_options
+      INTERFACE
+        /WX
+    )
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(
+      signum_project_options
+      INTERFACE
+        -Werror
+    )
+  endif()
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

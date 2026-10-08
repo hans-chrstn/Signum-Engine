@@ -1,12 +1,8 @@
 #include "../vulkan_integration_test_fixture.hpp"
-#include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
-
-namespace Renderer = SNE::Engine::Renderer;
-namespace Vulkan = Renderer::Vulkan;
 
 TEST_F(VulkanIntegrationTest, ExecutesImmediateSubmissionCallback) {
     bool callback_called{false};

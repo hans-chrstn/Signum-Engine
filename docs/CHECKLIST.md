@@ -554,7 +554,7 @@
 - [x] Define GPU resource move-semantics policy
 - [x] Define application-level exception boundary
 - [x] Define scalable error-code metadata handling
-- [ ] Define consistent warnings-as-errors policy
+- [x] Define consistent warnings-as-errors policy
 - [x] Define reusable Vulkan integration-test infrastructure
 
 ### Implement
@@ -605,16 +605,16 @@
 - [x] Add final handling for unexpected `std::exception`
 - [x] Add final handling for unknown exceptions if needed
 - [x] Keep assertion failures separate from recoverable exception handling
-- [ ] Document failures that cannot be propagated from destructors
+- [x] Document failures that cannot be propagated from destructors
 - [x] Add reusable Vulkan integration-test setup for instance, device, queue, and allocator
 - [x] Add immediate-submission support to Vulkan integration-test infrastructure
 - [x] Remove duplicated Vulkan setup from buffer and image integration tests
-- [ ] Remove unused `Window::waitEvents()` if no longer needed
-- [ ] Remove empty `application_configuration.cpp`
-- [ ] Remove stale empty namespaces, aliases, and includes
-- [ ] Make warnings-as-errors consistent between local builds and CI
+- [x] Remove unused `Window::waitEvents()` if no longer needed
+- [x] Remove empty `application_configuration.cpp`
+- [x] Remove stale empty namespaces, aliases, and includes
+- [x] Make warnings-as-errors consistent between local builds and CI
 - [x] Keep CMake source lists synchronized with renderer files
-- [ ] Keep Doxygen ownership, lifetime, and contract documentation current
+- [x] Keep Doxygen ownership, lifetime, and contract documentation current
 
 ### Test
 
@@ -645,7 +645,7 @@
 - [x] Test acquire-time out-of-date handling
 - [x] Test present-time out-of-date handling where reproducible
 - [x] Test frame-resource reuse after early returns
-- [ ] Test swapchain-dependent destruction ordering
+- [x] Test swapchain-dependent destruction ordering
 - [x] Add representative assertion death tests
 - [x] Test every error code has a valid string
 - [x] Test every error code has a valid subsystem
@@ -657,9 +657,9 @@
 - [x] Run Valgrind
 - [x] Run Clang-Tidy
 - [x] Run formatting checks
-- [ ] Run warnings-as-errors build
+- [x] Run warnings-as-errors build
 - [x] Run Vulkan validation cleanly
-- [ ] Generate Doxygen without warnings
+- [x] Generate Doxygen without warnings
 - [x] Verify CI from a clean checkout
 
 ### Architecture
@@ -675,11 +675,11 @@
 - [x] Keep VMA details out of normal renderer-facing APIs
 - [x] Keep transfer recording independent from submission policy
 - [x] Keep upload policy independent from transfer-command construction
-- [ ] Keep synchronous immediate submission replaceable by future asynchronous paths
-- [ ] Keep future streaming uploads possible
-- [ ] Keep graphics, compute, and transfer queue roles extensible
+- [x] Keep synchronous immediate submission replaceable by future asynchronous paths
+- [x] Keep future streaming uploads possible
+- [x] Keep graphics, compute, and transfer queue roles extensible
 - [x] Do not add dedicated transfer queues without queue-family ownership support
-- [ ] Do not assume queue submission will permanently remain single-threaded
+- [x] Do not assume queue submission will permanently remain single-threaded
 - [x] Keep swapchain recreation inside renderer/presentation ownership
 - [x] Keep frame-resource identity separate from swapchain-image identity
 - [x] Keep resource ownership valid when resources move between containers
@@ -690,8 +690,8 @@
 - [x] Keep Vulkan driver and lifetime behavior in integration tests
 - [x] Reuse Vulkan integration-test infrastructure
 - [x] Keep test helpers out of production architecture
-- [ ] Avoid generic managers, service locators, or registries without a concrete need
-- [ ] Avoid introducing the renderer abstraction before Phase 12
+- [x] Avoid generic managers, service locators, or registries without a concrete need
+- [x] Avoid introducing the renderer abstraction before Phase 12
 
 ---
 

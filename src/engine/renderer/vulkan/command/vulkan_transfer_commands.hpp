@@ -17,10 +17,30 @@ namespace SNE::Engine::Renderer::Vulkan {
      * queue submission, synchronization, or queue-family ownership.
      */
     struct BufferCopyRequest {
+        /**
+         * @brief Source buffer to copy data from.
+         */
         const VulkanBuffer &source;
+
+        /**
+         * @brief Destination buffer to copy data into.
+         */
         const VulkanBuffer &destination;
+
+        /**
+         * @brief Byte offset within the source buffer where the copy begins.
+         */
         VkDeviceSize source_offset{};
+
+        /**
+         * @brief Byte offset within the destination buffer where the copy
+         * begins.
+         */
         VkDeviceSize destination_offset{};
+
+        /**
+         * @brief Number of bytes to copy.
+         */
         VkDeviceSize size{};
     };
 
