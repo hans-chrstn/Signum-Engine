@@ -153,3 +153,18 @@ TEST_F(VulkanIntegrationTest, MoveAssignsVmaBackedBuffer) {
     EXPECT_EQ(statistics_after_destruction.allocation_count,
               statistics_before.allocation_count);
 }
+
+TEST_F(VulkanIntegrationTest, StoresRequestedBufferUsageFlags) {
+    const VkBufferUsageFlags requested_usage =
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+    const Vulkan::VulkanBufferCreateInfo buffer_create_info{
+        .size = 4U,
+        .usage = requested_usage,
+        .memory_usage = Renderer::GpuMemoryUsage::Device,
+    };
+
+    const Vulkan::VulkanBuffer buffer{memoryAllocator(), buffer_create_info};
+
+    EXPECT_EQ(buffer.usage(), requested_usage);
+}

@@ -624,7 +624,7 @@
 - [x] Test invalid offsets
 - [x] Test overflow-resistant range checks
 - [x] Test checked Vulkan count conversion
-- [ ] Test buffer usage tracking
+- [x] Test buffer usage tracking
 - [x] Test invalid transfer source usage
 - [x] Test invalid transfer destination usage
 - [x] Test overlapping same-buffer copies
@@ -634,12 +634,12 @@
 - [x] Test immediate fence reuse
 - [x] Test immediate submission recovery after recording failure where supported
 - [x] Test complete staging upload
-- [ ] Test staging upload with destination offsets
-- [ ] Test staging upload range boundaries
+- [x] Test staging upload with destination offsets
+- [x] Test staging upload range boundaries
 - [x] Test upload correctness through readback
 - [x] Test CPU -> upload -> device -> readback -> CPU round trip
-- [ ] Test partial transfer correctness
-- [ ] Test minimized-window behavior
+- [x] Test partial transfer correctness
+- [x] Test minimized-window behavior
 - [x] Test repeated window resizing
 - [x] Test swapchain recreation
 - [ ] Test acquire-time out-of-date handling
