@@ -18,7 +18,8 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(
         VkDevice device, VkFormat color_attachment_format,
         const GraphicsShaderData &graphics_shader_data,
-        const GraphicsVertexInputData &graphics_vertex_input_data)
+        const GraphicsVertexInputData &graphics_vertex_input_data,
+        const GraphicsPipelineLayoutData &graphics_pipeline_layout_data)
         : m_Device(device) {
         if (device == VK_NULL_HANDLE) {
             Core::Assertion::failAssertion(
@@ -182,14 +183,26 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
         pipeline_layout_create_info.sType =
             VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
         // No descriptor-set layouts yet
         pipeline_layout_create_info.setLayoutCount = 0U;
         // No descriptor-set layout array because count is zero
         pipeline_layout_create_info.pSetLayouts = nullptr;
-        // No push-constant ranges yet
-        pipeline_layout_create_info.pushConstantRangeCount = 0U;
-        // No push-constant descriptions because count is zero
-        pipeline_layout_create_info.pPushConstantRanges = nullptr;
+
+        const auto push_constant_range_count =
+            Core::Numeric::tryConvertToUint32(
+                graphics_pipeline_layout_data.push_constant_ranges.size());
+        if (!push_constant_range_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline push-constant range count exceeds "
+                "uint32_t");
+        }
+        pipeline_layout_create_info.pushConstantRangeCount =
+            push_constant_range_count.value();
+        pipeline_layout_create_info.pPushConstantRanges =
+            graphics_pipeline_layout_data.push_constant_ranges.data();
 
         const VkResult pipeline_layout_result = vkCreatePipelineLayout(
             m_Device, &pipeline_layout_create_info, nullptr, &m_PipelineLayout);

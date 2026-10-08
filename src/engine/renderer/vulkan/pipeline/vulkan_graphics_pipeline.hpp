@@ -5,6 +5,21 @@
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
+     * @brief Describes resource interface requirements for a graphics pipeline.
+     *
+     * Contains non-owning push-constant range descriptions used during
+     * pipeline-layout creation.
+     *
+     * The caller must keep the descriptions valid throughout construction.
+     */
+    struct GraphicsPipelineLayoutData {
+        /**
+         * @brief Borrowed push-constant ranges required by the pipeline.
+         */
+        std::span<const VkPushConstantRange> push_constant_ranges;
+    };
+
+    /**
      * @brief Describes vertex input bindings and attributes for a graphics
      * pipeline.
      *
@@ -119,6 +134,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * and fragment shader stages.
          * @param graphics_vertex_input_data Borrowed vertex input binding and
          * attribute descriptions.
+         * @param graphics_pipeline_layout_data Borrowed pipeline-layout
+         * requirements, including push-constant ranges.
          *
          * @pre device must be a valid Vulkan logical-device handle.
          * @pre color_attachment_format must not be VK_FORMAT_UNDEFINED.
@@ -136,7 +153,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanGraphicsPipeline(
             VkDevice device, VkFormat color_attachment_format,
             const GraphicsShaderData &graphics_shader_data,
-            const GraphicsVertexInputData &graphics_vertex_input_data);
+            const GraphicsVertexInputData &graphics_vertex_input_data,
+            const GraphicsPipelineLayoutData &graphics_pipeline_layout_data);
 
         VulkanGraphicsPipeline(const VulkanGraphicsPipeline &) = delete;
 

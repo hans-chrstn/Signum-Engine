@@ -272,9 +272,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 .attributes = vertex_attributes,
             };
 
+            const GraphicsPipelineLayoutData graphics_pipeline_layout_data{
+                .push_constant_ranges = {},
+            };
+
             new_graphics_pipeline.emplace(m_Device.nativeHandle(),
                                           new_swapchain.surfaceFormat().format,
-                                          graphics_data, vertex_input_data);
+                                          graphics_data, vertex_input_data,
+                                          graphics_pipeline_layout_data);
         }
 
         std::vector<VulkanSemaphore> new_render_finished_semaphores;
