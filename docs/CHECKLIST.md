@@ -711,6 +711,27 @@
 - [ ] GPU resource lifetime
 - [ ] GPU resource dependency tracking
 
+- [ ] SPIR-V compilation, shader stages, entry points, and compiler diagnostics
+- [ ] shader interface reflection and descriptor/push-constant compatibility
+- [ ] shader specialization constants and pipeline variant identity
+- [ ] image formats, image views, mip levels, array layers, and color spaces
+- [ ] sRGB versus linear sampling and texture usage
+- [ ] descriptor indexing capabilities and hardware-dependent binding limits
+- [ ] shader toolchain tradeoffs: GLSL, HLSL, and Slang
+
+### Design
+
+- [ ] Define a compiler-independent shader artifact contract with SPIR-V as the initial Vulkan backend input
+- [ ] Define shader-stage, entry-point, compilation error, and diagnostic ownership
+- [ ] Define shader-interface metadata for bindings, stages, push constants, and pipeline compatibility
+- [ ] Define a minimal shader reflection/validation boundary without depending on gameplay C++ reflection
+- [ ] Define pipeline/layout compatibility and variant-key responsibilities
+- [ ] Define texture/resource descriptions that preserve format, extent, sample count, mip levels, array layers, and intended usage
+- [ ] Define resource initialization and readiness separately from eventual logical resource handles
+- [ ] Define GPU-completion-aware resource retention for submissions still in flight
+- [ ] Keep optional device-feature requirements explicit rather than assuming all Vulkan hardware supports descriptor indexing or advanced shaders
+- [ ] Record criteria for evaluating Slang against the initial shader toolchain before committing to a compiler migration
+
 ### Implement
 
 - [ ] Add shader handling
@@ -734,6 +755,12 @@
 - [ ] Track GPU resource dependencies
 - [ ] Expose resource lifetime/dependency data needed by later frame scheduling
 
+- [ ] Connect the first shader compilation or validated SPIR-V loading path to explicit compiler diagnostics
+- [ ] Validate descriptor and push-constant declarations against the shader/pipeline interface
+- [ ] Represent texture format, color space, mip ranges, and resource usage explicitly in Vulkan resource setup
+- [ ] Preserve submitted GPU resource lifetimes until the relevant completion signal is observed
+- [ ] Keep conventional descriptors and draw calls as the working baseline
+
 ### Test
 
 - [ ] Test pure resource descriptions
@@ -749,6 +776,13 @@
 - [ ] Run Vulkan validation
 - [ ] Run sanitizers
 
+- [ ] Reject incompatible shader stages, bindings, and pipeline layouts with useful diagnostics
+- [ ] Test missing, invalid, and incompatible shader artifacts without resource leaks
+- [ ] Test shader/pipeline variant identity and compatible reuse
+- [ ] Test texture mip-level, view-range, format, and sRGB/linear interpretation cases
+- [ ] Test resource replacement and shutdown while previously submitted GPU work is still in flight
+- [ ] Verify missing optional binding capabilities do not block the conventional rendering path
+
 ### Architecture
 
 - [ ] Keep runtime object identity separate from GPU resource identity
@@ -761,6 +795,11 @@
 - [ ] Define safe recovery behavior before treating swapchain recreation failures as recoverable
 - [ ] Keep renderer resource mechanisms usable by mesh, procedural, indirect, compute-generated, and future GPU-driven workloads
 - [ ] Keep reference-scene concepts such as stars, planets, systems, and galaxies outside renderer-core types
+
+- [ ] Keep the shader source language and compiler choice replaceable without changing material or render-feature APIs
+- [ ] Keep shader reflection separate from engine/gameplay C++ reflection
+- [ ] Keep bindless and mesh-shader-specific mechanisms optional instead of hard requirements of the basic renderer
+- [ ] Do not expose raw in-flight Vulkan lifetime rules to game-facing callers
 
 ---
 
@@ -850,6 +889,9 @@
 - [ ] Route GLFW diagnostics
 - [ ] Support logging without editor
 
+- [ ] Capture device capability and feature-selection diagnostics for renderer troubleshooting
+- [ ] Correlate resource, shader, and submission failures with named engine operations where possible
+
 ### Test
 
 - [ ] Test level filtering
@@ -864,6 +906,8 @@
 - [ ] Keep logging implementation out of gameplay APIs
 - [ ] Keep log sinks replaceable and independently extensible
 - [ ] Keep structured log and diagnostic data independent from sink presentation
+
+- [ ] Keep diagnostic event storage independent of eventual tracing and crash-reporting backends
 
 ---
 
@@ -949,6 +993,9 @@
 - [ ] Define benchmark result-recording convention
 - [ ] Add repeatable reference-workload configurations for correctness and performance testing
 
+- [ ] Add targeted fault-injection seams for asset, allocation, shader, and device-facing failures as those systems appear
+- [ ] Record the runtime, driver, and capability configuration used by GPU integration tests
+
 ### Learn
 
 - [x] `EXPECT_*`
@@ -976,6 +1023,9 @@
 - [ ] Establish initial benchmark baseline
 - [ ] Record an initial multi-object rendering reference baseline
 
+- [ ] Verify representative failure-injection runs preserve ownership and cleanup invariants
+- [ ] Test feature-disabled and feature-unsupported renderer configurations where hardware permits
+
 ### Architecture
 
 - [ ] Keep deterministic logic in unit tests
@@ -995,6 +1045,11 @@
 - [ ] frame timing
 - [ ] variable timestep
 - [ ] fixed timestep
+
+### Design
+
+- [ ] Define a fixed-step simulation boundary separate from variable-rate rendering
+- [ ] Define input sampling and frame numbering without assuming networking or rollback
 
 ### Implement
 
@@ -1019,12 +1074,16 @@
 - [ ] Navigate the current 3D reference workload with test-side camera controls built from engine input and timing APIs
 - [ ] Test rapid camera movement, focus changes, resizing, and long-running movement against the reference workload
 
+- [ ] Verify a fixed input sequence can reproduce the same deterministic reference updates within the supported configuration
+
 ### Architecture
 
 - [ ] Keep GLFW types out of engine-facing input API
 - [ ] Keep actions such as Jump/Shoot project-defined
 - [ ] Keep input-device/backend translation replaceable without changing gameplay-facing action/state contracts
 - [ ] Avoid assuming one window, keyboard/mouse-only input, or one platform event source in engine-facing APIs
+
+- [ ] Keep input recording/replay optional and independent from a particular entity storage model
 
 ---
 
@@ -1062,6 +1121,10 @@
 - [ ] Define Vulkan escape-hatch policy
 - [ ] Avoid forcing future backends into an artificial lowest common denominator
 
+- [ ] Define backend capability queries for optional binding, shader, geometry, compute, and synchronization features
+- [ ] Define feature-specific capability requirements and graceful unsupported-feature behavior
+- [ ] Define resource state and submission contracts without fixing one queue layout or future work-generation strategy
+
 ### Implement
 
 - [ ] Move normal rendering callers away from raw Vulkan
@@ -1088,6 +1151,9 @@
 - [ ] Run the existing 3D reference workload entirely through backend-independent renderer APIs
 - [ ] Compare reference-workload correctness and basic performance with the pre-abstraction Vulkan path
 - [ ] Benchmark abstraction where useful
+
+- [ ] Verify feature registration reports unmet GPU capabilities instead of silently enabling unsupported paths
+- [ ] Verify the conventional rendering path remains usable when advanced GPU capabilities are unavailable
 
 ### Architecture
 
@@ -1123,6 +1189,8 @@
 - [ ] Define stale handle behavior
 - [ ] Define owning versus non-owning access
 
+- [ ] Distinguish resource identity, creation readiness, GPU residency, and pending destruction in resource contracts
+
 ### Implement
 
 - [ ] Add typed handle mechanism when needed
@@ -1136,11 +1204,15 @@
 - [ ] Test stale generations if used
 - [ ] Repeatedly create, destroy, and reuse reference-workload resources to exercise invalid and stale-handle behavior
 
+- [ ] Test handle invalidation while underlying GPU work or delayed resource release remains pending
+
 ### Architecture
 
 - [ ] Keep logical identity independent from memory address and backend-native handle values
 - [ ] Keep handle representation replaceable without changing resource ownership semantics
 - [ ] Avoid requiring globally persistent identity for temporary or representation-local resources that do not need it
+
+- [ ] Do not encode descriptor slot, GPU virtual address, or allocation location as permanent logical resource identity
 
 ---
 
@@ -1159,6 +1231,10 @@
 - [ ] queue scheduling
 - [ ] resource aliasing concepts
 
+- [ ] read-after-write, write-after-read, and write-after-write hazards
+- [ ] subresource-level image access and layout tracking
+- [ ] GPU queue-family ownership and external synchronization boundaries
+
 ### Design
 
 - [ ] Define render-pass declaration contract
@@ -1171,6 +1247,11 @@
 - [ ] Define external-resource import/export
 - [ ] Define render-feature registration against the graph
 - [ ] Keep graph policy independent from individual effects
+
+- [ ] Define image subresource ranges and buffer byte ranges for declared pass accesses
+- [ ] Define graph-visible external side effects and presentation/import/export lifetimes
+- [ ] Define explicit handling for read-before-initialization and invalid access declarations
+- [ ] Define safe synchronization fallback when optimal barriers cannot be proven
 
 ### Implement
 
@@ -1186,6 +1267,10 @@
 - [ ] Add pass culling when justified
 - [ ] Add queue scheduling when multiple queue types are actually used
 
+- [ ] Validate read/write hazards and reject invalid or uninitialized resource use
+- [ ] Track subresource accesses where whole-resource tracking proves insufficient
+- [ ] Add debug descriptions of compiled passes, dependencies, and generated barriers
+
 ### Test
 
 - [ ] Test dependency ordering
@@ -1199,6 +1284,12 @@
 - [ ] Scale the reference workload while validating generated dependencies, lifetimes, and synchronization
 - [ ] Test unused-pass removal when implemented
 
+- [ ] Test read-after-write, write-after-read, and write-after-write hazards
+- [ ] Test missing producer, read-before-write, and imported-resource initialization cases
+- [ ] Test external side-effect passes are not incorrectly culled
+- [ ] Test image subresource access conflicts when subresource tracking is implemented
+- [ ] Test graphics/present or cross-queue ownership and synchronization paths when introduced
+
 ### Architecture
 
 - [ ] Built-in and external render features use the same graph contracts
@@ -1209,8 +1300,58 @@
 - [ ] Do not couple pass declarations to the current physical queue topology
 - [ ] Preserve specialized backend scheduling paths where they outperform a generic path without changing graph semantics
 
+- [ ] Do not assume a render graph can derive correct barriers from incomplete pass declarations
+- [ ] Do not treat graph compilation as permission to omit external API or present synchronization
+
 ---
 
+## Phase 13.75 — Transient GPU Resource Optimization
+
+### Learn
+
+- [ ] transient GPU allocation and resource lifetime intervals
+- [ ] allocation reuse versus true Vulkan resource memory aliasing
+- [ ] resource memory-type compatibility, alignment, and aliasing restrictions
+- [ ] aliasing synchronization, initialization, and cross-queue overlap hazards
+- [ ] frame-overlap implications for transient resource reuse
+
+### Design
+
+- [ ] Keep the correct non-aliased render-graph path as the baseline
+- [ ] Define transient resource lifetime intervals from compiled graph dependencies
+- [ ] Define allocation compatibility from actual Vulkan resource memory requirements
+- [ ] Define policies for pooled reuse, allocation sharing, and optional aliasing separately
+- [ ] Define synchronization and initialization requirements when physical memory is reused
+- [ ] Define aliasing restrictions across overlapping frames and asynchronous queues
+- [ ] Define memory-savings, allocation-count, GPU-time, and complexity acceptance criteria
+
+### Implement
+
+- [ ] Report peak live transient resource memory without aliasing
+- [ ] Add transient allocation pooling or reuse only when measurement justifies it
+- [ ] Prototype compatible non-overlapping resource aliasing through Phase 6.5 allocation infrastructure
+- [ ] Make aliasing independently configurable and removable without changing render-pass APIs
+- [ ] Add transient allocation and aliasing diagnostics when the optimization is enabled
+
+### Test
+
+- [ ] Compare render output with and without transient allocation reuse
+- [ ] Reject incompatible memory types, alignment, and image usage requirements
+- [ ] Test aliasing lifetime overlap and required synchronization barriers
+- [ ] Test transient reuse across concurrent frames in flight and mixed queues where supported
+- [ ] Test resource initialization after reused or aliased memory becomes visible
+- [ ] Benchmark peak GPU memory, allocation overhead, and GPU frame time against the non-aliased baseline
+- [ ] Disable aliasing automatically or fail clearly when safety preconditions cannot be established
+
+### Architecture
+
+- [ ] Keep allocation policy inside renderer/backend memory infrastructure
+- [ ] Do not make resource aliasing a requirement of normal render features or custom passes
+- [ ] Keep resource identity independent from its reusable physical memory region
+- [ ] Prefer simple pooling over complex aliasing when measurements do not justify aliasing complexity
+- [ ] Do not claim aliasing eliminates all GPU memory fragmentation or synchronization work
+
+---
 ## Phase 14 — Scene and World Foundation
 
 ### Learn
@@ -1229,6 +1370,9 @@
 - [ ] Define transform hierarchy rules
 - [ ] Define logical world identity independently from one physical storage model
 - [ ] Allow authoring/scene representation to differ from optimized runtime representations
+
+- [ ] Define the distinction between local transforms, scene-space transforms, and project-defined world coordinates
+- [ ] Define conversion/precision expectations at renderer-facing transform boundaries without implementing large-world origin shifting yet
 
 ### Implement
 
@@ -1252,6 +1396,8 @@
 - [ ] Expand the reference scene to a small static star-and-bodies arrangement as hierarchy and transform support becomes available
 - [ ] Verify the same world mechanisms represent non-celestial scenes without special cases
 
+- [ ] Test hierarchy and renderer transform contracts without assuming global coordinates are limited to 32-bit floating point
+
 ### Architecture
 
 - [ ] Keep gameplay types project-defined
@@ -1259,6 +1405,8 @@
 - [ ] Keep World and Scene APIs independent from a mandatory ECS, object hierarchy, or renderer storage layout
 - [ ] Allow specialized subsystem representations to coexist without making one subsystem's storage the definition of the world
 - [ ] Keep star, planet, moon, orbit, solar-system, and galaxy semantics outside engine-core world types
+
+- [ ] Do not freeze one global coordinate precision or origin policy into all scene/component public APIs
 
 ---
 
@@ -1286,6 +1434,8 @@
 - [ ] Benchmark archetype, sparse-set, and other justified storage alternatives instead of assuming one layout is universally optimal
 - [ ] Keep entity identity separable from whichever component-storage strategy is selected
 
+- [ ] Define structural-change timing and iteration invalidation rules independently from future scheduler implementation
+
 ### Implement
 
 - [ ] Add entity identity
@@ -1309,6 +1459,8 @@
 - [ ] Benchmark iteration using both small and larger reference-scene populations
 - [ ] Benchmark iteration
 
+- [ ] Test component insertion/removal during active queries according to the documented mutation rules
+
 ### Architecture
 
 - [ ] Do not hard-code Player
@@ -1320,6 +1472,8 @@
 - [ ] Treat ECS/entity-component storage as one world representation mechanism rather than the definition of every engine subsystem
 - [ ] Do not require rendering, physics, audio, navigation, procedural data, or editor metadata to become ECS-shaped
 - [ ] Keep component semantics independent from one physical storage layout where practical
+
+- [ ] Keep gameplay semantics independent from whichever component storage layout wins early benchmarks
 
 ---
 
@@ -1342,6 +1496,10 @@
 - [ ] Define migration policy
 - [ ] Define transient fields
 
+- [ ] Define snapshotable simulation state separately from derived render/audio state when a consumer needs it
+- [ ] Define trusted versus untrusted serialized-input validation responsibilities
+- [ ] Define partial-save and interrupted-write recovery requirements before adding persistent game saves
+
 ### Implement
 
 - [ ] Serialize basic engine values
@@ -1360,11 +1518,15 @@
 - [ ] migration tests
 - [ ] Round-trip the growing reference scene and verify identities, transforms, hierarchy, and project-defined data survive serialization
 
+- [ ] Reject oversized, truncated, or inconsistent serialized inputs without unchecked allocation or memory access
+
 ### Architecture
 
 - [ ] Keep serialized schemas independent from in-memory layout and module addresses
 - [ ] Allow storage/backends to define serialization adapters without exposing their private physical representation
 - [ ] Keep migration/version policy usable across editor state, world data, modules, and future reload workflows
+
+- [ ] Do not make in-memory ECS table copying or any single wire-format library a serialization requirement
 
 ---
 
@@ -1423,6 +1585,8 @@
 - [ ] Keep strongly typed C++ APIs as the default where reflection is unnecessary
 - [ ] Keep internal renderer/backend types unreflected unless a concrete tooling requirement justifies exposure
 - [ ] Keep consumers dependent on the metadata API rather than one metadata-generation mechanism
+
+- [ ] Keep engine C++ metadata independent from GPU shader-layout reflection and shader compiler APIs
 
 ### Future Consumers
 
@@ -1497,6 +1661,9 @@
 - [ ] cache invalidation
 - [ ] asynchronous loading
 
+- [ ] glTF 2.0 mesh, material, and dependency import requirements
+- [ ] CPU decode, GPU upload, and resource-ready publication stages
+
 ### Design
 
 - [ ] Define asset identity
@@ -1507,6 +1674,10 @@
 - [ ] Define dependency tracking
 - [ ] Define shader/material asset dependencies without coupling assets to built-in render features
 - [ ] Define cache versioning
+
+- [ ] Define asset import failures and diagnostics separately from runtime GPU resource creation
+- [ ] Define CPU-ready, upload-pending, and GPU-ready states where asynchronous loading is later used
+- [ ] Define asset cancellation and resource-consumer behavior before future streaming integration
 
 ### Implement
 
@@ -1520,6 +1691,9 @@
 - [ ] Add reload path
 - [ ] Add asset diagnostics
 
+- [ ] Evaluate or add a glTF 2.0 importer when the first representative production mesh/material assets require it
+- [ ] Keep source-asset parsing separate from runtime resource construction and upload
+
 ### Test
 
 - [ ] Test missing assets
@@ -1531,6 +1705,9 @@
 - [ ] Test reload
 - [ ] Share geometry/material resources across many reference-scene objects and verify resource identity and dependency behavior
 - [ ] Repeatedly load and unload reference-scene resources while the scene remains valid
+
+- [ ] Test malformed glTF inputs and missing external mesh, material, or texture references when glTF import is supported
+- [ ] Test asset reload that fails during decoding or GPU upload without publishing half-constructed resources
 
 ### Architecture
 
@@ -1554,6 +1731,9 @@
 - [ ] compression
 - [ ] platform-specific cooking
 
+- [ ] KTX2 texture containers, Basis Universal transcoding, BCn/ASTC/ETC capabilities
+- [ ] mip-level layout, texture streaming granularity, and compressed block alignment
+
 ### Design
 
 - [ ] Define cooked-resource contract
@@ -1566,6 +1746,11 @@
 - [ ] Keep source decoders separate from runtime formats
 - [ ] Define platform-specific cooked variants where justified
 
+- [ ] Define cooked texture format choice independently from original image/container formats
+- [ ] Define platform/GPU texture format fallbacks based on queried capabilities
+- [ ] Define per-mip addressing and integrity information for future partial texture streaming
+- [ ] Define a cooked geometry layout that can later support optional meshlet data without requiring mesh shaders
+
 ### Implement
 
 - [ ] Add cooking pipeline
@@ -1575,6 +1760,10 @@
 - [ ] Add first cooked mesh representation when mesh resources exist
 - [ ] Add resource-format version checks
 - [ ] Add rebuild path for stale cooked data
+
+- [ ] Evaluate KTX2/Basis Universal in the texture cooking pipeline when size or portability justifies it
+- [ ] Support GPU-native block-compressed texture formats when a real asset workload requires them
+- [ ] Keep transcoding and decompression implementation details outside normal renderer callers
 
 ### Source-Format Policy
 
@@ -1595,12 +1784,18 @@
 - [ ] Test source-file changes rebuild dependent resources
 - [ ] Cook and load reference-scene assets through runtime formats and compare behavior with the imported source path
 
+- [ ] Test texture format selection on devices with different compression capabilities
+- [ ] Test compressed texture block/mip alignment and corrupted texture payload handling
+- [ ] Benchmark cooked texture size, decode/transcode cost, and GPU upload cost against an uncompressed baseline
+
 ### Architecture
 
 - [ ] Source formats are editor/import concerns
 - [ ] Runtime formats are engine-controlled
 - [ ] Runtime resource layout may evolve independently from source file format
 - [ ] Custom runtime formats target runtime requirements rather than novelty
+
+- [ ] Do not assume Basis transcoding is universally GPU-executed or that every device supports BC7
 
 ---
 
@@ -1803,6 +1998,10 @@
 - [ ] cancellation
 - [ ] thread affinity
 
+- [ ] C++20/23 coroutine scheduling and suspension rules
+- [ ] fiber-based scheduling, execution contexts, and thread-affinity hazards
+- [ ] work-stealing overhead, task granularity, and blocking I/O tradeoffs
+
 ### Design
 
 - [ ] Define task representation
@@ -1814,6 +2013,10 @@
 - [ ] Keep scheduling policy independent from task semantics
 - [ ] Avoid making one fixed worker topology or renderer-thread model a permanent public contract
 - [ ] Allow subsystem-specific schedulers or specialized execution paths to integrate through explicit dependencies when justified
+
+- [ ] Keep suspend/resume mechanics separate from task dependency semantics
+- [ ] Define how exceptions, cancellation, and shutdown propagate through suspended tasks if suspension is introduced
+- [ ] Avoid assuming fibers eliminate OS worker threads or provide automatic lock-free execution
 
 ### Implement
 
@@ -1835,11 +2038,16 @@
 - [ ] Verify scheduled reference-workload updates remain deterministic where determinism is required
 - [ ] Run ThreadSanitizer where supported
 
+- [ ] Benchmark ordinary thread-pool tasks against coroutine/fiber experiments only when representative waits justify the comparison
+- [ ] Test TLS, thread-affinity, cancellation, and shutdown when migratable suspended work is supported
+
 ### Architecture
 
 - [ ] Keep task description separate from worker-pool implementation
 - [ ] Keep dependency semantics usable by gameplay, rendering, asset, procedural, and future Composable World Model workloads
 - [ ] Allow the scheduler implementation to evolve without rewriting task producers
+
+- [ ] Keep fibers and coroutine-based scheduling optional implementation strategies rather than mandatory public task types
 
 ---
 
@@ -1893,6 +2101,8 @@
 - [ ] Verify disabled optional rendering features remain at the renderer-core baseline within defined tolerances
 - [ ] Increase reference object/system counts until bottlenecks become measurable
 - [ ] Preserve fixed-size reference tiers as regression benchmarks across later optimization phases
+
+- [ ] Record benchmark hardware, driver, compiler, configuration, and workload before comparing architecture alternatives
 
 ### Architecture
 
@@ -2039,6 +2249,9 @@
 - [ ] Preserve physical-path escape hatch for tooling
 - [ ] Keep logical asset identity independent from mount location
 
+- [ ] Define optional asynchronous range reads, completion, and cancellation without requiring one OS I/O API
+- [ ] Define bounded read sizes and lifetime ownership for bytes returned by directory and packaged mounts
+
 ### Implement
 
 - [ ] Add mount table
@@ -2059,6 +2272,8 @@
 - [ ] Test unmount lifecycle
 - [ ] Test project and engine mounts
 
+- [ ] Test short reads, truncated archives, cancellation, and unmount during outstanding requests when async reads exist
+
 ### Architecture
 
 - [ ] Do not make virtual paths mandatory for every engine user
@@ -2066,6 +2281,8 @@
 - [ ] Keep mount behavior out of gameplay-specific concepts
 - [ ] Keep mount/source implementations replaceable without changing logical asset identity
 - [ ] Allow directory, archive, package, network, or future custom mounts without forcing all mounts to share one physical storage model
+
+- [ ] Keep Linux-specific io_uring and platform storage APIs behind optional mount/I/O backend implementations
 
 ---
 
@@ -2677,6 +2894,10 @@
 - [ ] network security basics
 - [ ] networked coordinate/reference-frame representation
 
+- [ ] rollback netcode requirements and deterministic state replay
+- [ ] FlatBuffers and Protocol Buffers tradeoffs for game-state and service messages
+- [ ] matchmaking and online backend services as project-level concerns
+
 ### Design
 
 - [ ] Keep networking optional
@@ -2690,6 +2911,11 @@
 - [ ] Avoid assuming one flat single-precision coordinate space
 - [ ] Keep transport replaceable independently from replication policy
 
+- [ ] Define message validation, maximum sizes, versioning, and per-peer resource limits
+- [ ] Define optional simulation snapshot/restore hooks without requiring ECS memory cloning
+- [ ] Define project-selectable prediction, interpolation, reconciliation, and rollback policies
+- [ ] Keep matchmaking, authentication, storage, and RPC providers outside core transport/replication contracts
+
 ### Implement
 
 - [ ] Add transport abstraction
@@ -2697,6 +2923,10 @@
 - [ ] Add messages
 - [ ] Add optional replication support
 - [ ] Add reference-frame-aware spatial replication only when a project requires it
+
+- [ ] Evaluate verified zero-copy readers such as FlatBuffers only where profiling and message access patterns justify them
+- [ ] Prototype rollback networking only for a project that needs deterministic prediction and replay
+- [ ] Add optional online-service adapters only after a real game/backend requirement exists
 
 ### Test
 
@@ -2707,6 +2937,10 @@
 - [ ] Packet-loss simulation
 - [ ] Test spatial replication across reference-frame/origin changes when implemented
 
+- [ ] Fuzz or otherwise stress malformed, oversized, and truncated network messages
+- [ ] Test state save/restore and repeated deterministic replay if rollback is introduced
+- [ ] Test unavailable online services without preventing offline game startup
+
 ### Architecture
 
 - [ ] Keep networking out of projects that do not use it
@@ -2715,6 +2949,9 @@
 - [ ] Avoid coupling networking to one ECS storage implementation
 - [ ] Keep replication identity and authority independent from one local world representation
 - [ ] Allow a Composable World Model network representation if validated without making networking the authority for unrelated local state
+
+- [ ] Validate untrusted zero-copy buffers before accessing generated fields
+- [ ] Do not make one backend provider, microservice topology, serialization format, or rollback model mandatory
 
 ---
 
@@ -2732,6 +2969,11 @@
 - [ ] Keep resource streaming independent from world partition strategy
 - [ ] Define residency decisions separately from procedural generation
 
+- [ ] Define read/decode/upload/publish stages and separate CPU readiness from GPU completion
+- [ ] Define in-flight I/O, staging memory, GPU upload, and residency budgets with backpressure
+- [ ] Define stale-generation and cancellation behavior for streamed resource requests
+- [ ] Define GPU residency transitions without exposing allocator details through game-facing asset handles
+
 ### Implement
 
 - [ ] Add asynchronous load
@@ -2742,6 +2984,10 @@
 - [ ] Add memory-budget enforcement
 - [ ] Add spatial streaming integration when a real large-world workload exists
 - [ ] Integrate GPU residency budgets with Phase 6.5 memory information where appropriate
+
+- [ ] Implement bounded streaming request queues with observable completion and failure states
+- [ ] Publish streamed GPU resources only after upload and visibility requirements are satisfied
+- [ ] Overlap independent loading stages through the existing task and GPU submission systems where measured
 
 ### Test
 
@@ -2755,6 +3001,10 @@
 - [ ] Stream reference systems in and out while moving across large-world space
 - [ ] Scale streamable reference systems and resources until memory-budget, cancellation, and residency paths are exercised
 
+- [ ] Test load cancellation before read, after decode, and during an in-flight GPU upload
+- [ ] Test streaming budget exhaustion, priority inversion, and bounded queue behavior
+- [ ] Test resource unload/reload across multiple frames without use-after-free or stale asset publication
+
 ### Architecture
 
 - [ ] Keep streaming infrastructure independent from terrain, water, cloud, and other optional render-feature modules
@@ -2764,8 +3014,59 @@
 - [ ] Keep streaming policy independent from one world/component storage representation
 - [ ] Keep ordinary small projects free from large-world streaming requirements
 
+- [ ] Use completion-aware ownership rather than blocking the render thread merely to simplify streaming lifetimes
+
 ---
 
+## Phase 36.5 — Advanced Asynchronous I/O
+
+### Learn
+
+- [ ] Linux io_uring submission, completion, and kernel/runtime compatibility
+- [ ] worker-thread asynchronous I/O as a portable baseline
+- [ ] read batching, range I/O, and completion ordering
+- [ ] CPU decompression versus optional GPU decompression
+- [ ] overlapping storage reads, decode, GPU upload, and resource publication
+- [ ] staging-budget pressure and decompression queue scheduling
+
+### Design
+
+- [ ] Keep generic asset streaming and VFS I/O contracts independent from operating-system APIs
+- [ ] Define platform capability detection and fallback for accelerated I/O backends
+- [ ] Define cancellation, shutdown, short-read, retry, and partial-completion semantics
+- [ ] Define buffer ownership across asynchronous reads, decompression, and GPU submissions
+- [ ] Define separate CPU, GPU, I/O, and staging budgets and backpressure behavior
+- [ ] Define end-to-end performance baselines for representative asset sizes and storage media
+- [ ] Keep DirectStorage a future Windows-specific option rather than a Linux dependency
+
+### Implement
+
+- [ ] Benchmark the existing worker-thread I/O path before adopting an accelerated backend
+- [ ] Prototype an optional Linux io_uring backend when kernel support and workload justify it
+- [ ] Preserve worker-thread I/O fallback when io_uring is unavailable or inappropriate
+- [ ] Add batched or range-based requests where a measured asset workload benefits
+- [ ] Prototype overlapped read/decode/upload stages through existing tasks and GPU submission
+- [ ] Evaluate optional GPU decompression only when format, device, and backend support exist
+- [ ] Integrate observable I/O throughput, latency, queue depth, and cancellation diagnostics
+
+### Test
+
+- [ ] Test short reads, missing files, out-of-order completion, and partial I/O failure
+- [ ] Test request cancellation and shutdown with operations in flight
+- [ ] Test backend fallback when io_uring is unavailable or denied
+- [ ] Test bounded buffers and decompression/upload budgets under sustained load
+- [ ] Test output integrity across worker-thread and accelerated I/O backends
+- [ ] Test resource readiness and GPU lifetime after a delayed or cancelled load
+- [ ] Compare end-to-end loading time, frame hitches, CPU use, and memory pressure against the baseline
+
+### Architecture
+
+- [ ] Do not require Linux-specific APIs for non-Linux platforms or non-streaming tools
+- [ ] Keep I/O scheduling replaceable independently from asset decoding and GPU transfer recording
+- [ ] Keep GPU decompression optional and separate from Basis/KTX texture transcoding
+- [ ] Adopt accelerated paths only when supported, correct, and measurably beneficial
+
+---
 ## Phase 37 — Procedural Generation Capabilities
 
 ### Implement
@@ -2789,6 +3090,9 @@
 - [ ] Benchmark generation utilities
 - [ ] Verify fixed seeds reproduce the same generated reference systems across runs
 - [ ] Stress generation, materialization, eviction, and regeneration at increasing reference-workload sizes
+
+- [ ] Verify generated content produces equivalent results after save/load or eviction/regeneration when persistence is required
+- [ ] Test deterministic seeds separately from platform-wide bitwise deterministic floating-point claims
 
 ### Architecture
 
@@ -3018,6 +3322,14 @@
 - [ ] Evaluate custom GPU allocation strategies
 - [ ] Keep experiments interchangeable with baselines
 
+- [ ] Evaluate CPU-culling versus GPU-frustum/occlusion-culling paths on representative scene sizes
+- [ ] Evaluate indirect and indirect-count rendering with a conventional draw fallback
+- [ ] Evaluate offline meshlet clustering and hardware mesh shaders subject to queried device limits
+- [ ] Evaluate procedural compute-generated geometry without requiring traditional mesh assets
+- [ ] Evaluate Vulkan execution graphs/work graphs only when supported by stable production-ready extensions
+- [ ] Evaluate Slang automatic differentiation only for workloads that actually need gradients
+- [ ] Evaluate timeline semaphores for multi-queue submission without replacing required presentation synchronization
+
 ### Experimental Physics Work
 
 - [ ] Profile Jolt-backed workloads
@@ -3045,6 +3357,9 @@
 - [ ] Evaluate streaming-oriented runtime formats
 - [ ] Keep commodity source decoders unless replacement has measurable value
 
+- [ ] Compare GPU decompression and CPU decompression with end-to-end disk-to-resource timing where available
+- [ ] Evaluate specialized geometry compression/meshlet packaging only after common cooked geometry works
+
 ### UI Evolution
 
 - [ ] Profile editor UI
@@ -3064,6 +3379,8 @@
 - [ ] Prefer specialized coexistence when full replacement is unnecessary
 - [ ] Replace a dependency only when the new implementation has a concrete advantage
 - [ ] Document why each replacement exists
+
+- [ ] Record capability requirements and graceful fallback before accepting a hardware-specific optimization
 
 ### Architecture
 
@@ -3093,6 +3410,10 @@
 - [ ] Test abnormal shutdown
 - [ ] Run long-duration reference-scene stress tests across increasing workload tiers
 
+- [ ] Fuzz binary asset, cooked-content, project, and network parsers where they accept untrusted bytes
+- [ ] Test GPU device-loss and out-of-memory failure paths with graceful reporting where recovery is not possible
+- [ ] Test cancellation, retry, and shutdown across asynchronous I/O and GPU upload pipelines
+
 ### Compatibility
 
 - [ ] Test Wayland
@@ -3102,6 +3423,9 @@
 - [ ] Test project migrations
 - [ ] Test asset migrations
 
+- [ ] Build and test a documented minimum Vulkan feature/capability configuration
+- [ ] Test optional GPU feature fallback when mesh shaders, descriptor indexing, or accelerated I/O is unsupported
+
 ### Performance
 
 - [ ] Track startup time
@@ -3110,6 +3434,9 @@
 - [ ] Track memory usage
 - [ ] Track asset load time
 - [ ] Track fixed reference-workload regression baselines across supported configurations
+
+- [ ] Track GPU resource residency, transient allocation peaks, and streaming request latency
+- [ ] Track editor/project incremental build and cooked-asset turnaround time
 
 ### Release
 
@@ -3124,12 +3451,19 @@
 - [ ] Test clean project build
 - [ ] Test clean project export
 
+- [ ] Produce machine-readable third-party dependency and license inventory for release artifacts
+- [ ] Verify shipped shader binaries, cooked formats, and runtime dependencies on a clean target machine
+- [ ] Document public extension compatibility and migration policy before publishing a developer SDK
+- [ ] Define crash/error-report collection as opt-in and privacy-conscious if external telemetry is added
+
 ### Architecture
 
 - [ ] Audit public APIs for accidental dependencies on temporary backend, storage, queue, threading, editor, or module implementation details
 - [ ] Verify optional subsystems can remain absent without forcing placeholder initialization or resource allocation
 - [ ] Verify replacement backends and extension points do not require unrelated engine-core modifications
 - [ ] Preserve migration paths for serialized/project data when internal representations evolve
+
+- [ ] Reject optional technologies that add maintenance burden without a supported workload or measurable benefit
 
 ---
 

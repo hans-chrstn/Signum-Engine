@@ -47,31 +47,34 @@
       } {
         name = "signum-engine-dev";
 
-        packages = with pkgs; [
-          # Build
-          cmake
-          ninja
-          just
-          pkg-config
+        packages = with pkgs;
+          [
+            # Build
+            cmake
+            ninja
+            just
+            pkg-config
 
-          # LLVM tooling
-          clangTools
-          llvm.lldb
+            # LLVM tooling
+            clangTools
+            llvm.lldb
 
-          # Development tools
-          gdb
-          valgrind
-          doxygen
-          cppcheck
-          codespell
-          lcov
+            # Development tools
+            gdb
+            valgrind
+            doxygen
+            cppcheck
+            codespell
+            lcov
 
-          # Vulkan tooling
-          glslang
-          spirv-tools
-          vulkan-tools
-          renderdoc
-        ] ++ extraPackages;
+            # Vulkan tooling
+            glslang
+            shader-slang
+            spirv-tools
+            vulkan-tools
+            renderdoc
+          ]
+          ++ extraPackages;
 
         buildInputs = with pkgs; [
           # Tests
