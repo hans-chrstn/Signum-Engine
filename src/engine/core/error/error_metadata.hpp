@@ -1,3 +1,5 @@
+#pragma once
+
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include <string_view>

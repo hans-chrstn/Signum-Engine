@@ -660,21 +660,21 @@
 - [ ] Run warnings-as-errors build
 - [x] Run Vulkan validation cleanly
 - [ ] Generate Doxygen without warnings
-- [ ] Verify CI from a clean checkout
+- [x] Verify CI from a clean checkout
 
 ### Architecture
 
-- [ ] Preserve explicit RAII ownership
-- [ ] Preserve dependency-ordered destruction
-- [ ] Keep programmer errors separate from runtime failures
-- [ ] Keep native runtime failures out of assertions
-- [ ] Keep assertions out of normal control flow
-- [ ] Detect invalid internal state close to where it originates
-- [ ] Prefer small correctness helpers over repeated subtle logic
-- [ ] Keep Vulkan-specific validity checks inside the Vulkan backend
-- [ ] Keep VMA details out of normal renderer-facing APIs
-- [ ] Keep transfer recording independent from submission policy
-- [ ] Keep upload policy independent from transfer-command construction
+- [x] Preserve explicit RAII ownership
+- [x] Preserve dependency-ordered destruction
+- [x] Keep programmer errors separate from runtime failures
+- [x] Keep native runtime failures out of assertions
+- [x] Keep assertions out of normal control flow
+- [x] Detect invalid internal state close to where it originates
+- [x] Prefer small correctness helpers over repeated subtle logic
+- [x] Keep Vulkan-specific validity checks inside the Vulkan backend
+- [x] Keep VMA details out of normal renderer-facing APIs
+- [x] Keep transfer recording independent from submission policy
+- [x] Keep upload policy independent from transfer-command construction
 - [ ] Keep synchronous immediate submission replaceable by future asynchronous paths
 - [ ] Keep future streaming uploads possible
 - [ ] Keep graphics, compute, and transfer queue roles extensible
