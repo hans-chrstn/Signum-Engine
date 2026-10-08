@@ -19,6 +19,7 @@ add_executable(
   renderer/vulkan/common/vulkan_api_version_tests.cpp
   renderer/vulkan/device/vulkan_queue_requests_tests.cpp
   renderer/vulkan/presentation/vulkan_swapchain_selection_tests.cpp
+  renderer/vulkan/presentation/vulkan_swapchain_result_policy_tests.cpp
   renderer/vulkan/device/vulkan_device_tests.cpp
   renderer/vulkan/device/vulkan_device_features_tests.cpp
   renderer/vulkan/memory/vulkan_memory_policy_tests.cpp

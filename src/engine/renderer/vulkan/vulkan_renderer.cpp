@@ -15,6 +15,7 @@
 #include "engine/renderer/vulkan/device/vulkan_queue_requests.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
+#include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -193,12 +194,16 @@ namespace SNE::Engine::Renderer::Vulkan {
         current_frame.inFlightFence().wait();
 
         std::uint32_t image_index{};
+
         const VkSwapchainKHR swapchain_handle =
             swapchain_resources.m_VulkanSwapchain.nativeHandle();
+
         const VulkanSwapchain &swapchain =
             swapchain_resources.m_VulkanSwapchain;
+
         const VulkanGraphicsPipeline &graphics_pipeline =
             swapchain_resources.m_VulkanGraphicsPipeline;
+
         const auto &semaphores = swapchain_resources.m_VulkanSemaphores;
 
         const VkResult image_result = vkAcquireNextImageKHR(
@@ -208,19 +213,25 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         bool swapchain_recreation_requested = false;
 
-        switch (image_result) {
-        case VK_SUCCESS:
+        const SwapchainAcquireAction acquire_action =
+            selectSwapchainAcquireAction(image_result);
+
+        switch (acquire_action) {
+        case SwapchainAcquireAction::ContinueFrame:
             break;
-        case VK_SUBOPTIMAL_KHR:
+
+        case SwapchainAcquireAction::ContinueFrameAndRecreateAfterPresent:
             swapchain_recreation_requested = true;
             break;
-        case VK_TIMEOUT:
-        case VK_NOT_READY:
+
+        case SwapchainAcquireAction::ReturnWithoutAdvancingFrame:
             return;
-        case VK_ERROR_OUT_OF_DATE_KHR:
+
+        case SwapchainAcquireAction::RecreateAndReturnWithoutAdvancingFrame:
             static_cast<void>(recreateSwapchainResources());
             return;
-        default:
+
+        case SwapchainAcquireAction::Failure:
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanSwapchainImageAcquisitionFailed,
                 "Failed to acquire Vulkan swapchain image",
@@ -324,7 +335,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         render_attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         render_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
         const VkClearColorValue color{{0.0F, 0.0F, 0.0F, 1.0F}};
+
         render_attachment_info.clearValue = {
             .color = color,
         };
@@ -340,6 +353,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         render_info.pColorAttachments = &render_attachment_info;
 
         vkCmdBeginRendering(command_buffer, &render_info);
+
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());
 
@@ -350,16 +364,19 @@ namespace SNE::Engine::Renderer::Vulkan {
         viewport.height = -static_cast<float>(swapchain.extent().height);
         viewport.minDepth = 0.0F;
         viewport.maxDepth = 1.0F;
+
         vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
 
         VkRect2D scissor{};
         scissor.extent = swapchain.extent();
         scissor.offset.x = 0;
         scissor.offset.y = 0;
+
         vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
 
         // 3 vertices, 1 instance, start at vertex 0, start at instance 0
         vkCmdDraw(command_buffer, 3U, 1U, 0U, 0U);
+
         vkCmdEndRendering(command_buffer);
 
         VkImageMemoryBarrier2 present_barrier{};
@@ -404,6 +421,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const VulkanSemaphore &render_finished_semaphore =
             semaphores[acquired_image_index];
+
         const VkSemaphore render_finished_handle =
             render_finished_semaphore.nativeHandle();
 
@@ -468,16 +486,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         const VkResult queue_present_result =
             vkQueuePresentKHR(m_Device.presentationQueue(), &present_info);
 
-        switch (queue_present_result) {
-        case VK_SUCCESS:
+        const SwapchainPresentAction present_action =
+            selectSwapchainPresentAction(queue_present_result);
+
+        switch (present_action) {
+        case SwapchainPresentAction::AdvanceFrame:
             break;
-        case VK_SUBOPTIMAL_KHR:
+
+        case SwapchainPresentAction::RecreateAndAdvanceFrame:
             swapchain_recreation_requested = true;
             break;
-        case VK_ERROR_OUT_OF_DATE_KHR:
+
+        case SwapchainPresentAction::RecreateAndReturnWithoutAdvancingFrame:
             static_cast<void>(recreateSwapchainResources());
             return;
-        default:
+
+        case SwapchainPresentAction::Failure:
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanQueuePresentationFailed,
                 "Failed to present Vulkan swapchain image",

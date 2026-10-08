@@ -613,7 +613,7 @@
 - [ ] Remove empty `application_configuration.cpp`
 - [ ] Remove stale empty namespaces, aliases, and includes
 - [ ] Make warnings-as-errors consistent between local builds and CI
-- [ ] Keep CMake source lists synchronized with renderer files
+- [x] Keep CMake source lists synchronized with renderer files
 - [ ] Keep Doxygen ownership, lifetime, and contract documentation current
 
 ### Test
@@ -642,9 +642,9 @@
 - [x] Test minimized-window behavior
 - [x] Test repeated window resizing
 - [x] Test swapchain recreation
-- [ ] Test acquire-time out-of-date handling
-- [ ] Test present-time out-of-date handling where reproducible
-- [ ] Test frame-resource reuse after early returns
+- [x] Test acquire-time out-of-date handling
+- [x] Test present-time out-of-date handling where reproducible
+- [x] Test frame-resource reuse after early returns
 - [ ] Test swapchain-dependent destruction ordering
 - [x] Add representative assertion death tests
 - [x] Test every error code has a valid string
@@ -686,8 +686,8 @@
 - [x] Keep error metadata scalable as error counts grow
 - [x] Preserve one clear runtime exception boundary
 - [x] Keep assertion reporting separate from runtime error reporting
-- [ ] Keep deterministic logic in unit tests
-- [ ] Keep Vulkan driver and lifetime behavior in integration tests
+- [x] Keep deterministic logic in unit tests
+- [x] Keep Vulkan driver and lifetime behavior in integration tests
 - [x] Reuse Vulkan integration-test infrastructure
 - [x] Keep test helpers out of production architecture
 - [ ] Avoid generic managers, service locators, or registries without a concrete need

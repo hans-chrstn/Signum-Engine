@@ -50,6 +50,7 @@ add_library(
     engine/renderer/vulkan/memory/vulkan_upload.cpp
     engine/renderer/vulkan/memory/vulkan_readback.cpp
     engine/renderer/vulkan/memory/vulkan_byte_range.cpp
+    engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.cpp
 )
 
 target_include_directories(
