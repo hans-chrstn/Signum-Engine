@@ -6,6 +6,7 @@
 #include "engine/renderer/vulkan/device/vulkan_device.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
@@ -139,6 +140,35 @@ namespace SNE::Engine::Renderer::Vulkan {
          * released before the allocator is destroyed.
          */
         VulkanMemoryAllocator m_MemoryAllocator;
+
+        /**
+         * @brief Owns the GPU vertex buffer for the demonstration triangle.
+         *
+         * Stores the device-local vertex data used by the initial vertex-buffer
+         * rendering path.
+         *
+         * The buffer is independent of swapchain resources and survives
+         * swapchain recreation.
+         *
+         * The buffer must be released before the Vulkan memory allocator and
+         * logical device are destroyed.
+         */
+        std::optional<VulkanBuffer> m_TriangleVertexBuffer;
+
+        /**
+         * @brief Owns the GPU index buffer for the demonstration triangle.
+         *
+         * Stores device-local indices that reference vertices in the triangle's
+         * vertex buffer.
+         *
+         * The buffer is independent of swapchain resources and survives
+         * swapchain recreation.
+         *
+         * The buffer must be released before the Vulkan memory allocator and
+         * logical device are destroyed.
+         */
+        std::optional<VulkanBuffer> m_TriangleIndexBuffer;
+
         /**
          * @brief Swapchain-dependent renderer resources when presentation is
          * available.

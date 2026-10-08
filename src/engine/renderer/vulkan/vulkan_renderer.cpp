@@ -6,6 +6,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
@@ -13,6 +14,8 @@
 #include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/device/vulkan_queue_requests.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
@@ -23,6 +26,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -36,24 +40,34 @@ namespace {
         std::array<float, 3> color;
     };
 
-    [[maybe_unused]]
-    constexpr std::array<TriangleVertex, 3> kTriangleVertices{
+    constexpr std::array<TriangleVertex, 4> kTriangleVertices{
         {
             {
-
+                // bottom-left
                 .position = {-0.5F, -0.5F},
                 .color = {1.0F, 0.0F, 0.0F},
             },
             {
+                // bottom-right
                 .position = {0.5F, -0.5F},
                 .color = {0.0F, 1.0F, 0.0F},
             },
             {
-                .position = {0.0F, 0.5F},
+                // top-left
+                .position = {-0.5F, 0.5F},
+                .color = {0.0F, 0.0F, 1.0F},
+            },
+            {
+                .position = {0.5F, 0.5F},
                 .color = {0.0F, 0.0F, 1.0F},
             },
         },
     };
+
+    constexpr std::array<std::uint16_t, 6> kTriangleIndices{0, 1, 2, 2, 1, 3};
+    static_assert(kTriangleIndices.size() <=
+                      std::numeric_limits<std::uint32_t>::max(),
+                  "Triangle Indices size exceeds uint32_t");
 
     static_assert(sizeof(TriangleVertex) <=
                       std::numeric_limits<std::uint32_t>::max(),
@@ -120,6 +134,32 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_FrameResources.emplace_back(m_Device.nativeHandle(),
                                           graphics_queue_family_index);
         }
+
+        VulkanBufferCreateInfo buffer_create_info{
+            .size = static_cast<VkDeviceSize>(sizeof(kTriangleVertices)),
+            .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            .memory_usage = GpuMemoryUsage::Device,
+        };
+
+        m_TriangleVertexBuffer.emplace(m_MemoryAllocator, buffer_create_info);
+
+        const auto vertex_bytes = std::as_bytes(std::span{kTriangleVertices});
+        uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
+                         m_TriangleVertexBuffer.value(), vertex_bytes);
+
+        VulkanBufferCreateInfo index_buffer_create_info{
+            .size = static_cast<VkDeviceSize>(sizeof(kTriangleIndices)),
+            .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            .memory_usage = GpuMemoryUsage::Device,
+        };
+
+        m_TriangleIndexBuffer.emplace(m_MemoryAllocator,
+                                      index_buffer_create_info);
+        const auto index_bytes = std::as_bytes(std::span{kTriangleIndices});
+        uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
+                         m_TriangleIndexBuffer.value(), index_bytes);
 
         if (isFramebufferDrawable()) {
             static_cast<void>(recreateSwapchainResources());
@@ -445,6 +485,17 @@ namespace SNE::Engine::Renderer::Vulkan {
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());
 
+        const VkDeviceSize vertex_offset = 0U;
+        const VkBuffer vertex_buffer =
+            m_TriangleVertexBuffer.value().nativeHandle();
+        vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
+                               &vertex_offset);
+
+        const VkBuffer index_buffer =
+            m_TriangleIndexBuffer.value().nativeHandle();
+        vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
+                             VK_INDEX_TYPE_UINT16);
+
         VkViewport viewport{};
         viewport.x = 0.0F;
         viewport.y = static_cast<float>(swapchain.extent().height);
@@ -462,8 +513,11 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
 
-        // 3 vertices, 1 instance, start at vertex 0, start at instance 0
-        vkCmdDraw(command_buffer, 3U, 1U, 0U, 0U);
+        // 6 indices, 1 instance, first index 0, vertex offset 0,
+        // first instance 0
+        const auto indices =
+            static_cast<std::uint32_t>(kTriangleIndices.size());
+        vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
 
         vkCmdEndRendering(command_buffer);
 

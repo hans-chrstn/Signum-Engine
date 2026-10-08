@@ -1,3 +1,8 @@
+struct VertexInput {
+  [[vk::location(0)]] float2 position : POSITION0;
+  [[vk::location(1)]] float3 color : COLOR0;
+};
+
 struct VertexOutput
 {
   float4 position : SV_Position;
@@ -8,29 +13,14 @@ struct VertexOutput
 [shader("vertex")]
 // returns a 4 floating point value and marks 
 // the return value as the vertex's position
-VertexOutput vertexMain(uint vertexID : SV_VulkanVertexID)
+VertexOutput vertexMain(VertexInput input)
 {
   VertexOutput output;
-  if (vertexID == 0U)
-  {
-    // bottom-left
-    output.position =  float4(-0.5, -0.5, 0.0, 1.0);
-    output.color = float3(1.0, 0.0, 0.0);
-    return output;
-  } else if (vertexID == 1U)
-  {
-    // bottom-right
-    output.position = float4(0.5, -0.5, 0.0, 1.0);
-    output.color = float3(0.0, 1.0, 0.0);
-    return output;
-  } else 
-  {
-    // top
-    output.position = float4(0.0, 0.5, 0.0, 1.0);
-    output.color = float3(0.0, 0.0, 1.0);
-    return output;
-  }
 
+  output.position = float4(input.position, 0.0, 1.0);
+  output.color = input.color;
+
+  return output;
 }
 
 [shader("fragment")]
