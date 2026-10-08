@@ -740,6 +740,9 @@
 - [ ] Test shader/pipeline/binding descriptions without optional rendering modules
 - [ ] Test material parameter/binding behavior without effect-specific assumptions
 - [ ] Test partial creation failures
+- [ ] Test swapchain recreation failures after `oldSwapchain` retirement
+- [ ] Verify failed swapchain recreation does not reuse retired swapchain resources
+- [ ] Verify dependency-safe resource destruction and clean fatal shutdown after failed recreation
 - [ ] Verify destruction ordering
 - [ ] Use a simple sphere, star, or planet-like mesh as reference content without adding celestial concepts to renderer APIs
 - [ ] Increase reference object counts to expose resource, transform, synchronization, and rendering bugs
@@ -755,6 +758,7 @@
 - [ ] Keep core GPU resource APIs usable by built-in and developer-defined render features
 - [ ] Avoid baking PBR, shadow, terrain, water, ray-tracing-effect, or other optional-feature semantics into renderer-core resource types
 - [ ] Do not make vertex/index-buffer meshes the only renderable representation
+- [ ] Define safe recovery behavior before treating swapchain recreation failures as recoverable
 - [ ] Keep renderer resource mechanisms usable by mesh, procedural, indirect, compute-generated, and future GPU-driven workloads
 - [ ] Keep reference-scene concepts such as stars, planets, systems, and galaxies outside renderer-core types
 
