@@ -486,11 +486,25 @@ namespace SNE::Engine::Renderer::Vulkan {
                           graphics_pipeline.nativeHandle());
 
         const VkDeviceSize vertex_offset = 0U;
+        if (!m_TriangleVertexBuffer.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires an initialized vertex buffer before "
+                "recording draw commands");
+        }
         const VkBuffer vertex_buffer =
             m_TriangleVertexBuffer.value().nativeHandle();
         vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
                                &vertex_offset);
 
+        if (!m_TriangleIndexBuffer.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires an initialized index buffer before "
+                "recording indexed draw commands");
+        }
         const VkBuffer index_buffer =
             m_TriangleIndexBuffer.value().nativeHandle();
         vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
