@@ -48,6 +48,19 @@ static_assert([] -> bool {
 static_assert(Math::translate(0.0F, 0.0F, 0.0F).elements ==
               Math::identity().elements);
 
+static_assert([] -> bool {
+    constexpr float kScaleX = 2.0F;
+    constexpr float kScaleY = 3.0F;
+    constexpr float kScaleZ = 4.0F;
+
+    constexpr auto matrix = Math::scale(kScaleX, kScaleY, kScaleZ);
+    constexpr std::size_t kLastIndex = Math::kMatrix4Dimension - 1U;
+
+    return matrix.at(0U, 0U) == kScaleX && matrix.at(1U, 1U) == kScaleY &&
+           matrix.at(2U, 2U) == kScaleZ &&
+           matrix.at(kLastIndex, kLastIndex) == 1.0F;
+}());
+
 TEST(Matrix4Tests, IdentityMultipliedByIdentityIsIdentity) {
     const Math::Matrix4f identity = Math::identity();
 
@@ -341,5 +354,24 @@ TEST(Matrix4Tests, TranslateCreatesCorrectMatrix) {
 
     for (std::size_t i{}; i < translated.elements.size(); ++i) {
         EXPECT_FLOAT_EQ(translated.elements[i], expected.elements[i]);
+    }
+}
+
+TEST(Matrix4Tests, ScaleCreatesCorrectMatrix) {
+    const auto scaled = Math::scale(2.0F, 3.0F, 4.0F);
+
+    // clang-format off
+    const Math::Matrix4f expected {
+        .elements = {
+            2.0F, 0.0F, 0.0F, 0.0F,
+            0.0F, 3.0F, 0.0F, 0.0F,
+            0.0F, 0.0F, 4.0F, 0.0F,
+            0.0F, 0.0F, 0.0F, 1.0F,
+        },
+    };
+    // clang-format on
+
+    for (std::size_t i{}; i < scaled.elements.size(); ++i) {
+        EXPECT_FLOAT_EQ(scaled.elements[i], expected.elements[i]);
     }
 }

@@ -155,4 +155,14 @@ namespace SNE::Engine::Core::Math {
 
         return result;
     }
+
+    [[nodiscard]] constexpr auto scale(float scale_x, float scale_y,
+                                       float scale_z) -> Matrix4f {
+        Matrix4f result = identity();
+        result.at(0U, 0U) = scale_x;
+        result.at(1U, 1U) = scale_y;
+        result.at(2U, 2U) = scale_z;
+
+        return result;
+    }
 } // namespace SNE::Engine::Core::Math
