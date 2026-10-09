@@ -62,5 +62,4 @@ all:
     ./scripts/check.sh
     ./scripts/test.sh warnings all
     ./scripts/test.sh asan all
-    ./scripts/build.sh debug
     ./scripts/memcheck.sh

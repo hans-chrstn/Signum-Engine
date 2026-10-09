@@ -156,6 +156,26 @@ namespace SNE::Engine::Core::Math {
         return result;
     }
 
+    /**
+     * @brief Creates a 4x4 nonuniform scaling matrix.
+     *
+     * Constructs a matrix that scales positions along the X, Y,
+     * and Z axes using the provided factors.
+     *
+     * The matrix follows the column-vector transformation convention
+     * and stores its scaling components along the main diagonal
+     * using column-major storage.
+     *
+     * A scaling factor of 1 preserves the corresponding axis.
+     * A factor of 0 collapses that axis, while a negative factor
+     * reverses its direction.
+     *
+     * @param scale_x Scaling factor along the X axis.
+     * @param scale_y Scaling factor along the Y axis.
+     * @param scale_z Scaling factor along the Z axis.
+     *
+     * @return A new Matrix4f representing the specified scaling.
+     */
     [[nodiscard]] constexpr auto scale(float scale_x, float scale_y,
                                        float scale_z) -> Matrix4f {
         Matrix4f result = identity();

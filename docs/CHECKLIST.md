@@ -704,10 +704,10 @@
 - [x] Understand column-vector transformation conventions
 - [x] Understand matrix multiplication order
 - [x] Understand identity, translation, and scaling matrices
-- [ ] Understand mathematical coordinate access versus physical storage
-- [ ] Understand mutable and const reference accessors
+- [x] Understand mathematical coordinate access versus physical storage
+- [x] Understand mutable and const reference accessors
 - [ ] Understand floating-point precision and rounding
-- [ ] Understand vectors, dot products, and cross products
+- [x] Understand vectors, dot products, and cross products
 - [ ] Understand rotations, radians, and coordinate-system handedness
 - [ ] Understand quaternions and rotation composition
 - [ ] Understand affine transformations and matrix inverses
@@ -718,9 +718,9 @@
 ### Design
 
 - [ ] Define the public math API independently of Vulkan, Slang, and GPU resource ownership
-- [ ] Define consistent mathematical row/column indexing independent of memory storage
-- [ ] Define column-major matrix storage and column-vector multiplication as the initial convention
-- [ ] Define matrix-access bounds and programmer-contract policy
+- [x] Define consistent mathematical row/column indexing independent of memory storage
+- [x] Define column-major matrix storage and column-vector multiplication as the initial convention
+- [x] Define matrix-access bounds and programmer-contract policy
 - [ ] Define scalar precision policy for `float` and `double`
 - [ ] Define vector, matrix, and quaternion naming conventions
 - [ ] Define point, direction, and homogeneous-coordinate semantics
@@ -732,7 +732,7 @@
 - [ ] Define mathematical type alignment and layout requirements separately from GPU upload representations
 - [ ] Define a portable scalar reference implementation
 - [ ] Preserve the ability to introduce SIMD implementations without changing public math APIs
-- [ ] Preserve `constexpr` evaluation for applicable operations
+- [x] Preserve `constexpr` evaluation for applicable operations
 - [ ] Require C++26 mode for all C++ engine, renderer, editor, tool, test, and game-facing targets
 - [ ] Verify individual C++26 language and library features before treating them as required dependencies
 - [ ] Avoid adding generic mathematical abstractions without demonstrated reuse
@@ -742,16 +742,29 @@
 - [x] Create `Matrix4f` with column-major storage
 - [x] Implement 4x4 matrix multiplication
 - [x] Implement `constexpr` identity-matrix construction
-- [ ] Implement mutable `Matrix4f::at(row, column)`
-- [ ] Implement const `Matrix4f::at(row, column)`
-- [ ] Apply the chosen matrix-access bounds policy
+- [x] Implement mutable `Matrix4f::at(row, column)`
+- [x] Implement const `Matrix4f::at(row, column)`
+- [x] Apply the chosen matrix-access bounds policy
 - [ ] Refactor matrix multiplication to use mathematical element access
-- [ ] Implement reusable translation-matrix construction
-- [ ] Implement reusable nonuniform scaling-matrix construction
+- [x] Implement reusable translation-matrix construction
+- [x] Implement reusable nonuniform scaling-matrix construction
 - [ ] Implement essential 2D/3D/4D vector types
+  - [x] Implement `Vector2f`
+  - [x] Implement `Vector3f`
+  - [ ] Implement `Vector4f`
 - [ ] Implement essential vector arithmetic
+  - [x] Implement `Vector2f` addition, subtraction, and scalar multiplication
+  - [x] Implement `Vector3f` addition, subtraction, and scalar multiplication
+  - [ ] Implement `Vector4f` addition, subtraction, and scalar multiplication
 - [ ] Implement dot and cross products
+  - [x] Implement `Vector2f` dot product
+  - [x] Implement `Vector3f` dot product
+  - [x] Implement `Vector3f` cross product
+  - [ ] Implement `Vector4f` dot product
 - [ ] Implement vector length, length squared, and normalization
+  - [x] Implement `Vector2f` length, length squared, and normalization
+  - [x] Implement `Vector3f` length, length squared, and normalization
+  - [ ] Implement `Vector4f` length, length squared, and normalization
 - [ ] Implement axis-aligned rotation matrices
 - [ ] Implement transform-point and transform-direction operations
 - [ ] Implement composed model transformations using translation, rotation, and scale
@@ -773,12 +786,18 @@
 - [x] Test matrix multiplication containing off-diagonal values
 - [x] Test identity construction at compile time
 - [x] Test identity construction at runtime
-- [ ] Test mutable and const matrix-element access
-- [ ] Test row/column coordinate mapping to column-major storage
-- [ ] Test invalid matrix-access indices according to the chosen contract policy
-- [ ] Test translation and scaling constructors against independently specified matrices
+- [x] Test mutable and const matrix-element access
+- [x] Test row/column coordinate mapping to column-major storage
+- [x] Test invalid matrix-access indices according to the chosen contract policy
+- [x] Test translation and scaling constructors against independently specified matrices
 - [ ] Test vector arithmetic, dot products, and cross products
+  - [x] Test `Vector2f` arithmetic and dot product
+  - [x] Test `Vector3f` arithmetic, dot product, and cross product
+  - [ ] Test `Vector4f` arithmetic and dot product
 - [ ] Test normalization, including zero-length input
+  - [x] Test `Vector2f` normalization and zero-vector precondition
+  - [x] Test `Vector3f` normalization and zero-vector precondition
+  - [ ] Test `Vector4f` normalization and zero-vector precondition
 - [ ] Test rotations at known angles
 - [ ] Test quaternion rotation composition
 - [ ] Test matrix transpose and inversion
@@ -788,12 +807,102 @@
 - [ ] Test double-precision operations independently of float implementations
 - [ ] Verify CPU-generated matrices match shader transformation conventions
 - [ ] Verify applicable mathematical operations can execute during constant evaluation
+  - [x] Verify compile-time identity-matrix construction
+  - [x] Verify compile-time matrix element access
+  - [x] Verify compile-time translation and scaling matrices
+  - [x] Verify applicable `Vector2f` arithmetic operations
+  - [x] Verify applicable `Vector3f` arithmetic operations
+  - [ ] Verify applicable `Vector4f` arithmetic operations
+  - [ ] Verify applicable rotation and quaternion operations
 - [ ] Run unit tests, sanitizers, memory checks, Clang-Tidy, formatting, and documentation checks
 - [ ] Establish optimized-build performance baselines before introducing explicit SIMD
 
+### Benchmark — Mathematics Performance Baseline
+
+#### Infrastructure
+
+- [ ] Integrate Google Benchmark as a development-only dependency
+- [ ] Create a dedicated mathematics benchmark target
+- [ ] Add a `just bench` command for running benchmarks
+- [ ] Keep benchmark targets separate from production engine binaries
+- [ ] Keep benchmark execution separate from normal unit-test and validation workflows
+- [ ] Run benchmarks using optimized Release builds
+- [ ] Exclude sanitizers, Valgrind, and debug instrumentation from performance measurements
+- [ ] Verify benchmark configuration uses the intended compiler and optimization flags
+
+#### Benchmark Design
+
+- [ ] Define repeatable workloads with representative runtime inputs
+- [ ] Prevent dead-code elimination and unintended constant folding
+- [ ] Avoid measuring benchmark setup and unrelated allocations unless explicitly intended
+- [ ] Separate operation latency from batch throughput measurements where useful
+- [ ] Include representative workloads rather than relying only on trivial constant inputs
+- [ ] Repeat measurements to identify significant variance
+- [ ] Document benchmark methodology and environmental limitations
+
+#### Vector Benchmarks
+
+- [ ] Benchmark `Vector2f`, `Vector3f`, and `Vector4f` addition and subtraction
+- [ ] Benchmark vector scalar multiplication
+- [ ] Benchmark dot products
+- [ ] Benchmark `Vector3f` cross products
+- [ ] Benchmark squared-length calculations
+- [ ] Benchmark vector length calculations
+- [ ] Benchmark vector normalization
+
+#### Matrix Benchmarks
+
+- [ ] Benchmark `Matrix4f` multiplication
+- [ ] Benchmark matrix-vector multiplication and transformations
+- [ ] Benchmark translation, rotation, and scaling matrix construction
+- [ ] Benchmark matrix transpose
+- [ ] Benchmark matrix inversion using representative invertible matrices
+- [ ] Benchmark composed model transformations
+
+#### Quaternion Benchmarks
+
+- [ ] Benchmark quaternion multiplication
+- [ ] Benchmark quaternion normalization
+- [ ] Benchmark quaternion-based vector rotation
+- [ ] Benchmark quaternion-to-matrix conversion
+
+#### Precision Benchmarks
+
+- [ ] Benchmark equivalent float and double operations where implemented
+- [ ] Compare execution costs without assuming either precision is always preferable
+- [ ] Preserve numerical correctness as a requirement independent of benchmark speed
+
+#### Baseline Collection
+
+- [ ] Record CPU model, architecture, and relevant hardware characteristics
+- [ ] Record compiler version, standard library, build configuration, and optimization flags
+- [ ] Record source revision and benchmark configuration
+- [ ] Collect repeated measurements with representative timing statistics
+- [ ] Investigate unusually inconsistent or suspiciously low measurements
+- [ ] Save baseline results in a documented, reproducible format
+- [ ] Establish scalar implementation baselines before introducing explicit SIMD
+
+#### Architecture and Future Optimization
+
+- [ ] Preserve the portable scalar implementation as the correctness reference
+- [ ] Avoid adding SIMD-specific types to public mathematical APIs
+- [ ] Avoid premature runtime backend dispatch
+- [ ] Do not optimize operations solely because microbenchmarks expose small differences
+- [ ] Identify potential optimization candidates without implementing speculative optimizations
+- [ ] Defer explicit SIMD optimization and backend comparisons to Phase 23
+- [ ] Use the Phase 6.9 results as the reference for future performance comparisons
+
+#### Completion Criteria
+
+- [ ] Benchmark infrastructure builds and executes independently of normal tests
+- [ ] Essential implemented mathematical operations have representative performance baselines
+- [ ] Measurements can be reproduced with documented configuration and methodology
+- [ ] Results are recorded without introducing arbitrary performance pass/fail thresholds
+- [ ] Baseline measurements are complete before beginning Phase 7
+
 ### Architecture
 
-- [ ] Use C++26 as the project-wide C++ language target
+- [x] Use C++26 as the project-wide C++ language target
 - [ ] Prefer zero-overhead abstractions that compile to efficient operations
 - [ ] Avoid hidden allocations, virtual dispatch, and unnecessary runtime indirection in primitive math operations
 - [ ] Avoid promising zero overhead without inspecting generated code or measuring performance
