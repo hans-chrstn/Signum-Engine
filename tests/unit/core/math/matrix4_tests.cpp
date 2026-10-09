@@ -451,3 +451,141 @@ TEST(Matrix4Tests, RotateYCreatesCorrectMatrix) {
         }
     }
 }
+
+TEST(Matrix4Tests, TransformPointAppliesTranslation) {
+    const Math::Vector3f point{
+        .x = 1.0F,
+        .y = 2.0F,
+        .z = 3.0F,
+    };
+
+    const Math::Matrix4f matrix = Math::translate(3.0F, 2.0F, 5.0F);
+
+    const Math::Vector3f expected{
+        .x = 4.0F,
+        .y = 4.0F,
+        .z = 8.0F,
+    };
+
+    const auto result = Math::transformPoint(matrix, point);
+
+    EXPECT_FLOAT_EQ(result.x, expected.x);
+    EXPECT_FLOAT_EQ(result.y, expected.y);
+    EXPECT_FLOAT_EQ(result.z, expected.z);
+}
+
+TEST(Matrix4Tests, TransformDirectionIgnoresTranslation) {
+    const Math::Vector3f direction{
+        .x = 1.0F,
+        .y = 2.0F,
+        .z = 3.0F,
+    };
+
+    const Math::Matrix4f matrix = Math::translate(3.0F, 2.0F, 5.0F);
+
+    const Math::Vector3f expected{
+        .x = 1.0F,
+        .y = 2.0F,
+        .z = 3.0F,
+    };
+
+    const auto result = Math::transformDirection(matrix, direction);
+
+    EXPECT_FLOAT_EQ(result.x, expected.x);
+    EXPECT_FLOAT_EQ(result.y, expected.y);
+    EXPECT_FLOAT_EQ(result.z, expected.z);
+}
+
+TEST(Matrix4Tests, TransformPointAppliesRotation) {
+    constexpr float kRightAngle = std::numbers::pi_v<float> / 2.0F;
+    constexpr float kTolerance = 1.0e-6F;
+
+    const Math::Vector3f point{
+        .x = 1.0F,
+        .y = 0.0F,
+        .z = 0.0F,
+    };
+
+    const Math::Matrix4f matrix = Math::rotateZ(kRightAngle);
+
+    const Math::Vector3f expected{
+        .x = 0.0F,
+        .y = 1.0F,
+        .z = 0.0F,
+    };
+
+    const auto result = Math::transformPoint(matrix, point);
+
+    EXPECT_NEAR(result.x, expected.x, kTolerance);
+    EXPECT_NEAR(result.y, expected.y, kTolerance);
+    EXPECT_NEAR(result.z, expected.z, kTolerance);
+}
+
+TEST(Matrix4Tests, TransformDirectionAppliesRotation) {
+    constexpr float kRightAngle = std::numbers::pi_v<float> / 2.0F;
+    constexpr float kTolerance = 1.0e-6F;
+
+    const Math::Vector3f direction{
+        .x = 1.0F,
+        .y = 0.0F,
+        .z = 0.0F,
+    };
+
+    const Math::Matrix4f matrix = Math::rotateZ(kRightAngle);
+
+    const Math::Vector3f expected{
+        .x = 0.0F,
+        .y = 1.0F,
+        .z = 0.0F,
+    };
+
+    const auto result = Math::transformDirection(matrix, direction);
+
+    EXPECT_NEAR(result.x, expected.x, kTolerance);
+    EXPECT_NEAR(result.y, expected.y, kTolerance);
+    EXPECT_NEAR(result.z, expected.z, kTolerance);
+}
+
+TEST(Matrix4Tests, TransformPointAppliesNonUniformScale) {
+    const Math::Matrix4f matrix = Math::scale(2.0F, 3.0F, 4.0F);
+
+    const Math::Vector3f point{
+        .x = 1.0F,
+        .y = 2.0F,
+        .z = 3.0F,
+    };
+
+    const Math::Vector3f expected{
+        .x = 2.0F,
+        .y = 6.0F,
+        .z = 12.0F,
+    };
+
+    const auto result = Math::transformPoint(matrix, point);
+
+    EXPECT_FLOAT_EQ(result.x, expected.x);
+    EXPECT_FLOAT_EQ(result.y, expected.y);
+    EXPECT_FLOAT_EQ(result.z, expected.z);
+}
+
+TEST(Matrix4Tests, TransformDirectionAppliesNonUniformScale) {
+    const Math::Matrix4f matrix = Math::scale(2.0F, 3.0F, 4.0F);
+
+    const Math::Vector3f direction{
+        .x = 1.0F,
+        .y = 2.0F,
+        .z = 3.0F,
+    };
+
+    const Math::Vector3f expected{
+        .x = 2.0F,
+        .y = 6.0F,
+        .z = 12.0F,
+    };
+
+    const auto result = Math::transformDirection(matrix, direction);
+
+    EXPECT_FLOAT_EQ(result.x, expected.x);
+    EXPECT_FLOAT_EQ(result.y, expected.y);
+    EXPECT_FLOAT_EQ(result.z, expected.z);
+}

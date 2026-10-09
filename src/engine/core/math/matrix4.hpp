@@ -3,6 +3,7 @@
 #include "engine/core/assert/assertion_handler.hpp"
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/math/vector3.hpp"
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -242,7 +243,6 @@ namespace SNE::Engine::Core::Math {
      *
      * @return A new Matrix4f representing the X-axis rotation.
      */
-
     [[nodiscard]] inline auto rotateX(float radians) -> Matrix4f {
         Matrix4f result = identity();
 
@@ -278,7 +278,6 @@ namespace SNE::Engine::Core::Math {
      *
      * @return A new Matrix4f representing the Y-axis rotation.
      */
-
     [[nodiscard]] inline auto rotateY(float radians) -> Matrix4f {
         Matrix4f result = identity();
 
@@ -291,5 +290,86 @@ namespace SNE::Engine::Core::Math {
         result.at(2U, 2U) = cosine;
 
         return result;
+    }
+
+    /**
+     * @brief Transforms a three-dimensional direction using a 4x4 matrix.
+     *
+     * Applies the linear portion of an affine transformation matrix
+     * to the provided direction vector.
+     *
+     * The transformation follows the column-vector convention
+     * and uses the upper-left 3x3 portion of the matrix.
+     *
+     * The direction is treated as having a homogeneous W component
+     * of zero, so translation does not affect the result.
+     *
+     * Rotation and scaling affect the direction. Nonuniform scaling
+     * may change its magnitude, and the result is not normalized.
+     *
+     * The input matrix and direction are not modified.
+     *
+     * @param matrix Affine transformation matrix to apply.
+     * @param direction Direction vector to transform.
+     *
+     * @pre The matrix must represent an affine 3D transformation
+     *      with a final row of [0, 0, 0, 1].
+     *
+     * @return A new Vector3f containing the transformed direction.
+     */
+    [[nodiscard]] constexpr auto transformDirection(const Matrix4f &matrix,
+                                                    Vector3f direction)
+        -> Vector3f {
+        return Vector3f{
+            .x = (matrix.at(0U, 0U) * direction.x) +
+                 (matrix.at(0U, 1U) * direction.y) +
+                 (matrix.at(0U, 2U) * direction.z),
+            .y = (matrix.at(1U, 0U) * direction.x) +
+                 (matrix.at(1U, 1U) * direction.y) +
+                 (matrix.at(1U, 2U) * direction.z),
+            .z = (matrix.at(2U, 0U) * direction.x) +
+                 (matrix.at(2U, 1U) * direction.y) +
+                 (matrix.at(2U, 2U) * direction.z),
+        };
+    }
+
+    /**
+     * @brief Transforms a three-dimensional point using a 4x4 matrix.
+     *
+     * Applies an affine transformation matrix to the provided
+     * position vector.
+     *
+     * The transformation follows the column-vector convention
+     * and uses the upper-left 3x3 portion of the matrix
+     * together with the translation components in its final column.
+     *
+     * The point is treated as having a homogeneous W component
+     * of one, allowing translation, rotation, and scaling
+     * to affect its position.
+     *
+     * The function returns Cartesian coordinates without performing
+     * perspective division and does not support general projective
+     * transformations.
+     *
+     * The input matrix and point are not modified.
+     *
+     * @param matrix Affine transformation matrix to apply.
+     * @param point Position vector to transform.
+     *
+     * @pre The matrix must represent an affine 3D transformation
+     *      with a final row of [0, 0, 0, 1].
+     *
+     * @return A new Vector3f containing the transformed position.
+     */
+    [[nodiscard]] constexpr auto transformPoint(const Matrix4f &matrix,
+                                                Vector3f point) -> Vector3f {
+        return Vector3f{
+            .x = (matrix.at(0U, 0U) * point.x) + (matrix.at(0U, 1U) * point.y) +
+                 (matrix.at(0U, 2U) * point.z) + matrix.at(0U, 3U),
+            .y = (matrix.at(1U, 0U) * point.x) + (matrix.at(1U, 1U) * point.y) +
+                 (matrix.at(1U, 2U) * point.z) + matrix.at(1U, 3U),
+            .z = (matrix.at(2U, 0U) * point.x) + (matrix.at(2U, 1U) * point.y) +
+                 (matrix.at(2U, 2U) * point.z) + matrix.at(2U, 3U),
+        };
     }
 } // namespace SNE::Engine::Core::Math
