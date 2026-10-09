@@ -4,6 +4,7 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include <array>
+#include <cmath>
 #include <cstddef>
 
 namespace SNE::Engine::Core::Math {
@@ -182,6 +183,40 @@ namespace SNE::Engine::Core::Math {
         result.at(0U, 0U) = scale_x;
         result.at(1U, 1U) = scale_y;
         result.at(2U, 2U) = scale_z;
+
+        return result;
+    }
+
+    /**
+     * @brief Creates a 4x4 rotation matrix around the Z axis.
+     *
+     * Constructs a matrix that rotates positions and directions
+     * around the Z axis using the specified angle in radians.
+     *
+     * The matrix follows the right-handed coordinate system
+     * and column-vector transformation convention.
+     *
+     * Positive angles produce counterclockwise rotation
+     * in the XY plane, rotating the positive X axis toward
+     * the positive Y axis.
+     *
+     * The Z coordinate and homogeneous W component remain
+     * unchanged by the resulting transformation.
+     *
+     * @param radians Rotation angle in radians.
+     *
+     * @return A new Matrix4f representing the Z-axis rotation.
+     */
+    [[nodiscard]] inline auto rotateZ(float radians) -> Matrix4f {
+        Matrix4f result = identity();
+
+        const float cosine = std::cos(radians);
+        const float sine = std::sin(radians);
+
+        result.at(0U, 0U) = cosine;
+        result.at(1U, 0U) = sine;
+        result.at(0U, 1U) = -sine;
+        result.at(1U, 1U) = cosine;
 
         return result;
     }

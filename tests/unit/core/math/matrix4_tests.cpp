@@ -1,6 +1,7 @@
 #include "engine/core/math/matrix4.hpp"
 #include <cstddef>
 #include <gtest/gtest.h>
+#include <numbers>
 
 namespace Math = SNE::Engine::Core::Math;
 
@@ -373,5 +374,30 @@ TEST(Matrix4Tests, ScaleCreatesCorrectMatrix) {
 
     for (std::size_t i{}; i < scaled.elements.size(); ++i) {
         EXPECT_FLOAT_EQ(scaled.elements[i], expected.elements[i]);
+    }
+}
+
+TEST(Matrix4Tests, RotateZCreatesCorrectMatrix) {
+    constexpr float kRightAngle = std::numbers::pi_v<float> / 2.0F;
+    constexpr float kTolerance = 1.0e-6F;
+
+    const auto result = Math::rotateZ(kRightAngle);
+
+    // clang-format off
+    const Math::Matrix4f expected{
+        .elements = {
+             0.0F, 1.0F, 0.0F, 0.0F,
+            -1.0F, 0.0F, 0.0F, 0.0F,
+             0.0F, 0.0F, 1.0F, 0.0F,
+             0.0F, 0.0F, 0.0F, 1.0F,
+        },
+    };
+    // clang-format on
+
+    for (std::size_t column{}; column < Math::kMatrix4Dimension; ++column) {
+        for (std::size_t row{}; row < Math::kMatrix4Dimension; ++row) {
+            EXPECT_NEAR(result.at(row, column), expected.at(row, column),
+                        kTolerance);
+        }
     }
 }
