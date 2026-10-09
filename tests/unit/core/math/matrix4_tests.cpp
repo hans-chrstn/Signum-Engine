@@ -401,3 +401,53 @@ TEST(Matrix4Tests, RotateZCreatesCorrectMatrix) {
         }
     }
 }
+
+TEST(Matrix4Tests, RotateXCreatesCorrectMatrix) {
+    constexpr float kRightAngle = std::numbers::pi_v<float> / 2.0F;
+    constexpr float kTolerance = 1.0e-6F;
+
+    const auto result = Math::rotateX(kRightAngle);
+
+    // clang-format off
+    const Math::Matrix4f expected{
+        .elements = {
+            1.0F,  0.0F, 0.0F, 0.0F,
+            0.0F,  0.0F, 1.0F, 0.0F,
+            0.0F, -1.0F, 0.0F, 0.0F,
+            0.0F,  0.0F, 0.0F, 1.0F,
+        },
+    };
+    // clang-format on
+
+    for (std::size_t column{}; column < Math::kMatrix4Dimension; ++column) {
+        for (std::size_t row{}; row < Math::kMatrix4Dimension; ++row) {
+            EXPECT_NEAR(result.at(row, column), expected.at(row, column),
+                        kTolerance);
+        }
+    }
+}
+
+TEST(Matrix4Tests, RotateYCreatesCorrectMatrix) {
+    constexpr float kRightAngle = std::numbers::pi_v<float> / 2.0F;
+    constexpr float kTolerance = 1.0e-6F;
+
+    const auto result = Math::rotateY(kRightAngle);
+
+    // clang-format off
+    const Math::Matrix4f expected{
+        .elements = {
+             0.0F, 0.0F, -1.0F, 0.0F,
+             0.0F, 1.0F,  0.0F, 0.0F,
+             1.0F, 0.0F,  0.0F, 0.0F,
+             0.0F, 0.0F,  0.0F, 1.0F,
+        },
+    };
+    // clang-format on
+
+    for (std::size_t column{}; column < Math::kMatrix4Dimension; ++column) {
+        for (std::size_t row{}; row < Math::kMatrix4Dimension; ++row) {
+            EXPECT_NEAR(result.at(row, column), expected.at(row, column),
+                        kTolerance);
+        }
+    }
+}

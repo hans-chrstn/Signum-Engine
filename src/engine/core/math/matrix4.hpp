@@ -220,4 +220,76 @@ namespace SNE::Engine::Core::Math {
 
         return result;
     }
+
+    /**
+     * @brief Creates a 4x4 rotation matrix around the X axis.
+     *
+     * Constructs a matrix that rotates positions and directions
+     * around the X axis using the specified angle in radians.
+     *
+     * The matrix follows the right-handed coordinate system
+     * and column-vector transformation convention.
+     *
+     * Positive angles produce counterclockwise rotation
+     * in the YZ plane when viewed along the positive X axis
+     * toward the origin, rotating the positive Y axis toward
+     * the positive Z axis.
+     *
+     * The X coordinate and homogeneous W component remain
+     * unchanged by the resulting transformation.
+     *
+     * @param radians Rotation angle in radians.
+     *
+     * @return A new Matrix4f representing the X-axis rotation.
+     */
+
+    [[nodiscard]] inline auto rotateX(float radians) -> Matrix4f {
+        Matrix4f result = identity();
+
+        const float cosine = std::cos(radians);
+        const float sine = std::sin(radians);
+
+        result.at(1U, 1U) = cosine;
+        result.at(2U, 1U) = sine;
+        result.at(1U, 2U) = -sine;
+        result.at(2U, 2U) = cosine;
+
+        return result;
+    }
+
+    /**
+     * @brief Creates a 4x4 rotation matrix around the Y axis.
+     *
+     * Constructs a matrix that rotates positions and directions
+     * around the Y axis using the specified angle in radians.
+     *
+     * The matrix follows the right-handed coordinate system
+     * and column-vector transformation convention.
+     *
+     * Positive angles produce counterclockwise rotation
+     * in the ZX plane when viewed along the positive Y axis
+     * toward the origin, rotating the positive Z axis toward
+     * the positive X axis.
+     *
+     * The Y coordinate and homogeneous W component remain
+     * unchanged by the resulting transformation.
+     *
+     * @param radians Rotation angle in radians.
+     *
+     * @return A new Matrix4f representing the Y-axis rotation.
+     */
+
+    [[nodiscard]] inline auto rotateY(float radians) -> Matrix4f {
+        Matrix4f result = identity();
+
+        const float cosine = std::cos(radians);
+        const float sine = std::sin(radians);
+
+        result.at(0U, 0U) = cosine;
+        result.at(0U, 2U) = sine;
+        result.at(2U, 0U) = -sine;
+        result.at(2U, 2U) = cosine;
+
+        return result;
+    }
 } // namespace SNE::Engine::Core::Math
