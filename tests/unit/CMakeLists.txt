@@ -16,6 +16,7 @@ add_executable(
   core/math/vector2_tests.cpp
   core/math/vector3_tests.cpp
   core/math/vector4_tests.cpp
+  core/math/quaternion_tests.cpp
   renderer/vulkan/common/vulkan_result_tests.cpp
   renderer/vulkan/common/vulkan_extension_support_tests.cpp
   renderer/vulkan/device/vulkan_queue_families_tests.cpp

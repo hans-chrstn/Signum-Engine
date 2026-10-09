@@ -7,6 +7,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 
 namespace SNE::Engine::Core::Math {
     /**
@@ -372,4 +373,25 @@ namespace SNE::Engine::Core::Math {
                  (matrix.at(2U, 2U) * point.z) + matrix.at(2U, 3U),
         };
     }
+
+    [[nodiscard]] auto composeTRS(Vector3f translation,
+                                  Vector3f rotation_radians,
+                                  Vector3f scale_factors) -> Matrix4f;
+
+    [[nodiscard]] constexpr auto transpose(const Matrix4f &matrix) -> Matrix4f {
+        Matrix4f result{};
+        for (std::size_t column{}; column < kMatrix4Dimension; ++column) {
+            for (std::size_t row{}; row < kMatrix4Dimension; ++row) {
+                // clang-format off
+                result.at(row, column) = matrix.at(column, row); // NOLINT(readability-suspicious-call-argument)
+                // clang-format on
+            }
+        }
+
+        return result;
+    }
+
+    [[nodiscard]] auto tryInverse(const Matrix4f &matrix)
+        -> std::optional<Matrix4f>;
+
 } // namespace SNE::Engine::Core::Math

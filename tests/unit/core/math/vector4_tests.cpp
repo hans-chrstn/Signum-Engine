@@ -329,3 +329,39 @@ TEST(Vector4Tests, ScalesVectorCorrectly) {
     EXPECT_FLOAT_EQ(result.z, expected.z);
     EXPECT_FLOAT_EQ(result.w, expected.w);
 }
+
+TEST(Vector4Tests, DefaultInitializationProducesFourZeros) {
+    constexpr float kExpectedZero = 0.0F;
+
+    const Math::Vector4f vector{};
+
+    EXPECT_FLOAT_EQ(vector.x, kExpectedZero);
+    EXPECT_FLOAT_EQ(vector.y, kExpectedZero);
+    EXPECT_FLOAT_EQ(vector.z, kExpectedZero);
+    EXPECT_FLOAT_EQ(vector.w, kExpectedZero);
+}
+
+TEST(Vector4Tests, NormalizesVectorWithOnlyWComponent) {
+    constexpr float kTolerance = 1.0e-6F;
+
+    const Math::Vector4f vector{
+        .x = 0.0F,
+        .y = 0.0F,
+        .z = 0.0F,
+        .w = -7.0F,
+    };
+
+    const Math::Vector4f expected{
+        .x = 0.0F,
+        .y = 0.0F,
+        .z = 0.0F,
+        .w = -1.0F,
+    };
+
+    const auto result = Math::normalize(vector);
+
+    EXPECT_NEAR(result.x, expected.x, kTolerance);
+    EXPECT_NEAR(result.y, expected.y, kTolerance);
+    EXPECT_NEAR(result.z, expected.z, kTolerance);
+    EXPECT_NEAR(result.w, expected.w, kTolerance);
+}
