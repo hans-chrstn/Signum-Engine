@@ -717,25 +717,25 @@
 
 ### Design
 
-- [ ] Define the public math API independently of Vulkan, Slang, and GPU resource ownership
+- [x] Define the public math API independently of Vulkan, Slang, and GPU resource ownership
 - [x] Define consistent mathematical row/column indexing independent of memory storage
 - [x] Define column-major matrix storage and column-vector multiplication as the initial convention
 - [x] Define matrix-access bounds and programmer-contract policy
 - [ ] Define scalar precision policy for `float` and `double`
 - [ ] Define vector, matrix, and quaternion naming conventions
-- [ ] Define point, direction, and homogeneous-coordinate semantics
-- [ ] Define radians as the default rotation-angle unit
+- [x] Define point, direction, and homogeneous-coordinate semantics
+- [x] Define radians as the default rotation-angle unit
 - [ ] Define matrix composition order and transformation semantics
 - [ ] Define numerical comparison and tolerance policy
 - [ ] Define behavior for degenerate and singular mathematical operations
 - [ ] Define explicit conversion policy between numeric precisions
 - [ ] Define mathematical type alignment and layout requirements separately from GPU upload representations
-- [ ] Define a portable scalar reference implementation
-- [ ] Preserve the ability to introduce SIMD implementations without changing public math APIs
+- [x] Define a portable scalar reference implementation
+- [x] Preserve the ability to introduce SIMD implementations without changing public math APIs
 - [x] Preserve `constexpr` evaluation for applicable operations
 - [ ] Require C++26 mode for all C++ engine, renderer, editor, tool, test, and game-facing targets
 - [ ] Verify individual C++26 language and library features before treating them as required dependencies
-- [ ] Avoid adding generic mathematical abstractions without demonstrated reuse
+- [x] Avoid adding generic mathematical abstractions without demonstrated reuse
 
 ### Implement
 
@@ -745,37 +745,37 @@
 - [x] Implement mutable `Matrix4f::at(row, column)`
 - [x] Implement const `Matrix4f::at(row, column)`
 - [x] Apply the chosen matrix-access bounds policy
-- [ ] Refactor matrix multiplication to use mathematical element access
+- [x] Refactor matrix multiplication to use mathematical element access
 - [x] Implement reusable translation-matrix construction
 - [x] Implement reusable nonuniform scaling-matrix construction
-- [ ] Implement essential 2D/3D/4D vector types
+- [x] Implement essential 2D/3D/4D vector types
   - [x] Implement `Vector2f`
   - [x] Implement `Vector3f`
-  - [ ] Implement `Vector4f`
-- [ ] Implement essential vector arithmetic
+  - [x] Implement `Vector4f`
+- [x] Implement essential vector arithmetic
   - [x] Implement `Vector2f` addition, subtraction, and scalar multiplication
   - [x] Implement `Vector3f` addition, subtraction, and scalar multiplication
-  - [ ] Implement `Vector4f` addition, subtraction, and scalar multiplication
-- [ ] Implement dot and cross products
+  - [x] Implement `Vector4f` addition, subtraction, and scalar multiplication
+- [x] Implement dot and cross products
   - [x] Implement `Vector2f` dot product
   - [x] Implement `Vector3f` dot product
   - [x] Implement `Vector3f` cross product
-  - [ ] Implement `Vector4f` dot product
-- [ ] Implement vector length, length squared, and normalization
+  - [x] Implement `Vector4f` dot product
+- [x] Implement vector length, length squared, and normalization
   - [x] Implement `Vector2f` length, length squared, and normalization
   - [x] Implement `Vector3f` length, length squared, and normalization
-  - [ ] Implement `Vector4f` length, length squared, and normalization
-- [ ] Implement axis-aligned rotation matrices
-- [ ] Implement transform-point and transform-direction operations
-- [ ] Implement composed model transformations using translation, rotation, and scale
-- [ ] Implement matrix transpose
-- [ ] Implement essential matrix inversion with defined singular-input behavior
-- [ ] Implement quaternion identity, normalization, multiplication, and rotation conversion
+  - [x] Implement `Vector4f` length, length squared, and normalization
+- [x] Implement axis-aligned rotation matrices
+- [x] Implement transform-point and transform-direction operations
+- [x] Implement composed model transformations using translation, rotation, and scale
+- [x] Implement matrix transpose
+- [x] Implement essential matrix inversion with defined singular-input behavior
+- [x] Implement quaternion identity, normalization, multiplication, and rotation conversion
 - [ ] Implement essential double-precision vector and matrix variants
 - [ ] Define explicit CPU-to-shader matrix conversion or layout contracts
 - [ ] Replace manually assembled renderer model matrices after math validation
 - [ ] Add basic camera/view and Vulkan-compatible projection mathematics when the Phase 7 reference scene requires them
-- [ ] Keep mathematical utilities separate from scene entities and transform-component ownership
+- [x] Keep mathematical utilities separate from scene entities and transform-component ownership
 
 ### Test
 
@@ -790,18 +790,18 @@
 - [x] Test row/column coordinate mapping to column-major storage
 - [x] Test invalid matrix-access indices according to the chosen contract policy
 - [x] Test translation and scaling constructors against independently specified matrices
-- [ ] Test vector arithmetic, dot products, and cross products
+- [x] Test vector arithmetic, dot products, and cross products
   - [x] Test `Vector2f` arithmetic and dot product
   - [x] Test `Vector3f` arithmetic, dot product, and cross product
-  - [ ] Test `Vector4f` arithmetic and dot product
-- [ ] Test normalization, including zero-length input
+  - [x] Test `Vector4f` arithmetic and dot product
+- [x] Test normalization, including zero-length input
   - [x] Test `Vector2f` normalization and zero-vector precondition
   - [x] Test `Vector3f` normalization and zero-vector precondition
-  - [ ] Test `Vector4f` normalization and zero-vector precondition
-- [ ] Test rotations at known angles
-- [ ] Test quaternion rotation composition
+  - [x] Test `Vector4f` normalization and zero-vector precondition
+- [x] Test rotations at known angles
+- [x] Test quaternion rotation composition
 - [ ] Test matrix transpose and inversion
-- [ ] Test point versus direction transformation behavior
+- [x] Test point versus direction transformation behavior
 - [ ] Test composed transformations and multiplication-order sensitivity
 - [ ] Test floating-point comparisons using documented tolerances
 - [ ] Test double-precision operations independently of float implementations
@@ -812,7 +812,7 @@
   - [x] Verify compile-time translation and scaling matrices
   - [x] Verify applicable `Vector2f` arithmetic operations
   - [x] Verify applicable `Vector3f` arithmetic operations
-  - [ ] Verify applicable `Vector4f` arithmetic operations
+  - [x] Verify applicable `Vector4f` arithmetic operations
   - [ ] Verify applicable rotation and quaternion operations
 - [ ] Run unit tests, sanitizers, memory checks, Clang-Tidy, formatting, and documentation checks
 - [ ] Establish optimized-build performance baselines before introducing explicit SIMD
@@ -885,11 +885,11 @@
 #### Architecture and Future Optimization
 
 - [ ] Preserve the portable scalar implementation as the correctness reference
-- [ ] Avoid adding SIMD-specific types to public mathematical APIs
-- [ ] Avoid premature runtime backend dispatch
+- [x] Avoid adding SIMD-specific types to public mathematical APIs
+- [x] Avoid premature runtime backend dispatch
 - [ ] Do not optimize operations solely because microbenchmarks expose small differences
 - [ ] Identify potential optimization candidates without implementing speculative optimizations
-- [ ] Defer explicit SIMD optimization and backend comparisons to Phase 23
+- [x] Defer explicit SIMD optimization and backend comparisons to Phase 23
 - [ ] Use the Phase 6.9 results as the reference for future performance comparisons
 
 #### Completion Criteria
@@ -904,23 +904,23 @@
 
 - [x] Use C++26 as the project-wide C++ language target
 - [ ] Prefer zero-overhead abstractions that compile to efficient operations
-- [ ] Avoid hidden allocations, virtual dispatch, and unnecessary runtime indirection in primitive math operations
+- [x] Avoid hidden allocations, virtual dispatch, and unnecessary runtime indirection in primitive math operations
 - [ ] Avoid promising zero overhead without inspecting generated code or measuring performance
-- [ ] Preserve small value types and explicit ownership semantics
-- [ ] Keep public mathematical interfaces independent of SIMD instruction-set types
-- [ ] Keep scalar reference implementations available for correctness comparisons
-- [ ] Avoid forcing all numeric types into one premature template hierarchy
+- [x] Preserve small value types and explicit ownership semantics
+- [x] Keep public mathematical interfaces independent of SIMD instruction-set types
+- [x] Keep scalar reference implementations available for correctness comparisons
+- [x] Avoid forcing all numeric types into one premature template hierarchy
 - [ ] Avoid forcing all calculations to use single precision
-- [ ] Preserve compile-time evaluation wherever practical
+- [x] Preserve compile-time evaluation wherever practical
 - [ ] Avoid implicit precision-losing conversions
-- [ ] Avoid coupling math types to Vulkan structures or shader-specific padding
-- [ ] Avoid introducing a runtime backend-dispatch system without a demonstrated need
-- [ ] Prefer composable mathematical operations over monolithic transform managers
+- [x] Avoid coupling math types to Vulkan structures or shader-specific padding
+- [x] Avoid introducing a runtime backend-dispatch system without a demonstrated need
+- [x] Prefer composable mathematical operations over monolithic transform managers
 - [ ] Keep mathematical coordinate conventions documented and consistent across CPU and GPU boundaries
 - [ ] Preserve opportunities for cache-friendly data layouts and SIMD-friendly batch operations
-- [ ] Keep mathematical algorithms independent of scene representation, physics, procedural generation, and world streaming
-- [ ] Avoid premature ABI guarantees for mathematical types exposed across future module boundaries
-- [ ] Keep the initial mathematics foundation small enough to verify and maintain
+- [x] Keep mathematical algorithms independent of scene representation, physics, procedural generation, and world streaming
+- [x] Avoid premature ABI guarantees for mathematical types exposed across future module boundaries
+- [x] Keep the initial mathematics foundation small enough to verify and maintain
 
 ### Deferred Integration
 
@@ -934,8 +934,8 @@
 
 ### Completion Criteria
 
-- [ ] Essential vector and matrix operations are reusable without renderer dependencies
-- [ ] Mathematical element access hides column-major indexing from callers
+- [x] Essential vector and matrix operations are reusable without renderer dependencies
+- [x] Mathematical element access hides column-major indexing from callers
 - [ ] Required foundation operations have independently verified unit tests
 - [ ] Supported compile-time operations pass constant-evaluation checks
 - [ ] Core conventions for precision, transformation order, and CPU/GPU interoperability are documented
