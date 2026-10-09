@@ -328,4 +328,9 @@ namespace SNE::Engine::Renderer::Vulkan {
     auto VulkanGraphicsPipeline::nativeHandle() const noexcept -> VkPipeline {
         return m_Pipeline;
     }
+
+    auto VulkanGraphicsPipeline::layoutHandle() const noexcept
+        -> VkPipelineLayout {
+        return m_PipelineLayout;
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

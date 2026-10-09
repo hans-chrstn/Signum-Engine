@@ -734,10 +734,10 @@
 
 ### Implement
 
-- [ ] Add shader handling
-- [ ] Add graphics pipelines
-- [ ] Add vertex buffers
-- [ ] Add index buffers
+- [x] Add shader handling
+- [x] Add graphics pipelines
+- [x] Add vertex buffers
+- [x] Add index buffers
 - [ ] Add uniform/storage buffers
 - [ ] Add textures
 - [ ] Add descriptor/binding infrastructure
@@ -746,7 +746,7 @@
 - [ ] Add material parameter/binding foundation
 - [ ] Add depth buffering
 - [ ] Render first simple 3D reference object
-- [ ] Render multiple objects
+- [x] Render multiple objects
 - [ ] Scale the reference rendering workload from one 3D object to multiple independently transformed objects
 - [ ] Separate scene data from GPU resources
 - [ ] Define rendering-facing data contracts
@@ -1352,6 +1352,7 @@
 - [ ] Do not claim aliasing eliminates all GPU memory fragmentation or synchronization work
 
 ---
+
 ## Phase 14 — Scene and World Foundation
 
 ### Learn
@@ -3067,6 +3068,7 @@
 - [ ] Adopt accelerated paths only when supported, correct, and measurably beneficial
 
 ---
+
 ## Phase 37 — Procedural Generation Capabilities
 
 ### Implement

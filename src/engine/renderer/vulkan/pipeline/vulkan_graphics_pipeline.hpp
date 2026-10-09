@@ -208,5 +208,16 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @return Vulkan graphics pipeline handle owned by this object.
          */
         [[nodiscard]] auto nativeHandle() const noexcept -> VkPipeline;
+
+        /**
+         * @brief Returns the Vulkan pipeline layout owned by this graphics
+         * pipeline.
+         *
+         * The returned handle is non-owning and remains valid only while this
+         * object owns the pipeline layout.
+         *
+         * @return Vulkan pipeline layout handle.
+         */
+        [[nodiscard]] auto layoutHandle() const noexcept -> VkPipelineLayout;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

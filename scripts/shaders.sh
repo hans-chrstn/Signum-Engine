@@ -26,6 +26,7 @@ slangc "${slang_shader_source_dir}/triangle.slang" \
     -target spirv \
     -entry vertexMain \
     -stage vertex \
+    -matrix-layout-column-major \
     -o "${shader_output_dir}/triangle.vert.spv"
 spirv-val "${shader_output_dir}/triangle.vert.spv"
 
@@ -33,6 +34,7 @@ slangc "${slang_shader_source_dir}/triangle.slang" \
           -target spirv \
           -entry fragmentMain \
           -stage fragment \
+          -matrix-layout-column-major \
           -o "${shader_output_dir}/triangle.frag.spv"
 spirv-val "${shader_output_dir}/triangle.frag.spv"
 

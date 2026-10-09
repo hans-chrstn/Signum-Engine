@@ -22,9 +22,11 @@
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <string>
@@ -35,12 +37,55 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Error = SNE::Engine::Core::Error;
 
 namespace {
-    struct TriangleVertex {
+    constexpr std::size_t kModelMatrixDimension = 4U;
+    constexpr std::size_t kModelMatrixElementCount =
+        kModelMatrixDimension * kModelMatrixDimension;
+
+    constexpr std::size_t kTranslationXIndex =
+        (kModelMatrixDimension - 1U) * kModelMatrixDimension;
+
+    [[maybe_unused]]
+    constexpr std::size_t kTranslationYIndex = kTranslationXIndex + 1U;
+
+    struct ModelPushConstants {
+        std::array<float, kModelMatrixElementCount> model;
+    };
+
+    constexpr ModelPushConstants kIdentityModel{
+        .model =
+            {
+                1.0F,
+                0.0F,
+                0.0F,
+                0.0F,
+                0.0F,
+                1.0F,
+                0.0F,
+                0.0F,
+                0.0F,
+                0.0F,
+                1.0F,
+                0.0F,
+                0.0F,
+                0.0F,
+                0.0F,
+                1.0F,
+            },
+    };
+
+    struct QuadVertex {
         std::array<float, 2> position;
         std::array<float, 3> color;
     };
+    constexpr float kQuadScale = 0.5F;
+    constexpr float kQuadHorizontalOffset = 0.5F;
+    constexpr float kQuadRotationDegrees = 45.0F;
+    constexpr float kDegreesPerHalfTurn = 180.0F;
 
-    constexpr std::array<TriangleVertex, 4> kTriangleVertices{
+    constexpr float kQuadRotationRadians =
+        kQuadRotationDegrees * std::numbers::pi_v<float> / kDegreesPerHalfTurn;
+
+    constexpr std::array<QuadVertex, 4> kQuadVertices{
         {
             {
                 // bottom-left
@@ -64,14 +109,14 @@ namespace {
         },
     };
 
-    constexpr std::array<std::uint16_t, 6> kTriangleIndices{0, 1, 2, 2, 1, 3};
-    static_assert(kTriangleIndices.size() <=
+    constexpr std::array<std::uint16_t, 6> kQuadIndices{0, 1, 2, 2, 1, 3};
+    static_assert(kQuadIndices.size() <=
                       std::numeric_limits<std::uint32_t>::max(),
-                  "Triangle Indices size exceeds uint32_t");
+                  "Quad Indices size exceeds uint32_t");
 
-    static_assert(sizeof(TriangleVertex) <=
+    static_assert(sizeof(QuadVertex) <=
                       std::numeric_limits<std::uint32_t>::max(),
-                  "TriangleVertex size exceeds uint32_t");
+                  "QuadVertex size exceeds uint32_t");
 
     [[nodiscard]] auto selectRequiredPhysicalDevice(VkInstance instance,
                                                     VkSurfaceKHR surface)
@@ -136,30 +181,29 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         VulkanBufferCreateInfo buffer_create_info{
-            .size = static_cast<VkDeviceSize>(sizeof(kTriangleVertices)),
+            .size = static_cast<VkDeviceSize>(sizeof(kQuadVertices)),
             .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             .memory_usage = GpuMemoryUsage::Device,
         };
 
-        m_TriangleVertexBuffer.emplace(m_MemoryAllocator, buffer_create_info);
+        m_QuadVertexBuffer.emplace(m_MemoryAllocator, buffer_create_info);
 
-        const auto vertex_bytes = std::as_bytes(std::span{kTriangleVertices});
+        const auto vertex_bytes = std::as_bytes(std::span{kQuadVertices});
         uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
-                         m_TriangleVertexBuffer.value(), vertex_bytes);
+                         m_QuadVertexBuffer.value(), vertex_bytes);
 
         VulkanBufferCreateInfo index_buffer_create_info{
-            .size = static_cast<VkDeviceSize>(sizeof(kTriangleIndices)),
+            .size = static_cast<VkDeviceSize>(sizeof(kQuadIndices)),
             .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             .memory_usage = GpuMemoryUsage::Device,
         };
 
-        m_TriangleIndexBuffer.emplace(m_MemoryAllocator,
-                                      index_buffer_create_info);
-        const auto index_bytes = std::as_bytes(std::span{kTriangleIndices});
+        m_QuadIndexBuffer.emplace(m_MemoryAllocator, index_buffer_create_info);
+        const auto index_bytes = std::as_bytes(std::span{kQuadIndices});
         uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
-                         m_TriangleIndexBuffer.value(), index_bytes);
+                         m_QuadIndexBuffer.value(), index_bytes);
 
         if (isFramebufferDrawable()) {
             static_cast<void>(recreateSwapchainResources());
@@ -229,10 +273,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             // binding slot, not vertex index
             vertex_binding.binding = 0U;
             // stride to reach next vertex: 20
-            // since TriangleVertex contains arrays of float size 2 and float
+            // since QuadVertex contains arrays of float size 2 and float
             // size 3 where float is 4 bytes: 4 x 2 + 4 x 3 = 20
             vertex_binding.stride =
-                static_cast<std::uint32_t>(sizeof(TriangleVertex));
+                static_cast<std::uint32_t>(sizeof(QuadVertex));
             // advances by set of vertex data rather than each instance
             vertex_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
@@ -241,11 +285,11 @@ namespace SNE::Engine::Renderer::Vulkan {
             position_attribute.location = 0U;
             // reads from vertex-buffer binding 0
             position_attribute.binding = 0U;
-            // two 32 bit floating point components TriangleVertex.position
+            // two 32 bit floating point components QuadVertex.position
             position_attribute.format = VK_FORMAT_R32G32_SFLOAT;
             // Position starts at byte 0 within each vertex.
             position_attribute.offset =
-                static_cast<std::uint32_t>(offsetof(TriangleVertex, position));
+                static_cast<std::uint32_t>(offsetof(QuadVertex, position));
 
             VkVertexInputAttributeDescription color_attribute{};
             // position is already using location = 0, so we use next position
@@ -256,7 +300,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             color_attribute.format = VK_FORMAT_R32G32B32_SFLOAT;
             // color starts at byte 8
             color_attribute.offset =
-                static_cast<std::uint32_t>(offsetof(TriangleVertex, color));
+                static_cast<std::uint32_t>(offsetof(QuadVertex, color));
 
             const std::array<VkVertexInputBindingDescription, 1>
                 vertex_bindings{vertex_binding};
@@ -272,8 +316,19 @@ namespace SNE::Engine::Renderer::Vulkan {
                 .attributes = vertex_attributes,
             };
 
+            const std::array<VkPushConstantRange, 1> push_constant_ranges{
+                {
+                    {
+                        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+                        .offset = 0U,
+                        .size = static_cast<std::uint32_t>(
+                            sizeof(ModelPushConstants)),
+                    },
+                },
+            };
+
             const GraphicsPipelineLayoutData graphics_pipeline_layout_data{
-                .push_constant_ranges = {},
+                .push_constant_ranges = push_constant_ranges,
             };
 
             new_graphics_pipeline.emplace(m_Device.nativeHandle(),
@@ -485,13 +540,18 @@ namespace SNE::Engine::Renderer::Vulkan {
         render_info.colorAttachmentCount = 1U;
         render_info.pColorAttachments = &render_attachment_info;
 
+        // Begin dynamic rendering using the configured color attachment.
+        // Subsequent draw commands render into this attachment until rendering
+        // ends.
         vkCmdBeginRendering(command_buffer, &render_info);
 
+        // Bind the graphics pipeline that defines shaders, vertex input,
+        // rasterization, and other graphics state used by subsequent draws.
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());
 
         const VkDeviceSize vertex_offset = 0U;
-        if (!m_TriangleVertexBuffer.has_value()) {
+        if (!m_QuadVertexBuffer.has_value()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
@@ -499,19 +559,23 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "recording draw commands");
         }
         const VkBuffer vertex_buffer =
-            m_TriangleVertexBuffer.value().nativeHandle();
+            m_QuadVertexBuffer.value().nativeHandle();
+        // Bind the vertex buffer to binding slot 0, starting at byte offset 0.
+        // The pipeline's vertex input descriptions determine how its data is
+        // read.
         vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
                                &vertex_offset);
 
-        if (!m_TriangleIndexBuffer.has_value()) {
+        if (!m_QuadIndexBuffer.has_value()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
                 "VulkanRenderer requires an initialized index buffer before "
                 "recording indexed draw commands");
         }
-        const VkBuffer index_buffer =
-            m_TriangleIndexBuffer.value().nativeHandle();
+        const VkBuffer index_buffer = m_QuadIndexBuffer.value().nativeHandle();
+        // Bind the index buffer starting at byte offset 0.
+        // Each index is a 16-bit unsigned integer referencing a vertex.
         vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
                              VK_INDEX_TYPE_UINT16);
 
@@ -522,22 +586,60 @@ namespace SNE::Engine::Renderer::Vulkan {
         viewport.height = -static_cast<float>(swapchain.extent().height);
         viewport.minDepth = 0.0F;
         viewport.maxDepth = 1.0F;
-
+        // Set the viewport that transforms normalized device coordinates
+        // into framebuffer coordinates. Negative height flips the Y direction.
         vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
 
         VkRect2D scissor{};
         scissor.extent = swapchain.extent();
         scissor.offset.x = 0;
         scissor.offset.y = 0;
-
+        // Restrict rasterized fragments to the scissor rectangle.
+        // Currently, the scissor covers the entire swapchain image.
         vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
+
+        const float cosine = std::cos(kQuadRotationRadians);
+        const float sine = std::sin(kQuadRotationRadians);
 
         // 6 indices, 1 instance, first index 0, vertex offset 0,
         // first instance 0
-        const auto indices =
-            static_cast<std::uint32_t>(kTriangleIndices.size());
+        const auto indices = static_cast<std::uint32_t>(kQuadIndices.size());
+        ModelPushConstants model_a = kIdentityModel;
+        model_a.model[kTranslationXIndex] = -kQuadHorizontalOffset;
+
+        model_a.model[0U] = cosine * kQuadScale;
+        model_a.model[1U] = sine * kQuadScale;
+        model_a.model[kModelMatrixDimension] = -sine * kQuadScale;
+        model_a.model[kModelMatrixDimension + 1U] = cosine * kQuadScale;
+        // Notice that the top-left 2x2 is the rotation
+        // The top-right and below it is the translation x and y's
+        // Scale occupies row 0 colo 0, row 1 col 1, row 2 col 2
+
+        // Set the vertex shader's push-constant data for subsequent draws.
+        // Supply the model transformation matrix to the vertex shader.
+        // The identity matrix preserves the original vertex positions.
+        vkCmdPushConstants(
+            command_buffer, graphics_pipeline.layoutHandle(),
+            VK_SHADER_STAGE_VERTEX_BIT, 0U,
+            static_cast<std::uint32_t>(sizeof(ModelPushConstants)), &model_a);
+        // Draw the first quad without transforming its vertices.
         vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
 
+        ModelPushConstants model_b = kIdentityModel;
+        model_b.model[kTranslationXIndex] = kQuadHorizontalOffset;
+
+        model_b.model[0U] = kQuadScale;
+        model_b.model[kModelMatrixDimension + 1U] = kQuadScale;
+
+        vkCmdPushConstants(
+            command_buffer, graphics_pipeline.layoutHandle(),
+            VK_SHADER_STAGE_VERTEX_BIT, 0U,
+            static_cast<std::uint32_t>(sizeof(ModelPushConstants)), &model_b);
+        // Draw the second quad at the same position as the first.
+        vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
+
+        // End the current dynamic rendering scope.
+        // Subsequent draw commands require another active rendering scope.
         vkCmdEndRendering(command_buffer);
 
         VkImageMemoryBarrier2 present_barrier{};

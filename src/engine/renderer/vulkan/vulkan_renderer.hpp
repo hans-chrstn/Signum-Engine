@@ -142,10 +142,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanMemoryAllocator m_MemoryAllocator;
 
         /**
-         * @brief Owns the GPU vertex buffer for the demonstration triangle.
+         * @brief Owns the GPU vertex buffer for the demonstration quad.
          *
-         * Stores the device-local vertex data used by the initial vertex-buffer
-         * rendering path.
+         * Stores device-local vertex data shared by the indexed draw commands.
          *
          * The buffer is independent of swapchain resources and survives
          * swapchain recreation.
@@ -153,13 +152,13 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The buffer must be released before the Vulkan memory allocator and
          * logical device are destroyed.
          */
-        std::optional<VulkanBuffer> m_TriangleVertexBuffer;
+        std::optional<VulkanBuffer> m_QuadVertexBuffer;
 
         /**
-         * @brief Owns the GPU index buffer for the demonstration triangle.
+         * @brief Owns the GPU index buffer for the demonstration quad.
          *
-         * Stores device-local indices that reference vertices in the triangle's
-         * vertex buffer.
+         * Stores device-local indices defining two triangles that share
+         * vertices from the quad's vertex buffer.
          *
          * The buffer is independent of swapchain resources and survives
          * swapchain recreation.
@@ -167,7 +166,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The buffer must be released before the Vulkan memory allocator and
          * logical device are destroyed.
          */
-        std::optional<VulkanBuffer> m_TriangleIndexBuffer;
+        std::optional<VulkanBuffer> m_QuadIndexBuffer;
 
         /**
          * @brief Swapchain-dependent renderer resources when presentation is
