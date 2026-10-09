@@ -13,6 +13,7 @@ add_executable(
   core/assert/assertion_handler_tests.cpp
   core/numeric/checked_conversion_tests.cpp
   core/math/matrix4_tests.cpp
+  core/math/vector2_tests.cpp
   core/math/vector3_tests.cpp
   renderer/vulkan/common/vulkan_result_tests.cpp
   renderer/vulkan/common/vulkan_extension_support_tests.cpp
