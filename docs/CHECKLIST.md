@@ -2022,7 +2022,7 @@
 
 ### Design
 
-- [ ] Use C++23 as the first-class initial game-code language
+- [ ] Use C++26 as the first-class initial game-code language
 - [ ] Separate engine/editor code from ordinary project game code
 - [ ] Allow ordinary project-defined C++ types
 - [ ] Allow project-defined components

@@ -1,6 +1,8 @@
-
 #pragma once
 
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include <array>
 #include <cstddef>
 
@@ -30,6 +32,57 @@ namespace SNE::Engine::Core::Math {
          * by default.
          */
         std::array<float, kMatrix4Dimension * kMatrix4Dimension> elements{};
+
+        /**
+         * @brief Provides mutable access to a matrix element.
+         *
+         * Accesses an element using mathematical row and column coordinates
+         * while internally preserving column-major storage.
+         *
+         * @param row Zero-based row index.
+         * @param column Zero-based column index.
+         *
+         * @pre Both indices must be less than kMatrix4Dimension.
+         *
+         * @return A mutable reference to the requested matrix element.
+         */
+        [[nodiscard]] constexpr auto at(std::size_t row, std::size_t column)
+            -> float & {
+            if (row >= kMatrix4Dimension || column >= kMatrix4Dimension) {
+                Assertion::failAssertion(
+                    Assertion::AssertionType::Precondition,
+                    Error::Subsystem::Core,
+                    "Matrix4f row or column is out of bounds");
+            }
+            const std::size_t index = (column * kMatrix4Dimension) + row;
+            return elements[index];
+        }
+
+        /**
+         * @brief Provides read-only access to a matrix element.
+         *
+         * Accesses an element using mathematical row and column coordinates
+         * without modifying the matrix.
+         *
+         * @param row Zero-based row index.
+         * @param column Zero-based column index.
+         *
+         * @pre Both indices must be less than kMatrix4Dimension.
+         *
+         * @return A const reference to the requested matrix element.
+         */
+        [[nodiscard]] constexpr auto at(std::size_t row,
+                                        std::size_t column) const -> const
+            float & {
+            if (row >= kMatrix4Dimension || column >= kMatrix4Dimension) {
+                Assertion::failAssertion(
+                    Assertion::AssertionType::Precondition,
+                    Error::Subsystem::Core,
+                    "Matrix4f row or column is out of bounds");
+            }
+            const std::size_t index = (column * kMatrix4Dimension) + row;
+            return elements[index];
+        }
     };
 
     /**
@@ -95,11 +148,10 @@ namespace SNE::Engine::Core::Math {
                                            float translation_y,
                                            float translation_z) -> Matrix4f {
         Matrix4f result = identity();
-        constexpr std::size_t translation_column_start =
-            (kMatrix4Dimension - 1U) * kMatrix4Dimension;
-        result.elements[translation_column_start] = translation_x;
-        result.elements[translation_column_start + 1U] = translation_y;
-        result.elements[translation_column_start + 2U] = translation_z;
+        constexpr std::size_t kTranslationColumn = kMatrix4Dimension - 1U;
+        result.at(0U, kTranslationColumn) = translation_x;
+        result.at(1U, kTranslationColumn) = translation_y;
+        result.at(2U, kTranslationColumn) = translation_z;
 
         return result;
     }
