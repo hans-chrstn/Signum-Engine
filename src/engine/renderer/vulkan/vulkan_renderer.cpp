@@ -103,6 +103,7 @@ namespace {
                 .color = {0.0F, 0.0F, 1.0F},
             },
             {
+                // top-right
                 .position = {0.5F, 0.5F},
                 .color = {0.0F, 0.0F, 1.0F},
             },
@@ -270,35 +271,22 @@ namespace SNE::Engine::Renderer::Vulkan {
             };
 
             VkVertexInputBindingDescription vertex_binding{};
-            // binding slot, not vertex index
             vertex_binding.binding = 0U;
-            // stride to reach next vertex: 20
-            // since QuadVertex contains arrays of float size 2 and float
-            // size 3 where float is 4 bytes: 4 x 2 + 4 x 3 = 20
             vertex_binding.stride =
                 static_cast<std::uint32_t>(sizeof(QuadVertex));
-            // advances by set of vertex data rather than each instance
             vertex_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
             VkVertexInputAttributeDescription position_attribute{};
-            // shader input location
             position_attribute.location = 0U;
-            // reads from vertex-buffer binding 0
             position_attribute.binding = 0U;
-            // two 32 bit floating point components QuadVertex.position
             position_attribute.format = VK_FORMAT_R32G32_SFLOAT;
-            // Position starts at byte 0 within each vertex.
             position_attribute.offset =
                 static_cast<std::uint32_t>(offsetof(QuadVertex, position));
 
             VkVertexInputAttributeDescription color_attribute{};
-            // position is already using location = 0, so we use next position
             color_attribute.location = 1U;
-            // both color and position attribute share the same vertex buffer
             color_attribute.binding = 0U;
-            // three 32 bit floats R,G,B
             color_attribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-            // color starts at byte 8
             color_attribute.offset =
                 static_cast<std::uint32_t>(offsetof(QuadVertex, color));
 
@@ -540,13 +528,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         render_info.colorAttachmentCount = 1U;
         render_info.pColorAttachments = &render_attachment_info;
 
-        // Begin dynamic rendering using the configured color attachment.
-        // Subsequent draw commands render into this attachment until rendering
-        // ends.
         vkCmdBeginRendering(command_buffer, &render_info);
 
-        // Bind the graphics pipeline that defines shaders, vertex input,
-        // rasterization, and other graphics state used by subsequent draws.
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());
 
@@ -560,9 +543,6 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
         const VkBuffer vertex_buffer =
             m_QuadVertexBuffer.value().nativeHandle();
-        // Bind the vertex buffer to binding slot 0, starting at byte offset 0.
-        // The pipeline's vertex input descriptions determine how its data is
-        // read.
         vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
                                &vertex_offset);
 
@@ -574,8 +554,6 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "recording indexed draw commands");
         }
         const VkBuffer index_buffer = m_QuadIndexBuffer.value().nativeHandle();
-        // Bind the index buffer starting at byte offset 0.
-        // Each index is a 16-bit unsigned integer referencing a vertex.
         vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
                              VK_INDEX_TYPE_UINT16);
 
@@ -586,23 +564,17 @@ namespace SNE::Engine::Renderer::Vulkan {
         viewport.height = -static_cast<float>(swapchain.extent().height);
         viewport.minDepth = 0.0F;
         viewport.maxDepth = 1.0F;
-        // Set the viewport that transforms normalized device coordinates
-        // into framebuffer coordinates. Negative height flips the Y direction.
         vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
 
         VkRect2D scissor{};
         scissor.extent = swapchain.extent();
         scissor.offset.x = 0;
         scissor.offset.y = 0;
-        // Restrict rasterized fragments to the scissor rectangle.
-        // Currently, the scissor covers the entire swapchain image.
         vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
 
         const float cosine = std::cos(kQuadRotationRadians);
         const float sine = std::sin(kQuadRotationRadians);
 
-        // 6 indices, 1 instance, first index 0, vertex offset 0,
-        // first instance 0
         const auto indices = static_cast<std::uint32_t>(kQuadIndices.size());
         ModelPushConstants model_a = kIdentityModel;
         model_a.model[kTranslationXIndex] = -kQuadHorizontalOffset;
@@ -611,18 +583,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         model_a.model[1U] = sine * kQuadScale;
         model_a.model[kModelMatrixDimension] = -sine * kQuadScale;
         model_a.model[kModelMatrixDimension + 1U] = cosine * kQuadScale;
-        // Notice that the top-left 2x2 is the rotation
-        // The top-right and below it is the translation x and y's
-        // Scale occupies row 0 colo 0, row 1 col 1, row 2 col 2
 
-        // Set the vertex shader's push-constant data for subsequent draws.
-        // Supply the model transformation matrix to the vertex shader.
-        // The identity matrix preserves the original vertex positions.
         vkCmdPushConstants(
             command_buffer, graphics_pipeline.layoutHandle(),
             VK_SHADER_STAGE_VERTEX_BIT, 0U,
             static_cast<std::uint32_t>(sizeof(ModelPushConstants)), &model_a);
-        // Draw the first quad without transforming its vertices.
         vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
 
         ModelPushConstants model_b = kIdentityModel;
@@ -635,11 +600,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             command_buffer, graphics_pipeline.layoutHandle(),
             VK_SHADER_STAGE_VERTEX_BIT, 0U,
             static_cast<std::uint32_t>(sizeof(ModelPushConstants)), &model_b);
-        // Draw the second quad at the same position as the first.
         vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
 
-        // End the current dynamic rendering scope.
-        // Subsequent draw commands require another active rendering scope.
         vkCmdEndRendering(command_buffer);
 
         VkImageMemoryBarrier2 present_barrier{};

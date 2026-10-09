@@ -695,6 +695,146 @@
 
 ---
 
+## Phase 6.9 — Engine Mathematics Foundation
+
+### Learn
+
+- [x] Understand 4x4 matrix multiplication
+- [x] Understand row-major versus column-major storage
+- [x] Understand column-vector transformation conventions
+- [x] Understand matrix multiplication order
+- [x] Understand identity, translation, and scaling matrices
+- [ ] Understand mathematical coordinate access versus physical storage
+- [ ] Understand mutable and const reference accessors
+- [ ] Understand floating-point precision and rounding
+- [ ] Understand vectors, dot products, and cross products
+- [ ] Understand rotations, radians, and coordinate-system handedness
+- [ ] Understand quaternions and rotation composition
+- [ ] Understand affine transformations and matrix inverses
+- [ ] Understand SIMD, compiler auto-vectorization, and data alignment
+- [ ] Understand C++26 compile-time evaluation and feature availability
+- [ ] Understand the zero-overhead abstraction principle
+
+### Design
+
+- [ ] Define the public math API independently of Vulkan, Slang, and GPU resource ownership
+- [ ] Define consistent mathematical row/column indexing independent of memory storage
+- [ ] Define column-major matrix storage and column-vector multiplication as the initial convention
+- [ ] Define matrix-access bounds and programmer-contract policy
+- [ ] Define scalar precision policy for `float` and `double`
+- [ ] Define vector, matrix, and quaternion naming conventions
+- [ ] Define point, direction, and homogeneous-coordinate semantics
+- [ ] Define radians as the default rotation-angle unit
+- [ ] Define matrix composition order and transformation semantics
+- [ ] Define numerical comparison and tolerance policy
+- [ ] Define behavior for degenerate and singular mathematical operations
+- [ ] Define explicit conversion policy between numeric precisions
+- [ ] Define mathematical type alignment and layout requirements separately from GPU upload representations
+- [ ] Define a portable scalar reference implementation
+- [ ] Preserve the ability to introduce SIMD implementations without changing public math APIs
+- [ ] Preserve `constexpr` evaluation for applicable operations
+- [ ] Require C++26 mode for all C++ engine, renderer, editor, tool, test, and game-facing targets
+- [ ] Verify individual C++26 language and library features before treating them as required dependencies
+- [ ] Avoid adding generic mathematical abstractions without demonstrated reuse
+
+### Implement
+
+- [x] Create `Matrix4f` with column-major storage
+- [x] Implement 4x4 matrix multiplication
+- [x] Implement `constexpr` identity-matrix construction
+- [ ] Implement mutable `Matrix4f::at(row, column)`
+- [ ] Implement const `Matrix4f::at(row, column)`
+- [ ] Apply the chosen matrix-access bounds policy
+- [ ] Refactor matrix multiplication to use mathematical element access
+- [ ] Implement reusable translation-matrix construction
+- [ ] Implement reusable nonuniform scaling-matrix construction
+- [ ] Implement essential 2D/3D/4D vector types
+- [ ] Implement essential vector arithmetic
+- [ ] Implement dot and cross products
+- [ ] Implement vector length, length squared, and normalization
+- [ ] Implement axis-aligned rotation matrices
+- [ ] Implement transform-point and transform-direction operations
+- [ ] Implement composed model transformations using translation, rotation, and scale
+- [ ] Implement matrix transpose
+- [ ] Implement essential matrix inversion with defined singular-input behavior
+- [ ] Implement quaternion identity, normalization, multiplication, and rotation conversion
+- [ ] Implement essential double-precision vector and matrix variants
+- [ ] Define explicit CPU-to-shader matrix conversion or layout contracts
+- [ ] Replace manually assembled renderer model matrices after math validation
+- [ ] Add basic camera/view and Vulkan-compatible projection mathematics when the Phase 7 reference scene requires them
+- [ ] Keep mathematical utilities separate from scene entities and transform-component ownership
+
+### Test
+
+- [x] Test identity multiplied by identity
+- [x] Test identity preserving another matrix
+- [x] Test uniform scaling and translation order
+- [x] Test nonuniform scaling and translation order
+- [x] Test matrix multiplication containing off-diagonal values
+- [x] Test identity construction at compile time
+- [x] Test identity construction at runtime
+- [ ] Test mutable and const matrix-element access
+- [ ] Test row/column coordinate mapping to column-major storage
+- [ ] Test invalid matrix-access indices according to the chosen contract policy
+- [ ] Test translation and scaling constructors against independently specified matrices
+- [ ] Test vector arithmetic, dot products, and cross products
+- [ ] Test normalization, including zero-length input
+- [ ] Test rotations at known angles
+- [ ] Test quaternion rotation composition
+- [ ] Test matrix transpose and inversion
+- [ ] Test point versus direction transformation behavior
+- [ ] Test composed transformations and multiplication-order sensitivity
+- [ ] Test floating-point comparisons using documented tolerances
+- [ ] Test double-precision operations independently of float implementations
+- [ ] Verify CPU-generated matrices match shader transformation conventions
+- [ ] Verify applicable mathematical operations can execute during constant evaluation
+- [ ] Run unit tests, sanitizers, memory checks, Clang-Tidy, formatting, and documentation checks
+- [ ] Establish optimized-build performance baselines before introducing explicit SIMD
+
+### Architecture
+
+- [ ] Use C++26 as the project-wide C++ language target
+- [ ] Prefer zero-overhead abstractions that compile to efficient operations
+- [ ] Avoid hidden allocations, virtual dispatch, and unnecessary runtime indirection in primitive math operations
+- [ ] Avoid promising zero overhead without inspecting generated code or measuring performance
+- [ ] Preserve small value types and explicit ownership semantics
+- [ ] Keep public mathematical interfaces independent of SIMD instruction-set types
+- [ ] Keep scalar reference implementations available for correctness comparisons
+- [ ] Avoid forcing all numeric types into one premature template hierarchy
+- [ ] Avoid forcing all calculations to use single precision
+- [ ] Preserve compile-time evaluation wherever practical
+- [ ] Avoid implicit precision-losing conversions
+- [ ] Avoid coupling math types to Vulkan structures or shader-specific padding
+- [ ] Avoid introducing a runtime backend-dispatch system without a demonstrated need
+- [ ] Prefer composable mathematical operations over monolithic transform managers
+- [ ] Keep mathematical coordinate conventions documented and consistent across CPU and GPU boundaries
+- [ ] Preserve opportunities for cache-friendly data layouts and SIMD-friendly batch operations
+- [ ] Keep mathematical algorithms independent of scene representation, physics, procedural generation, and world streaming
+- [ ] Avoid premature ABI guarantees for mathematical types exposed across future module boundaries
+- [ ] Keep the initial mathematics foundation small enough to verify and maintain
+
+### Deferred Integration
+
+- [ ] Phase 7 — Integrate tested model, view, and projection transformations with reference rendering
+- [ ] Phase 14 — Integrate mathematical transforms with scene hierarchies and world-space relationships
+- [ ] Phase 23 — Benchmark scalar mathematics, evaluate SIMD, and optimize measured hot paths
+- [ ] Phase 25 — Extend mathematical operations for physics requirements when justified
+- [ ] Phase 34.5 — Introduce large-world coordinate representations, reference frames, and high-precision spatial conversion
+- [ ] Phase 37 — Introduce procedural-generation-specific mathematics, sampling, noise, and deterministic algorithms as required
+- [ ] Phase 41 — Track math-performance regressions across supported compilers and hardware
+
+### Completion Criteria
+
+- [ ] Essential vector and matrix operations are reusable without renderer dependencies
+- [ ] Mathematical element access hides column-major indexing from callers
+- [ ] Required foundation operations have independently verified unit tests
+- [ ] Supported compile-time operations pass constant-evaluation checks
+- [ ] Core conventions for precision, transformation order, and CPU/GPU interoperability are documented
+- [ ] Phase 7 can construct and combine transformations without manually assembling matrix arrays
+- [ ] The library can gain SIMD implementations later without forcing renderer or simulation API changes
+
+---
+
 ## Phase 7 — Rendering Resource Foundation
 
 ### Learn
