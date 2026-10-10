@@ -61,14 +61,15 @@ There is no global epsilon. Tolerances depend on the operation and expected nume
 
 ## Shader layout
 
-The current Vulkan renderer uses a model matrix stored as 16 floats in push constants.
+The Vulkan renderer uploads `Matrix4f` directly through push constants.
 
-The Slang shader uses `float4x4` and `mul(matrix, vector)`.
+- Matrix size: 64 bytes
+- Matrix member offset: 0 bytes
+- Matrix stride: 16 bytes
+- CPU storage: column-major
+- Shader type: Slang `float4x4`
+- Shader multiplication: `mul(matrix, vector)`
 
-Shaders are compiled with:
+Shaders are compiled with `-matrix-layout-column-major`.
 
-```bash
--matrix-layout-column-major
-```
-
-The compiled SPIR-V layout has not yet been verified against the CPU representation.
+The generated SPIR-V uses `RowMajor` and `OpVectorTimesMatrix`.
