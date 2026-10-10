@@ -706,14 +706,14 @@
 - [x] Understand identity, translation, and scaling matrices
 - [x] Understand mathematical coordinate access versus physical storage
 - [x] Understand mutable and const reference accessors
-- [ ] Understand floating-point precision and rounding
+- [x] Understand floating-point precision and rounding
 - [x] Understand vectors, dot products, and cross products
-- [ ] Understand rotations, radians, and coordinate-system handedness
-- [ ] Understand quaternions and rotation composition
-- [ ] Understand affine transformations and matrix inverses
-- [ ] Understand SIMD, compiler auto-vectorization, and data alignment
-- [ ] Understand C++26 compile-time evaluation and feature availability
-- [ ] Understand the zero-overhead abstraction principle
+- [x] Understand rotations, radians, and coordinate-system handedness
+- [x] Understand quaternions and rotation composition
+- [x] Understand affine transformations and matrix inverses
+- [x] Understand SIMD, compiler auto-vectorization, and data alignment
+- [x] Understand C++26 compile-time evaluation and feature availability
+- [x] Understand the zero-overhead abstraction principle
 
 ### Design
 
@@ -721,19 +721,19 @@
 - [x] Define consistent mathematical row/column indexing independent of memory storage
 - [x] Define column-major matrix storage and column-vector multiplication as the initial convention
 - [x] Define matrix-access bounds and programmer-contract policy
-- [ ] Define scalar precision policy for `float` and `double`
-- [ ] Define vector, matrix, and quaternion naming conventions
+- [x] Define scalar precision policy for `float` and `double`
+- [x] Define vector, matrix, and quaternion naming conventions
 - [x] Define point, direction, and homogeneous-coordinate semantics
 - [x] Define radians as the default rotation-angle unit
-- [ ] Define matrix composition order and transformation semantics
+- [x] Define matrix composition order and transformation semantics
 - [x] Define numerical comparison and tolerance policy
-- [ ] Define behavior for degenerate and singular mathematical operations
-- [ ] Define explicit conversion policy between numeric precisions
-- [ ] Define mathematical type alignment and layout requirements separately from GPU upload representations
+- [x] Define behavior for degenerate and singular mathematical operations
+- [x] Define explicit conversion policy between numeric precisions
+- [x] Define mathematical type alignment and layout requirements separately from GPU upload representations
 - [x] Define a portable scalar reference implementation
 - [x] Preserve the ability to introduce SIMD implementations without changing public math APIs
 - [x] Preserve `constexpr` evaluation for applicable operations
-- [ ] Require C++26 mode for all C++ engine, renderer, editor, tool, test, and game-facing targets
+- [x] Require C++26 mode for all C++ engine, renderer, editor, tool, test, and game-facing targets
 - [ ] Verify individual C++26 language and library features before treating them as required dependencies
 - [x] Avoid adding generic mathematical abstractions without demonstrated reuse
 
