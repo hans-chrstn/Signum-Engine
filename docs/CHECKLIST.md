@@ -734,7 +734,7 @@
 - [x] Preserve the ability to introduce SIMD implementations without changing public math APIs
 - [x] Preserve `constexpr` evaluation for applicable operations
 - [x] Require C++26 mode for all C++ engine, renderer, editor, tool, test, and game-facing targets
-- [ ] Verify individual C++26 language and library features before treating them as required dependencies
+- [x] Verify individual C++26 language and library features before treating them as required dependencies
 - [x] Avoid adding generic mathematical abstractions without demonstrated reuse
 
 ### Implement
@@ -903,7 +903,7 @@
 ### Architecture
 
 - [x] Use C++26 as the project-wide C++ language target
-- [ ] Prefer zero-overhead abstractions that compile to efficient operations
+- [x] Prefer zero-overhead abstractions that compile to efficient operations
 - [x] Avoid hidden allocations, virtual dispatch, and unnecessary runtime indirection in primitive math operations
 - [x] Avoid promising zero overhead without inspecting generated code or measuring performance
 - [x] Preserve small value types and explicit ownership semantics
