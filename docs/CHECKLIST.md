@@ -771,7 +771,7 @@
 - [x] Implement matrix transpose
 - [x] Implement essential matrix inversion with defined singular-input behavior
 - [x] Implement quaternion identity, normalization, multiplication, and rotation conversion
-- [ ] Implement essential double-precision vector and matrix variants
+- [x] Implement essential double-precision vector and matrix variants
 - [ ] Define explicit CPU-to-shader matrix conversion or layout contracts
 - [ ] Replace manually assembled renderer model matrices after math validation
 - [ ] Add basic camera/view and Vulkan-compatible projection mathematics when the Phase 7 reference scene requires them
@@ -800,11 +800,11 @@
   - [x] Test `Vector4f` normalization and zero-vector precondition
 - [x] Test rotations at known angles
 - [x] Test quaternion rotation composition
-- [ ] Test matrix transpose and inversion
+- [x] Test matrix transpose and inversion
 - [x] Test point versus direction transformation behavior
-- [ ] Test composed transformations and multiplication-order sensitivity
+- [x] Test composed transformations and multiplication-order sensitivity
 - [ ] Test floating-point comparisons using documented tolerances
-- [ ] Test double-precision operations independently of float implementations
+- [x] Test double-precision operations independently of float implementations
 - [ ] Verify CPU-generated matrices match shader transformation conventions
 - [ ] Verify applicable mathematical operations can execute during constant evaluation
   - [x] Verify compile-time identity-matrix construction
@@ -814,7 +814,7 @@
   - [x] Verify applicable `Vector3f` arithmetic operations
   - [x] Verify applicable `Vector4f` arithmetic operations
   - [ ] Verify applicable rotation and quaternion operations
-- [ ] Run unit tests, sanitizers, memory checks, Clang-Tidy, formatting, and documentation checks
+- [x] Run unit tests, sanitizers, memory checks, Clang-Tidy, formatting, and documentation checks
 - [ ] Establish optimized-build performance baselines before introducing explicit SIMD
 
 ### Benchmark — Mathematics Performance Baseline
