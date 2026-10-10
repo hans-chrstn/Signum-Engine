@@ -1,4 +1,6 @@
 #include "engine/core/math/matrix4d.hpp"
+#include "engine/core/math/vector3d.hpp"
+#include <cmath>
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <limits>
@@ -928,4 +930,49 @@ TEST(Matrix4dTests, InvertsVerySmallNonzeroScale) {
         EXPECT_NEAR(result.elements[index], expected.elements[index],
                     kTolerance);
     }
+}
+
+TEST(Matrix4dTests, ComposedTransformHandlesMixedMagnitudes) {
+    const Math::Vector3d translation{
+        .x = 10.0,
+        .y = -4.0,
+        .z = 0.0,
+    };
+
+    const Math::Vector3d rotation{
+        .x = 0.0,
+        .y = 0.0,
+        .z = std::numbers::pi_v<double> / 2,
+    };
+
+    const Math::Vector3d scale{
+        .x = 1000000.0,
+        .y = 0.001,
+        .z = 1.0,
+    };
+
+    const Math::Vector3d point{
+        .x = 1.5,
+        .y = 2.0,
+        .z = 0.0,
+    };
+
+    const Math::Matrix4d matrix =
+        Math::composeTRS(translation, rotation, scale);
+
+    const Math::Vector3d result = Math::transformPoint(matrix, point);
+
+    const Math::Vector3d expected{
+        .x = 9.998,
+        .y = 1499996.0,
+        .z = 0.0,
+    };
+
+    constexpr double kAbsoluteTolerance = 1.0e-9;
+    constexpr double kRelativeTolerance = 1.0e-12;
+
+    EXPECT_NEAR(result.x, expected.x, kAbsoluteTolerance);
+    EXPECT_NEAR(result.y, expected.y,
+                kRelativeTolerance * std::abs(expected.y));
+    EXPECT_DOUBLE_EQ(result.z, expected.z);
 }

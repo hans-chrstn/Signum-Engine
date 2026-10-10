@@ -55,9 +55,13 @@ Near-singular matrices may produce inaccurate inverses. No condition-number esti
 
 ### Comparisons
 
-Tests use exact comparisons where appropriate and tolerances for floating-point operations.
-
-There is no global epsilon. Tolerances depend on the operation and expected numerical error.
+- Use exact equality when exact results are required.
+- Use absolute tolerance for values near zero or with known error bounds.
+- Use relative tolerance when comparing values across different magnitudes.
+- Select tolerances according to precision, operation, and expected error.
+- Do not use a global epsilon.
+- NaN must not compare approximately equal to any value.
+- Handle infinities explicitly when they are valid expected results.
 
 ## Shader layout
 
