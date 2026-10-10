@@ -5,6 +5,8 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/math/matrix4.hpp"
+#include "engine/core/math/vector3.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/presentation_preference.hpp"
@@ -22,7 +24,6 @@
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include <array>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -30,48 +31,21 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Error = SNE::Engine::Core::Error;
+namespace Math = SNE::Engine::Core::Math;
 
 namespace {
-    constexpr std::size_t kModelMatrixDimension = 4U;
-    constexpr std::size_t kModelMatrixElementCount =
-        kModelMatrixDimension * kModelMatrixDimension;
+    constexpr std::size_t kMatrixSize = 64U;
+    constexpr std::size_t kMatrixOffset = 0U;
 
-    constexpr std::size_t kTranslationXIndex =
-        (kModelMatrixDimension - 1U) * kModelMatrixDimension;
-
-    [[maybe_unused]]
-    constexpr std::size_t kTranslationYIndex = kTranslationXIndex + 1U;
-
-    struct ModelPushConstants {
-        std::array<float, kModelMatrixElementCount> model;
-    };
-
-    constexpr ModelPushConstants kIdentityModel{
-        .model =
-            {
-                1.0F,
-                0.0F,
-                0.0F,
-                0.0F,
-                0.0F,
-                1.0F,
-                0.0F,
-                0.0F,
-                0.0F,
-                0.0F,
-                1.0F,
-                0.0F,
-                0.0F,
-                0.0F,
-                0.0F,
-                1.0F,
-            },
-    };
+    static_assert(sizeof(Math::Matrix4f) == kMatrixSize);
+    static_assert(offsetof(Math::Matrix4f, elements) == kMatrixOffset);
+    static_assert(std::is_trivially_copyable_v<Math::Matrix4f>);
 
     struct QuadVertex {
         std::array<float, 2> position;
@@ -309,8 +283,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                     {
                         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
                         .offset = 0U,
-                        .size = static_cast<std::uint32_t>(
-                            sizeof(ModelPushConstants)),
+                        .size =
+                            static_cast<std::uint32_t>(sizeof(Math::Matrix4f)),
                     },
                 },
             };
@@ -572,34 +546,49 @@ namespace SNE::Engine::Renderer::Vulkan {
         scissor.offset.y = 0;
         vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
 
-        const float cosine = std::cos(kQuadRotationRadians);
-        const float sine = std::sin(kQuadRotationRadians);
-
         const auto indices = static_cast<std::uint32_t>(kQuadIndices.size());
-        ModelPushConstants model_a = kIdentityModel;
-        model_a.model[kTranslationXIndex] = -kQuadHorizontalOffset;
+        const Math::Vector3f translation_a{
+            .x = -kQuadHorizontalOffset,
+            .y = 0.0F,
+            .z = 0.0F,
+        };
 
-        model_a.model[0U] = cosine * kQuadScale;
-        model_a.model[1U] = sine * kQuadScale;
-        model_a.model[kModelMatrixDimension] = -sine * kQuadScale;
-        model_a.model[kModelMatrixDimension + 1U] = cosine * kQuadScale;
+        const Math::Vector3f rotation_a{
+            .x = 0.0F,
+            .y = 0.0F,
+            .z = kQuadRotationRadians,
+        };
 
-        vkCmdPushConstants(
-            command_buffer, graphics_pipeline.layoutHandle(),
-            VK_SHADER_STAGE_VERTEX_BIT, 0U,
-            static_cast<std::uint32_t>(sizeof(ModelPushConstants)), &model_a);
+        const Math::Vector3f scale_a{
+            .x = kQuadScale,
+            .y = kQuadScale,
+            .z = 1.0F,
+        };
+
+        const Math::Matrix4f model_a =
+            Math::composeTRS(translation_a, rotation_a, scale_a);
+
+        vkCmdPushConstants(command_buffer, graphics_pipeline.layoutHandle(),
+                           VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                           static_cast<std::uint32_t>(sizeof(model_a)),
+                           &model_a);
         vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
 
-        ModelPushConstants model_b = kIdentityModel;
-        model_b.model[kTranslationXIndex] = kQuadHorizontalOffset;
+        const Math::Vector3f translation_b{
+            .x = kQuadHorizontalOffset,
+            .y = 0.0F,
+            .z = 0.0F,
+        };
 
-        model_b.model[0U] = kQuadScale;
-        model_b.model[kModelMatrixDimension + 1U] = kQuadScale;
+        const Math::Vector3f rotation_b{};
 
-        vkCmdPushConstants(
-            command_buffer, graphics_pipeline.layoutHandle(),
-            VK_SHADER_STAGE_VERTEX_BIT, 0U,
-            static_cast<std::uint32_t>(sizeof(ModelPushConstants)), &model_b);
+        const Math::Matrix4f model_b =
+            Math::composeTRS(translation_b, rotation_b, scale_a);
+
+        vkCmdPushConstants(command_buffer, graphics_pipeline.layoutHandle(),
+                           VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                           static_cast<std::uint32_t>(sizeof(model_b)),
+                           &model_b);
         vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
 
         vkCmdEndRendering(command_buffer);
