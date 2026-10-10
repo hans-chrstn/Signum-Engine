@@ -374,10 +374,36 @@ namespace SNE::Engine::Core::Math {
         };
     }
 
+    /**
+     * @brief Composes a 3D affine transformation from translation, rotation,
+     * and scale.
+     *
+     * Uses column vectors and applies nonuniform scaling first, followed
+     * by X, Y, and Z rotations, then translation.
+     *
+     * The resulting matrix is T * Rz * Ry * Rx * S.
+     *
+     * @param translation Translation along the X, Y, and Z axes.
+     * @param rotation_radians Rotation angles around the X, Y, and Z axes,
+     *                         expressed in radians.
+     * @param scale_factors Scaling factors along the X, Y, and Z axes.
+     *
+     * @return The composed affine transformation matrix.
+     */
     [[nodiscard]] auto composeTRS(Vector3f translation,
                                   Vector3f rotation_radians,
                                   Vector3f scale_factors) -> Matrix4f;
 
+    /**
+     * @brief Computes the transpose of a 4x4 matrix.
+     *
+     * Exchanges rows and columns without changing the matrix storage
+     * convention.
+     *
+     * @param matrix Matrix to transpose.
+     *
+     * @return A new matrix containing the transposed elements.
+     */
     [[nodiscard]] constexpr auto transpose(const Matrix4f &matrix) -> Matrix4f {
         Matrix4f result{};
         for (std::size_t column{}; column < kMatrix4Dimension; ++column) {
@@ -391,6 +417,22 @@ namespace SNE::Engine::Core::Math {
         return result;
     }
 
+    /**
+     * @brief Attempts to invert a 4x4 matrix.
+     *
+     * Uses Gauss-Jordan elimination with partial pivoting.
+     *
+     * Rejects non-finite input matrices and matrices for which
+     * elimination cannot produce a finite inverse.
+     *
+     * Near-singular matrices may produce numerically inaccurate results;
+     * no condition-number threshold is currently applied.
+     *
+     * @param matrix Matrix to invert.
+     *
+     * @return The inverse matrix when successful, or std::nullopt
+     *         when inversion fails.
+     */
     [[nodiscard]] auto tryInverse(const Matrix4f &matrix)
         -> std::optional<Matrix4f>;
 
