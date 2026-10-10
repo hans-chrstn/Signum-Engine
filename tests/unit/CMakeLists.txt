@@ -34,6 +34,7 @@ add_executable(
   renderer/vulkan/memory/vulkan_memory_policy_tests.cpp
   renderer/vulkan/device/vulkan_device_extensions_tests.cpp
   renderer/vulkan/memory/vulkan_byte_range_tests.cpp
+  renderer/vulkan/pipeline/vulkan_graphics_shader_data_tests.cpp
 )
 
 target_link_libraries(

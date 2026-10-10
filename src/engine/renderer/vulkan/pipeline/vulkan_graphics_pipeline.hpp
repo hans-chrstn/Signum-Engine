@@ -232,4 +232,27 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto layoutHandle() const noexcept -> VkPipelineLayout;
     };
+
+    /**
+     * @brief Validates shader inputs required by a Vulkan graphics pipeline.
+     *
+     * Verifies that the vertex and fragment shader inputs specify their
+     * expected execution stages and provide nonempty entry-point names.
+     *
+     * Validation does not require a Vulkan device or create GPU resources.
+     *
+     * @param data Shader inputs to validate.
+     *
+     * @pre data must specify valid vertex and fragment shader stages
+     * and nonempty entry-point names.
+     *
+     * @post Successful validation leaves the shader inputs unchanged.
+     *
+     * @note Does not verify SPIR-V bytecode contents or whether the
+     * selected entry points exist in the compiled modules.
+     *
+     * @note Invalid configuration triggers a fatal precondition assertion
+     * rather than throwing an exception.
+     */
+    auto validateGraphicsShaderData(const GraphicsShaderData &data) -> void;
 } // namespace SNE::Engine::Renderer::Vulkan

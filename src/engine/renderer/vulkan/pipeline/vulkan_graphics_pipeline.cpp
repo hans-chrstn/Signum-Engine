@@ -16,6 +16,40 @@
 #include <utility>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    auto validateGraphicsShaderData(const GraphicsShaderData &data) -> void {
+        if (data.vertex.selection.stage != Shader::ShaderStage::Vertex) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires the vertex shader input "
+                "to specify ShaderStage::Vertex");
+        }
+
+        if (data.fragment.selection.stage != Shader::ShaderStage::Fragment) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires the fragment shader input "
+                "to specify ShaderStage::Fragment");
+        }
+
+        if (data.vertex.selection.entry_point.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires a nonempty vertex shader "
+                "entry-point name");
+        }
+
+        if (data.fragment.selection.entry_point.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires a nonempty fragment shader "
+                "entry-point name");
+        }
+    }
+
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(
         VkDevice device, VkFormat color_attachment_format,
         const GraphicsShaderData &graphics_shader_data,
@@ -37,39 +71,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "format");
         }
 
-        if (graphics_shader_data.vertex.selection.stage !=
-            Shader::ShaderStage::Vertex) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanGraphicsPipeline requires the vertex shader input "
-                "to specify ShaderStage::Vertex");
-        }
-
-        if (graphics_shader_data.fragment.selection.stage !=
-            Shader::ShaderStage::Fragment) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanGraphicsPipeline requires the fragment shader input "
-                "to specify ShaderStage::Fragment");
-        }
-
-        if (graphics_shader_data.vertex.selection.entry_point.empty()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanGraphicsPipeline requires a nonempty vertex shader "
-                "entry-point name");
-        }
-
-        if (graphics_shader_data.fragment.selection.entry_point.empty()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanGraphicsPipeline requires a nonempty fragment shader "
-                "entry-point name");
-        }
+        validateGraphicsShaderData(graphics_shader_data);
 
         VulkanShaderModule vertex_shader =
             VulkanShaderModule(m_Device, graphics_shader_data.vertex.words);
