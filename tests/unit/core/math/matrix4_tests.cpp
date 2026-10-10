@@ -589,3 +589,302 @@ TEST(Matrix4Tests, TransformDirectionAppliesNonUniformScale) {
     EXPECT_FLOAT_EQ(result.y, expected.y);
     EXPECT_FLOAT_EQ(result.z, expected.z);
 }
+
+TEST(Matrix4Tests, TransposeSwapsRowsAndColumns) {
+    constexpr std::size_t kFirstIndex = 0U;
+    constexpr std::size_t kSecondIndex = 1U;
+    constexpr std::size_t kThirdIndex = 2U;
+    constexpr std::size_t kFourthIndex = 3U;
+
+    constexpr float kUpperValue = 2.0F;
+    constexpr float kLowerValue = 3.0F;
+    constexpr float kTranslationValue = 7.0F;
+
+    Math::Matrix4f matrix = Math::identity();
+
+    matrix.at(kFirstIndex, kSecondIndex) = kUpperValue;
+    matrix.at(kSecondIndex, kFirstIndex) = kLowerValue;
+    matrix.at(kThirdIndex, kFourthIndex) = kTranslationValue;
+
+    const Math::Matrix4f result = Math::transpose(matrix);
+
+    EXPECT_FLOAT_EQ(result.at(kSecondIndex, kFirstIndex), kUpperValue);
+    EXPECT_FLOAT_EQ(result.at(kFirstIndex, kSecondIndex), kLowerValue);
+    EXPECT_FLOAT_EQ(result.at(kFourthIndex, kThirdIndex), kTranslationValue);
+}
+
+TEST(Matrix4Tests, TransposingTwiceRestoresOriginalMatrix) {
+    constexpr std::size_t kFirstIndex = 0U;
+    constexpr std::size_t kSecondIndex = 1U;
+    constexpr std::size_t kThirdIndex = 2U;
+
+    constexpr float kFirstValue = 5.0F;
+    constexpr float kSecondValue = -3.0F;
+
+    Math::Matrix4f matrix = Math::identity();
+
+    matrix.at(kFirstIndex, kSecondIndex) = kFirstValue;
+    matrix.at(kSecondIndex, kThirdIndex) = kSecondValue;
+
+    const Math::Matrix4f transposed = Math::transpose(matrix);
+    const Math::Matrix4f restored = Math::transpose(transposed);
+
+    EXPECT_EQ(restored.elements, matrix.elements);
+}
+
+TEST(Matrix4Tests, ComposeTRSAppliesScaleRotationAndTranslation) {
+    constexpr float kRightAngle = std::numbers::pi_v<float> / 2.0F;
+    constexpr float kTolerance = 1.0e-5F;
+
+    const Math::Vector3f translation{
+        .x = 5.0F,
+        .y = -2.0F,
+        .z = 3.0F,
+    };
+
+    const Math::Vector3f rotation_radians{
+        .x = 0.0F,
+        .y = 0.0F,
+        .z = kRightAngle,
+    };
+
+    const Math::Vector3f scale_factors{
+        .x = 2.0F,
+        .y = 3.0F,
+        .z = 4.0F,
+    };
+
+    const Math::Vector3f point{
+        .x = 1.0F,
+        .y = 2.0F,
+        .z = -1.0F,
+    };
+
+    const Math::Vector3f expected{
+        .x = -1.0F,
+        .y = 0.0F,
+        .z = -1.0F,
+    };
+
+    const Math::Matrix4f matrix =
+        Math::composeTRS(translation, rotation_radians, scale_factors);
+
+    const Math::Vector3f result = Math::transformPoint(matrix, point);
+
+    EXPECT_NEAR(result.x, expected.x, kTolerance);
+    EXPECT_NEAR(result.y, expected.y, kTolerance);
+    EXPECT_NEAR(result.z, expected.z, kTolerance);
+}
+
+TEST(Matrix4Tests, ComposeTRSWithIdentityRotationAndScaleMatchesTranslation) {
+    constexpr float kTolerance = 1.0e-5F;
+
+    const Math::Vector3f translation{
+        .x = 3.0F,
+        .y = -4.0F,
+        .z = 5.0F,
+    };
+
+    const Math::Vector3f rotation_radians{};
+
+    const Math::Vector3f scale_factors{
+        .x = 1.0F,
+        .y = 1.0F,
+        .z = 1.0F,
+    };
+
+    const Math::Matrix4f result =
+        Math::composeTRS(translation, rotation_radians, scale_factors);
+
+    const Math::Matrix4f expected =
+        Math::translate(translation.x, translation.y, translation.z);
+
+    for (std::size_t index{}; index < expected.elements.size(); ++index) {
+        EXPECT_NEAR(result.elements[index], expected.elements[index],
+                    kTolerance);
+    }
+}
+
+TEST(Matrix4Tests, InvertsIdentityMatrix) {
+    const Math::Matrix4f matrix = Math::identity();
+
+    const auto inverse = Math::tryInverse(matrix);
+
+    if (!inverse.has_value()) {
+        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        return;
+    }
+
+    EXPECT_EQ(inverse->elements, matrix.elements);
+}
+
+TEST(Matrix4Tests, InvertsTranslationMatrix) {
+    constexpr float kTolerance = 1.0e-5F;
+
+    const Math::Vector3f translation{
+        .x = 3.0F,
+        .y = -4.0F,
+        .z = 5.0F,
+    };
+
+    const Math::Vector3f inverse_translation{
+        .x = -3.0F,
+        .y = 4.0F,
+        .z = -5.0F,
+    };
+
+    const Math::Matrix4f matrix =
+        Math::translate(translation.x, translation.y, translation.z);
+
+    const Math::Matrix4f expected = Math::translate(
+        inverse_translation.x, inverse_translation.y, inverse_translation.z);
+
+    const auto inverse = Math::tryInverse(matrix);
+
+    if (!inverse.has_value()) {
+        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        return;
+    }
+
+    for (std::size_t index{}; index < expected.elements.size(); ++index) {
+        EXPECT_NEAR(inverse->elements[index], expected.elements[index],
+                    kTolerance);
+    }
+}
+
+TEST(Matrix4Tests, InvertsNonUniformScaleMatrix) {
+    constexpr float kTolerance = 1.0e-5F;
+
+    const Math::Vector3f scale_factors{
+        .x = 2.0F,
+        .y = 4.0F,
+        .z = 8.0F,
+    };
+
+    const Math::Vector3f inverse_scale_factors{
+        .x = 0.5F,
+        .y = 0.25F,
+        .z = 0.125F,
+    };
+
+    const Math::Matrix4f matrix =
+        Math::scale(scale_factors.x, scale_factors.y, scale_factors.z);
+
+    const Math::Matrix4f expected =
+        Math::scale(inverse_scale_factors.x, inverse_scale_factors.y,
+                    inverse_scale_factors.z);
+
+    const auto inverse = Math::tryInverse(matrix);
+
+    if (!inverse.has_value()) {
+        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        return;
+    }
+
+    for (std::size_t index{}; index < expected.elements.size(); ++index) {
+        EXPECT_NEAR(inverse->elements[index], expected.elements[index],
+                    kTolerance);
+    }
+}
+
+TEST(Matrix4Tests, InversionHandlesPivotRowSwapping) {
+    constexpr std::size_t kFirstIndex = 0U;
+    constexpr std::size_t kSecondIndex = 1U;
+
+    constexpr float kZero = 0.0F;
+    constexpr float kOne = 1.0F;
+
+    Math::Matrix4f matrix = Math::identity();
+
+    matrix.at(kFirstIndex, kFirstIndex) = kZero;
+    matrix.at(kSecondIndex, kSecondIndex) = kZero;
+    matrix.at(kFirstIndex, kSecondIndex) = kOne;
+    matrix.at(kSecondIndex, kFirstIndex) = kOne;
+
+    const auto inverse = Math::tryInverse(matrix);
+
+    if (!inverse.has_value()) {
+        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        return;
+    }
+
+    EXPECT_EQ(inverse->elements, matrix.elements);
+}
+
+TEST(Matrix4Tests, InvertsComposedTransformation) {
+    constexpr float kRotationAngle = std::numbers::pi_v<float> / 3.0F;
+    constexpr float kTolerance = 1.0e-4F;
+
+    const Math::Vector3f translation{
+        .x = 3.0F,
+        .y = -2.0F,
+        .z = 5.0F,
+    };
+
+    const Math::Vector3f rotation_radians{
+        .x = kRotationAngle,
+        .y = kRotationAngle,
+        .z = kRotationAngle,
+    };
+
+    const Math::Vector3f scale_factors{
+        .x = 2.0F,
+        .y = 3.0F,
+        .z = 4.0F,
+    };
+
+    const Math::Matrix4f matrix =
+        Math::composeTRS(translation, rotation_radians, scale_factors);
+
+    const auto inverse = Math::tryInverse(matrix);
+
+    if (!inverse.has_value()) {
+        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        return;
+    }
+
+    const Math::Matrix4f left_product = Math::multiply(matrix, *inverse);
+
+    const Math::Matrix4f right_product = Math::multiply(*inverse, matrix);
+
+    const Math::Matrix4f expected = Math::identity();
+
+    for (std::size_t index{}; index < expected.elements.size(); ++index) {
+        EXPECT_NEAR(left_product.elements[index], expected.elements[index],
+                    kTolerance);
+
+        EXPECT_NEAR(right_product.elements[index], expected.elements[index],
+                    kTolerance);
+    }
+}
+
+TEST(Matrix4Tests, InversionRejectsSingularMatrix) {
+    const Math::Vector3f scale_factors{
+        .x = 2.0F,
+        .y = 0.0F,
+        .z = 4.0F,
+    };
+
+    const Math::Matrix4f matrix =
+        Math::scale(scale_factors.x, scale_factors.y, scale_factors.z);
+
+    const auto inverse = Math::tryInverse(matrix);
+
+    EXPECT_FALSE(inverse.has_value());
+}
+
+TEST(Matrix4Tests, InversionRejectsNonFiniteMatrix) {
+    constexpr std::size_t kFirstIndex = 0U;
+
+    Math::Matrix4f matrix = Math::identity();
+
+    matrix.at(kFirstIndex, kFirstIndex) =
+        std::numeric_limits<float>::infinity();
+
+    EXPECT_FALSE(Math::tryInverse(matrix).has_value());
+
+    matrix.at(kFirstIndex, kFirstIndex) =
+        std::numeric_limits<float>::quiet_NaN();
+
+    EXPECT_FALSE(Math::tryInverse(matrix).has_value());
+}
