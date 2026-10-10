@@ -821,23 +821,23 @@
 
 #### Infrastructure
 
-- [ ] Integrate Google Benchmark as a development-only dependency
-- [ ] Create a dedicated mathematics benchmark target
-- [ ] Add a `just bench` command for running benchmarks
-- [ ] Keep benchmark targets separate from production engine binaries
-- [ ] Keep benchmark execution separate from normal unit-test and validation workflows
-- [ ] Run benchmarks using optimized Release builds
-- [ ] Exclude sanitizers, Valgrind, and debug instrumentation from performance measurements
+- [x] Integrate Google Benchmark as a development-only dependency
+- [x] Create a dedicated mathematics benchmark target
+- [x] Add a `just bench` command for running benchmarks
+- [x] Keep benchmark targets separate from production engine binaries
+- [x] Keep benchmark execution separate from normal unit-test and validation workflows
+- [x] Run benchmarks using optimized Release builds
+- [x] Exclude sanitizers, Valgrind, and debug instrumentation from performance measurements
 - [ ] Verify benchmark configuration uses the intended compiler and optimization flags
 
 #### Benchmark Design
 
 - [ ] Define repeatable workloads with representative runtime inputs
-- [ ] Prevent dead-code elimination and unintended constant folding
-- [ ] Avoid measuring benchmark setup and unrelated allocations unless explicitly intended
+- [x] Prevent dead-code elimination and unintended constant folding
+- [x] Avoid measuring benchmark setup and unrelated allocations unless explicitly intended
 - [ ] Separate operation latency from batch throughput measurements where useful
-- [ ] Include representative workloads rather than relying only on trivial constant inputs
-- [ ] Repeat measurements to identify significant variance
+- [x] Include representative workloads rather than relying only on trivial constant inputs
+- [x] Repeat measurements to identify significant variance
 - [ ] Document benchmark methodology and environmental limitations
 
 #### Vector Benchmarks
@@ -852,7 +852,7 @@
 
 #### Matrix Benchmarks
 
-- [ ] Benchmark `Matrix4f` multiplication
+- [x] Benchmark `Matrix4f` multiplication
 - [ ] Benchmark matrix-vector multiplication and transformations
 - [ ] Benchmark translation, rotation, and scaling matrix construction
 - [ ] Benchmark matrix transpose
@@ -877,27 +877,27 @@
 - [ ] Record CPU model, architecture, and relevant hardware characteristics
 - [ ] Record compiler version, standard library, build configuration, and optimization flags
 - [ ] Record source revision and benchmark configuration
-- [ ] Collect repeated measurements with representative timing statistics
-- [ ] Investigate unusually inconsistent or suspiciously low measurements
+- [x] Collect repeated measurements with representative timing statistics
+- [x] Investigate unusually inconsistent or suspiciously low measurements
 - [ ] Save baseline results in a documented, reproducible format
 - [ ] Establish scalar implementation baselines before introducing explicit SIMD
 
 #### Architecture and Future Optimization
 
-- [ ] Preserve the portable scalar implementation as the correctness reference
+- [x] Preserve the portable scalar implementation as the correctness reference
 - [x] Avoid adding SIMD-specific types to public mathematical APIs
 - [x] Avoid premature runtime backend dispatch
-- [ ] Do not optimize operations solely because microbenchmarks expose small differences
+- [x] Do not optimize operations solely because microbenchmarks expose small differences
 - [ ] Identify potential optimization candidates without implementing speculative optimizations
 - [x] Defer explicit SIMD optimization and backend comparisons to Phase 23
 - [ ] Use the Phase 6.9 results as the reference for future performance comparisons
 
 #### Completion Criteria
 
-- [ ] Benchmark infrastructure builds and executes independently of normal tests
+- [x] Benchmark infrastructure builds and executes independently of normal tests
 - [ ] Essential implemented mathematical operations have representative performance baselines
 - [ ] Measurements can be reproduced with documented configuration and methodology
-- [ ] Results are recorded without introducing arbitrary performance pass/fail thresholds
+- [x] Results are recorded without introducing arbitrary performance pass/fail thresholds
 - [ ] Baseline measurements are complete before beginning Phase 7
 
 ### Architecture
