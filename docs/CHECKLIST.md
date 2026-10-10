@@ -805,15 +805,15 @@
 - [x] Test composed transformations and multiplication-order sensitivity
 - [x] Test floating-point comparisons using documented tolerances
 - [x] Test double-precision operations independently of float implementations
-- [ ] Verify CPU-generated matrices match shader transformation conventions
-- [ ] Verify applicable mathematical operations can execute during constant evaluation
+- [x] Verify CPU-generated matrices match shader transformation conventions
+- [x] Verify applicable mathematical operations can execute during constant evaluation
   - [x] Verify compile-time identity-matrix construction
   - [x] Verify compile-time matrix element access
   - [x] Verify compile-time translation and scaling matrices
   - [x] Verify applicable `Vector2f` arithmetic operations
   - [x] Verify applicable `Vector3f` arithmetic operations
   - [x] Verify applicable `Vector4f` arithmetic operations
-  - [ ] Verify applicable rotation and quaternion operations
+  - [x] Verify applicable rotation and quaternion operations
 - [x] Run unit tests, sanitizers, memory checks, Clang-Tidy, formatting, and documentation checks
 - [ ] Establish optimized-build performance baselines before introducing explicit SIMD
 

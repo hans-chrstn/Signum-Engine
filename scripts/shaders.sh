@@ -6,8 +6,10 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd -- "${script_dir}/.." && pwd)"
 
 slang_shader_source_dir="${project_root}/shaders/slang/basic"
-shader_source_dir="${project_root}/shaders/basic"
+shader_source_dir="${project_root}/shaders/glsl/basic"
 shader_output_dir="${project_root}/build/shaders"
+slang_test_shader_source_dir="${project_root}/shaders/slang/tests"
+shader_disassembly="$(spirv-dis "${shader_output_dir}/triangle.vert.spv")"
 
 mkdir -p -- "${shader_output_dir}"
 
@@ -30,8 +32,6 @@ slangc "${slang_shader_source_dir}/triangle.slang" \
     -o "${shader_output_dir}/triangle.vert.spv"
 
 spirv-val "${shader_output_dir}/triangle.vert.spv"
-
-shader_disassembly="$(spirv-dis "${shader_output_dir}/triangle.vert.spv")"
 
 if [[ "$shader_disassembly" != *"OpMemberDecorate %ModelPushConstants_std430 0 RowMajor"* ]]; then
     echo "Unexpected model matrix layout" >&2
@@ -61,5 +61,14 @@ slangc "${slang_shader_source_dir}/triangle.slang" \
     -o "${shader_output_dir}/triangle.frag.spv"
 
 spirv-val "${shader_output_dir}/triangle.frag.spv"
+
+slangc "${slang_test_shader_source_dir}/matrix_transform.slang" \
+    -target spirv \
+    -entry computeMain \
+    -stage compute \
+    -matrix-layout-column-major \
+    -o "${shader_output_dir}/matrix_transform.comp.spv"
+
+spirv-val "${shader_output_dir}/matrix_transform.comp.spv"
 
 printf 'Compiled and validated shaders: %s\n' "${shader_output_dir}"

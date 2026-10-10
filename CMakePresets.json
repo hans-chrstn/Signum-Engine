@@ -68,6 +68,19 @@
         "BUILD_TESTING": false,
         "SIGNUM_ENABLE_SANITIZERS": false
       }
+    },
+    {
+      "name": "bench",
+      "displayName": "Optimized Mathematics Benchmarks",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": false,
+        "SIGNUM_BUILD_BENCHMARKS": true,
+        "SIGNUM_ENABLE_SANITIZERS": false,
+        "SIGNUM_ENABLE_REFLECTION": false,
+        "SIGNUM_ENABLE_CONTRACTS": false
+      }
     }
   ],
   "buildPresets": [
@@ -90,6 +103,10 @@
     {
       "name": "release",
       "configurePreset": "release"
+    },
+    {
+      "name": "bench",
+      "configurePreset": "bench"
     }
   ],
   "testPresets": [

@@ -8,6 +8,7 @@ add_executable(
   renderer/vulkan/memory/vulkan_image_integration_tests.cpp
   renderer/vulkan/command/vulkan_immediate_submission_integration_tests.cpp
   renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
+  renderer/vulkan/compute/vulkan_matrix_transform_integration_tests.cpp
 )
 
 target_link_libraries(
@@ -15,6 +16,12 @@ target_link_libraries(
   PRIVATE
     signum_engine
     GTest::gtest_main
+)
+
+target_compile_definitions(
+  signum_integration_tests
+  PRIVATE
+    SIGNUM_TEST_SHADER_DIR="${CMAKE_SOURCE_DIR}/build/shaders"
 )
 
 include(GoogleTest)

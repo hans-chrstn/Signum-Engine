@@ -45,6 +45,12 @@ option(
   OFF
 )
 
+option(
+  SIGNUM_BUILD_BENCHMARKS
+  "Build standalone mathematics benchmarks"
+  OFF
+)
+
 if(SIGNUM_ENABLE_REFLECTION OR SIGNUM_ENABLE_CONTRACTS)
   if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(
@@ -144,4 +150,8 @@ include(CTest)
 
 if(BUILD_TESTING)
   add_subdirectory(tests)
+endif()
+
+if(SIGNUM_BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
 endif()

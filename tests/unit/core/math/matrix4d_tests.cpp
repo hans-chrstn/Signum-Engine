@@ -65,6 +65,58 @@ static_assert([] -> bool {
            matrix.at(kLastIndex, kLastIndex) == 1.0;
 }());
 
+static_assert([] -> bool {
+    constexpr double kTranslationX = 2.0;
+    constexpr double kTranslationY = 3.0;
+    constexpr double kTranslationZ = 4.0;
+
+    constexpr Math::Vector3d kInput{
+        .x = 1.0,
+        .y = 2.0,
+        .z = 3.0,
+    };
+
+    constexpr Math::Vector3d kExpectedPoint{
+        .x = 3.0,
+        .y = 5.0,
+        .z = 7.0,
+    };
+
+    constexpr auto matrix =
+        Math::translate(kTranslationX, kTranslationY, kTranslationZ);
+
+    constexpr auto point = Math::transformPoint(matrix, kInput);
+    constexpr auto direction = Math::transformDirection(matrix, kInput);
+
+    return point.x == kExpectedPoint.x && point.y == kExpectedPoint.y &&
+           point.z == kExpectedPoint.z && direction.x == kInput.x &&
+           direction.y == kInput.y && direction.z == kInput.z;
+}());
+
+static_assert([] -> bool {
+    constexpr double kTranslationX = 2.0;
+    constexpr double kTranslationY = 3.0;
+    constexpr double kTranslationZ = 4.0;
+    constexpr double kZero = 0.0;
+
+    constexpr std::size_t kXIndex = 0U;
+    constexpr std::size_t kYIndex = 1U;
+    constexpr std::size_t kZIndex = 2U;
+    constexpr std::size_t kTranslationIndex = Math::kMatrix4dDimension - 1U;
+
+    constexpr auto matrix =
+        Math::translate(kTranslationX, kTranslationY, kTranslationZ);
+
+    constexpr auto result = Math::transpose(matrix);
+
+    return result.at(kTranslationIndex, kXIndex) == kTranslationX &&
+           result.at(kTranslationIndex, kYIndex) == kTranslationY &&
+           result.at(kTranslationIndex, kZIndex) == kTranslationZ &&
+           result.at(kXIndex, kTranslationIndex) == kZero &&
+           result.at(kYIndex, kTranslationIndex) == kZero &&
+           result.at(kZIndex, kTranslationIndex) == kZero;
+}());
+
 TEST(Matrix4dTests, DefaultInitializationProducesZeroMatrix) {
     const Math::Matrix4d matrix{};
 

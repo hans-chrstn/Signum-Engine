@@ -58,6 +58,7 @@
             # LLVM tooling
             clangTools
             llvm.lldb
+            neocmakelsp
 
             # Development tools
             gdb
@@ -69,6 +70,7 @@
 
             # Vulkan tooling
             glslang
+            glsl_analyzer
             shader-slang
             spirv-tools
             vulkan-tools
@@ -79,6 +81,7 @@
         buildInputs = with pkgs; [
           # Tests
           gtest
+          gbenchmark
 
           # Windowing
           glfw

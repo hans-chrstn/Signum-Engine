@@ -56,6 +56,9 @@ release:
 clean:
     ./scripts/clean.sh
 
+bench:
+    ./scripts/bench.sh
+
 all:
     ./scripts/clean.sh
     ./scripts/format.sh
