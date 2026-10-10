@@ -726,7 +726,7 @@
 - [x] Define point, direction, and homogeneous-coordinate semantics
 - [x] Define radians as the default rotation-angle unit
 - [ ] Define matrix composition order and transformation semantics
-- [ ] Define numerical comparison and tolerance policy
+- [x] Define numerical comparison and tolerance policy
 - [ ] Define behavior for degenerate and singular mathematical operations
 - [ ] Define explicit conversion policy between numeric precisions
 - [ ] Define mathematical type alignment and layout requirements separately from GPU upload representations
@@ -772,7 +772,7 @@
 - [x] Implement essential matrix inversion with defined singular-input behavior
 - [x] Implement quaternion identity, normalization, multiplication, and rotation conversion
 - [x] Implement essential double-precision vector and matrix variants
-- [ ] Define explicit CPU-to-shader matrix conversion or layout contracts
+- [x] Define explicit CPU-to-shader matrix conversion or layout contracts
 - [x] Replace manually assembled renderer model matrices after math validation
 - [ ] Add basic camera/view and Vulkan-compatible projection mathematics when the Phase 7 reference scene requires them
 - [x] Keep mathematical utilities separate from scene entities and transform-component ownership
@@ -803,7 +803,7 @@
 - [x] Test matrix transpose and inversion
 - [x] Test point versus direction transformation behavior
 - [x] Test composed transformations and multiplication-order sensitivity
-- [ ] Test floating-point comparisons using documented tolerances
+- [x] Test floating-point comparisons using documented tolerances
 - [x] Test double-precision operations independently of float implementations
 - [ ] Verify CPU-generated matrices match shader transformation conventions
 - [ ] Verify applicable mathematical operations can execute during constant evaluation

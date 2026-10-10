@@ -12,7 +12,13 @@
 
 Both precisions are supported. The renderer currently uses `float`.
 
-Precision conversions across subsystem boundaries must be explicit. Conversion functions and their error handling are not implemented yet.
+## Precision
+
+- Use `float` for rendering data when its precision is sufficient.
+- Use `double` for large-world coordinates and high-precision simulation.
+- Select GPU precision according to numerical requirements and hardware support.
+- Precision conversions must be explicit and account for range and precision loss.
+- CPU mathematical types must not depend on GPU layout requirements.
 
 ## Matrices
 
