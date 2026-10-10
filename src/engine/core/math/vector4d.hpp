@@ -6,12 +6,12 @@
 #include <cmath>
 
 namespace SNE::Engine::Core::Math {
+
     /**
-     * @brief Represents a four-dimensional single-precision floating-point
-     * vector.
+     * @brief Represents a four-dimensional double-precision vector.
      *
-     * Stores four components representing coordinates or values
-     * in four-dimensional space.
+     * Stores four double-precision floating-point components representing
+     * coordinates or values in four-dimensional space.
      *
      * The vector supports addition, subtraction, dot products,
      * magnitude calculations, normalization, and scalar multiplication.
@@ -21,36 +21,38 @@ namespace SNE::Engine::Core::Math {
      * Default initialization produces a zero vector.
      *
      * The W component has no implicit homogeneous-coordinate semantics.
-     * This type is independent of rendering APIs.
+     *
+     * This type is independent of rendering APIs and does not impose
+     * SIMD-specific alignment or storage requirements.
      */
-    struct Vector4f {
+    struct Vector4d {
         /**
          * @brief X component of the vector.
          *
          * Initialized to zero by default.
          */
-        float x{};
+        double x{};
 
         /**
          * @brief Y component of the vector.
          *
          * Initialized to zero by default.
          */
-        float y{};
+        double y{};
 
         /**
          * @brief Z component of the vector.
          *
          * Initialized to zero by default.
          */
-        float z{};
+        double z{};
 
         /**
          * @brief W component of the vector.
          *
          * Initialized to zero by default.
          */
-        float w{};
+        double w{};
     };
 
     /**
@@ -66,11 +68,11 @@ namespace SNE::Engine::Core::Math {
      * @param first First vector operand.
      * @param second Second vector operand.
      *
-     * @return A new Vector4f containing the component-wise sum.
+     * @return A new Vector4d containing the component-wise sum.
      */
-    [[nodiscard]] constexpr auto add(Vector4f first, Vector4f second)
-        -> Vector4f {
-        return Vector4f{
+    [[nodiscard]] constexpr auto add(Vector4d first, Vector4d second)
+        -> Vector4d {
+        return Vector4d{
             .x = first.x + second.x,
             .y = first.y + second.y,
             .z = first.z + second.z,
@@ -92,11 +94,11 @@ namespace SNE::Engine::Core::Math {
      * @param first Vector to subtract from.
      * @param second Vector to subtract.
      *
-     * @return A new Vector4f containing the component-wise difference.
+     * @return A new Vector4d containing the component-wise difference.
      */
-    [[nodiscard]] constexpr auto subtract(Vector4f first, Vector4f second)
-        -> Vector4f {
-        return Vector4f{
+    [[nodiscard]] constexpr auto subtract(Vector4d first, Vector4d second)
+        -> Vector4d {
+        return Vector4d{
             .x = first.x - second.x,
             .y = first.y - second.y,
             .z = first.z - second.z,
@@ -120,7 +122,8 @@ namespace SNE::Engine::Core::Math {
      *
      * @return The scalar dot product of the two vectors.
      */
-    [[nodiscard]] constexpr auto dot(Vector4f first, Vector4f second) -> float {
+    [[nodiscard]] constexpr auto dot(Vector4d first, Vector4d second)
+        -> double {
         return (first.x * second.x) + (first.y * second.y) +
                (first.z * second.z) + (first.w * second.w);
     }
@@ -140,25 +143,28 @@ namespace SNE::Engine::Core::Math {
      *
      * @return The squared Euclidean length of the vector.
      */
-    [[nodiscard]] constexpr auto lengthSquared(Vector4f vector) -> float {
+    [[nodiscard]] constexpr auto lengthSquared(Vector4d vector) -> double {
         return dot(vector, vector);
     }
 
     /**
-     * @brief Computes the Euclidean length of a vector.
+     * @brief Computes the Euclidean magnitude of a four-dimensional vector.
      *
-     * Calculates the square root of the sum of the squares
-     * of all four vector components.
+     * Calculates the vector's magnitude using nested std::hypot
+     * operations to reduce unnecessary intermediate overflow
+     * and underflow.
      *
-     * The resulting value represents the magnitude
-     * of the vector in four-dimensional Euclidean space.
+     * All four vector components contribute to the magnitude.
      *
-     * @param vector Vector whose length is calculated.
+     * The input vector is not modified.
      *
-     * @return The Euclidean length of the vector.
+     * @param vector Vector whose magnitude is calculated.
+     *
+     * @return The non-negative magnitude of the vector.
      */
-    [[nodiscard]] inline auto length(Vector4f vector) -> float {
-        return std::sqrt(lengthSquared(vector));
+    [[nodiscard]] inline auto length(Vector4d vector) -> double {
+        return std::hypot(std::hypot(vector.x, vector.y),
+                          std::hypot(vector.z, vector.w));
     }
 
     /**
@@ -180,17 +186,17 @@ namespace SNE::Engine::Core::Math {
      * @pre The computed vector length must be greater than zero
      *      and finite.
      *
-     * @return A new Vector4f containing the normalized vector.
+     * @return A new Vector4d containing the normalized vector.
      */
-    [[nodiscard]] inline auto normalize(Vector4f vector) -> Vector4f {
-        const float vector_length = length(vector);
-        if (!std::isfinite(vector_length) || vector_length <= 0.0F) {
+    [[nodiscard]] inline auto normalize(Vector4d vector) -> Vector4d {
+        const double vector_length = length(vector);
+        if (!std::isfinite(vector_length) || vector_length <= 0.0) {
             Assertion::failAssertion(
                 Assertion::AssertionType::Precondition, Error::Subsystem::Core,
                 "Cannot normalize a vector with an invalid magnitude");
         }
 
-        return Vector4f{
+        return Vector4d{
             .x = vector.x / vector_length,
             .y = vector.y / vector_length,
             .z = vector.z / vector_length,
@@ -213,11 +219,11 @@ namespace SNE::Engine::Core::Math {
      * @param vector Vector to scale.
      * @param scalar Scalar multiplication factor.
      *
-     * @return A new Vector4f containing the scaled vector.
+     * @return A new Vector4d containing the scaled vector.
      */
-    [[nodiscard]] constexpr auto scale(Vector4f vector, float scalar)
-        -> Vector4f {
-        return Vector4f{
+    [[nodiscard]] constexpr auto scale(Vector4d vector, double scalar)
+        -> Vector4d {
+        return Vector4d{
             .x = vector.x * scalar,
             .y = vector.y * scalar,
             .z = vector.z * scalar,

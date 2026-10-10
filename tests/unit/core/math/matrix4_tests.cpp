@@ -711,7 +711,7 @@ TEST(Matrix4Tests, InvertsIdentityMatrix) {
     const auto inverse = Math::tryInverse(matrix);
 
     if (!inverse.has_value()) {
-        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        FAIL() << "Expected matrix inversion to succeed";
         return;
     }
 
@@ -742,7 +742,7 @@ TEST(Matrix4Tests, InvertsTranslationMatrix) {
     const auto inverse = Math::tryInverse(matrix);
 
     if (!inverse.has_value()) {
-        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        FAIL() << "Expected matrix inversion to succeed";
         return;
     }
 
@@ -777,7 +777,7 @@ TEST(Matrix4Tests, InvertsNonUniformScaleMatrix) {
     const auto inverse = Math::tryInverse(matrix);
 
     if (!inverse.has_value()) {
-        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        FAIL() << "Expected matrix inversion to succeed";
         return;
     }
 
@@ -804,7 +804,7 @@ TEST(Matrix4Tests, InversionHandlesPivotRowSwapping) {
     const auto inverse = Math::tryInverse(matrix);
 
     if (!inverse.has_value()) {
-        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        FAIL() << "Expected matrix inversion to succeed";
         return;
     }
 
@@ -839,7 +839,7 @@ TEST(Matrix4Tests, InvertsComposedTransformation) {
     const auto inverse = Math::tryInverse(matrix);
 
     if (!inverse.has_value()) {
-        ADD_FAILURE() << "Expected matrix inversion to succeed";
+        FAIL() << "Expected matrix inversion to succeed";
         return;
     }
 

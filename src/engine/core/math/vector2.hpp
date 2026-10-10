@@ -153,7 +153,7 @@ namespace SNE::Engine::Core::Math {
     [[nodiscard]] inline auto normalize(Vector2f vector) -> Vector2f {
         const float vector_length = length(vector);
 
-        if (vector_length <= 0.0F || !std::isfinite(vector_length)) {
+        if (!std::isfinite(vector_length) || vector_length <= 0.0F) {
             Assertion::failAssertion(
                 Assertion::AssertionType::Precondition, Error::Subsystem::Core,
                 "Cannot normalize a vector with an invalid magnitude");

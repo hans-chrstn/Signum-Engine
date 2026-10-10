@@ -227,7 +227,7 @@ namespace SNE::Engine::Core::Math {
      */
     [[nodiscard]] inline auto normalize(Quaternionf quaternion) -> Quaternionf {
         const float quaternion_length = length(quaternion);
-        if (quaternion_length <= 0.0F || !std::isfinite(quaternion_length)) {
+        if (!std::isfinite(quaternion_length) || quaternion_length <= 0.0F) {
             Assertion::failAssertion(
                 Assertion::AssertionType::Precondition, Error::Subsystem::Core,
                 "Cannot normalize a quaternion with an invalid magnitude");
