@@ -51,22 +51,24 @@ namespace SNE::Engine::Renderer::Vulkan {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanGraphicsPipeline requires a nonempty vertex shader "
-                "entry-point name");
+                "VulkanGraphicsPipeline requires the fragment shader input "
+                "to specify ShaderStage::Fragment");
         }
 
         if (graphics_shader_data.vertex.selection.entry_point.empty()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanGraphicsPipeline requires a nonempty fragment shader "
+                "VulkanGraphicsPipeline requires a nonempty vertex shader "
                 "entry-point name");
         }
 
         if (graphics_shader_data.fragment.selection.entry_point.empty()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan, "");
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires a nonempty fragment shader "
+                "entry-point name");
         }
 
         VulkanShaderModule vertex_shader =
