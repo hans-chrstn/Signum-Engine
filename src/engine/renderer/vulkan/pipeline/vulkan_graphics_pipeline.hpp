@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "engine/renderer/shader/shader_stage_input.hpp"
 #include <span>
 #include <vulkan/vulkan.h>
 
@@ -48,27 +48,36 @@ namespace SNE::Engine::Renderer::Vulkan {
     };
 
     /**
-     * @brief Describes compiled shader data used to create a graphics pipeline.
+     * @brief Describes shader inputs required to create a graphics pipeline.
      *
-     * Contains non-owning views of the SPIR-V bytecode for the vertex and
-     * fragment shader stages.
+     * Contains vertex and fragment shader descriptions, each specifying
+     * borrowed SPIR-V bytecode, an execution stage, and an exported
+     * entry-point name.
      *
-     * The caller retains ownership of the underlying bytecode and must keep
-     * it valid throughout graphics-pipeline construction.
+     * The underlying SPIR-V storage must remain valid throughout
+     * pipeline construction.
      *
-     * The shader data is not retained after pipeline creation.
+     * Entry-point names are owned by their respective shader descriptions.
+     * The descriptions are not retained by the graphics pipeline.
      */
     struct GraphicsShaderData {
         /**
-         * @brief Borrowed SPIR-V bytecode for the vertex shader stage.
+         * @brief Vertex shader input used during pipeline creation.
+         *
+         * Must specify the vertex execution stage, nonempty SPIR-V
+         * bytecode, and a valid exported entry-point name.
          */
-        std::span<const std::uint32_t> vertex_data;
+        Shader::ShaderStageInput vertex{};
 
         /**
-         * @brief Borrowed SPIR-V bytecode for the fragment shader stage.
+         * @brief Fragment shader input used during pipeline creation.
+         *
+         * Must specify the fragment execution stage, nonempty SPIR-V
+         * bytecode, and a valid exported entry-point name.
          */
-        std::span<const std::uint32_t> fragment_data;
+        Shader::ShaderStageInput fragment{};
     };
+
     /**
      * @brief Owns a Vulkan graphics pipeline and its pipeline layout.
      *
@@ -130,8 +139,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * resources.
          * @param color_attachment_format Format of the color attachment used
          * with the graphics pipeline.
-         * @param graphics_shader_data Borrowed SPIR-V bytecode for the vertex
-         * and fragment shader stages.
+         * @param graphics_shader_data Vertex and fragment shader inputs,
+         * including borrowed SPIR-V bytecode and selected entry points.
          * @param graphics_vertex_input_data Borrowed vertex input binding and
          * attribute descriptions.
          * @param graphics_pipeline_layout_data Borrowed pipeline-layout
@@ -139,10 +148,13 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @pre device must be a valid Vulkan logical-device handle.
          * @pre color_attachment_format must not be VK_FORMAT_UNDEFINED.
-         * @pre graphics_shader_data.vertex_data must contain valid, nonempty
-         * vertex shader SPIR-V.
-         * @pre graphics_shader_data.fragment_data must contain valid, nonempty
-         * fragment shader SPIR-V.
+         * @pre graphics_shader_data.vertex must specify a vertex-stage
+         * shader with valid, nonempty SPIR-V bytecode.
+         * @pre graphics_shader_data.fragment must specify a fragment-stage
+         * shader with valid, nonempty SPIR-V bytecode.
+         * @pre Both shader inputs must specify nonempty exported entry-point
+         * names that exist in their respective SPIR-V modules and match
+         * their requested execution stages.
          *
          * @post Successful construction produces a non-null Vulkan pipeline
          * layout and graphics pipeline.

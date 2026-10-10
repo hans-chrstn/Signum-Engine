@@ -10,6 +10,7 @@
 #include "engine/platform/window.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_discovery.hpp"
@@ -240,8 +241,24 @@ namespace SNE::Engine::Renderer::Vulkan {
             const auto vertex_data =
                 loadSpirv("build/shaders/triangle.vert.spv");
             const GraphicsShaderData graphics_data{
-                .vertex_data = vertex_data,
-                .fragment_data = fragment_data,
+                .vertex =
+                    {
+                        .words = vertex_data,
+                        .selection =
+                            {
+                                .stage = Shader::ShaderStage::Vertex,
+                                .entry_point = "main",
+                            },
+                    },
+                .fragment =
+                    {
+                        .words = fragment_data,
+                        .selection =
+                            {
+                                .stage = Shader::ShaderStage::Fragment,
+                                .entry_point = "main",
+                            },
+                    },
             };
 
             VkVertexInputBindingDescription vertex_binding{};

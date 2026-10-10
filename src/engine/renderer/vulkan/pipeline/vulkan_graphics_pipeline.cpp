@@ -6,6 +6,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
+#include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include "vulkan_shader_module.hpp"
 #include <array>
@@ -36,10 +37,42 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "format");
         }
 
+        if (graphics_shader_data.vertex.selection.stage !=
+            Shader::ShaderStage::Vertex) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires the vertex shader input "
+                "to specify ShaderStage::Vertex");
+        }
+
+        if (graphics_shader_data.fragment.selection.stage !=
+            Shader::ShaderStage::Fragment) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires a nonempty vertex shader "
+                "entry-point name");
+        }
+
+        if (graphics_shader_data.vertex.selection.entry_point.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires a nonempty fragment shader "
+                "entry-point name");
+        }
+
+        if (graphics_shader_data.fragment.selection.entry_point.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan, "");
+        }
+
         VulkanShaderModule vertex_shader =
-            VulkanShaderModule(m_Device, graphics_shader_data.vertex_data);
+            VulkanShaderModule(m_Device, graphics_shader_data.vertex.words);
         VulkanShaderModule fragment_shader =
-            VulkanShaderModule(m_Device, graphics_shader_data.fragment_data);
+            VulkanShaderModule(m_Device, graphics_shader_data.fragment.words);
 
         VkPipelineShaderStageCreateInfo vertex_stage_description{};
         vertex_stage_description.sType =
@@ -49,7 +82,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         // Actual compiled vertex shader
         vertex_stage_description.module = vertex_shader.nativeHandle();
         // Shader function Vulkan starts executing
-        vertex_stage_description.pName = "main";
+        vertex_stage_description.pName =
+            graphics_shader_data.vertex.selection.entry_point.c_str();
 
         VkPipelineShaderStageCreateInfo fragment_stage_description{};
         fragment_stage_description.sType =
@@ -59,7 +93,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         // Actual compiled fragment shader
         fragment_stage_description.module = fragment_shader.nativeHandle();
         // Shader function Vulkan starts executing
-        fragment_stage_description.pName = "main";
+        fragment_stage_description.pName =
+            graphics_shader_data.fragment.selection.entry_point.c_str();
 
         VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
         vertex_input_state_create_info.sType =
