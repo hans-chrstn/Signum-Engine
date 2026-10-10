@@ -773,7 +773,7 @@
 - [x] Implement quaternion identity, normalization, multiplication, and rotation conversion
 - [x] Implement essential double-precision vector and matrix variants
 - [ ] Define explicit CPU-to-shader matrix conversion or layout contracts
-- [ ] Replace manually assembled renderer model matrices after math validation
+- [x] Replace manually assembled renderer model matrices after math validation
 - [ ] Add basic camera/view and Vulkan-compatible projection mathematics when the Phase 7 reference scene requires them
 - [x] Keep mathematical utilities separate from scene entities and transform-component ownership
 
