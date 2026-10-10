@@ -815,7 +815,7 @@
   - [x] Verify applicable `Vector4f` arithmetic operations
   - [x] Verify applicable rotation and quaternion operations
 - [x] Run unit tests, sanitizers, memory checks, Clang-Tidy, formatting, and documentation checks
-- [ ] Establish optimized-build performance baselines before introducing explicit SIMD
+- [x] Establish optimized-build performance baselines before introducing explicit SIMD
 
 ### Benchmark — Mathematics Performance Baseline
 
@@ -828,59 +828,59 @@
 - [x] Keep benchmark execution separate from normal unit-test and validation workflows
 - [x] Run benchmarks using optimized Release builds
 - [x] Exclude sanitizers, Valgrind, and debug instrumentation from performance measurements
-- [ ] Verify benchmark configuration uses the intended compiler and optimization flags
+- [x] Verify benchmark configuration uses the intended compiler and optimization flags
 
 #### Benchmark Design
 
-- [ ] Define repeatable workloads with representative runtime inputs
+- [x] Define repeatable workloads with representative runtime inputs
 - [x] Prevent dead-code elimination and unintended constant folding
 - [x] Avoid measuring benchmark setup and unrelated allocations unless explicitly intended
 - [ ] Separate operation latency from batch throughput measurements where useful
 - [x] Include representative workloads rather than relying only on trivial constant inputs
 - [x] Repeat measurements to identify significant variance
-- [ ] Document benchmark methodology and environmental limitations
+- [x] Document benchmark methodology and environmental limitations
 
 #### Vector Benchmarks
 
-- [ ] Benchmark `Vector2f`, `Vector3f`, and `Vector4f` addition and subtraction
-- [ ] Benchmark vector scalar multiplication
-- [ ] Benchmark dot products
-- [ ] Benchmark `Vector3f` cross products
-- [ ] Benchmark squared-length calculations
-- [ ] Benchmark vector length calculations
-- [ ] Benchmark vector normalization
+- [x] Benchmark `Vector2f`, `Vector3f`, and `Vector4f` addition and subtraction
+- [x] Benchmark vector scalar multiplication
+- [x] Benchmark dot products
+- [x] Benchmark `Vector3f` cross products
+- [x] Benchmark squared-length calculations
+- [x] Benchmark vector length calculations
+- [x] Benchmark vector normalization
 
 #### Matrix Benchmarks
 
 - [x] Benchmark `Matrix4f` multiplication
-- [ ] Benchmark matrix-vector multiplication and transformations
-- [ ] Benchmark translation, rotation, and scaling matrix construction
-- [ ] Benchmark matrix transpose
-- [ ] Benchmark matrix inversion using representative invertible matrices
-- [ ] Benchmark composed model transformations
+- [x] Benchmark matrix-vector multiplication and transformations
+- [x] Benchmark translation, rotation, and scaling matrix construction
+- [x] Benchmark matrix transpose
+- [x] Benchmark matrix inversion using representative invertible matrices
+- [x] Benchmark composed model transformations
 
 #### Quaternion Benchmarks
 
-- [ ] Benchmark quaternion multiplication
-- [ ] Benchmark quaternion normalization
-- [ ] Benchmark quaternion-based vector rotation
-- [ ] Benchmark quaternion-to-matrix conversion
+- [x] Benchmark quaternion multiplication
+- [x] Benchmark quaternion normalization
+- [x] Benchmark quaternion-based vector rotation
+- [x] Benchmark quaternion-to-matrix conversion
 
 #### Precision Benchmarks
 
-- [ ] Benchmark equivalent float and double operations where implemented
-- [ ] Compare execution costs without assuming either precision is always preferable
-- [ ] Preserve numerical correctness as a requirement independent of benchmark speed
+- [x] Benchmark equivalent float and double operations where implemented
+- [x] Compare execution costs without assuming either precision is always preferable
+- [x] Preserve numerical correctness as a requirement independent of benchmark speed
 
 #### Baseline Collection
 
-- [ ] Record CPU model, architecture, and relevant hardware characteristics
-- [ ] Record compiler version, standard library, build configuration, and optimization flags
-- [ ] Record source revision and benchmark configuration
+- [x] Record CPU model, architecture, and relevant hardware characteristics
+- [x] Record compiler version, standard library, build configuration, and optimization flags
+- [x] Record source revision and benchmark configuration
 - [x] Collect repeated measurements with representative timing statistics
 - [x] Investigate unusually inconsistent or suspiciously low measurements
-- [ ] Save baseline results in a documented, reproducible format
-- [ ] Establish scalar implementation baselines before introducing explicit SIMD
+- [x] Save baseline results in a documented, reproducible format
+- [x] Establish scalar implementation baselines before introducing explicit SIMD
 
 #### Architecture and Future Optimization
 
@@ -888,36 +888,36 @@
 - [x] Avoid adding SIMD-specific types to public mathematical APIs
 - [x] Avoid premature runtime backend dispatch
 - [x] Do not optimize operations solely because microbenchmarks expose small differences
-- [ ] Identify potential optimization candidates without implementing speculative optimizations
+- [x] Identify potential optimization candidates without implementing speculative optimizations
 - [x] Defer explicit SIMD optimization and backend comparisons to Phase 23
 - [ ] Use the Phase 6.9 results as the reference for future performance comparisons
 
 #### Completion Criteria
 
 - [x] Benchmark infrastructure builds and executes independently of normal tests
-- [ ] Essential implemented mathematical operations have representative performance baselines
-- [ ] Measurements can be reproduced with documented configuration and methodology
+- [x] Essential implemented mathematical operations have representative performance baselines
+- [x] Measurements can be reproduced with documented configuration and methodology
 - [x] Results are recorded without introducing arbitrary performance pass/fail thresholds
-- [ ] Baseline measurements are complete before beginning Phase 7
+- [x] Baseline measurements are complete before beginning Phase 7
 
 ### Architecture
 
 - [x] Use C++26 as the project-wide C++ language target
 - [ ] Prefer zero-overhead abstractions that compile to efficient operations
 - [x] Avoid hidden allocations, virtual dispatch, and unnecessary runtime indirection in primitive math operations
-- [ ] Avoid promising zero overhead without inspecting generated code or measuring performance
+- [x] Avoid promising zero overhead without inspecting generated code or measuring performance
 - [x] Preserve small value types and explicit ownership semantics
 - [x] Keep public mathematical interfaces independent of SIMD instruction-set types
 - [x] Keep scalar reference implementations available for correctness comparisons
 - [x] Avoid forcing all numeric types into one premature template hierarchy
-- [ ] Avoid forcing all calculations to use single precision
+- [x] Avoid forcing all calculations to use single precision
 - [x] Preserve compile-time evaluation wherever practical
 - [ ] Avoid implicit precision-losing conversions
 - [x] Avoid coupling math types to Vulkan structures or shader-specific padding
 - [x] Avoid introducing a runtime backend-dispatch system without a demonstrated need
 - [x] Prefer composable mathematical operations over monolithic transform managers
-- [ ] Keep mathematical coordinate conventions documented and consistent across CPU and GPU boundaries
-- [ ] Preserve opportunities for cache-friendly data layouts and SIMD-friendly batch operations
+- [x] Keep mathematical coordinate conventions documented and consistent across CPU and GPU boundaries
+- [x] Preserve opportunities for cache-friendly data layouts and SIMD-friendly batch operations
 - [x] Keep mathematical algorithms independent of scene representation, physics, procedural generation, and world streaming
 - [x] Avoid premature ABI guarantees for mathematical types exposed across future module boundaries
 - [x] Keep the initial mathematics foundation small enough to verify and maintain
@@ -936,11 +936,11 @@
 
 - [x] Essential vector and matrix operations are reusable without renderer dependencies
 - [x] Mathematical element access hides column-major indexing from callers
-- [ ] Required foundation operations have independently verified unit tests
-- [ ] Supported compile-time operations pass constant-evaluation checks
-- [ ] Core conventions for precision, transformation order, and CPU/GPU interoperability are documented
-- [ ] Phase 7 can construct and combine transformations without manually assembling matrix arrays
-- [ ] The library can gain SIMD implementations later without forcing renderer or simulation API changes
+- [x] Required foundation operations have independently verified unit tests
+- [x] Supported compile-time operations pass constant-evaluation checks
+- [x] Core conventions for precision, transformation order, and CPU/GPU interoperability are documented
+- [x] Phase 7 can construct and combine transformations without manually assembling matrix arrays
+- [x] The library can gain SIMD implementations later without forcing renderer or simulation API changes
 
 ---
 
