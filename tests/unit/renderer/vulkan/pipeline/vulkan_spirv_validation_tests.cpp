@@ -3,8 +3,10 @@
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_validation.hpp"
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <gtest/gtest.h>
 #include <span>
+#include <string_view>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Core = SNE::Engine::Core;
