@@ -948,8 +948,8 @@
 
 ### Learn
 
-- [ ] shaders
-- [ ] graphics pipelines
+- [x] shaders
+- [x] graphics pipelines
 - [ ] buffers
 - [ ] textures
 - [ ] descriptors
@@ -980,6 +980,8 @@
 - [ ] Define GPU-completion-aware resource retention for submissions still in flight
 - [ ] Keep optional device-feature requirements explicit rather than assuming all Vulkan hardware supports descriptor indexing or advanced shaders
 - [ ] Record criteria for evaluating Slang against the initial shader toolchain before committing to a compiler migration
+- [x] Define shader-stage and entry-point selection contracts
+- [x] Define SPIR-V validation failure and diagnostic contracts
 
 ### Implement
 
@@ -987,6 +989,11 @@
 - [x] Add graphics pipelines
 - [x] Add vertex buffers
 - [x] Add index buffers
+- [x] Validate SPIR-V modules against the Vulkan 1.4 environment
+- [x] Validate shader entry-point names and execution stages
+- [x] Preserve SPIRV-Tools parser result codes in structured errors
+- [x] Integrate shader validation into Vulkan shader-module creation
+- [x] Integrate entry-point validation into Vulkan graphics-pipeline creation
 - [ ] Add uniform/storage buffers
 - [ ] Add textures
 - [ ] Add descriptor/binding infrastructure
@@ -1012,6 +1019,11 @@
 
 ### Test
 
+- [x] Test valid, empty, and malformed SPIR-V modules
+- [x] Test matching Vertex, Fragment, and Compute entry points
+- [x] Test missing entry-point names and incompatible shader stages
+- [x] Test structured SPIR-V validation and entry-point error codes
+- [x] Test SPIR-V validation without GPU resources
 - [ ] Test pure resource descriptions
 - [ ] Test shader/pipeline/binding descriptions without optional rendering modules
 - [ ] Test material parameter/binding behavior without effect-specific assumptions
