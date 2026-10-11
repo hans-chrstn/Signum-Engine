@@ -107,6 +107,8 @@ namespace SNE::Engine::Core::Error {
         VulkanDeviceWaitIdleFailed,
         /** Failed to validate Vulkan Spir-V. */
         VulkanSpirvValidationFailed,
+        /** Required Vulkan shader entry point could not be obtained. */
+        VulkanShaderEntryPointUnavailable,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

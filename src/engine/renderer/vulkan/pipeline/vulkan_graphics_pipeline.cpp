@@ -8,6 +8,7 @@
 #include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_spirv_validation.hpp"
 #include "vulkan_shader_module.hpp"
 #include <array>
 #include <cstdint>
@@ -72,6 +73,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         validateGraphicsShaderData(graphics_shader_data);
+        validateSpirvEntryPoint(graphics_shader_data.vertex.words,
+                                graphics_shader_data.vertex.selection);
+        validateSpirvEntryPoint(graphics_shader_data.fragment.words,
+                                graphics_shader_data.fragment.selection);
 
         VulkanShaderModule vertex_shader =
             VulkanShaderModule(m_Device, graphics_shader_data.vertex.words);
