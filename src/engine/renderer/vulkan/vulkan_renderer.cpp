@@ -243,7 +243,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             const GraphicsShaderData graphics_data{
                 .vertex =
                     {
-                        .words = vertex_data,
+                        .words = vertex_data.words,
                         .selection =
                             {
                                 .stage = Shader::ShaderStage::Vertex,
@@ -252,7 +252,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                     },
                 .fragment =
                     {
-                        .words = fragment_data,
+                        .words = fragment_data.words,
                         .selection =
                             {
                                 .stage = Shader::ShaderStage::Fragment,

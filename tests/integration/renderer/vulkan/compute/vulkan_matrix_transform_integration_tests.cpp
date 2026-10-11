@@ -1,9 +1,9 @@
-
 #include "../vulkan_integration_test_fixture.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/vector3.hpp"
 #include "engine/core/math/vector4.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/shader/shader_artifact.hpp"
 #include "engine/renderer/vulkan/device/vulkan_queue_families.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_readback.hpp"
@@ -22,6 +22,7 @@
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Math = SNE::Engine::Core::Math;
 namespace Renderer = SNE::Engine::Renderer;
+namespace Shader = SNE::Engine::Renderer::Shader;
 
 namespace {
     struct ComputeTestResources {
@@ -208,9 +209,9 @@ TEST_F(VulkanIntegrationTest, CpuMatrixMatchesComputeShader) {
         std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
         "matrix_transform.comp.spv";
 
-    const std::vector<std::uint32_t> spirv = Vulkan::loadSpirv(shader_path);
+    Shader::ShaderArtifact artifact = Vulkan::loadSpirv(shader_path);
 
-    const Vulkan::VulkanShaderModule shader_module{m_Device, spirv};
+    const Vulkan::VulkanShaderModule shader_module{m_Device, artifact.words};
 
     VkPipelineShaderStageCreateInfo shader_stage{};
     shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

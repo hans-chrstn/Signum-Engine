@@ -970,7 +970,7 @@
 
 ### Design
 
-- [ ] Define a compiler-independent shader artifact contract with SPIR-V as the initial Vulkan backend input
+- [x] Define a compiler-independent shader artifact contract with SPIR-V as the initial Vulkan backend input
 - [ ] Define shader-stage, entry-point, compilation error, and diagnostic ownership
 - [ ] Define shader-interface metadata for bindings, stages, push constants, and pipeline compatibility
 - [ ] Define a minimal shader reflection/validation boundary without depending on gameplay C++ reflection

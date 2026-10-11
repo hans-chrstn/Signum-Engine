@@ -1,14 +1,16 @@
 #include "vulkan_spirv.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "engine/renderer/shader/shader_artifact.hpp"
 
 #include <cstddef>
 #include <fstream>
 #include <limits>
 
+namespace Shader = SNE::Engine::Renderer::Shader;
 namespace SNE::Engine::Renderer::Vulkan {
     auto loadSpirv(const std::filesystem::path &path)
-        -> std::vector<std::uint32_t> {
+        -> Shader::ShaderArtifact {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
 
         if (!file.is_open()) {
@@ -54,7 +56,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         const std::size_t word_count =
             static_cast<std::size_t>(byte_size) / sizeof(std::uint32_t);
 
-        std::vector<std::uint32_t> spirv(word_count);
+        Shader::ShaderArtifact artifact{};
+        artifact.words.resize(word_count);
 
         file.seekg(0, std::ios::beg);
 
@@ -66,7 +69,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Seek SPIR-V Shader Bytecode");
         }
 
-        file.read(reinterpret_cast<char *>(spirv.data()),
+        file.read(reinterpret_cast<char *>(artifact.words.data()),
                   static_cast<std::streamsize>(byte_size));
 
         if (!file) {
@@ -76,6 +79,6 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Read SPIR-V Shader Bytecode");
         }
 
-        return spirv;
+        return artifact;
     }
 } // namespace SNE::Engine::Renderer::Vulkan
