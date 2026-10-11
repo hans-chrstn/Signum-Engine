@@ -310,10 +310,11 @@ namespace SNE::Engine::Renderer::Vulkan {
                 .push_constant_ranges = push_constant_ranges,
             };
 
-            new_graphics_pipeline.emplace(m_Device.nativeHandle(),
-                                          new_swapchain.surfaceFormat().format,
-                                          graphics_data, vertex_input_data,
-                                          graphics_pipeline_layout_data);
+            new_graphics_pipeline.emplace(
+                m_Device.nativeHandle(), new_swapchain.surfaceFormat().format,
+                graphics_data, vertex_input_data, graphics_pipeline_layout_data,
+                m_PhysicalDevice.capabilities.properties.limits
+                    .maxPushConstantsSize);
         }
 
         std::vector<VulkanSemaphore> new_render_finished_semaphores;

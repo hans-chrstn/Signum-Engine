@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/renderer/shader/shader_stage_input.hpp"
+#include <cstdint>
 #include <span>
 #include <vulkan/vulkan.h>
 
@@ -124,7 +125,7 @@ namespace SNE::Engine::Renderer::Vulkan {
       public:
         /**
          * @brief Creates a Vulkan graphics pipeline using supplied SPIR-V
-         * shaders and vertex input descriptions.
+         * shaders, vertex input descriptions, and pipeline-layout requirements.
          *
          * Creates and owns the pipeline layout and graphics pipeline used for
          * Vulkan dynamic rendering with the supplied color-attachment format.
@@ -132,8 +133,17 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The logical device is borrowed and must remain valid for the lifetime
          * of this object.
          *
-         * Shader data and vertex input descriptions are borrowed only during
-         * construction and are not retained by the graphics pipeline.
+         * Shader data, vertex input descriptions, and pipeline-layout
+         * descriptions are borrowed only during construction and are not
+         * retained by the graphics pipeline.
+         *
+         * Shader entry points and reflected push-constant requirements are
+         * validated against the supplied pipeline layout before Vulkan pipeline
+         * resources are created.
+         *
+         * The physical device's push-constant size limit is supplied by the
+         * caller. The constructor does not query physical-device properties
+         * or retain the supplied limit.
          *
          * @param device Logical device used to create and destroy pipeline
          * resources.
@@ -145,6 +155,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * attribute descriptions.
          * @param graphics_pipeline_layout_data Borrowed pipeline-layout
          * requirements, including push-constant ranges.
+         * @param max_push_constants_size Maximum push-constant storage size
+         * in bytes supported by the selected physical device.
          *
          * @pre device must be a valid Vulkan logical-device handle.
          * @pre color_attachment_format must not be VK_FORMAT_UNDEFINED.
@@ -155,18 +167,25 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @pre Both shader inputs must specify nonempty exported entry-point
          * names that exist in their respective SPIR-V modules and match
          * their requested execution stages.
+         * @pre max_push_constants_size must be a valid, nonzero device limit.
+         * @pre Pipeline push-constant ranges must satisfy Vulkan alignment,
+         * stage-usage, and physical-device limit requirements.
          *
          * @post Successful construction produces a non-null Vulkan pipeline
          * layout and graphics pipeline.
          *
-         * @throws Core::Error::EngineError if shader-module creation,
-         * pipeline-layout creation, or graphics-pipeline creation fails.
+         * @throws Core::Error::EngineError if shader validation or reflection
+         * fails, shader push-constant requirements are incompatible with the
+         * pipeline layout, or Vulkan resource creation fails.
+         *
+         * @note Violated input contracts trigger precondition assertions.
          */
         VulkanGraphicsPipeline(
             VkDevice device, VkFormat color_attachment_format,
             const GraphicsShaderData &graphics_shader_data,
             const GraphicsVertexInputData &graphics_vertex_input_data,
-            const GraphicsPipelineLayoutData &graphics_pipeline_layout_data);
+            const GraphicsPipelineLayoutData &graphics_pipeline_layout_data,
+            std::uint32_t max_push_constants_size);
 
         VulkanGraphicsPipeline(const VulkanGraphicsPipeline &) = delete;
 

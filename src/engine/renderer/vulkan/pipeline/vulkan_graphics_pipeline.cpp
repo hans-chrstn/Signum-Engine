@@ -6,8 +6,11 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
+#include "engine/renderer/shader/shader_interface.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_push_constant_compatibility.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_validation.hpp"
 #include "vulkan_shader_module.hpp"
 #include <array>
@@ -55,7 +58,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkDevice device, VkFormat color_attachment_format,
         const GraphicsShaderData &graphics_shader_data,
         const GraphicsVertexInputData &graphics_vertex_input_data,
-        const GraphicsPipelineLayoutData &graphics_pipeline_layout_data)
+        const GraphicsPipelineLayoutData &graphics_pipeline_layout_data,
+        std::uint32_t max_push_constants_size)
         : m_Device(device) {
         if (device == VK_NULL_HANDLE) {
             Core::Assertion::failAssertion(
@@ -77,6 +81,20 @@ namespace SNE::Engine::Renderer::Vulkan {
                                 graphics_shader_data.vertex.selection);
         validateSpirvEntryPoint(graphics_shader_data.fragment.words,
                                 graphics_shader_data.fragment.selection);
+        const Shader::ShaderInterface vertex_interface =
+            reflectSpirvInterface(graphics_shader_data.vertex.words,
+                                  graphics_shader_data.vertex.selection);
+        const Shader::ShaderInterface fragment_interface =
+            reflectSpirvInterface(graphics_shader_data.fragment.words,
+                                  graphics_shader_data.fragment.selection);
+        validatePushConstantCompatibility(
+            vertex_interface,
+            graphics_pipeline_layout_data.push_constant_ranges,
+            max_push_constants_size);
+        validatePushConstantCompatibility(
+            fragment_interface,
+            graphics_pipeline_layout_data.push_constant_ranges,
+            max_push_constants_size);
 
         VulkanShaderModule vertex_shader =
             VulkanShaderModule(m_Device, graphics_shader_data.vertex.words);
