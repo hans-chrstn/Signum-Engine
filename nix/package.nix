@@ -8,6 +8,9 @@
   vulkan-loader,
   vulkan-headers,
   vulkan-memory-allocator,
+  spirv-reflect,
+  spirv-tools,
+  spirv-headers,
 }:
 stdenv.mkDerivation {
   pname = "signum-engine";
@@ -26,15 +29,18 @@ stdenv.mkDerivation {
     vulkan-loader
     vulkan-headers
     vulkan-memory-allocator
+    spirv-tools
+    spirv-headers
   ];
 
   cmakeFlags = [
     "-DBUILD_TESTING=OFF"
     "-DSIGNUM_ENABLE_SANITIZERS=OFF"
+    "-DSPIRV_REFLECT_SOURCE_DIR=${spirv-reflect}"
   ];
 
   meta = {
-    description = "C++23 game engine built around Vulkan";
+    description = "C++26 game engine built around Vulkan";
     homepage = "https://github.com/hans-chrstn/Signum-Engine";
     license = lib.licenses.asl20;
     platforms = lib.platforms.linux;

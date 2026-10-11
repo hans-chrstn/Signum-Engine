@@ -36,6 +36,7 @@ add_executable(
   renderer/vulkan/memory/vulkan_byte_range_tests.cpp
   renderer/vulkan/pipeline/vulkan_graphics_shader_data_tests.cpp
   renderer/vulkan/pipeline/vulkan_spirv_validation_tests.cpp
+  renderer/vulkan/pipeline/vulkan_spirv_reflection_tests.cpp
 )
 
 target_link_libraries(

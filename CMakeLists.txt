@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.28)
 project(
   SignumEngine
   VERSION 0.1.0
-  LANGUAGES CXX
+  LANGUAGES C CXX
 )
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -151,6 +151,27 @@ if(SIGNUM_ENABLE_SANITIZERS)
     )
   endif()
 endif()
+
+set(
+  SPIRV_REFLECT_SOURCE_DIR
+  "$ENV{SPIRV_REFLECT_SOURCE_DIR}"
+  CACHE PATH "Path to SPIRV-Reflect source"
+)
+
+if(NOT EXISTS "${SPIRV_REFLECT_SOURCE_DIR}/spirv_reflect.c")
+  message(FATAL_ERROR "SPIRV-Reflect source directory is unavailable")
+endif()
+
+set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_SHARED_LIB OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_INSTALL OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(
+  "${SPIRV_REFLECT_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}/third_party/spirv-reflect"
+)
 
 add_subdirectory(src)
 

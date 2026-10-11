@@ -3,11 +3,17 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    spirv-reflect = {
+      url = "github:KhronosGroup/SPIRV-Reflect";
+      flake = false;
+    };
   };
 
   outputs = {
     self,
     nixpkgs,
+    spirv-reflect,
     ...
   }: let
     system = "x86_64-linux";
@@ -101,6 +107,8 @@
           freetype
         ];
 
+        SPIRV_REFLECT_SOURCE_DIR = "${spirv-reflect}";
+
         LD_LIBRARY_PATH =
           pkgs.lib.makeLibraryPath runtimeLibraries;
 
@@ -120,6 +128,7 @@
   in {
     packages.${system}.default = pkgs.callPackage ./nix/package.nix {
       stdenv = gccStdenv;
+      inherit spirv-reflect;
     };
 
     devShells.${system} = {

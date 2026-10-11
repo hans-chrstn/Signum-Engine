@@ -238,6 +238,11 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanShaderEntryPointUnavailable",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::VulkanSpirvReflectionFailed,
+                    .name = "VulkanSpirvReflectionFailed",
+                    .subsystem = Subsystem::Vulkan,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {

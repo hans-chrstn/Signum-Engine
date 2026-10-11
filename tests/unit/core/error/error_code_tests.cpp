@@ -271,6 +271,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanShaderEntryPointUnavailable,
             "VulkanShaderEntryPointUnavailable",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSpirvReflectionFailed,
+            "VulkanSpirvReflectionFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

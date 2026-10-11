@@ -1,0 +1,42 @@
+
+#pragma once
+
+#include "engine/renderer/shader/push_constant_range.hpp"
+#include "engine/renderer/shader/shader_entry_point_selection.hpp"
+#include <vector>
+
+namespace SNE::Engine::Renderer::Shader {
+    /**
+     * @brief Describes the resource interface of a shader entry point.
+     *
+     * Associates a selected shader entry point with metadata describing
+     * the resources accessed by that entry point.
+     *
+     * Initially stores push-constant ranges. Additional shader interface
+     * information, such as descriptor bindings, may be represented as
+     * the rendering resource system expands.
+     *
+     * The description owns its metadata and is independent of Vulkan
+     * shader modules, graphics pipelines, and GPU resource ownership.
+     */
+    struct ShaderInterface {
+        /**
+         * @brief Shader execution stage and exported entry-point name.
+         *
+         * Identifies the shader entry point associated with the
+         * reflected interface metadata.
+         */
+        ShaderEntryPointSelection entry_point{};
+
+        /**
+         * @brief Push-constant byte ranges accessed by the entry point.
+         *
+         * Contains the offset, size, and execution stage of each
+         * represented push-constant range.
+         *
+         * An empty vector indicates that no push-constant ranges
+         * are represented by this interface.
+         */
+        std::vector<PushConstantRange> push_constant_ranges;
+    };
+} // namespace SNE::Engine::Renderer::Shader

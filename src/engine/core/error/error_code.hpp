@@ -109,6 +109,8 @@ namespace SNE::Engine::Core::Error {
         VulkanSpirvValidationFailed,
         /** Required Vulkan shader entry point could not be obtained. */
         VulkanShaderEntryPointUnavailable,
+        /** Failed to do reflection for Vulkan Spir-V. */
+        VulkanSpirvReflectionFailed,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

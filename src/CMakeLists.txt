@@ -55,7 +55,7 @@ add_library(
     engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.cpp
     engine/renderer/vulkan/synchronization/vulkan_semaphore.cpp
     engine/renderer/vulkan/synchronization/vulkan_fence.cpp
-
+    engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.cpp
 )
 
 target_include_directories(
@@ -73,6 +73,7 @@ target_link_libraries(
     glfw
     GPUOpen::VulkanMemoryAllocator
     PkgConfig::SPIRVTools
+    spirv-reflect-static
 )
 
 add_executable(

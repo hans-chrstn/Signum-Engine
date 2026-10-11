@@ -18,7 +18,24 @@
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "spirv-reflect": "spirv-reflect"
+      }
+    },
+    "spirv-reflect": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791213505,
+        "narHash": "sha256-E48CPOSEl2aXeJHgHcdatBNfZDFQxXl/4DDLVSm9NGE=",
+        "owner": "KhronosGroup",
+        "repo": "SPIRV-Reflect",
+        "rev": "563dc9a16d0e86145e12a66bb61f0695ca4a14b9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "KhronosGroup",
+        "repo": "SPIRV-Reflect",
+        "type": "github"
       }
     }
   },
