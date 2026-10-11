@@ -276,6 +276,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanSpirvReflectionFailed,
             "VulkanSpirvReflectionFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanPushConstantLayoutIncompatible,
+            "VulkanPushConstantLayoutIncompatible",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

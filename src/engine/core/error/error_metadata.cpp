@@ -243,6 +243,11 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanSpirvReflectionFailed",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::VulkanPushConstantLayoutIncompatible,
+                    .name = "VulkanPushConstantLayoutIncompatible",
+                    .subsystem = Subsystem::Vulkan,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {

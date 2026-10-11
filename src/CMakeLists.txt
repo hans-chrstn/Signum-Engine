@@ -48,6 +48,8 @@ add_library(
     engine/renderer/vulkan/pipeline/vulkan_spirv_validation.cpp
     engine/renderer/vulkan/pipeline/vulkan_shader_module.cpp
     engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.cpp
+    engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.cpp
+    engine/renderer/vulkan/pipeline/vulkan_push_constant_compatibility.cpp
     engine/renderer/vulkan/presentation/vulkan_surface.cpp
     engine/renderer/vulkan/presentation/vulkan_swapchain_support.cpp
     engine/renderer/vulkan/presentation/vulkan_swapchain_selection.cpp
@@ -55,7 +57,6 @@ add_library(
     engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.cpp
     engine/renderer/vulkan/synchronization/vulkan_semaphore.cpp
     engine/renderer/vulkan/synchronization/vulkan_fence.cpp
-    engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.cpp
 )
 
 target_include_directories(

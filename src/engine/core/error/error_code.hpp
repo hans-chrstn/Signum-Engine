@@ -111,6 +111,8 @@ namespace SNE::Engine::Core::Error {
         VulkanShaderEntryPointUnavailable,
         /** Failed to do reflection for Vulkan Spir-V. */
         VulkanSpirvReflectionFailed,
+        /** Required Vulkan push constant layout is not compatible. */
+        VulkanPushConstantLayoutIncompatible,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *
