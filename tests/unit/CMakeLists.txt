@@ -35,6 +35,7 @@ add_executable(
   renderer/vulkan/device/vulkan_device_extensions_tests.cpp
   renderer/vulkan/memory/vulkan_byte_range_tests.cpp
   renderer/vulkan/pipeline/vulkan_graphics_shader_data_tests.cpp
+  renderer/vulkan/pipeline/vulkan_spirv_validation_tests.cpp
 )
 
 target_link_libraries(
@@ -42,6 +43,12 @@ target_link_libraries(
   PRIVATE
     signum_engine
     GTest::gtest_main
+)
+
+target_compile_definitions(
+  signum_unit_tests
+  PRIVATE
+    SIGNUM_TEST_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/shaders"
 )
 
 include(GoogleTest)

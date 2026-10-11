@@ -261,6 +261,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanDeviceWaitIdleFailed,
             "VulkanDeviceWaitIdleFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSpirvValidationFailed,
+            "VulkanSpirvValidationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

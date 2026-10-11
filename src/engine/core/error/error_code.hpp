@@ -105,6 +105,8 @@ namespace SNE::Engine::Core::Error {
         VulkanBufferInvalidationFailed,
         /** Failed to wait for Vulkan device. */
         VulkanDeviceWaitIdleFailed,
+        /** Failed to validate Vulkan Spir-V. */
+        VulkanSpirvValidationFailed,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

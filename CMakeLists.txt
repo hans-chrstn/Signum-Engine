@@ -24,6 +24,14 @@ option(
 find_package(Vulkan REQUIRED)
 find_package(glfw3 3.4 REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(
+  SPIRVTools
+  REQUIRED
+  IMPORTED_TARGET
+  SPIRV-Tools
+)
 
 add_library(signum_project_options INTERFACE)
 

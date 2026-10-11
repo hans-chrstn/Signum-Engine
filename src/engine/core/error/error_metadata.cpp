@@ -1,4 +1,5 @@
 #include "error_metadata.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include <array>
 #include <cstddef>
 
@@ -225,6 +226,11 @@ namespace SNE::Engine::Core::Error {
                 ErrorMetadata{
                     .code = Code::VulkanDeviceWaitIdleFailed,
                     .name = "VulkanDeviceWaitIdleFailed",
+                    .subsystem = Subsystem::Vulkan,
+                },
+                ErrorMetadata{
+                    .code = Code::VulkanSpirvValidationFailed,
+                    .name = "VulkanSpirvValidationFailed",
                     .subsystem = Subsystem::Vulkan,
                 },
         };

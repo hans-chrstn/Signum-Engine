@@ -6,6 +6,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include "vulkan_spirv_validation.hpp"
 #include <cstdint>
 #include <span>
 #include <string>
@@ -27,6 +28,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::Subsystem::Vulkan,
                 "VulkanShaderModule requires non-empty SPIR-V bytecode");
         }
+
+        validateSpirvModule(spirv);
 
         VkShaderModuleCreateInfo shader_create_info{};
         shader_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

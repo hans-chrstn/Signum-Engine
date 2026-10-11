@@ -21,10 +21,14 @@ add_library(
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp
-    engine/renderer/vulkan/common/vulkan_extension_support.cpp
     engine/renderer/vulkan/vulkan_instance.cpp
-    engine/renderer/vulkan/presentation/vulkan_surface.cpp
+    engine/renderer/vulkan/vulkan_frame_resources.cpp
+    engine/renderer/vulkan/vulkan_renderer.cpp
     engine/renderer/vulkan/common/vulkan_result.cpp
+    engine/renderer/vulkan/common/vulkan_extension_support.cpp
+    engine/renderer/vulkan/command/vulkan_command_pool.cpp
+    engine/renderer/vulkan/command/vulkan_transfer_commands.cpp
+    engine/renderer/vulkan/command/vulkan_immediate_submission.cpp
     engine/renderer/vulkan/device/vulkan_device_discovery.cpp
     engine/renderer/vulkan/device/vulkan_device_capabilities.cpp
     engine/renderer/vulkan/device/vulkan_queue_families.cpp
@@ -33,27 +37,25 @@ add_library(
     engine/renderer/vulkan/device/vulkan_device_features.cpp
     engine/renderer/vulkan/device/vulkan_queue_requests.cpp
     engine/renderer/vulkan/device/vulkan_device.cpp
-    engine/renderer/vulkan/presentation/vulkan_swapchain_support.cpp
-    engine/renderer/vulkan/presentation/vulkan_swapchain_selection.cpp
-    engine/renderer/vulkan/presentation/vulkan_swapchain.cpp
-    engine/renderer/vulkan/command/vulkan_command_pool.cpp
-    engine/renderer/vulkan/vulkan_frame_resources.cpp
-    engine/renderer/vulkan/vulkan_renderer.cpp
-    engine/renderer/vulkan/synchronization/vulkan_semaphore.cpp
-    engine/renderer/vulkan/synchronization/vulkan_fence.cpp
-    engine/renderer/vulkan/pipeline/vulkan_spirv.cpp
-    engine/renderer/vulkan/pipeline/vulkan_shader_module.cpp
-    engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.cpp
+    engine/renderer/vulkan/memory/vulkan_upload.cpp
+    engine/renderer/vulkan/memory/vulkan_readback.cpp
+    engine/renderer/vulkan/memory/vulkan_byte_range.cpp
     engine/renderer/vulkan/memory/vulkan_memory_allocator.cpp
     engine/renderer/vulkan/memory/vulkan_buffer.cpp
     engine/renderer/vulkan/memory/vulkan_memory_policy.cpp
     engine/renderer/vulkan/memory/vulkan_image.cpp
-    engine/renderer/vulkan/command/vulkan_transfer_commands.cpp
-    engine/renderer/vulkan/command/vulkan_immediate_submission.cpp
-    engine/renderer/vulkan/memory/vulkan_upload.cpp
-    engine/renderer/vulkan/memory/vulkan_readback.cpp
-    engine/renderer/vulkan/memory/vulkan_byte_range.cpp
+    engine/renderer/vulkan/pipeline/vulkan_spirv.cpp
+    engine/renderer/vulkan/pipeline/vulkan_spirv_validation.cpp
+    engine/renderer/vulkan/pipeline/vulkan_shader_module.cpp
+    engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.cpp
+    engine/renderer/vulkan/presentation/vulkan_surface.cpp
+    engine/renderer/vulkan/presentation/vulkan_swapchain_support.cpp
+    engine/renderer/vulkan/presentation/vulkan_swapchain_selection.cpp
+    engine/renderer/vulkan/presentation/vulkan_swapchain.cpp
     engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.cpp
+    engine/renderer/vulkan/synchronization/vulkan_semaphore.cpp
+    engine/renderer/vulkan/synchronization/vulkan_fence.cpp
+
 )
 
 target_include_directories(
@@ -70,6 +72,7 @@ target_link_libraries(
     Vulkan::Vulkan
     glfw
     GPUOpen::VulkanMemoryAllocator
+    PkgConfig::SPIRVTools
 )
 
 add_executable(
