@@ -18,6 +18,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vulkan/vulkan_core.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto validateGraphicsShaderData(const GraphicsShaderData &data) -> void {
@@ -55,7 +56,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(
-        VkDevice device, VkFormat color_attachment_format,
+        VkDevice device, GraphicsAttachmentFormats attachment_formats,
         const GraphicsShaderData &graphics_shader_data,
         const GraphicsVertexInputData &graphics_vertex_input_data,
         const GraphicsPipelineLayoutData &graphics_pipeline_layout_data,
@@ -68,11 +69,19 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanGraphicsPipeline requires a valid Vulkan device");
         }
 
-        if (color_attachment_format == VK_FORMAT_UNDEFINED) {
+        if (attachment_formats.color == VK_FORMAT_UNDEFINED) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
                 "VulkanGraphicsPipeline requires a valid color attachment "
+                "format");
+        }
+
+        if (attachment_formats.depth == VK_FORMAT_UNDEFINED) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline requires a valid depth attachment "
                 "format");
         }
 
@@ -213,6 +222,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         // Don't run the fragment shader independently for multiple samples
         multisample_state_create_info.sampleShadingEnable = VK_FALSE;
 
+        VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info{};
+        depth_stencil_state_create_info.sType =
+            VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
+        depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
+        depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+        depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
+        depth_stencil_state_create_info.stencilTestEnable = VK_FALSE;
+
         VkPipelineColorBlendAttachmentState color_blend_attachment_state{};
         // Fragment shader output replaces the existing color directly
         color_blend_attachment_state.blendEnable = VK_FALSE;
@@ -240,7 +258,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         // This pipeline renders into one color attachment
         rendering_create_info.colorAttachmentCount = 1U;
         rendering_create_info.pColorAttachmentFormats =
-            &color_attachment_format;
+            &attachment_formats.color;
+        rendering_create_info.depthAttachmentFormat = attachment_formats.depth;
 
         VkPipelineLayoutCreateInfo pipeline_layout_create_info{};
         pipeline_layout_create_info.sType =
@@ -306,7 +325,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 &raster_state_create_info;
             graphics_pipeline_create_info.pMultisampleState =
                 &multisample_state_create_info;
-            graphics_pipeline_create_info.pDepthStencilState = nullptr;
+            graphics_pipeline_create_info.pDepthStencilState =
+                &depth_stencil_state_create_info;
             graphics_pipeline_create_info.pColorBlendState =
                 &color_blend_state_create_info;
             graphics_pipeline_create_info.pDynamicState =

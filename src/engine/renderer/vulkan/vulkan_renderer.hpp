@@ -101,6 +101,15 @@ namespace SNE::Engine::Renderer::Vulkan {
             VulkanSwapchain m_VulkanSwapchain;
 
             /**
+             * @brief Depth attachment format associated with this swapchain.
+             *
+             * Records the format used by the owned depth attachments and
+             * graphics pipeline to determine whether pipeline recreation
+             * is required when attachment formats change.
+             */
+            VkFormat m_DepthFormat{VK_FORMAT_UNDEFINED};
+
+            /**
              * @brief Owns the graphics pipeline used for swapchain rendering.
              *
              * Contains the Vulkan graphics pipeline and its pipeline layout
@@ -361,6 +370,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::size_t m_CurrentFrameIndex{};
 
         /**
+         * @brief Indicates that a queue submission failed and rendering
+         * must not continue using this renderer instance.
+         *
+         * Prevents subsequent frames from waiting on synchronization
+         * objects whose expected GPU signal may never occur.
+         */
+        bool m_SubmissionFailed{false};
+
+        /**
          * @brief Waits until the application framebuffer becomes drawable.
          *
          * Blocks on platform window events while the framebuffer has a
@@ -404,6 +422,14 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @throws Core::Error::EngineError if required Vulkan synchronization
          * or resource recreation fails.
+         * @post Successful recreation installs a new swapchain with compatible
+         * depth attachments, presentation synchronization, and graphics
+         * pipeline resources.
+         *
+         * @note If resource recreation throws, the previously owned
+         * swapchain resources are released because the old swapchain may
+         * already have been retired. The original exception propagates
+         * to the caller.
          */
         [[nodiscard]] auto recreateSwapchainResources() -> bool;
 
@@ -442,6 +468,89 @@ namespace SNE::Engine::Renderer::Vulkan {
          * assertions.
          */
         auto uploadMesh(const MeshUploadData &mesh) -> void;
+
+        /**
+         * @brief Records Vulkan rendering commands for an acquired swapchain
+         * image.
+         *
+         * Records attachment layout transitions, dynamic rendering, mesh draws,
+         * and the final transition to presentation layout.
+         *
+         * @param command_buffer Command buffer to record into.
+         * @param swapchain_resources Borrowed swapchain-dependent resources.
+         * @param depth_attachment Depth attachment owned by the current frame
+         * slot.
+         * @param image_index Index of the acquired swapchain image.
+         *
+         * @pre command_buffer must be valid and ready for recording.
+         * @pre image_index must reference an image in swapchain_resources.
+         *
+         * @throws Core::Error::EngineError if command buffer recording
+         * initialization or completion fails.
+         */
+        auto
+        recordFrameCommands(VkCommandBuffer command_buffer,
+                            const SwapchainResources &swapchain_resources,
+                            const DepthAttachmentResources &depth_attachment,
+                            std::size_t image_index) -> void;
+
+        /**
+         * @brief Records indexed mesh drawing commands within active dynamic
+         * rendering.
+         *
+         * Validates the required graphics resources, binds the graphics
+         * pipeline and mesh buffers, configures the viewport and scissor,
+         * calculates camera and model transformations, and records indexed
+         * drawing commands.
+         *
+         * The function borrows existing renderer-owned resources and does not
+         * create, destroy, or transfer ownership of Vulkan resources.
+         *
+         * @param command_buffer Command buffer currently recording graphics
+         * commands.
+         * @param swapchain_resources Swapchain resources providing the graphics
+         * pipeline and current rendering extent.
+         *
+         * @pre command_buffer must be valid and recording within an active
+         * dynamic-rendering instance.
+         * @pre The renderer must have an uploaded mesh available for drawing.
+         *
+         * @note Missing required graphics resources trigger invariant
+         * assertions.
+         */
+        auto
+        recordMeshDraws(VkCommandBuffer command_buffer,
+                        const SwapchainResources &swapchain_resources) const
+            -> void;
+
+        /**
+         * @brief Submits a recorded frame command buffer to the graphics queue.
+         *
+         * Configures image-availability and render-completion semaphore
+         * synchronization, resets the frame's in-flight fence, and submits
+         * the recorded commands using Vulkan synchronization2.
+         *
+         * A failed queue submission permanently prevents further rendering
+         * through this renderer instance.
+         *
+         * @param current_frame Frame resources owning the synchronization fence
+         * and image-availability semaphore.
+         * @param command_buffer Recorded command buffer to submit.
+         * @param render_finished_semaphore Semaphore signaled after submitted
+         * rendering commands complete.
+         *
+         * @pre command_buffer must be valid and executable.
+         * @pre The frame's in-flight fence must be signaled before submission.
+         * @pre render_finished_semaphore must be a valid Vulkan semaphore.
+         *
+         * @throws Core::Error::EngineError if fence reset or queue
+         * submission fails.
+         *
+         * @note Queue submission failures are not automatically recovered.
+         */
+        auto submitFrame(VulkanFrameResources &current_frame,
+                         VkCommandBuffer command_buffer,
+                         VkSemaphore render_finished_semaphore) -> void;
 
       public:
         /**
@@ -511,6 +620,11 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @throws Core::Error::EngineError if a required Vulkan frame operation
          * fails.
+         *
+         * @note A failed Vulkan queue submission permanently prevents
+         * further frame rendering through this renderer instance.
+         * Subsequent renderFrame() calls throw rather than waiting
+         * on potentially unsignaled synchronization objects.
          */
         auto renderFrame() -> void;
     };

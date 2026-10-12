@@ -49,6 +49,20 @@ namespace SNE::Engine::Renderer::Vulkan {
     };
 
     /**
+     * @brief Describes the attachment formats required by a graphics pipeline.
+     *
+     * Specifies the color and depth attachment formats used to establish
+     * compatibility with Vulkan dynamic rendering.
+     */
+    struct GraphicsAttachmentFormats {
+        /** @brief Format of the color attachment. */
+        VkFormat color{VK_FORMAT_UNDEFINED};
+
+        /** @brief Format of the depth attachment. */
+        VkFormat depth{VK_FORMAT_UNDEFINED};
+    };
+
+    /**
      * @brief Describes shader inputs required to create a graphics pipeline.
      *
      * Contains vertex and fragment shader descriptions, each specifying
@@ -128,7 +142,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * shaders, vertex input descriptions, and pipeline-layout requirements.
          *
          * Creates and owns the pipeline layout and graphics pipeline used for
-         * Vulkan dynamic rendering with the supplied color-attachment format.
+         * Vulkan dynamic rendering with the supplied color and depth
+         * attachment formats.
          *
          * The logical device is borrowed and must remain valid for the lifetime
          * of this object.
@@ -147,8 +162,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @param device Logical device used to create and destroy pipeline
          * resources.
-         * @param color_attachment_format Format of the color attachment used
-         * with the graphics pipeline.
+         * @param attachment_formats Color and depth attachment formats
+         * required for compatibility with Vulkan dynamic rendering.
          * @param graphics_shader_data Vertex and fragment shader inputs,
          * including borrowed SPIR-V bytecode and selected entry points.
          * @param graphics_vertex_input_data Borrowed vertex input binding and
@@ -159,7 +174,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * in bytes supported by the selected physical device.
          *
          * @pre device must be a valid Vulkan logical-device handle.
-         * @pre color_attachment_format must not be VK_FORMAT_UNDEFINED.
+         * @pre attachment_formats.color must be a defined color
+         * attachment format.
+         * @pre attachment_formats.depth must be a defined depth
+         * attachment format compatible with the active rendering configuration.
          * @pre graphics_shader_data.vertex must specify a vertex-stage
          * shader with valid, nonempty SPIR-V bytecode.
          * @pre graphics_shader_data.fragment must specify a fragment-stage
@@ -181,7 +199,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @note Violated input contracts trigger precondition assertions.
          */
         VulkanGraphicsPipeline(
-            VkDevice device, VkFormat color_attachment_format,
+            VkDevice device, GraphicsAttachmentFormats attachment_formats,
             const GraphicsShaderData &graphics_shader_data,
             const GraphicsVertexInputData &graphics_vertex_input_data,
             const GraphicsPipelineLayoutData &graphics_pipeline_layout_data,
