@@ -69,10 +69,25 @@ auto VulkanIntegrationTest::SetUp() -> void {
     device_queue_info.queueCount = 1U;
     device_queue_info.pQueuePriorities = &priority;
 
+    VkPhysicalDeviceVulkan13Features supported_vulkan13_features{};
+    supported_vulkan13_features.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+
+    VkPhysicalDeviceFeatures2 supported_features{};
+    supported_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    supported_features.pNext = &supported_vulkan13_features;
+
+    vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &supported_features);
+
+    m_DynamicRenderingEnabled =
+        supported_vulkan13_features.dynamicRendering == VK_TRUE;
+
     VkPhysicalDeviceVulkan13Features vulkan13_features{};
     vulkan13_features.sType =
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     vulkan13_features.synchronization2 = VK_TRUE;
+    vulkan13_features.dynamicRendering =
+        supported_vulkan13_features.dynamicRendering;
 
     VkDeviceCreateInfo device_create_info{};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

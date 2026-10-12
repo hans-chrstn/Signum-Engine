@@ -24,23 +24,24 @@ add_executable(
   renderer/geometry/vertex_format_tests.cpp
   renderer/vulkan/common/vulkan_result_tests.cpp
   renderer/vulkan/common/vulkan_extension_support_tests.cpp
+  renderer/vulkan/common/vulkan_api_version_tests.cpp
   renderer/vulkan/device/vulkan_queue_families_tests.cpp
   renderer/vulkan/device/vulkan_device_selection_tests.cpp
   renderer/vulkan/device/vulkan_depth_format_tests.cpp
-  renderer/vulkan/common/vulkan_api_version_tests.cpp
-  renderer/vulkan/device/vulkan_queue_requests_tests.cpp
-  renderer/vulkan/presentation/vulkan_swapchain_selection_tests.cpp
-  renderer/vulkan/presentation/vulkan_swapchain_result_policy_tests.cpp
   renderer/vulkan/device/vulkan_device_tests.cpp
   renderer/vulkan/device/vulkan_device_features_tests.cpp
-  renderer/vulkan/memory/vulkan_memory_policy_tests.cpp
   renderer/vulkan/device/vulkan_device_extensions_tests.cpp
+  renderer/vulkan/device/vulkan_queue_requests_tests.cpp
+  renderer/vulkan/geometry/vulkan_vertex_format_tests.cpp
+  renderer/vulkan/geometry/vulkan_vertex_input_tests.cpp
+  renderer/vulkan/memory/vulkan_memory_policy_tests.cpp
   renderer/vulkan/memory/vulkan_byte_range_tests.cpp
+  renderer/vulkan/presentation/vulkan_swapchain_selection_tests.cpp
+  renderer/vulkan/presentation/vulkan_swapchain_result_policy_tests.cpp
+  renderer/vulkan/presentation/fail_closed_replacement_tests.cpp
   renderer/vulkan/pipeline/vulkan_graphics_shader_data_tests.cpp
   renderer/vulkan/pipeline/vulkan_spirv_validation_tests.cpp
   renderer/vulkan/pipeline/vulkan_spirv_reflection_tests.cpp
-  renderer/vulkan/geometry/vulkan_vertex_format_tests.cpp
-  renderer/vulkan/geometry/vulkan_vertex_input_tests.cpp
 )
 
 target_link_libraries(

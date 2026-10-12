@@ -12,6 +12,7 @@ add_executable(
   renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
   renderer/vulkan/compute/vulkan_matrix_transform_integration_tests.cpp
   renderer/vulkan/pipeline/vulkan_push_constant_reflection_integration_tests.cpp
+  renderer/vulkan/pipeline/vulkan_graphics_pipeline_integration_tests.cpp
 )
 
 target_link_libraries(

@@ -950,7 +950,7 @@
 
 - [x] shaders
 - [x] graphics pipelines
-- [ ] buffers
+- [x] buffers
 - [ ] textures
 - [ ] descriptors
 - [ ] descriptor/binding models
@@ -973,7 +973,7 @@
 - [x] Define a compiler-independent shader artifact contract with SPIR-V as the initial Vulkan backend input
 - [ ] Define shader-stage, entry-point, compilation error, and diagnostic ownership
 - [ ] Define shader-interface metadata for bindings, stages, push constants, and pipeline compatibility
-- [ ] Define a minimal shader reflection/validation boundary without depending on gameplay C++ reflection
+- [x] Define a minimal shader reflection/validation boundary without depending on gameplay C++ reflection
 - [ ] Define pipeline/layout compatibility and variant-key responsibilities
 - [ ] Define texture/resource descriptions that preserve format, extent, sample count, mip levels, array layers, and intended usage
 - [ ] Define resource initialization and readiness separately from eventual logical resource handles
@@ -1005,9 +1005,9 @@
 - [x] Render multiple objects
 - [ ] Scale the reference rendering workload from one 3D object to multiple independently transformed objects
 - [ ] Separate scene data from GPU resources
-- [ ] Define rendering-facing data contracts
-- [ ] Define GPU resource ownership
-- [ ] Define GPU lifetime ordering
+- [x] Define rendering-facing data contracts
+- [x] Define GPU resource ownership
+- [x] Define GPU lifetime ordering
 - [ ] Track GPU resource dependencies
 - [ ] Expose resource lifetime/dependency data needed by later frame scheduling
 
@@ -1047,19 +1047,20 @@
 ### Architecture
 
 - [ ] Keep runtime object identity separate from GPU resource identity
-- [ ] Keep GPU allocation details behind Phase 6.5 memory mechanisms
+- [x] Keep GPU allocation details behind Phase 6.5 memory mechanisms
 - [ ] Avoid raw Vulkan ownership in game entities
 - [ ] Keep resource, shader, pipeline, binding, and material mechanisms independent from optional rendering features
 - [ ] Keep core GPU resource APIs usable by built-in and developer-defined render features
-- [ ] Avoid baking PBR, shadow, terrain, water, ray-tracing-effect, or other optional-feature semantics into renderer-core resource types
+- [x] Avoid baking PBR, shadow, terrain, water, ray-tracing-effect, or other optional-feature semantics into renderer-core resource types
 - [ ] Do not make vertex/index-buffer meshes the only renderable representation
-- [ ] Define safe recovery behavior before treating swapchain recreation failures as recoverable
+- [x] Define safe recovery behavior before treating swapchain recreation failures as recoverable
 - [ ] Keep renderer resource mechanisms usable by mesh, procedural, indirect, compute-generated, and future GPU-driven workloads
-- [ ] Keep reference-scene concepts such as stars, planets, systems, and galaxies outside renderer-core types
-
+- [x] Keep reference-scene concepts such as stars, planets, systems, and galaxies outside renderer-core types
+- [ ] Treat renderer-facing floating-point transforms as local or camera-relative representations, not authoritative global coordinates
+- [ ] Keep high-precision world-to-renderer conversion outside Vulkan resource ownership
 - [ ] Keep the shader source language and compiler choice replaceable without changing material or render-feature APIs
-- [ ] Keep shader reflection separate from engine/gameplay C++ reflection
-- [ ] Keep bindless and mesh-shader-specific mechanisms optional instead of hard requirements of the basic renderer
+- [x] Keep shader reflection separate from engine/gameplay C++ reflection
+- [x] Keep bindless and mesh-shader-specific mechanisms optional instead of hard requirements of the basic renderer
 - [ ] Do not expose raw in-flight Vulkan lifetime rules to game-facing callers
 
 ---
@@ -1632,7 +1633,8 @@
 - [ ] Define transform hierarchy rules
 - [ ] Define logical world identity independently from one physical storage model
 - [ ] Allow authoring/scene representation to differ from optimized runtime representations
-
+- [ ] Define semantic world-position and local-transform contracts without permanently selecting a global numeric representation
+- [ ] Ensure transform hierarchies can support multiple spatial reference frames without redesigning world identity
 - [ ] Define the distinction between local transforms, scene-space transforms, and project-defined world coordinates
 - [ ] Define conversion/precision expectations at renderer-facing transform boundaries without implementing large-world origin shifting yet
 
@@ -2602,6 +2604,10 @@
 - [ ] Test backend shutdown
 - [ ] Verify gameplay-facing code does not require Jolt types
 
+### Architecture
+
+- [ ] Avoid exposing physics-backend coordinate precision as the mandatory world-coordinate representation
+
 ### Future Evolution
 
 - [ ] Allow specialized procedural-collision systems
@@ -3096,6 +3102,9 @@
 - [ ] reference frames
 - [ ] double-precision world coordinates
 - [ ] local high-precision simulation regions
+- [ ] Understand 128-bit integer and floating-point representations
+- [ ] Understand fixed-point arithmetic and quantization
+- [ ] Understand precision error propagation
 
 ### Design
 
@@ -3109,6 +3118,12 @@
 - [ ] Define physics coordinate contract
 - [ ] Define networking coordinate contract
 - [ ] Avoid assuming one flat coordinate space
+- [ ] Evaluate optional 128-bit integer, fixed-point, and extended-precision representations against hierarchical 64-bit coordinate approaches
+- [ ] Define explicit spatial units and precision guarantees
+- [ ] Define checked arithmetic and overflow behavior
+- [ ] Define exact global-position storage versus approximate local simulation
+- [ ] Define camera-relative GPU coordinate conversion
+- [ ] Preserve replaceable spatial representations
 
 ### Implement
 
@@ -3118,6 +3133,10 @@
 - [ ] Add origin shifting if selected
 - [ ] Preserve stable object identity across reference-frame changes
 - [ ] Integrate with physics when large-world physics requires it
+- [ ] Add optional high-precision global coordinates when justified
+- [ ] Add precision-safe reference-frame-relative transformations
+- [ ] Add checked world-coordinate arithmetic
+- [ ] Add high-precision coordinate serialization
 
 ### Test
 
@@ -3131,6 +3150,12 @@
 - [ ] Expand the reference workload from one system to multiple widely separated systems
 - [ ] Test reference-frame transitions between systems at increasing coordinate magnitudes
 - [ ] Compare rendering and transform stability for nearby and extremely distant reference content
+- [ ] Test extreme-distance coordinate ranges
+- [ ] Test exact fixed-point coordinate operations
+- [ ] Test sub-meter movement at interstellar distances
+- [ ] Test overflow and boundary conditions
+- [ ] Test precision across reference-frame transitions
+- [ ] Test stable camera-relative rendering at extreme distances
 
 ### Architecture
 

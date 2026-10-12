@@ -18,6 +18,7 @@ class VulkanIntegrationTest : public ::testing::Test {
     VkQueue m_GraphicsQueue{VK_NULL_HANDLE};
     std::optional<SNE::Engine::Renderer::Vulkan::VulkanImmediateSubmission>
         m_ImmediateSubmission;
+    bool m_DynamicRenderingEnabled{false};
 
     auto SetUp() -> void override;
     auto TearDown() -> void override;
