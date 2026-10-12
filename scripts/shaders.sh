@@ -34,17 +34,17 @@ spirv-val "${shader_output_dir}/triangle.vert.spv"
 
 shader_disassembly="$(spirv-dis "${shader_output_dir}/triangle.vert.spv")"
 
-if [[ "$shader_disassembly" != *"OpMemberDecorate %ModelPushConstants_std430 0 RowMajor"* ]]; then
+if [[ "$shader_disassembly" != *"OpMemberDecorate %TransformPushConstants_std430 0 RowMajor"* ]]; then
     echo "Unexpected model matrix layout" >&2
     exit 1
 fi
 
-if [[ "$shader_disassembly" != *"OpMemberDecorate %ModelPushConstants_std430 0 MatrixStride 16"* ]]; then
+if [[ "$shader_disassembly" != *"OpMemberDecorate %TransformPushConstants_std430 0 MatrixStride 16"* ]]; then
     echo "Unexpected model matrix stride" >&2
     exit 1
 fi
 
-if [[ "$shader_disassembly" != *"OpMemberDecorate %ModelPushConstants_std430 0 Offset 0"* ]]; then
+if [[ "$shader_disassembly" != *"OpMemberDecorate %TransformPushConstants_std430 0 Offset 0"* ]]; then
     echo "Unexpected model matrix offset" >&2
     exit 1
 fi

@@ -9,7 +9,8 @@ namespace SNE::Engine::Core {
           m_Renderer(m_Configuration.application_name, m_Window,
                      m_Configuration.presentation_preference,
                      m_Configuration.development_diagnostics_enabled,
-                     m_Configuration.initial_mesh) {}
+                     m_Configuration.initial_mesh,
+                     m_Configuration.initial_camera) {}
 
     void Application::run() {
         while (!m_Window.shouldClose()) {

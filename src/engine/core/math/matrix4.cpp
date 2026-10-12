@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <numbers>
 #include <optional>
 #include <utility>
 
@@ -142,4 +143,49 @@ namespace SNE::Engine::Core::Math {
         return inverse;
     }
 
+    auto perspectiveRH_ZO(PerspectiveProjectionParameters parameters)
+        -> Matrix4f {
+        const auto fail_invalid_parameters = [] -> void {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition, Error::Subsystem::Core,
+                "Perspective projection parameters are invalid");
+        };
+
+        if (!std::isfinite(parameters.fov_y_radians) ||
+            !std::isfinite(parameters.aspect_ratio) ||
+            !std::isfinite(parameters.near_plane) ||
+            !std::isfinite(parameters.far_plane)) {
+            fail_invalid_parameters();
+        }
+
+        if (parameters.fov_y_radians <= 0.0F ||
+            parameters.fov_y_radians >= std::numbers::pi_v<float>) {
+            fail_invalid_parameters();
+        }
+
+        if (parameters.aspect_ratio <= 0.0F) {
+            fail_invalid_parameters();
+        }
+
+        if (parameters.near_plane <= 0.0F) {
+            fail_invalid_parameters();
+        }
+
+        if (parameters.far_plane <= parameters.near_plane) {
+            fail_invalid_parameters();
+        }
+
+        const float focal_scale =
+            1.0F / std::tan(parameters.fov_y_radians / 2.0F);
+
+        Matrix4f matrix{};
+        matrix.at(0U, 0U) = focal_scale / parameters.aspect_ratio;
+        matrix.at(1U, 1U) = focal_scale;
+        matrix.at(2U, 2U) = parameters.far_plane /
+                            (parameters.near_plane - parameters.far_plane);
+        matrix.at(2U, 3U) = (parameters.far_plane * parameters.near_plane) /
+                            (parameters.near_plane - parameters.far_plane);
+        matrix.at(3U, 2U) = -1.0F;
+        return matrix;
+    }
 } // namespace SNE::Engine::Core::Math

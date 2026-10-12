@@ -38,6 +38,9 @@ add_library(
     engine/renderer/vulkan/device/vulkan_device_features.cpp
     engine/renderer/vulkan/device/vulkan_queue_requests.cpp
     engine/renderer/vulkan/device/vulkan_device.cpp
+    engine/renderer/vulkan/device/vulkan_depth_format.cpp
+    engine/renderer/vulkan/geometry/vulkan_vertex_format.cpp
+    engine/renderer/vulkan/geometry/vulkan_vertex_input.cpp
     engine/renderer/vulkan/memory/vulkan_upload.cpp
     engine/renderer/vulkan/memory/vulkan_readback.cpp
     engine/renderer/vulkan/memory/vulkan_byte_range.cpp
@@ -58,8 +61,6 @@ add_library(
     engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.cpp
     engine/renderer/vulkan/synchronization/vulkan_semaphore.cpp
     engine/renderer/vulkan/synchronization/vulkan_fence.cpp
-    engine/renderer/vulkan/geometry/vulkan_vertex_format.cpp
-    engine/renderer/vulkan/geometry/vulkan_vertex_input.cpp
 )
 
 target_include_directories(

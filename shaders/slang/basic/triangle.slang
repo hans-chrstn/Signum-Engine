@@ -1,12 +1,12 @@
-struct ModelPushConstants {
-  float4x4 model;
+struct TransformPushConstants {
+  float4x4 mvp;
 };
 
 [[vk::push_constant]]
-ModelPushConstants push_constants;
+TransformPushConstants push_constants;
 
 struct VertexInput {
-  [[vk::location(0)]] float2 position : POSITION0;
+  [[vk::location(0)]] float3 position : POSITION0;
   [[vk::location(1)]] float3 color : COLOR0;
 };
 
@@ -24,7 +24,7 @@ VertexOutput vertexMain(VertexInput input)
 {
   VertexOutput output;
 
-  output.position = mul(push_constants.model, float4(input.position, 0.0, 1.0));
+  output.position = mul(push_constants.mvp, float4(input.position, 1.0));
   output.color = input.color;
 
   return output;

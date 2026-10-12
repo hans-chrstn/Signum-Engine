@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/platform/window.hpp"
+#include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include <optional>
@@ -71,5 +72,23 @@ namespace SNE::Engine::Core {
          * When absent, no application-provided geometry is requested.
          */
         std::optional<Renderer::InitialMeshData> initial_mesh;
+
+        /**
+         * @brief Optional initial camera configuration supplied to the
+         * renderer.
+         *
+         * Stores the initial world-to-camera view transformation and
+         * perspective projection parameters.
+         *
+         * The configuration is copied during renderer initialization,
+         * allowing the renderer to retain camera information without
+         * borrowing application-managed storage.
+         *
+         * The rendering backend derives the projection aspect ratio
+         * from the current drawable framebuffer dimensions.
+         *
+         * When absent, no application-provided camera is configured.
+         */
+        std::optional<Renderer::InitialCameraData> initial_camera;
     };
 } // namespace SNE::Engine::Core

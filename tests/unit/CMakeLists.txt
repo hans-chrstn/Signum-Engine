@@ -26,6 +26,7 @@ add_executable(
   renderer/vulkan/common/vulkan_extension_support_tests.cpp
   renderer/vulkan/device/vulkan_queue_families_tests.cpp
   renderer/vulkan/device/vulkan_device_selection_tests.cpp
+  renderer/vulkan/device/vulkan_depth_format_tests.cpp
   renderer/vulkan/common/vulkan_api_version_tests.cpp
   renderer/vulkan/device/vulkan_queue_requests_tests.cpp
   renderer/vulkan/presentation/vulkan_swapchain_selection_tests.cpp

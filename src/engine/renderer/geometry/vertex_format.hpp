@@ -41,11 +41,11 @@ namespace SNE::Engine::Renderer {
      * The result depends only on the format and does not require a
      * graphics device or allocate GPU resources.
      *
-     * @param format Vertex attribute format to inspect.
+     * @param vertex_format Vertex attribute format to inspect.
      *
      * @return Size of the vertex attribute in bytes.
      *
-     * @pre format must identify a supported VertexFormat value.
+     * @pre vertex_format must identify a supported VertexFormat value.
      *
      * @note Unsupported format values trigger a fatal precondition
      * assertion in the Renderer subsystem.

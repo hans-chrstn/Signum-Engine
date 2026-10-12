@@ -16,6 +16,47 @@ namespace SNE::Engine::Core::Math {
     constexpr std::size_t kMatrix4Dimension = 4U;
 
     /**
+     * @brief Parameters for constructing a perspective projection matrix.
+     *
+     * Describes a right-handed perspective projection using a vertical
+     * field of view and a zero-to-one depth range.
+     *
+     * The camera looks along the negative Z axis.
+     *
+     * All parameters must be finite and satisfy the projection
+     * constraints.
+     */
+    struct PerspectiveProjectionParameters {
+        /**
+         * @brief Vertical field of view expressed in radians.
+         *
+         * Must be greater than zero and less than pi.
+         */
+        float fov_y_radians{};
+
+        /**
+         * @brief Ratio of viewport width to viewport height.
+         *
+         * Must be greater than zero.
+         */
+        float aspect_ratio{};
+
+        /**
+         * @brief Positive distance to the near clipping plane.
+         *
+         * Must be greater than zero and less than the far distance.
+         */
+        float near_plane{};
+
+        /**
+         * @brief Positive distance to the far clipping plane.
+         *
+         * Must be greater than the near distance.
+         */
+        float far_plane{};
+    };
+
+    /**
      * @brief Represents a 4x4 single-precision floating-point matrix.
      *
      * Stores sixteen elements in column-major order.
@@ -435,5 +476,39 @@ namespace SNE::Engine::Core::Math {
      */
     [[nodiscard]] auto tryInverse(const Matrix4f &matrix)
         -> std::optional<Matrix4f>;
+
+    /**
+     * @brief Creates a right-handed perspective projection matrix.
+     *
+     * Constructs a perspective projection using a right-handed coordinate
+     * system, a camera looking along the negative Z axis, and a normalized
+     * depth range of zero to one.
+     *
+     * The resulting matrix follows the column-vector convention and
+     * uses column-major storage.
+     *
+     * The near clipping plane maps to normalized depth zero, while
+     * the far clipping plane maps to normalized depth one after
+     * perspective division.
+     *
+     * @param parameters Field of view, aspect ratio, and clipping distances
+     * used to construct the projection.
+     *
+     * @pre All projection parameters must be finite.
+     * @pre The vertical field of view must be greater than zero and
+     * less than pi radians.
+     * @pre The aspect ratio must be greater than zero.
+     * @pre The near clipping distance must be greater than zero.
+     * @pre The far clipping distance must be greater than the near
+     * clipping distance.
+     *
+     * @return A Matrix4f representing the perspective projection.
+     *
+     * @note The resulting matrix is projective rather than affine.
+     * Functions restricted to affine transformations must not be
+     * used to transform points through this matrix.
+     */
+    [[nodiscard]] auto
+    perspectiveRH_ZO(PerspectiveProjectionParameters parameters) -> Matrix4f;
 
 } // namespace SNE::Engine::Core::Math

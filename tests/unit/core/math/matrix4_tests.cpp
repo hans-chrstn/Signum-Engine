@@ -1,6 +1,7 @@
 #include "engine/core/math/matrix4.hpp"
 #include <cstddef>
 #include <gtest/gtest.h>
+#include <limits>
 #include <numbers>
 
 namespace Math = SNE::Engine::Core::Math;
@@ -113,6 +114,19 @@ static_assert([] -> bool {
            result.at(kYIndex, kTranslationIndex) == kZero &&
            result.at(kZIndex, kTranslationIndex) == kZero;
 }());
+
+namespace {
+    constexpr float kProjectionTolerance = 1.0e-5F;
+    constexpr float kExpectedHorizontalScale = 0.5F;
+    constexpr float kExpectedDepthCoefficient = -1.1F;
+
+    constexpr Math::PerspectiveProjectionParameters kValidPerspectiveParameters{
+        .fov_y_radians = std::numbers::pi_v<float> / 2.0F,
+        .aspect_ratio = 2.0F,
+        .near_plane = 1.0F,
+        .far_plane = 11.0F,
+    };
+} // namespace
 
 TEST(Matrix4Tests, IdentityMultipliedByIdentityIsIdentity) {
     const Math::Matrix4f identity = Math::identity();
@@ -939,4 +953,155 @@ TEST(Matrix4Tests, InversionRejectsNonFiniteMatrix) {
         std::numeric_limits<float>::quiet_NaN();
 
     EXPECT_FALSE(Math::tryInverse(matrix).has_value());
+}
+
+TEST(Matrix4Tests, PerspectiveCreatesCorrectRightHandedZeroToOneMatrix) {
+    const Math::Matrix4f result =
+        Math::perspectiveRH_ZO(kValidPerspectiveParameters);
+
+    // clang-format off
+    const Math::Matrix4f expected{
+        .elements = {
+            kExpectedHorizontalScale, 0.0F, 0.0F, 0.0F,
+            0.0F, 1.0F, 0.0F, 0.0F,
+            0.0F, 0.0F, kExpectedDepthCoefficient, -1.0F,
+            0.0F, 0.0F, kExpectedDepthCoefficient, 0.0F,
+        },
+    };
+    // clang-format on
+
+    for (std::size_t index{}; index < result.elements.size(); ++index) {
+        EXPECT_NEAR(result.elements[index], expected.elements[index],
+                    kProjectionTolerance);
+    }
+}
+
+TEST(Matrix4Tests, PerspectiveMapsNearPlaneToZeroAndFarPlaneToOne) {
+    const Math::Matrix4f projection =
+        Math::perspectiveRH_ZO(kValidPerspectiveParameters);
+
+    const auto projected_depth = [&projection](float camera_z) -> float {
+        const float clip_z =
+            (projection.at(2U, 2U) * camera_z) + projection.at(2U, 3U);
+
+        const float clip_w =
+            (projection.at(3U, 2U) * camera_z) + projection.at(3U, 3U);
+
+        return clip_z / clip_w;
+    };
+
+    EXPECT_NEAR(projected_depth(-kValidPerspectiveParameters.near_plane), 0.0F,
+                kProjectionTolerance);
+
+    EXPECT_NEAR(projected_depth(-kValidPerspectiveParameters.far_plane), 1.0F,
+                kProjectionTolerance);
+}
+
+TEST(Matrix4Tests, PerspectiveMakesDistantObjectsAppearSmaller) {
+    constexpr float kCameraX = 1.0F;
+    constexpr float kNearCameraZ = -2.0F;
+    constexpr float kFarCameraZ = -4.0F;
+    constexpr float kDistanceRatio = 2.0F;
+
+    const Math::Matrix4f projection =
+        Math::perspectiveRH_ZO(kValidPerspectiveParameters);
+
+    const auto projected_x = [&projection](float camera_x,
+                                           float camera_z) -> float {
+        const float clip_x = projection.at(0U, 0U) * camera_x;
+        const float clip_w = projection.at(3U, 2U) * camera_z;
+
+        return clip_x / clip_w;
+    };
+
+    const float near_x = projected_x(kCameraX, kNearCameraZ);
+    const float far_x = projected_x(kCameraX, kFarCameraZ);
+
+    EXPECT_GT(near_x, far_x);
+    EXPECT_NEAR(near_x, kDistanceRatio * far_x, kProjectionTolerance);
+}
+
+TEST(Matrix4Tests, PerspectiveRejectsInvalidFieldOfView) {
+    constexpr float kNegativeFieldOfView = -0.5F;
+
+    Math::PerspectiveProjectionParameters parameters =
+        kValidPerspectiveParameters;
+
+    parameters.fov_y_radians = 0.0F;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters.fov_y_radians = kNegativeFieldOfView;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters.fov_y_radians = std::numbers::pi_v<float>;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+}
+
+TEST(Matrix4Tests, PerspectiveRejectsInvalidAspectRatio) {
+    constexpr float kNegativeAspectRatio = -1.0F;
+
+    Math::PerspectiveProjectionParameters parameters =
+        kValidPerspectiveParameters;
+
+    parameters.aspect_ratio = 0.0F;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters.aspect_ratio = kNegativeAspectRatio;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+}
+
+TEST(Matrix4Tests, PerspectiveRejectsInvalidClippingPlanes) {
+    constexpr float kNegativeNearPlane = -1.0F;
+    constexpr float kNearBeyondFarPlane = 12.0F;
+
+    Math::PerspectiveProjectionParameters parameters =
+        kValidPerspectiveParameters;
+
+    parameters.near_plane = 0.0F;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters.near_plane = kNegativeNearPlane;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters.near_plane = parameters.far_plane;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters.near_plane = kNearBeyondFarPlane;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+}
+
+TEST(Matrix4Tests, PerspectiveRejectsNonFiniteParameters) {
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+
+    Math::PerspectiveProjectionParameters parameters =
+        kValidPerspectiveParameters;
+
+    parameters.fov_y_radians = nan;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters = kValidPerspectiveParameters;
+    parameters.aspect_ratio = infinity;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters = kValidPerspectiveParameters;
+    parameters.near_plane = nan;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
+
+    parameters = kValidPerspectiveParameters;
+    parameters.far_plane = infinity;
+    EXPECT_DEATH(static_cast<void>(Math::perspectiveRH_ZO(parameters)),
+                 "Perspective projection parameters are invalid");
 }

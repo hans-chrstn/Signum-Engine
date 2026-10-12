@@ -79,7 +79,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         const std::string &application_name, const Platform::Window &window,
         PresentationPreference presentation_preference,
         bool development_diagnostics_enabled,
-        std::optional<InitialMeshData> initial_mesh)
+        std::optional<InitialMeshData> initial_mesh,
+        std::optional<InitialCameraData> initial_camera)
         : m_Window(&window),
           m_Instance(application_name, development_diagnostics_enabled),
           m_Surface(m_Instance.nativeHandle(), window.nativeHandle()),
@@ -101,7 +102,8 @@ namespace SNE::Engine::Renderer::Vulkan {
           m_MemoryAllocator(m_Instance.nativeHandle(), m_PhysicalDevice.handle,
                             m_Device.nativeHandle(), kRequiredApiVersion,
                             m_PhysicalDevice.capabilities.optional_capabilities
-                                .memory_budget_extension_supported) {
+                                .memory_budget_extension_supported),
+          m_InitialCamera(initial_camera) {
         const std::uint32_t graphics_queue_family_index =
             m_PhysicalDevice.queue_families.graphics_family.family_index;
 
@@ -584,11 +586,36 @@ namespace SNE::Engine::Renderer::Vulkan {
             scissor.offset.y = 0;
             vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
 
+            Math::Matrix4f view_projection = Math::identity();
+
+            if (m_InitialCamera.has_value()) {
+                const float aspect_ratio =
+                    static_cast<float>(swapchain.extent().width) /
+                    static_cast<float>(swapchain.extent().height);
+
+                const Math::PerspectiveProjectionParameters
+                    projection_parameters{
+                        .fov_y_radians = m_InitialCamera->fov_y_radians,
+                        .aspect_ratio = aspect_ratio,
+                        .near_plane = m_InitialCamera->near_plane,
+                        .far_plane = m_InitialCamera->far_plane,
+                };
+
+                const Math::Matrix4f perspective =
+                    Math::perspectiveRH_ZO(projection_parameters);
+
+                view_projection =
+                    Math::multiply(perspective, m_InitialCamera->view);
+            }
+
             for (const Math::Matrix4f &model : m_ModelMatrices) {
+                const Math::Matrix4f mvp =
+                    Math::multiply(view_projection, model);
+
                 vkCmdPushConstants(
                     command_buffer, graphics_pipeline.layoutHandle(),
                     VK_SHADER_STAGE_VERTEX_BIT, 0U,
-                    static_cast<std::uint32_t>(sizeof(model)), &model);
+                    static_cast<std::uint32_t>(sizeof(mvp)), &mvp);
 
                 vkCmdDrawIndexed(command_buffer, m_MeshIndexCount, 1U, 0U, 0,
                                  0U);

@@ -2,6 +2,7 @@
 
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
@@ -219,6 +220,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::uint32_t m_MeshVertexStride{};
 
         /**
+         * @brief Optional initial camera configuration owned by the renderer.
+         *
+         * Stores a copy of the application-provided view transformation and
+         * perspective projection parameters.
+         *
+         * The renderer derives the projection aspect ratio from the current
+         * drawable framebuffer dimensions.
+         *
+         * The camera configuration is independent of swapchain resources and
+         * remains available across swapchain recreation.
+         *
+         * Empty when no initial camera has been configured.
+         */
+        std::optional<InitialCameraData> m_InitialCamera;
+
+        /**
          * @brief Swapchain-dependent renderer resources when presentation is
          * available.
          *
@@ -362,6 +379,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * during renderer initialization. When absent, the renderer starts
          * without application-provided geometry. The underlying CPU storage
          * must remain valid until construction completes.
+         * @param initial_camera Optional initial camera configuration
+         * containing the view transformation and perspective projection
+         * parameters. The configuration is retained by value for subsequent
+         * rendering.
          *
          * @throws Core::Error::EngineError if a required Vulkan resource or
          * capability cannot be initialized.
@@ -370,7 +391,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             const std::string &application_name, const Platform::Window &window,
             PresentationPreference presentation_preference,
             bool development_diagnostics_enabled,
-            std::optional<InitialMeshData> initial_mesh = std::nullopt);
+            std::optional<InitialMeshData> initial_mesh = std::nullopt,
+            std::optional<InitialCameraData> initial_camera = std::nullopt);
 
         /**
          * @brief Releases the Vulkan renderer runtime.
