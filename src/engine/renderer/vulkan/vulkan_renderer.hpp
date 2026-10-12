@@ -1,6 +1,10 @@
 #pragma once
 
+#include "engine/core/math/matrix4.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/geometry/initial_mesh_data.hpp"
+#include "engine/renderer/geometry/mesh_upload_data.hpp"
+#include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device.hpp"
@@ -15,6 +19,7 @@
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_instance.hpp"
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -46,7 +51,7 @@ namespace SNE::Engine::Renderer::Vulkan {
       private:
         struct SwapchainResources {
             VulkanSwapchain m_VulkanSwapchain;
-            VulkanGraphicsPipeline m_VulkanGraphicsPipeline;
+            std::optional<VulkanGraphicsPipeline> m_VulkanGraphicsPipeline;
             std::vector<VulkanSemaphore> m_VulkanSemaphores;
         };
         /**
@@ -142,9 +147,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanMemoryAllocator m_MemoryAllocator;
 
         /**
-         * @brief Owns the GPU vertex buffer for the demonstration quad.
+         * @brief Owns the GPU vertex buffer for the uploaded mesh.
          *
-         * Stores device-local vertex data shared by the indexed draw commands.
+         * Stores device-local vertex data supplied during renderer
+         * initialization.
          *
          * The buffer is independent of swapchain resources and survives
          * swapchain recreation.
@@ -152,13 +158,13 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The buffer must be released before the Vulkan memory allocator and
          * logical device are destroyed.
          */
-        std::optional<VulkanBuffer> m_QuadVertexBuffer;
+        std::optional<VulkanBuffer> m_MeshVertexBuffer;
 
         /**
-         * @brief Owns the GPU index buffer for the demonstration quad.
+         * @brief Owns the GPU index buffer for the uploaded mesh.
          *
-         * Stores device-local indices defining two triangles that share
-         * vertices from the quad's vertex buffer.
+         * Stores device-local indices referencing vertices in the mesh's vertex
+         * buffer.
          *
          * The buffer is independent of swapchain resources and survives
          * swapchain recreation.
@@ -166,21 +172,66 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The buffer must be released before the Vulkan memory allocator and
          * logical device are destroyed.
          */
-        std::optional<VulkanBuffer> m_QuadIndexBuffer;
+        std::optional<VulkanBuffer> m_MeshIndexBuffer;
+
+        /**
+         * @brief Number of indices in the currently uploaded GPU mesh.
+         *
+         * Updated after successful mesh upload and used to determine the index
+         * count supplied to indexed draw commands.
+         *
+         * The count remains associated with the renderer-owned mesh buffers and
+         * is independent of swapchain recreation.
+         */
+        std::uint32_t m_MeshIndexCount{};
+
+        /**
+         * @brief Owns the model transformations for the uploaded mesh.
+         *
+         * Stores copies of application-provided model matrices so rendering
+         * does not depend on caller-managed CPU storage.
+         *
+         * Each matrix represents one draw of the same uploaded mesh.
+         *
+         * Empty when no mesh instances have been configured.
+         */
+        std::vector<Core::Math::Matrix4f> m_ModelMatrices;
+
+        /**
+         * @brief Owns the vertex attribute descriptions of the uploaded mesh.
+         *
+         * Stores a copy of the caller-provided vertex layout so graphics
+         * pipelines can be recreated without referencing expired external
+         * storage.
+         *
+         * Empty when no mesh layout has been configured.
+         */
+        std::vector<VertexAttributeDescription> m_MeshVertexAttributes;
+
+        /**
+         * @brief Byte stride of each vertex in the uploaded mesh.
+         *
+         * Retained alongside the owned attribute descriptions for
+         * graphics-pipeline creation and recreation.
+         *
+         * Zero when no mesh has been configured.
+         */
+        std::uint32_t m_MeshVertexStride{};
 
         /**
          * @brief Swapchain-dependent renderer resources when presentation is
          * available.
          *
-         * Owns the presentation swapchain, compatible graphics pipeline, and
+         * Owns the presentation swapchain, optional graphics pipeline, and
          * render-finished semaphores associated with swapchain images.
          *
          * The optional is empty while no drawable framebuffer is available,
          * allowing the renderer to remain initialized without presentation
          * resources.
          *
-         * When present, all swapchain-dependent resources exist together and
-         * are recreated as a single logical resource group.
+         * When present, the swapchain and render-finished semaphores are
+         * initialized together. A graphics pipeline is only required when
+         * geometry is available for drawing.
          */
         std::optional<SwapchainResources> m_SwapchainResources;
         /**
@@ -251,6 +302,42 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto recreateSwapchainResources() -> bool;
 
+        /**
+         * @brief Creates and uploads GPU buffers for the supplied mesh.
+         *
+         * Consumes borrowed CPU-side vertex and index data to create
+         * device-local Vulkan buffers through the renderer's memory allocator
+         * and immediate submission infrastructure.
+         *
+         * The renderer retains ownership of the resulting GPU buffers. The
+         * supplied mesh data is not retained, and its underlying CPU storage
+         * must remain valid until the upload operation completes.
+         *
+         * Initially intended for renderer initialization before normal frame
+         * submission begins. Runtime mesh replacement and synchronization with
+         * in-flight rendering work are not supported by this contract.
+         *
+         * @param mesh Non-owning description of vertex data, vertex stride, and
+         * index data to upload.
+         *
+         * @pre Vertex data and indices must be nonempty.
+         * @pre Vertex stride must be nonzero and divide the vertex byte count
+         * evenly.
+         * @pre Every index must reference an existing vertex.
+         * @pre The renderer's memory allocator and immediate submission
+         * resources must be initialized.
+         *
+         * @post On successful completion, the renderer owns device-local vertex
+         * and index buffers containing the supplied mesh data.
+         *
+         * @throws Core::Error::EngineError if Vulkan buffer creation, memory
+         * allocation, or data upload fails.
+         *
+         * @note Invalid mesh descriptions trigger fatal precondition
+         * assertions.
+         */
+        auto uploadMesh(const MeshUploadData &mesh) -> void;
+
       public:
         /**
          * @brief Initializes the Vulkan renderer for an application window.
@@ -271,14 +358,19 @@ namespace SNE::Engine::Renderer::Vulkan {
          * renderer.
          * @param development_diagnostics_enabled Whether development-oriented
          * Vulkan diagnostics should be enabled.
+         * @param initial_mesh Optional borrowed mesh and vertex layout consumed
+         * during renderer initialization. When absent, the renderer starts
+         * without application-provided geometry. The underlying CPU storage
+         * must remain valid until construction completes.
          *
          * @throws Core::Error::EngineError if a required Vulkan resource or
          * capability cannot be initialized.
          */
-        VulkanRenderer(const std::string &application_name,
-                       const Platform::Window &window,
-                       PresentationPreference presentation_preference,
-                       bool development_diagnostics_enabled);
+        VulkanRenderer(
+            const std::string &application_name, const Platform::Window &window,
+            PresentationPreference presentation_preference,
+            bool development_diagnostics_enabled,
+            std::optional<InitialMeshData> initial_mesh = std::nullopt);
 
         /**
          * @brief Releases the Vulkan renderer runtime.

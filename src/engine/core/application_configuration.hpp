@@ -1,7 +1,9 @@
 #pragma once
 
 #include "engine/platform/window.hpp"
+#include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include <optional>
 #include <string>
 
 namespace SNE::Engine::Core {
@@ -58,5 +60,16 @@ namespace SNE::Engine::Core {
          * not required.
          */
         bool development_diagnostics_enabled = true;
+
+        /**
+         * @brief Optional initial geometry supplied to the renderer.
+         *
+         * Contains non-owning views of CPU mesh data and vertex attributes.
+         * The referenced storage must remain valid until renderer
+         * initialization completes.
+         *
+         * When absent, no application-provided geometry is requested.
+         */
+        std::optional<Renderer::InitialMeshData> initial_mesh;
     };
 } // namespace SNE::Engine::Core

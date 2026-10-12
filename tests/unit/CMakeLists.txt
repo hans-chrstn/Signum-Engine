@@ -21,6 +21,7 @@ add_executable(
   core/math/vector4_tests.cpp
   core/math/vector4d_tests.cpp
   core/math/quaternion_tests.cpp
+  renderer/geometry/vertex_format_tests.cpp
   renderer/vulkan/common/vulkan_result_tests.cpp
   renderer/vulkan/common/vulkan_extension_support_tests.cpp
   renderer/vulkan/device/vulkan_queue_families_tests.cpp
@@ -37,6 +38,8 @@ add_executable(
   renderer/vulkan/pipeline/vulkan_graphics_shader_data_tests.cpp
   renderer/vulkan/pipeline/vulkan_spirv_validation_tests.cpp
   renderer/vulkan/pipeline/vulkan_spirv_reflection_tests.cpp
+  renderer/vulkan/geometry/vulkan_vertex_format_tests.cpp
+  renderer/vulkan/geometry/vulkan_vertex_input_tests.cpp
 )
 
 target_link_libraries(

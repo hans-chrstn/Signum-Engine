@@ -8,7 +8,8 @@ namespace SNE::Engine::Core {
                    m_Configuration.application_name),
           m_Renderer(m_Configuration.application_name, m_Window,
                      m_Configuration.presentation_preference,
-                     m_Configuration.development_diagnostics_enabled) {}
+                     m_Configuration.development_diagnostics_enabled,
+                     m_Configuration.initial_mesh) {}
 
     void Application::run() {
         while (!m_Window.shouldClose()) {

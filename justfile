@@ -59,6 +59,10 @@ clean:
 bench:
     ./scripts/bench.sh
 
+playground preset="playground":
+    just build playground
+    ./build/playground/playground/signum_playground
+
 all:
     ./scripts/clean.sh
     ./scripts/format.sh

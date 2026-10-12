@@ -21,6 +21,7 @@ add_library(
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp
+    engine/renderer/geometry/vertex_format.cpp
     engine/renderer/vulkan/vulkan_instance.cpp
     engine/renderer/vulkan/vulkan_frame_resources.cpp
     engine/renderer/vulkan/vulkan_renderer.cpp
@@ -57,6 +58,8 @@ add_library(
     engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.cpp
     engine/renderer/vulkan/synchronization/vulkan_semaphore.cpp
     engine/renderer/vulkan/synchronization/vulkan_fence.cpp
+    engine/renderer/vulkan/geometry/vulkan_vertex_format.cpp
+    engine/renderer/vulkan/geometry/vulkan_vertex_input.cpp
 )
 
 target_include_directories(

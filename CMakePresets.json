@@ -24,7 +24,17 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "SIGNUM_ENABLE_SANITIZERS": false,
         "SIGNUM_ENABLE_REFLECTION": false,
-        "SIGNUM_ENABLE_CONTRACTS": false
+        "SIGNUM_ENABLE_CONTRACTS": false,
+        "SIGNUM_BUILD_PLAYGROUND": false
+      }
+    },
+    {
+      "name": "playground",
+      "displayName": "Playground",
+      "inherits": "debug",
+      "cacheVariables": {
+        "SIGNUM_BUILD_PLAYGROUND": true,
+        "BUILD_TESTING": false
       }
     },
     {
@@ -36,6 +46,7 @@
         "SIGNUM_ENABLE_SANITIZERS": false,
         "SIGNUM_ENABLE_REFLECTION": false,
         "SIGNUM_ENABLE_CONTRACTS": false,
+        "SIGNUM_BUILD_PLAYGROUND": false,
         "SIGNUM_WARNINGS_AS_ERRORS": true
       }
     },
@@ -47,7 +58,8 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "SIGNUM_ENABLE_SANITIZERS": false,
         "SIGNUM_ENABLE_REFLECTION": true,
-        "SIGNUM_ENABLE_CONTRACTS": true
+        "SIGNUM_ENABLE_CONTRACTS": true,
+        "SIGNUM_BUILD_PLAYGROUND": false
       }
     },
     {
@@ -56,7 +68,8 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "SIGNUM_ENABLE_SANITIZERS": true
+        "SIGNUM_ENABLE_SANITIZERS": true,
+        "SIGNUM_BUILD_PLAYGROUND": false
       }
     },
     {
@@ -66,7 +79,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": false,
-        "SIGNUM_ENABLE_SANITIZERS": false
+        "SIGNUM_ENABLE_SANITIZERS": false,
+        "SIGNUM_BUILD_PLAYGROUND": false
       }
     },
     {
@@ -79,7 +93,8 @@
         "SIGNUM_BUILD_BENCHMARKS": true,
         "SIGNUM_ENABLE_SANITIZERS": false,
         "SIGNUM_ENABLE_REFLECTION": false,
-        "SIGNUM_ENABLE_CONTRACTS": false
+        "SIGNUM_ENABLE_CONTRACTS": false,
+        "SIGNUM_BUILD_PLAYGROUND": false
       }
     }
   ],
@@ -87,6 +102,10 @@
     {
       "name": "debug",
       "configurePreset": "debug"
+    },
+    {
+      "name": "playground",
+      "configurePreset": "playground"
     },
     {
       "name": "warnings",

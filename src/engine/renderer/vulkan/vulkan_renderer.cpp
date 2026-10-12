@@ -6,8 +6,10 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/math/matrix4.hpp"
-#include "engine/core/math/vector3.hpp"
+#include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/geometry/mesh_upload_data.hpp"
+#include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
@@ -17,6 +19,7 @@
 #include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/device/vulkan_queue_requests.hpp"
+#include "engine/renderer/vulkan/geometry/vulkan_vertex_input.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
@@ -27,8 +30,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
-#include <numbers>
 #include <optional>
 #include <span>
 #include <string>
@@ -47,52 +48,6 @@ namespace {
     static_assert(sizeof(Math::Matrix4f) == kMatrixSize);
     static_assert(offsetof(Math::Matrix4f, elements) == kMatrixOffset);
     static_assert(std::is_trivially_copyable_v<Math::Matrix4f>);
-
-    struct QuadVertex {
-        std::array<float, 2> position;
-        std::array<float, 3> color;
-    };
-    constexpr float kQuadScale = 0.5F;
-    constexpr float kQuadHorizontalOffset = 0.5F;
-    constexpr float kQuadRotationDegrees = 45.0F;
-    constexpr float kDegreesPerHalfTurn = 180.0F;
-
-    constexpr float kQuadRotationRadians =
-        kQuadRotationDegrees * std::numbers::pi_v<float> / kDegreesPerHalfTurn;
-
-    constexpr std::array<QuadVertex, 4> kQuadVertices{
-        {
-            {
-                // bottom-left
-                .position = {-0.5F, -0.5F},
-                .color = {1.0F, 0.0F, 0.0F},
-            },
-            {
-                // bottom-right
-                .position = {0.5F, -0.5F},
-                .color = {0.0F, 1.0F, 0.0F},
-            },
-            {
-                // top-left
-                .position = {-0.5F, 0.5F},
-                .color = {0.0F, 0.0F, 1.0F},
-            },
-            {
-                // top-right
-                .position = {0.5F, 0.5F},
-                .color = {0.0F, 0.0F, 1.0F},
-            },
-        },
-    };
-
-    constexpr std::array<std::uint16_t, 6> kQuadIndices{0, 1, 2, 2, 1, 3};
-    static_assert(kQuadIndices.size() <=
-                      std::numeric_limits<std::uint32_t>::max(),
-                  "Quad Indices size exceeds uint32_t");
-
-    static_assert(sizeof(QuadVertex) <=
-                      std::numeric_limits<std::uint32_t>::max(),
-                  "QuadVertex size exceeds uint32_t");
 
     [[nodiscard]] auto selectRequiredPhysicalDevice(VkInstance instance,
                                                     VkSurfaceKHR surface)
@@ -123,7 +78,8 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanRenderer::VulkanRenderer(
         const std::string &application_name, const Platform::Window &window,
         PresentationPreference presentation_preference,
-        bool development_diagnostics_enabled)
+        bool development_diagnostics_enabled,
+        std::optional<InitialMeshData> initial_mesh)
         : m_Window(&window),
           m_Instance(application_name, development_diagnostics_enabled),
           m_Surface(m_Instance.nativeHandle(), window.nativeHandle()),
@@ -156,30 +112,18 @@ namespace SNE::Engine::Renderer::Vulkan {
                                           graphics_queue_family_index);
         }
 
-        VulkanBufferCreateInfo buffer_create_info{
-            .size = static_cast<VkDeviceSize>(sizeof(kQuadVertices)),
-            .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            .memory_usage = GpuMemoryUsage::Device,
-        };
+        if (initial_mesh.has_value()) {
+            m_MeshVertexAttributes.assign(
+                initial_mesh->layout.attributes.begin(),
+                initial_mesh->layout.attributes.end());
 
-        m_QuadVertexBuffer.emplace(m_MemoryAllocator, buffer_create_info);
+            m_MeshVertexStride = initial_mesh->mesh.vertex_stride;
 
-        const auto vertex_bytes = std::as_bytes(std::span{kQuadVertices});
-        uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
-                         m_QuadVertexBuffer.value(), vertex_bytes);
+            m_ModelMatrices.assign(initial_mesh->model_matrices.begin(),
+                                   initial_mesh->model_matrices.end());
 
-        VulkanBufferCreateInfo index_buffer_create_info{
-            .size = static_cast<VkDeviceSize>(sizeof(kQuadIndices)),
-            .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            .memory_usage = GpuMemoryUsage::Device,
-        };
-
-        m_QuadIndexBuffer.emplace(m_MemoryAllocator, index_buffer_create_info);
-        const auto index_bytes = std::as_bytes(std::span{kQuadIndices});
-        uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
-                         m_QuadIndexBuffer.value(), index_bytes);
+            uploadMesh(initial_mesh->mesh);
+        }
 
         if (isFramebufferDrawable()) {
             static_cast<void>(recreateSwapchainResources());
@@ -189,6 +133,87 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanRenderer::~VulkanRenderer() noexcept {
         const VkResult result = vkDeviceWaitIdle(m_Device.nativeHandle());
         static_cast<void>(result);
+    }
+
+    auto VulkanRenderer::uploadMesh(const MeshUploadData &mesh) -> void {
+        const std::optional<std::uint32_t> mesh_indices_size =
+            Core::Numeric::tryConvertToUint32(mesh.indices.size());
+
+        if (!mesh_indices_size.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan mesh upload index count exceeds uint32_t");
+        }
+
+        if (mesh.vertex_bytes.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan mesh upload requires nonempty vertex data");
+        }
+
+        if (mesh.indices.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan mesh upload requires nonempty index data");
+        }
+
+        if (mesh.vertex_stride == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan mesh upload requires a nonzero vertex stride");
+        }
+
+        const std::size_t byte_count = mesh.vertex_bytes.size();
+
+        if ((byte_count % mesh.vertex_stride) != 0) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan mesh upload requires vertex data aligned to its "
+                "stride");
+        }
+
+        const std::size_t vertex_count = byte_count / mesh.vertex_stride;
+
+        for (const std::uint16_t index : mesh.indices) {
+            if (static_cast<std::size_t>(index) >= vertex_count) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan mesh upload index references a vertex outside the "
+                    "mesh");
+            }
+        }
+
+        const VulkanBufferCreateInfo buffer_create_info{
+            .size = static_cast<VkDeviceSize>(byte_count),
+            .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            .memory_usage = GpuMemoryUsage::Device,
+        };
+
+        m_MeshVertexBuffer.emplace(m_MemoryAllocator, buffer_create_info);
+
+        uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
+                         m_MeshVertexBuffer.value(), mesh.vertex_bytes);
+
+        const VulkanBufferCreateInfo index_buffer_create_info{
+            .size = static_cast<VkDeviceSize>(mesh.indices.size_bytes()),
+            .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                     VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            .memory_usage = GpuMemoryUsage::Device,
+        };
+
+        const auto index_bytes = std::as_bytes(mesh.indices);
+
+        m_MeshIndexBuffer.emplace(m_MemoryAllocator, index_buffer_create_info);
+        uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
+                         m_MeshIndexBuffer.value(), index_bytes);
+        m_MeshIndexCount = mesh_indices_size.value();
     }
 
     auto VulkanRenderer::waitForDrawableFramebuffer() const -> bool {
@@ -231,11 +256,11 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         std::optional<VulkanGraphicsPipeline> new_graphics_pipeline{};
 
-        if (!m_SwapchainResources.has_value() ||
-            new_swapchain.surfaceFormat().format !=
-                m_SwapchainResources.value()
-                    .m_VulkanSwapchain.surfaceFormat()
-                    .format) {
+        if (m_MeshIndexCount > 0U &&
+            (!m_SwapchainResources.has_value() ||
+             new_swapchain.surfaceFormat().format !=
+                 m_SwapchainResources->m_VulkanSwapchain.surfaceFormat()
+                     .format)) {
             const auto fragment_data =
                 loadSpirv("build/shaders/triangle.frag.spv");
             const auto vertex_data =
@@ -261,38 +286,22 @@ namespace SNE::Engine::Renderer::Vulkan {
                     },
             };
 
-            VkVertexInputBindingDescription vertex_binding{};
-            vertex_binding.binding = 0U;
-            vertex_binding.stride =
-                static_cast<std::uint32_t>(sizeof(QuadVertex));
-            vertex_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            const VertexLayoutDescription vertex_layout{
+                .attributes = m_MeshVertexAttributes,
+            };
 
-            VkVertexInputAttributeDescription position_attribute{};
-            position_attribute.location = 0U;
-            position_attribute.binding = 0U;
-            position_attribute.format = VK_FORMAT_R32G32_SFLOAT;
-            position_attribute.offset =
-                static_cast<std::uint32_t>(offsetof(QuadVertex, position));
-
-            VkVertexInputAttributeDescription color_attribute{};
-            color_attribute.location = 1U;
-            color_attribute.binding = 0U;
-            color_attribute.format = VK_FORMAT_R32G32B32_SFLOAT;
-            color_attribute.offset =
-                static_cast<std::uint32_t>(offsetof(QuadVertex, color));
+            const VulkanVertexInputDescriptions vertex_input_descriptions =
+                makeVulkanVertexInputDescriptions(vertex_layout,
+                                                  m_MeshVertexStride);
 
             const std::array<VkVertexInputBindingDescription, 1>
-                vertex_bindings{vertex_binding};
-
-            const std::array<VkVertexInputAttributeDescription, 2>
-                vertex_attributes{
-                    position_attribute,
-                    color_attribute,
+                vertex_bindings{
+                    vertex_input_descriptions.binding,
             };
 
             const GraphicsVertexInputData vertex_input_data{
                 .bindings = vertex_bindings,
-                .attributes = vertex_attributes,
+                .attributes = vertex_input_descriptions.attributes,
             };
 
             const std::array<VkPushConstantRange, 1> push_constant_ranges{
@@ -325,15 +334,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                 m_Device.nativeHandle());
         }
 
-        if (!new_graphics_pipeline.has_value()) {
-            new_graphics_pipeline.emplace(
-                std::move(m_SwapchainResources->m_VulkanGraphicsPipeline));
+        if (!new_graphics_pipeline.has_value() &&
+            m_SwapchainResources.has_value() &&
+            m_SwapchainResources->m_VulkanGraphicsPipeline.has_value()) {
+            new_graphics_pipeline.emplace(std::move(
+                m_SwapchainResources->m_VulkanGraphicsPipeline.value()));
         }
 
         m_SwapchainResources.emplace(SwapchainResources{
             .m_VulkanSwapchain = std::move(new_swapchain),
-            .m_VulkanGraphicsPipeline =
-                std::move(new_graphics_pipeline.value()),
+            .m_VulkanGraphicsPipeline = std::move(new_graphics_pipeline),
             .m_VulkanSemaphores = std::move(new_render_finished_semaphores),
         });
 
@@ -368,9 +378,6 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const VulkanSwapchain &swapchain =
             swapchain_resources.m_VulkanSwapchain;
-
-        const VulkanGraphicsPipeline &graphics_pipeline =
-            swapchain_resources.m_VulkanGraphicsPipeline;
 
         const auto &semaphores = swapchain_resources.m_VulkanSemaphores;
 
@@ -522,92 +529,71 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdBeginRendering(command_buffer, &render_info);
 
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          graphics_pipeline.nativeHandle());
+        if (m_MeshIndexCount > 0U) {
+            if (!swapchain_resources.m_VulkanGraphicsPipeline.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer requires a graphics pipeline when drawing");
+            }
 
-        const VkDeviceSize vertex_offset = 0U;
-        if (!m_QuadVertexBuffer.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires an initialized vertex buffer before "
-                "recording draw commands");
+            const VulkanGraphicsPipeline &graphics_pipeline =
+                swapchain_resources.m_VulkanGraphicsPipeline.value();
+
+            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              graphics_pipeline.nativeHandle());
+            const VkDeviceSize vertex_offset = 0U;
+            if (!m_MeshVertexBuffer.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer requires an initialized vertex buffer "
+                    "before "
+                    "recording draw commands");
+            }
+            const VkBuffer vertex_buffer =
+                m_MeshVertexBuffer.value().nativeHandle();
+            vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
+                                   &vertex_offset);
+
+            if (!m_MeshIndexBuffer.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer requires an initialized index buffer "
+                    "before "
+                    "recording indexed draw commands");
+            }
+            const VkBuffer index_buffer =
+                m_MeshIndexBuffer.value().nativeHandle();
+            vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
+                                 VK_INDEX_TYPE_UINT16);
+
+            VkViewport viewport{};
+            viewport.x = 0.0F;
+            viewport.y = static_cast<float>(swapchain.extent().height);
+            viewport.width = static_cast<float>(swapchain.extent().width);
+            viewport.height = -static_cast<float>(swapchain.extent().height);
+            viewport.minDepth = 0.0F;
+            viewport.maxDepth = 1.0F;
+            vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
+
+            VkRect2D scissor{};
+            scissor.extent = swapchain.extent();
+            scissor.offset.x = 0;
+            scissor.offset.y = 0;
+            vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
+
+            for (const Math::Matrix4f &model : m_ModelMatrices) {
+                vkCmdPushConstants(
+                    command_buffer, graphics_pipeline.layoutHandle(),
+                    VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                    static_cast<std::uint32_t>(sizeof(model)), &model);
+
+                vkCmdDrawIndexed(command_buffer, m_MeshIndexCount, 1U, 0U, 0,
+                                 0U);
+            }
         }
-        const VkBuffer vertex_buffer =
-            m_QuadVertexBuffer.value().nativeHandle();
-        vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
-                               &vertex_offset);
-
-        if (!m_QuadIndexBuffer.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires an initialized index buffer before "
-                "recording indexed draw commands");
-        }
-        const VkBuffer index_buffer = m_QuadIndexBuffer.value().nativeHandle();
-        vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
-                             VK_INDEX_TYPE_UINT16);
-
-        VkViewport viewport{};
-        viewport.x = 0.0F;
-        viewport.y = static_cast<float>(swapchain.extent().height);
-        viewport.width = static_cast<float>(swapchain.extent().width);
-        viewport.height = -static_cast<float>(swapchain.extent().height);
-        viewport.minDepth = 0.0F;
-        viewport.maxDepth = 1.0F;
-        vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
-
-        VkRect2D scissor{};
-        scissor.extent = swapchain.extent();
-        scissor.offset.x = 0;
-        scissor.offset.y = 0;
-        vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
-
-        const auto indices = static_cast<std::uint32_t>(kQuadIndices.size());
-        const Math::Vector3f translation_a{
-            .x = -kQuadHorizontalOffset,
-            .y = 0.0F,
-            .z = 0.0F,
-        };
-
-        const Math::Vector3f rotation_a{
-            .x = 0.0F,
-            .y = 0.0F,
-            .z = kQuadRotationRadians,
-        };
-
-        const Math::Vector3f scale_a{
-            .x = kQuadScale,
-            .y = kQuadScale,
-            .z = 1.0F,
-        };
-
-        const Math::Matrix4f model_a =
-            Math::composeTRS(translation_a, rotation_a, scale_a);
-
-        vkCmdPushConstants(command_buffer, graphics_pipeline.layoutHandle(),
-                           VK_SHADER_STAGE_VERTEX_BIT, 0U,
-                           static_cast<std::uint32_t>(sizeof(model_a)),
-                           &model_a);
-        vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
-
-        const Math::Vector3f translation_b{
-            .x = kQuadHorizontalOffset,
-            .y = 0.0F,
-            .z = 0.0F,
-        };
-
-        const Math::Vector3f rotation_b{};
-
-        const Math::Matrix4f model_b =
-            Math::composeTRS(translation_b, rotation_b, scale_a);
-
-        vkCmdPushConstants(command_buffer, graphics_pipeline.layoutHandle(),
-                           VK_SHADER_STAGE_VERTEX_BIT, 0U,
-                           static_cast<std::uint32_t>(sizeof(model_b)),
-                           &model_b);
-        vkCmdDrawIndexed(command_buffer, indices, 1U, 0U, 0, 0U);
 
         vkCmdEndRendering(command_buffer);
 
