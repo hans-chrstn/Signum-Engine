@@ -253,6 +253,11 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanImageViewCreationFailed",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::VulkanDepthFormatUnavailable,
+                    .name = "VulkanDepthFormatUnavailable",
+                    .subsystem = Subsystem::Vulkan,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {

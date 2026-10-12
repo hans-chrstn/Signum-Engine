@@ -15,12 +15,14 @@
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/device/vulkan_queue_requests.hpp"
 #include "engine/renderer/vulkan/geometry/vulkan_vertex_input.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_image.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
@@ -256,6 +258,56 @@ namespace SNE::Engine::Renderer::Vulkan {
                     .presentModeFifoLatestReady == VK_TRUE,
             old_swapchain);
 
+        const std::optional<VkFormat> depth_format =
+            selectSupportedDepthFormat(m_PhysicalDevice.handle);
+
+        if (!depth_format.has_value()) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanDepthFormatUnavailable,
+                "No supported Vulkan depth attachment format available",
+                "Select Vulkan Depth Format");
+        }
+
+        const VulkanImageCreateInfo depth_image_create_info{
+            .extent =
+                {
+                    .width = new_swapchain.extent().width,
+                    .height = new_swapchain.extent().height,
+                    .depth = 1U,
+                },
+            .image_type = VK_IMAGE_TYPE_2D,
+            .format = depth_format.value(),
+            .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        };
+
+        std::vector<DepthAttachmentResources> new_depth_attachments;
+        new_depth_attachments.reserve(m_FrameResources.size());
+
+        for (std::size_t i{}; i < m_FrameResources.size(); ++i) {
+            VulkanImage depth_image{m_MemoryAllocator, depth_image_create_info};
+
+            VkImageViewCreateInfo depth_view_create_info{};
+            depth_view_create_info.sType =
+                VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            depth_view_create_info.image = depth_image.nativeHandle();
+            depth_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            depth_view_create_info.format = depth_format.value();
+            depth_view_create_info.subresourceRange.aspectMask =
+                VK_IMAGE_ASPECT_DEPTH_BIT;
+            depth_view_create_info.subresourceRange.baseMipLevel = 0U;
+            depth_view_create_info.subresourceRange.levelCount = 1U;
+            depth_view_create_info.subresourceRange.baseArrayLayer = 0U;
+            depth_view_create_info.subresourceRange.layerCount = 1U;
+
+            VulkanImageView depth_image_view{m_Device.nativeHandle(),
+                                             depth_view_create_info};
+
+            new_depth_attachments.emplace_back(DepthAttachmentResources{
+                .m_Image = std::move(depth_image),
+                .m_ImageView = std::move(depth_image_view),
+            });
+        }
+
         std::optional<VulkanGraphicsPipeline> new_graphics_pipeline{};
 
         if (m_MeshIndexCount > 0U &&
@@ -347,6 +399,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             .m_VulkanSwapchain = std::move(new_swapchain),
             .m_VulkanGraphicsPipeline = std::move(new_graphics_pipeline),
             .m_VulkanSemaphores = std::move(new_render_finished_semaphores),
+            .m_DepthAttachments = std::move(new_depth_attachments),
         });
 
         return true;

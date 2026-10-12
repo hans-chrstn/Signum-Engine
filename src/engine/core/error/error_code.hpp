@@ -115,6 +115,8 @@ namespace SNE::Engine::Core::Error {
         VulkanPushConstantLayoutIncompatible,
         /** Creation of a Vulkan image view failed. */
         VulkanImageViewCreationFailed,
+        /** Required Vulkan depth format could not be obtained. */
+        VulkanDepthFormatUnavailable,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

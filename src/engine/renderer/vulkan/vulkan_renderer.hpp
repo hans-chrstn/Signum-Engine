@@ -12,6 +12,8 @@
 #include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_image.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_image_view.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
@@ -50,11 +52,97 @@ namespace SNE::Engine::Renderer::Vulkan {
      */
     class VulkanRenderer {
       private:
-        struct SwapchainResources {
-            VulkanSwapchain m_VulkanSwapchain;
-            std::optional<VulkanGraphicsPipeline> m_VulkanGraphicsPipeline;
-            std::vector<VulkanSemaphore> m_VulkanSemaphores;
+        /**
+         * @brief Owns a depth image and its corresponding image view.
+         *
+         * Groups the GPU image and image-view resources required for
+         * a depth attachment.
+         *
+         * The image view references the image owned by this structure.
+         * Members are declared in dependency order so the image view
+         * is destroyed before the underlying image.
+         *
+         * The structure is move-only because its resources have
+         * exclusive Vulkan ownership.
+         */
+        struct DepthAttachmentResources {
+            /** @brief Owns the VMA-backed depth image. */
+            VulkanImage m_Image;
+
+            /** @brief Owns the image view referencing the depth image. */
+            VulkanImageView m_ImageView;
         };
+
+        /**
+         * @brief Owns resources associated with a presentation swapchain.
+         *
+         * Groups the Vulkan swapchain, optional graphics pipeline,
+         * presentation synchronization objects, and depth attachments.
+         *
+         * Render-finished semaphores are maintained per swapchain image,
+         * while depth attachments are maintained per frame-in-flight slot.
+         *
+         * Depth attachments are recreated alongside the swapchain to
+         * match its current framebuffer extent.
+         *
+         * The resources must not be destroyed while outstanding GPU
+         * operations still reference them.
+         */
+        struct SwapchainResources {
+            /**
+             * @brief Owns the Vulkan presentation swapchain.
+             *
+             * Manages the swapchain, its presentation images, and their
+             * associated image views.
+             *
+             * Determines the image count, color format, and extent used
+             * by the other swapchain-dependent resources.
+             */
+            VulkanSwapchain m_VulkanSwapchain;
+
+            /**
+             * @brief Owns the graphics pipeline used for swapchain rendering.
+             *
+             * Contains the Vulkan graphics pipeline and its pipeline layout
+             * when renderable geometry is available.
+             *
+             * The pipeline is created using attachment formats compatible
+             * with the current rendering configuration.
+             *
+             * The optional remains empty when no graphics pipeline is
+             * required.
+             */
+            std::optional<VulkanGraphicsPipeline> m_VulkanGraphicsPipeline;
+
+            /**
+             * @brief Owns render-finished semaphores for swapchain images.
+             *
+             * Maintains one semaphore per swapchain image to synchronize
+             * completed rendering with presentation.
+             *
+             * Each semaphore is associated with its corresponding
+             * swapchain image index.
+             *
+             * The collection is recreated when swapchain-dependent
+             * resources are rebuilt.
+             */
+            std::vector<VulkanSemaphore> m_VulkanSemaphores;
+
+            /**
+             * @brief Owns depth attachments for frame-in-flight slots.
+             *
+             * Each frame slot receives an independent depth image and
+             * image view, preventing overlapping frames from writing
+             * to the same depth attachment.
+             *
+             * Every depth image uses a supported depth format and
+             * matches the current swapchain extent.
+             *
+             * The collection is recreated alongside the swapchain.
+             */
+            std::vector<DepthAttachmentResources> m_DepthAttachments;
+        };
+
         /**
          * @brief Application window borrowed by the renderer.
          *

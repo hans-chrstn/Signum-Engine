@@ -286,6 +286,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanImageViewCreationFailed,
             "VulkanImageViewCreationFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDepthFormatUnavailable,
+            "VulkanDepthFormatUnavailable",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {
