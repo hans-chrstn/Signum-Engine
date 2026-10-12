@@ -1000,8 +1000,8 @@
 - [ ] Add reusable shader/pipeline variant infrastructure
 - [ ] Add compute-pipeline support when a real workload requires it
 - [ ] Add material parameter/binding foundation
-- [ ] Add depth buffering
-- [ ] Render first simple 3D reference object
+- [x] Add depth buffering
+- [x] Render first simple 3D reference object
 - [x] Render multiple objects
 - [ ] Scale the reference rendering workload from one 3D object to multiple independently transformed objects
 - [ ] Separate scene data from GPU resources
