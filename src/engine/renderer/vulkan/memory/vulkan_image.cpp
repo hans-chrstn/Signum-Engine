@@ -168,4 +168,8 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         return *this;
     }
+
+    auto VulkanImage::nativeHandle() const noexcept -> VkImage {
+        return m_Image;
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

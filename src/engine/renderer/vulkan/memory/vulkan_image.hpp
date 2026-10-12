@@ -164,5 +164,19 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @return Reference to this image object.
          */
         auto operator=(VulkanImage &&other) noexcept -> VulkanImage &;
+
+        /**
+         * @brief Returns the native Vulkan image handle.
+         *
+         * Provides non-owning access to the Vulkan image managed by this
+         * object.
+         *
+         * The returned handle remains owned by this VulkanImage and must not
+         * be destroyed by the caller.
+         *
+         * @return The owned VkImage handle, or VK_NULL_HANDLE if this object
+         * has been moved from.
+         */
+        [[nodiscard]] auto nativeHandle() const noexcept -> VkImage;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

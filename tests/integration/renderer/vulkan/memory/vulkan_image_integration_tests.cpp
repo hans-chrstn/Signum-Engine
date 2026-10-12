@@ -127,3 +127,73 @@ TEST_F(VulkanIntegrationTest, MoveAssignsVmaBackedImage) {
     EXPECT_EQ(statistics_after_destruction.allocation_count,
               statistics_before.allocation_count);
 }
+
+TEST_F(VulkanIntegrationTest, NativeHandleReturnsCreatedImage) {
+    const Vulkan::VulkanImageCreateInfo create_info{
+        .extent =
+            {
+                .width = 64U,
+                .height = 64U,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
+    const Vulkan::VulkanImage image{memoryAllocator(), create_info};
+
+    EXPECT_NE(image.nativeHandle(), VK_NULL_HANDLE);
+}
+
+TEST_F(VulkanIntegrationTest, NativeHandlePreservedAfterMoveConstruction) {
+    const Vulkan::VulkanImageCreateInfo create_info{
+        .extent =
+            {
+                .width = 64U,
+                .height = 64U,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
+    Vulkan::VulkanImage source{memoryAllocator(), create_info};
+
+    const VkImage original_handle = source.nativeHandle();
+    ASSERT_NE(original_handle, VK_NULL_HANDLE);
+
+    const Vulkan::VulkanImage destination{std::move(source)};
+
+    EXPECT_EQ(destination.nativeHandle(), original_handle);
+}
+
+TEST_F(VulkanIntegrationTest, NativeHandleUpdatedAfterMoveAssignment) {
+    const Vulkan::VulkanImageCreateInfo create_info{
+        .extent =
+            {
+                .width = 64U,
+                .height = 64U,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
+    Vulkan::VulkanImage source{memoryAllocator(), create_info};
+    Vulkan::VulkanImage destination{memoryAllocator(), create_info};
+
+    const VkImage source_handle = source.nativeHandle();
+    const VkImage destination_handle = destination.nativeHandle();
+
+    ASSERT_NE(source_handle, VK_NULL_HANDLE);
+    ASSERT_NE(destination_handle, VK_NULL_HANDLE);
+    ASSERT_NE(source_handle, destination_handle);
+
+    destination = std::move(source);
+
+    EXPECT_EQ(destination.nativeHandle(), source_handle);
+    EXPECT_NE(destination.nativeHandle(), destination_handle);
+}

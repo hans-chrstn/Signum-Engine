@@ -113,6 +113,8 @@ namespace SNE::Engine::Core::Error {
         VulkanSpirvReflectionFailed,
         /** Required Vulkan push constant layout is not compatible. */
         VulkanPushConstantLayoutIncompatible,
+        /** Creation of a Vulkan image view failed. */
+        VulkanImageViewCreationFailed,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

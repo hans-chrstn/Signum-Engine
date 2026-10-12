@@ -281,6 +281,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanPushConstantLayoutIncompatible,
             "VulkanPushConstantLayoutIncompatible",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanImageViewCreationFailed,
+            "VulkanImageViewCreationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

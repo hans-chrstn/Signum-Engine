@@ -48,6 +48,7 @@ add_library(
     engine/renderer/vulkan/memory/vulkan_buffer.cpp
     engine/renderer/vulkan/memory/vulkan_memory_policy.cpp
     engine/renderer/vulkan/memory/vulkan_image.cpp
+    engine/renderer/vulkan/memory/vulkan_image_view.cpp
     engine/renderer/vulkan/pipeline/vulkan_spirv.cpp
     engine/renderer/vulkan/pipeline/vulkan_spirv_validation.cpp
     engine/renderer/vulkan/pipeline/vulkan_shader_module.cpp

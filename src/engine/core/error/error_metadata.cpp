@@ -248,6 +248,11 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanPushConstantLayoutIncompatible",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::VulkanImageViewCreationFailed,
+                    .name = "VulkanImageViewCreationFailed",
+                    .subsystem = Subsystem::Vulkan,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {
