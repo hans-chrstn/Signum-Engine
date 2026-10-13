@@ -516,6 +516,7 @@
 - [x] Keep allocation backend-specific
 - [x] Keep allocation policy replaceable without changing resource identity or normal renderer callers
 - [ ] Keep future streaming requirements possible
+- [ ] Keep GPU allocation separate from resource-page loading and eviction.
 - [ ] Keep future memory-budget enforcement possible
 - [ ] Keep future specialized allocator experiments possible
 - [ ] Allow dedicated, suballocated, pooled, and externally managed allocations where concrete workloads justify them
@@ -1055,6 +1056,8 @@
 - [ ] Do not make vertex/index-buffer meshes the only renderable representation
 - [x] Define safe recovery behavior before treating swapchain recreation failures as recoverable
 - [ ] Keep renderer resource mechanisms usable by mesh, procedural, indirect, compute-generated, and future GPU-driven workloads
+- [ ] Support geometry formats other than vertex/index meshes. Do not pick a format yet.
+- [ ] Track resource readiness separately from page residency.
 - [x] Keep reference-scene concepts such as stars, planets, systems, and galaxies outside renderer-core types
 - [ ] Treat renderer-facing floating-point transforms as local or camera-relative representations, not authoritative global coordinates
 - [ ] Keep high-precision world-to-renderer conversion outside Vulkan resource ownership
@@ -1307,11 +1310,15 @@
 - [ ] frame timing
 - [ ] variable timestep
 - [ ] fixed timestep
+- [ ] Learn the difference between wall time, frame time, simulation ticks, and simulation time.
+- [ ] Learn clock precision, pause/resume, time scaling, and errors in long-running simulations.
 
 ### Design
 
 - [ ] Define a fixed-step simulation boundary separate from variable-rate rendering
 - [ ] Define input sampling and frame numbering without assuming networking or rollback
+- [ ] Define simulation tick IDs and time units separately from rendering frames.
+- [ ] Allow spatial transforms to use simulation time. Keep orbital mechanics out of the timing system.
 
 ### Implement
 
@@ -1332,6 +1339,7 @@
 - [ ] Test mouse state
 - [ ] Test scroll input
 - [ ] Test timing utilities
+- [ ] Test long-running ticks, pause/resume, time scaling, and large catch-up intervals.
 - [ ] Test event translation
 - [ ] Navigate the current 3D reference workload with test-side camera controls built from engine input and timing APIs
 - [ ] Test rapid camera movement, focus changes, resizing, and long-running movement against the reference workload
@@ -1507,6 +1515,8 @@
 - [ ] Define synchronization-generation boundary
 - [ ] Define transient-resource ownership
 - [ ] Define external-resource import/export
+- [ ] Define IDs, versions, and validity rules for temporal render resources.
+- [ ] Define history reset cases: camera cuts, origin shifts, resize, LOD changes, and resource replacement.
 - [ ] Define render-feature registration against the graph
 - [ ] Keep graph policy independent from individual effects
 
@@ -1528,6 +1538,7 @@
 - [ ] Add transient-resource support when required
 - [ ] Add pass culling when justified
 - [ ] Add queue scheduling when multiple queue types are actually used
+- [ ] Add temporal-history tracking when a render feature needs it.
 
 - [ ] Validate read/write hazards and reject invalid or uninitialized resource use
 - [ ] Track subresource accesses where whole-resource tracking proves insufficient
@@ -1551,6 +1562,7 @@
 - [ ] Test external side-effect passes are not incorrectly culled
 - [ ] Test image subresource access conflicts when subresource tracking is implemented
 - [ ] Test graphics/present or cross-queue ownership and synchronization paths when introduced
+- [ ] Test history resets and resource lifetimes during resize, camera cuts, origin shifts, and LOD changes.
 
 ### Architecture
 
@@ -1635,6 +1647,8 @@
 - [ ] Allow authoring/scene representation to differ from optimized runtime representations
 - [ ] Define semantic world-position and local-transform contracts without permanently selecting a global numeric representation
 - [ ] Ensure transform hierarchies can support multiple spatial reference frames without redesigning world identity
+- [ ] Support reference-frame transforms evaluated at a given simulation time.
+- [ ] Keep transform hierarchies separate from global coordinate storage.
 - [ ] Define the distinction between local transforms, scene-space transforms, and project-defined world coordinates
 - [ ] Define conversion/precision expectations at renderer-facing transform boundaries without implementing large-world origin shifting yet
 
@@ -1661,6 +1675,7 @@
 - [ ] Verify the same world mechanisms represent non-celestial scenes without special cases
 
 - [ ] Test hierarchy and renderer transform contracts without assuming global coordinates are limited to 32-bit floating point
+- [ ] Test moving and rotating reference frames without changing object IDs.
 
 ### Architecture
 
@@ -1768,6 +1783,7 @@
 
 - [ ] Serialize basic engine values
 - [ ] Serialize scenes
+- [ ] Allow custom coordinate formats and reference-frame IDs in scene serialization. Do not require 128-bit storage.
 - [ ] Serialize entities/components
 - [ ] Deserialize with validation
 - [ ] Handle unsupported versions
@@ -2014,6 +2030,8 @@
 - [ ] Define platform/GPU texture format fallbacks based on queried capabilities
 - [ ] Define per-mip addressing and integrity information for future partial texture streaming
 - [ ] Define a cooked geometry layout that can later support optional meshlet data without requiring mesh shaders
+- [ ] Study geometry clusters, LOD data, and page dependencies ([Nanite technical presentation, 2021](https://www.wihlidal.com/projects/nanite-deepdive/)).
+- [ ] Define optional page metadata: version, integrity checks, dependencies, and byte ranges.
 
 ### Implement
 
@@ -2051,6 +2069,7 @@
 - [ ] Test texture format selection on devices with different compression capabilities
 - [ ] Test compressed texture block/mip alignment and corrupted texture payload handling
 - [ ] Benchmark cooked texture size, decode/transcode cost, and GPU upload cost against an uncompressed baseline
+- [ ] Test partial loads and reject missing, corrupt, or incompatible pages.
 
 ### Architecture
 
@@ -2310,6 +2329,7 @@
 - [ ] Keep task description separate from worker-pool implementation
 - [ ] Keep dependency semantics usable by gameplay, rendering, asset, procedural, and future Composable World Model workloads
 - [ ] Allow the scheduler implementation to evolve without rewriting task producers
+- [ ] Keep procedural results independent of worker assignment and task completion order.
 
 - [ ] Keep fibers and coroutine-based scheduling optional implementation strategies rather than mandatory public task types
 
@@ -2602,6 +2622,7 @@
 - [ ] Test synchronization
 - [ ] Test fixed-step behavior
 - [ ] Test backend shutdown
+- [ ] If using multiple physics regions, test bodies and contacts crossing region boundaries.
 - [ ] Verify gameplay-facing code does not require Jolt types
 
 ### Architecture
@@ -2612,6 +2633,8 @@
 
 - [ ] Allow specialized procedural-collision systems
 - [ ] Allow large-world physics specialization
+- [ ] Study local physics regions, boundary crossing, and cross-region contacts ([Accurate Real-time Physics Simulation for Large Worlds, 2021](https://www.scitepress.org/PublishedPapers/2021/101945/)).
+- [ ] Allow multiple physics regions without requiring them in normal scenes.
 - [ ] Allow experimental solver or broad-phase research without rewriting gameplay APIs
 - [ ] Allow physics-native representations to participate in the Composable World Model if validated without forcing physics state into ECS storage
 - [ ] Replace general-purpose backend pieces only when measurements justify it
@@ -3105,6 +3128,8 @@
 - [ ] Understand 128-bit integer and floating-point representations
 - [ ] Understand fixed-point arithmetic and quantization
 - [ ] Understand precision error propagation
+- [ ] Compare double-double, quad-double, binary128, and integer/fixed-point coordinates ([Hida, Li & Bailey](https://escholarship.org/uc/item/69q5t2mj)).
+- [ ] Study moving, rotating, and nested reference frames ([NASA SPICE frames documentation](https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/frames.html)).
 
 ### Design
 
@@ -3120,9 +3145,12 @@
 - [ ] Avoid assuming one flat coordinate space
 - [ ] Evaluate optional 128-bit integer, fixed-point, and extended-precision representations against hierarchical 64-bit coordinate approaches
 - [ ] Define explicit spatial units and precision guarantees
+- [ ] Set measurable targets for coordinate range, movement resolution, conversion error, and simulation time.
+- [ ] Define position and velocity conversions between moving reference frames at a given time.
 - [ ] Define checked arithmetic and overflow behavior
 - [ ] Define exact global-position storage versus approximate local simulation
 - [ ] Define camera-relative GPU coordinate conversion
+- [ ] Subtract positions at high precision before converting to GPU floats. Document error limits.
 - [ ] Preserve replaceable spatial representations
 
 ### Implement
@@ -3156,6 +3184,8 @@
 - [ ] Test overflow and boundary conditions
 - [ ] Test precision across reference-frame transitions
 - [ ] Test stable camera-relative rendering at extreme distances
+- [ ] Benchmark hierarchical doubles, origin rebasing, fixed-point, and extended precision at large distances.
+- [ ] Test position and velocity conversions across moving and rotating reference frames.
 
 ### Architecture
 
@@ -3255,6 +3285,9 @@
 - [ ] Avoid requiring chunk-based worlds
 - [ ] Keep resource streaming independent from world partition strategy
 - [ ] Define residency decisions separately from procedural generation
+- [ ] Define optional page loading, priority, and eviction.
+- [ ] Define how residency feedback creates requests and how stale requests are ignored.
+- [ ] Study cluster LOD, streaming, and occlusion feedback ([Nanite technical presentation, 2021](https://www.wihlidal.com/projects/nanite-deepdive/)).
 
 - [ ] Define read/decode/upload/publish stages and separate CPU readiness from GPU completion
 - [ ] Define in-flight I/O, staging memory, GPU upload, and residency budgets with backpressure
@@ -3270,6 +3303,8 @@
 - [ ] Add streaming cancellation
 - [ ] Add memory-budget enforcement
 - [ ] Add spatial streaming integration when a real large-world workload exists
+- [ ] Add partial page loading after page formats, GPU lifetimes, and demand tracking are working.
+- [ ] Report page requests, residency, and evictions in diagnostics.
 - [ ] Integrate GPU residency budgets with Phase 6.5 memory information where appropriate
 
 - [ ] Implement bounded streaming request queues with observable completion and failure states
@@ -3291,6 +3326,7 @@
 - [ ] Test load cancellation before read, after decode, and during an in-flight GPU upload
 - [ ] Test streaming budget exhaustion, priority inversion, and bounded queue behavior
 - [ ] Test resource unload/reload across multiple frames without use-after-free or stale asset publication
+- [ ] Test partial loads, eviction, stale feedback, memory limits, and in-flight GPU resources.
 
 ### Architecture
 
@@ -3360,9 +3396,12 @@
 ### Implement
 
 - [ ] Add reusable seeded random utilities
+- [ ] Study counter-based RNGs such as Philox and Threefry ([Parallel Random Numbers: As Easy as 1, 2, 3, 2011](https://random123.com/)).
+- [ ] Add seeded, counter-based RNG streams when independent generators need them.
 - [ ] Add deterministic-generation utilities
 - [ ] Support project-defined generators
 - [ ] Support generation through task system
+- [ ] Track generator versions and request IDs. Discard outdated results.
 - [ ] Support generated resource creation
 - [ ] Support CPU generation
 - [ ] Support GPU compute generation when useful
@@ -3377,6 +3416,8 @@
 - [ ] Test concurrent deterministic behavior
 - [ ] Benchmark generation utilities
 - [ ] Verify fixed seeds reproduce the same generated reference systems across runs
+- [ ] Test reproducible output across worker counts, task order, and completion order.
+- [ ] Test cancellation, generator changes, regeneration, and outdated results.
 - [ ] Stress generation, materialization, eviction, and regeneration at increasing reference-workload sizes
 
 - [ ] Verify generated content produces equivalent results after save/load or eviction/regeneration when persistence is required
@@ -3385,6 +3426,7 @@
 ### Architecture
 
 - [ ] Keep procedural algorithms project-defined unless generally reusable
+- [ ] Keep star systems, orbital rules, climate, and planet-generation recipes in the game.
 - [ ] Do not require procedural generation for normal projects
 - [ ] Do not make chunks or planets core engine concepts
 - [ ] Keep generator definition independent from CPU or GPU execution strategy
@@ -3417,12 +3459,15 @@
 - [ ] Add optional HDR module
 - [ ] Add optional temporal-effects module
 - [ ] Add optional visibility module
+- [ ] Study GPU adaptive subdivision after basic geometry and streaming work ([Concurrent Binary Trees for Large-Scale Game Components, 2024](https://arxiv.org/abs/2407.02215)).
+- [ ] Try optional virtualized geometry using clusters, LOD, page loading, and GPU culling ([Nanite technical presentation, 2021](https://www.wihlidal.com/projects/nanite-deepdive/)).
 
 ### Ray-Traced Feature Modules
 
 - [ ] Add optional ray-traced shadow module
 - [ ] Add optional ray-traced reflection module
 - [ ] Add optional ray-traced GI module
+- [ ] Keep standard lighting working before testing ReSTIR or neural GI.
 
 ### Environment Feature Modules
 
@@ -3431,6 +3476,9 @@
 - [ ] Add optional wetness module
 - [ ] Add optional volumetric-cloud module
 - [ ] Add optional terrain/cloud-shadow module
+- [ ] Try optional atmosphere rendering from ground to space ([Hillaire, 2020](https://doi.org/10.1111/cgf.14050)).
+- [ ] Compare detailed atmospheric scattering with simpler methods when needed ([Schneegans et al., 2024](https://doi.org/10.1111/cgf.15010)).
+- [ ] Keep atmosphere settings configurable and independent of planet or star types.
 
 ### Test
 
@@ -3446,6 +3494,9 @@
 - [ ] Verify render-graph resource dependencies and lifetimes across multiple features
 - [ ] Verify ray-tracing infrastructure can exist without enabling any ray-traced effect module
 - [ ] Run the growing reference scene with optional rendering features independently enabled and disabled
+- [ ] Compare adaptive geometry with normal meshes for LOD cracks, silhouettes, error, GPU memory, and frame time.
+- [ ] Test atmosphere rendering from ground level, mid-altitude, and space.
+- [ ] Test temporal-history resets after LOD changes, camera cuts, origin shifts, and resource eviction.
 - [ ] Use larger reference scenes to expose feature interaction, precision, visibility, synchronization, and memory regressions
 
 ### Architecture
@@ -3601,10 +3652,19 @@
 ### Experimental Renderer Work
 
 - [ ] Evaluate newer GPU-driven techniques
+- [ ] Test sample reuse across geometry LOD changes ([Real-Time Level-of-Detail Rendering with ReSTIR, 2026](https://research.nvidia.com/labs/rtr/publication/wang2026levelofdetail/)).
+- [ ] Compare ReSTIR PT with existing lighting methods on quality, cost, and hardware support ([ReSTIR PT Enhanced, 2026](https://research.nvidia.com/labs/rtr/publication/lin2026restirptenhanced/)).
+- [ ] Compare neural radiance caching with simpler GI methods ([Neural Two-Level Monte Carlo Real-Time Rendering, 2025](https://doi.org/10.1111/cgf.70050)).
+- [ ] Benchmark compressed temporal lightmaps for changing lighting ([Neural Dynamic GI, 2026](https://arxiv.org/abs/2604.12625)).
+- [ ] Test voxel-based GI and reflections as a rendering option, not a world format ([Including Reflections in Real-Time Voxel-Based Global Illumination, 2025](https://doi.org/10.1016/j.cag.2025.104449)).
 - [ ] Evaluate visibility alternatives
 - [ ] Evaluate bindless/resource-indexing strategies
 - [ ] Evaluate descriptor-management alternatives
 - [ ] Evaluate specialized geometry pipelines
+- [ ] Compare GPU adaptive subdivision with tessellation and compute-generated meshes ([Concurrent Binary Trees for Large-Scale Game Components, 2024](https://arxiv.org/abs/2407.02215)).
+- [ ] Compare sparse-voxel DAG visibility and streaming with existing geometry paths ([Aokana, 2025](https://doi.org/10.1145/3728299)).
+- [ ] Test Gaussian-splat LOD as a separate rendering path ([Virtualized 3D Gaussians, 2025](https://xijie-yang.github.io/V3DG/)).
+- [ ] Test animated meshlet compression after normal animation works ([ZibraGDS, 2026](https://doi.org/10.1145/3799821.3820910)).
 - [ ] Evaluate asynchronous compute workloads
 - [ ] Evaluate resource-residency strategies
 - [ ] Evaluate custom GPU allocation strategies
@@ -3626,6 +3686,7 @@
 - [ ] Evaluate procedural-collision specialization
 - [ ] Evaluate large-world broad-phase specialization
 - [ ] Evaluate large-scale/reference-frame simulation
+- [ ] Benchmark GPU hierarchical summation as a general compute technique, not a built-in gravity solver ([Stochastic Barnes-Hut Approximation for Fast Summation on the GPU, 2025](https://doi.org/10.1145/3721238.3730725)).
 - [ ] Replace general-purpose physics components only when evidence supports it
 
 ### Experimental Audio Work
@@ -3643,6 +3704,8 @@
 - [ ] Profile runtime asset loading
 - [ ] Evaluate custom compression/layout where useful
 - [ ] Evaluate streaming-oriented runtime formats
+- [ ] Compare neural texture compression with GPU block compression for quality, memory, and speed ([Random-Access Neural Compression of Material Textures, 2023](https://doi.org/10.1145/3592407)).
+- [ ] Test block-compressed neural material data as an optional shader format ([Real-Time Neural Materials using Block-Compressed Features, 2024](https://doi.org/10.1111/cgf.15013)).
 - [ ] Keep commodity source decoders unless replacement has measurable value
 
 - [ ] Compare GPU decompression and CPU decompression with end-to-end disk-to-resource timing where available
@@ -3669,6 +3732,7 @@
 - [ ] Document why each replacement exists
 
 - [ ] Record capability requirements and graceful fallback before accepting a hardware-specific optimization
+- [ ] Use experimental techniques only when benchmarks show a benefit on supported hardware.
 
 ### Architecture
 

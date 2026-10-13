@@ -25,6 +25,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -151,6 +152,8 @@ namespace SNE::Engine::Renderer::Vulkan {
              */
             std::vector<DepthAttachmentResources> m_DepthAttachments;
         };
+
+        static_assert(std::is_nothrow_move_constructible_v<SwapchainResources>);
 
         /**
          * @brief Application window borrowed by the renderer.
