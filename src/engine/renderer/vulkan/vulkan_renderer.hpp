@@ -19,6 +19,7 @@
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_queue_submission_state.hpp"
+#include "engine/renderer/vulkan/synchronization/vulkan_resource_retirement_queue.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_instance.hpp"
@@ -387,6 +388,26 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanQueueSubmissionState m_GraphicsSubmissionState;
 
         /**
+         * @brief Retains retired graphics resources until GPU work completes.
+         *
+         * Owns deferred resource-release operations associated with graphics
+         * submission identifiers tracked by m_GraphicsSubmissionState.
+         *
+         * Resources remain retained while their associated submissions are
+         * incomplete and are released after confirmed GPU completion.
+         *
+         * This queue owns retired resources but does not own Vulkan queues,
+         * fences, command buffers, or synchronization objects.
+         *
+         * The renderer is responsible for collecting completed resources during
+         * frame processing, swapchain recreation, and shutdown.
+         *
+         * All pending retirement records must be collected before this
+         * member is destroyed.
+         */
+        VulkanResourceRetirementQueue m_GraphicsResourceRetirementQueue;
+
+        /**
          * @brief Index of the frame-in-flight slot currently being processed.
          *
          * Selects the VulkanFrameResources object used for the current renderer
@@ -625,8 +646,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * memory-allocation, and device resources are destroyed in reverse
          * dependency order.
          *
-         * Shutdown synchronization is best-effort because destruction must not
-         * propagate exceptions.
+         * @note Failure to confirm GPU completion during shutdown triggers
+         * a fatal invariant assertion. Outstanding retired resources must
+         * be collected before renderer members are destroyed.
          */
         ~VulkanRenderer() noexcept;
 

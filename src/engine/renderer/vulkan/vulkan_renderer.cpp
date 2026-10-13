@@ -138,7 +138,21 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     VulkanRenderer::~VulkanRenderer() noexcept {
         const VkResult result = vkDeviceWaitIdle(m_Device.nativeHandle());
-        static_cast<void>(result);
+
+        if (result != VK_SUCCESS) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer failed to confirm GPU completion during "
+                "shutdown");
+        }
+
+        for (std::size_t i{}; i < m_FrameResources.size(); ++i) {
+            m_GraphicsSubmissionState.recordCompletion(i);
+        }
+
+        m_GraphicsResourceRetirementQueue.collectCompleted(
+            m_GraphicsSubmissionState);
     }
 
     auto VulkanRenderer::uploadMesh(const MeshUploadData &mesh) -> void {
@@ -242,6 +256,13 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         m_Device.waitIdle();
+
+        for (std::size_t i{}; i < m_FrameResources.size(); ++i) {
+            m_GraphicsSubmissionState.recordCompletion(i);
+        }
+
+        m_GraphicsResourceRetirementQueue.collectCompleted(
+            m_GraphicsSubmissionState);
 
         VkSwapchainKHR old_swapchain = VK_NULL_HANDLE;
         if (m_SwapchainResources.has_value()) {
@@ -791,7 +812,11 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_FrameResources[m_CurrentFrameIndex];
 
         current_frame.inFlightFence().wait();
+
         m_GraphicsSubmissionState.recordCompletion(m_CurrentFrameIndex);
+
+        m_GraphicsResourceRetirementQueue.collectCompleted(
+            m_GraphicsSubmissionState);
 
         if (swapchain_resources.m_DepthAttachments.size() !=
             m_FrameResources.size()) {

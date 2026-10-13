@@ -63,6 +63,7 @@ add_library(
     engine/renderer/vulkan/synchronization/vulkan_semaphore.cpp
     engine/renderer/vulkan/synchronization/vulkan_fence.cpp
     engine/renderer/vulkan/synchronization/vulkan_queue_submission_state.cpp
+    engine/renderer/vulkan/synchronization/vulkan_resource_retirement_queue.cpp
 )
 
 target_include_directories(

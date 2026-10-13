@@ -43,6 +43,7 @@ add_executable(
   renderer/vulkan/pipeline/vulkan_spirv_validation_tests.cpp
   renderer/vulkan/pipeline/vulkan_spirv_reflection_tests.cpp
   renderer/vulkan/synchronization/vulkan_queue_submission_state_tests.cpp
+  renderer/vulkan/synchronization/vulkan_resource_retirement_queue_tests.cpp
 )
 
 target_link_libraries(
