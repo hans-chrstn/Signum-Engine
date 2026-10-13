@@ -23,8 +23,12 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @post On success, current owns the replacement resource group.
      * @post On failure, current is empty and the exception propagates.
      *
-     * @note The builder must not invalidate the current resource
-     * group while potentially throwing construction work remains.
+     * @note The builder may retire the current resource during
+     * construction. If construction fails, the current resource
+     * is destroyed rather than reused.
+     *
+     * Borrowed dependencies must remain alive until replacement
+     * construction completes or throws.
      */
     template <typename Resource, typename Builder>
     auto replaceRetiringResource(std::optional<Resource> &current,
