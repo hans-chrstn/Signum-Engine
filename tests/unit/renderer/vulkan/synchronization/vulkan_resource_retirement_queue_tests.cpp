@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <memory>
+#include <optional>
+#include <utility>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
@@ -174,4 +176,49 @@ TEST(VulkanResourceRetirementQueueTests,
             queue.retire(submission_id, resource);
         },
         "must be empty before destruction");
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     ReplacingActiveResourceRetainsOldUntilCompletion) {
+    int old_destructions{};
+    int replacement_destructions{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    std::optional<TrackedResource> active_resource{
+        std::in_place, makeTrackedResource(old_destructions)};
+
+    auto replacement = makeTrackedResource(replacement_destructions);
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retire(submission_id, active_resource.value());
+
+    EXPECT_TRUE(active_resource.has_value());
+    EXPECT_EQ(active_resource->get(), nullptr);
+
+    active_resource.emplace(std::move(replacement));
+
+    EXPECT_EQ(replacement.get(), nullptr);
+    EXPECT_NE(active_resource->get(), nullptr);
+
+    EXPECT_EQ(old_destructions, 0);
+    EXPECT_EQ(replacement_destructions, 0);
+
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(old_destructions, 0);
+    EXPECT_EQ(replacement_destructions, 0);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(old_destructions, 1);
+    EXPECT_EQ(replacement_destructions, 0);
+
+    active_resource.reset();
+
+    EXPECT_EQ(old_destructions, 1);
+    EXPECT_EQ(replacement_destructions, 1);
 }

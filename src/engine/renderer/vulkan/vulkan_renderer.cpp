@@ -216,10 +216,11 @@ namespace SNE::Engine::Renderer::Vulkan {
             .memory_usage = GpuMemoryUsage::Device,
         };
 
-        m_MeshVertexBuffer.emplace(m_MemoryAllocator, buffer_create_info);
+        VulkanBuffer new_vertex_buffer =
+            VulkanBuffer(m_MemoryAllocator, buffer_create_info);
 
         uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
-                         m_MeshVertexBuffer.value(), mesh.vertex_bytes);
+                         new_vertex_buffer, mesh.vertex_bytes);
 
         const VulkanBufferCreateInfo index_buffer_create_info{
             .size = static_cast<VkDeviceSize>(mesh.indices.size_bytes()),
@@ -230,10 +231,43 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         const auto index_bytes = std::as_bytes(mesh.indices);
 
-        m_MeshIndexBuffer.emplace(m_MemoryAllocator, index_buffer_create_info);
+        VulkanBuffer new_index_buffer =
+            VulkanBuffer(m_MemoryAllocator, index_buffer_create_info);
         uploadBufferData(m_MemoryAllocator, m_ImmediateSubmission,
-                         m_MeshIndexBuffer.value(), index_bytes);
-        m_MeshIndexCount = mesh_indices_size.value();
+                         new_index_buffer, index_bytes);
+
+        MeshBufferResources new_mesh_buffers{
+            .m_VertexBuffer = std::move(new_vertex_buffer),
+            .m_IndexBuffer = std::move(new_index_buffer),
+            .m_IndexCount = mesh_indices_size.value(),
+        };
+
+        if (m_MeshBuffers.has_value()) {
+            m_GraphicsResourceRetirementQueue.retire(
+                m_GraphicsSubmissionState.lastSubmitted(),
+                m_MeshBuffers.value());
+        }
+
+        m_MeshBuffers.emplace(std::move(new_mesh_buffers));
+    }
+
+    auto VulkanRenderer::replaceMesh(const MeshUploadData &mesh) -> void {
+        if (!m_MeshBuffers.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::replaceMesh requires an existing mesh");
+        }
+
+        if (mesh.vertex_stride != m_MeshVertexStride) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::replaceMesh requires a matching vertex "
+                "stride");
+        }
+
+        uploadMesh(mesh);
     }
 
     auto VulkanRenderer::waitForDrawableFramebuffer() const -> bool {
@@ -337,7 +371,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
                 std::optional<VulkanGraphicsPipeline> new_graphics_pipeline{};
 
-                if (m_MeshIndexCount > 0U &&
+                if (m_MeshBuffers.has_value() &&
                     (!m_SwapchainResources.has_value() ||
                      new_swapchain.surfaceFormat().format !=
                          m_SwapchainResources->m_VulkanSwapchain.surfaceFormat()
@@ -464,34 +498,27 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanRenderer requires a graphics pipeline when drawing");
         }
 
+        if (!m_MeshBuffers.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires an initialized mesh before recording "
+                "draw commands");
+        }
+
+        const MeshBufferResources &mesh = m_MeshBuffers.value();
+
         const VulkanGraphicsPipeline &graphics_pipeline =
             swapchain_resources.m_VulkanGraphicsPipeline.value();
 
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());
         const VkDeviceSize vertex_offset = 0U;
-        if (!m_MeshVertexBuffer.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires an initialized vertex buffer "
-                "before "
-                "recording draw commands");
-        }
-        const VkBuffer vertex_buffer =
-            m_MeshVertexBuffer.value().nativeHandle();
+        const VkBuffer vertex_buffer = mesh.m_VertexBuffer.nativeHandle();
         vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
                                &vertex_offset);
 
-        if (!m_MeshIndexBuffer.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires an initialized index buffer "
-                "before "
-                "recording indexed draw commands");
-        }
-        const VkBuffer index_buffer = m_MeshIndexBuffer.value().nativeHandle();
+        const VkBuffer index_buffer = mesh.m_IndexBuffer.nativeHandle();
         vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
                              VK_INDEX_TYPE_UINT16);
 
@@ -538,7 +565,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                                VK_SHADER_STAGE_VERTEX_BIT, 0U,
                                static_cast<std::uint32_t>(sizeof(mvp)), &mvp);
 
-            vkCmdDrawIndexed(command_buffer, m_MeshIndexCount, 1U, 0U, 0, 0U);
+            vkCmdDrawIndexed(command_buffer, mesh.m_IndexCount, 1U, 0U, 0, 0U);
         }
     }
 
@@ -682,7 +709,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdBeginRendering(command_buffer, &render_info);
 
-        if (m_MeshIndexCount > 0U) {
+        if (m_MeshBuffers.has_value()) {
             recordMeshDraws(command_buffer, swapchain_resources);
         }
 

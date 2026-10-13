@@ -1,6 +1,7 @@
 add_executable(
   signum_integration_tests
   renderer/vulkan/vulkan_integration_test_fixture.cpp
+  renderer/vulkan/vulkan_renderer_mesh_replacement_integration_tests.cpp
   renderer/vulkan/device/vulkan_device_capabilities_integration_tests.cpp
   renderer/vulkan/device/vulkan_depth_format_integration_tests.cpp
   renderer/vulkan/memory/vulkan_buffer_integration_tests.cpp
@@ -34,6 +35,7 @@ include(GoogleTest)
 gtest_discover_tests(
   signum_integration_tests
   TEST_PREFIX "integration::"
+  WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
   PROPERTIES
     LABELS "integration"
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"

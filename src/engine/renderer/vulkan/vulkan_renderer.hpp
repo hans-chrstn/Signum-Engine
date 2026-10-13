@@ -77,6 +77,35 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
 
         /**
+         * @brief Owns the GPU buffers and index count of a mesh.
+         *
+         * Groups the vertex buffer, index buffer, and associated index count
+         * into one resource ownership unit.
+         *
+         * Both buffers are owned exclusively and must remain alive while GPU
+         * submissions reference them.
+         *
+         * The structure supports moving its resources together during mesh
+         * replacement and deferred GPU resource retirement.
+         *
+         * The structure is move-only because its Vulkan buffers have
+         * exclusive ownership.
+         */
+        struct MeshBufferResources {
+            /** @brief Owns the GPU vertex buffer. */
+            VulkanBuffer m_VertexBuffer;
+
+            /** @brief Owns the GPU index buffer. */
+            VulkanBuffer m_IndexBuffer;
+
+            /** @brief Number of indices stored in the index buffer. */
+            std::uint32_t m_IndexCount{};
+        };
+
+        static_assert(
+            std::is_nothrow_move_constructible_v<MeshBufferResources>);
+
+        /**
          * @brief Owns resources associated with a presentation swapchain.
          *
          * Groups the Vulkan swapchain, optional graphics pipeline,
@@ -250,43 +279,19 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanMemoryAllocator m_MemoryAllocator;
 
         /**
-         * @brief Owns the GPU vertex buffer for the uploaded mesh.
+         * @brief Owns the currently active GPU mesh resources.
          *
-         * Stores device-local vertex data supplied during renderer
-         * initialization.
+         * Groups the vertex buffer, index buffer, and index count into one
+         * optional resource ownership unit.
          *
-         * The buffer is independent of swapchain resources and survives
-         * swapchain recreation.
+         * The optional remains empty when no mesh has been uploaded.
          *
-         * The buffer must be released before the Vulkan memory allocator and
-         * logical device are destroyed.
+         * Active mesh resources survive swapchain recreation.
+         *
+         * Replaced mesh resources must remain alive until all GPU submissions
+         * referencing them have completed.
          */
-        std::optional<VulkanBuffer> m_MeshVertexBuffer;
-
-        /**
-         * @brief Owns the GPU index buffer for the uploaded mesh.
-         *
-         * Stores device-local indices referencing vertices in the mesh's vertex
-         * buffer.
-         *
-         * The buffer is independent of swapchain resources and survives
-         * swapchain recreation.
-         *
-         * The buffer must be released before the Vulkan memory allocator and
-         * logical device are destroyed.
-         */
-        std::optional<VulkanBuffer> m_MeshIndexBuffer;
-
-        /**
-         * @brief Number of indices in the currently uploaded GPU mesh.
-         *
-         * Updated after successful mesh upload and used to determine the index
-         * count supplied to indexed draw commands.
-         *
-         * The count remains associated with the renderer-owned mesh buffers and
-         * is independent of swapchain recreation.
-         */
-        std::uint32_t m_MeshIndexCount{};
+        std::optional<MeshBufferResources> m_MeshBuffers;
 
         /**
          * @brief Owns the model transformations for the uploaded mesh.
@@ -655,6 +660,38 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanRenderer(const VulkanRenderer &) = delete;
 
         auto operator=(const VulkanRenderer &) -> VulkanRenderer & = delete;
+
+        /**
+         * @brief Replaces the currently active GPU mesh.
+         *
+         * Creates and uploads replacement vertex and index buffers before
+         * changing the active mesh.
+         *
+         * The previous mesh is retained until graphics submissions that
+         * reference it have completed.
+         *
+         * The replacement must use the existing vertex layout and stride.
+         * This operation does not recreate the graphics pipeline.
+         *
+         * The operation must not overlap frame recording, graphics queue
+         * submission, or another mesh replacement.
+         *
+         * @param mesh Borrowed vertex and index data for the replacement mesh.
+         *
+         * @pre An active mesh and its vertex layout must already exist.
+         * @pre The replacement vertex stride must match the active layout.
+         * @pre The caller must serialize this operation with rendering.
+         *
+         * @post On success, subsequent frames use the replacement mesh.
+         * @post If preparation or retirement fails, the previous mesh
+         * remains active.
+         *
+         * @throws Core::Error::EngineError if buffer creation or upload fails.
+         *
+         * @note The supplied CPU data must remain valid until this
+         * operation completes.
+         */
+        auto replaceMesh(const MeshUploadData &mesh) -> void;
 
         /**
          * @brief Processes one renderer frame.
