@@ -113,4 +113,12 @@ namespace SNE::Engine::Renderer::Vulkan {
         memory_allocation_statistics.block_count = statistics.blockCount;
         return memory_allocation_statistics;
     }
+
+    auto VulkanMemoryAllocator::physicalDevice() const noexcept
+        -> VkPhysicalDevice {
+        VmaAllocatorInfo allocator_info{};
+        vmaGetAllocatorInfo(m_Allocator, &allocator_info);
+
+        return allocator_info.physicalDevice;
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

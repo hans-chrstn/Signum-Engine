@@ -8,13 +8,18 @@
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include "vulkan_memory_policy.hpp"
+#include <algorithm>
+#include <bit>
 #include <string>
 #include <utility>
 
-namespace SNE::Engine::Renderer::Vulkan {
-    VulkanImage::VulkanImage(const VulkanMemoryAllocator &allocator,
-                             const VulkanImageCreateInfo &create_info)
-        : m_Allocator(allocator.nativeHandle()) {
+namespace Vulkan = SNE::Engine::Renderer::Vulkan;
+namespace Core = SNE::Engine::Core;
+
+namespace {
+    auto
+    validateImageCreateInfo(const Vulkan::VulkanImageCreateInfo &create_info)
+        -> void {
         switch (create_info.image_type) {
         case VK_IMAGE_TYPE_1D:
             if (create_info.extent.width == 0U) {
@@ -86,11 +91,42 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanImage requires at least one image usage flag");
         }
 
+        if (create_info.mip_levels == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanImage requires at least one mip level");
+        }
+
+        const std::uint32_t largest_dimension = std::max({
+            create_info.extent.width,
+            create_info.extent.height,
+            create_info.extent.depth,
+        });
+
+        const auto max_mip_levels =
+            static_cast<std::uint32_t>(std::bit_width(largest_dimension));
+
+        if (create_info.mip_levels > max_mip_levels) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanImage mip level count exceeds the image dimensions");
+        }
+    }
+} // namespace
+
+namespace SNE::Engine::Renderer::Vulkan {
+    VulkanImage::VulkanImage(const VulkanMemoryAllocator &allocator,
+                             const VulkanImageCreateInfo &create_info)
+        : m_Allocator(allocator.nativeHandle()) {
+        validateImageCreateInfo(create_info);
+
         VkImageCreateInfo image_create_info{};
         image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         image_create_info.imageType = create_info.image_type;
         image_create_info.extent = create_info.extent;
-        image_create_info.mipLevels = 1U;
+        image_create_info.mipLevels = create_info.mip_levels;
         image_create_info.arrayLayers = 1U;
         image_create_info.format = create_info.format;
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -105,6 +141,65 @@ namespace SNE::Engine::Renderer::Vulkan {
         VmaAllocationCreateInfo allocation_create_info{};
         allocation_create_info.usage = memory_policy.usage;
         allocation_create_info.flags = memory_policy.flags;
+
+        VkImageFormatProperties image_format_properties{};
+
+        const VkResult image_format_properties_result =
+            vkGetPhysicalDeviceImageFormatProperties(
+                allocator.physicalDevice(), create_info.format,
+                create_info.image_type, VK_IMAGE_TILING_OPTIMAL,
+                create_info.usage, image_create_info.flags,
+                &image_format_properties);
+
+        if (image_format_properties_result == VK_ERROR_FORMAT_NOT_SUPPORTED) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanImageFormatUnsupported,
+                "Requested Vulkan image format configuration is unsupported",
+                Core::Error::NativeError(
+                    static_cast<int>(image_format_properties_result),
+                    std::string(toString(image_format_properties_result))),
+                "Query Vulkan Image Format Support");
+        }
+
+        if (image_format_properties_result != VK_SUCCESS) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanImageFormatQueryFailed,
+                "Failed to query Vulkan image format capabilities",
+                Core::Error::NativeError(
+                    static_cast<int>(image_format_properties_result),
+                    std::string(toString(image_format_properties_result))),
+                "Query Vulkan Image Format Capabilities");
+        }
+
+        if (create_info.mip_levels > image_format_properties.maxMipLevels) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanImageFormatUnsupported,
+                "Requested Vulkan image mip level count exceeds device "
+                "capabilities",
+                "Validate Vulkan Image Mip Level Support");
+        }
+
+        if (create_info.extent.width >
+                image_format_properties.maxExtent.width ||
+            create_info.extent.height >
+                image_format_properties.maxExtent.height ||
+            create_info.extent.depth >
+                image_format_properties.maxExtent.depth) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanImageFormatUnsupported,
+                "Requested Vulkan image extent exceeds device capabilities",
+                "Validate Vulkan Image Extent Support");
+        }
+
+        if ((image_format_properties.sampleCounts &
+             static_cast<VkSampleCountFlags>(image_create_info.samples)) ==
+            0U) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanImageFormatUnsupported,
+                "Requested Vulkan image sample count exceeds device "
+                "capabilities",
+                "Validate Vulkan Image Sample Count Support");
+        }
 
         const VkResult result = vmaCreateImage(
             m_Allocator, &image_create_info, &allocation_create_info, &m_Image,

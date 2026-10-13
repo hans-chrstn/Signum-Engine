@@ -291,6 +291,16 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanDepthFormatUnavailable,
             "VulkanDepthFormatUnavailable",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanImageFormatUnsupported,
+            "VulkanImageFormatUnsupported",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanImageFormatQueryFailed,
+            "VulkanImageFormatQueryFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

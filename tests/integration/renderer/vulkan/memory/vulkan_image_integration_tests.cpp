@@ -1,5 +1,6 @@
 #include "../vulkan_integration_test_fixture.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_image.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_image_view.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
 #include <cstdint>
 #include <gtest/gtest.h>
@@ -196,4 +197,104 @@ TEST_F(VulkanIntegrationTest, NativeHandleUpdatedAfterMoveAssignment) {
 
     EXPECT_EQ(destination.nativeHandle(), source_handle);
     EXPECT_NE(destination.nativeHandle(), destination_handle);
+}
+
+TEST_F(VulkanIntegrationTest, CreatesImageWithMultipleMipLevels) {
+    constexpr std::uint32_t kImageWidth = 8U;
+    constexpr std::uint32_t kImageHeight = 8U;
+    constexpr std::uint32_t kImageDepth = 1U;
+    constexpr std::uint32_t kMipLevels = 4U;
+    constexpr VkFormat kImageFormat = VK_FORMAT_R8G8B8A8_UNORM;
+
+    const Vulkan::VulkanImageCreateInfo create_info{
+        .extent =
+            {
+                .width = kImageWidth,
+                .height = kImageHeight,
+                .depth = kImageDepth,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = kImageFormat,
+        .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .mip_levels = kMipLevels,
+    };
+
+    const Vulkan::VulkanMemoryAllocationStatistics statistics_before =
+        memoryAllocator().queryMemoryAllocationStatistics();
+
+    {
+        const Vulkan::VulkanImage image{memoryAllocator(), create_info};
+
+        ASSERT_NE(image.nativeHandle(), VK_NULL_HANDLE);
+
+        VkImageViewCreateInfo view_create_info{};
+        view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        view_create_info.image = image.nativeHandle(),
+        view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D,
+        view_create_info.format = kImageFormat,
+        view_create_info.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = kMipLevels - 1U,
+            .levelCount = 1U,
+            .baseArrayLayer = 0U,
+            .layerCount = 1U,
+        };
+
+        const Vulkan::VulkanImageView image_view{m_Device, view_create_info};
+
+        EXPECT_NE(image_view.nativeHandle(), VK_NULL_HANDLE);
+    }
+
+    const Vulkan::VulkanMemoryAllocationStatistics statistics_after =
+        memoryAllocator().queryMemoryAllocationStatistics();
+
+    EXPECT_EQ(statistics_after.allocation_count,
+              statistics_before.allocation_count);
+}
+
+TEST_F(VulkanIntegrationTest, RejectsZeroMipLevelCount) {
+    constexpr std::uint32_t kImageExtent = 8U;
+    constexpr std::uint32_t kImageDepth = 1U;
+    constexpr std::uint32_t kInvalidMipLevels = 0U;
+
+    const Vulkan::VulkanImageCreateInfo create_info{
+        .extent =
+            {
+                .width = kImageExtent,
+                .height = kImageExtent,
+                .depth = kImageDepth,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .mip_levels = kInvalidMipLevels,
+    };
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage requires at least one mip level");
+}
+
+TEST_F(VulkanIntegrationTest, RejectsMipLevelsExceedingImageDimensions) {
+    constexpr std::uint32_t kImageExtent = 8U;
+    constexpr std::uint32_t kImageDepth = 1U;
+    constexpr std::uint32_t kMaximumMipLevels = 4U;
+    constexpr std::uint32_t kInvalidMipLevels = kMaximumMipLevels + 1U;
+
+    const Vulkan::VulkanImageCreateInfo create_info{
+        .extent =
+            {
+                .width = kImageExtent,
+                .height = kImageExtent,
+                .depth = kImageDepth,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .mip_levels = kInvalidMipLevels,
+    };
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage mip level count exceeds the image dimensions");
 }

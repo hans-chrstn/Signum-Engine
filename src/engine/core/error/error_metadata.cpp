@@ -258,6 +258,16 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanDepthFormatUnavailable",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::VulkanImageFormatUnsupported,
+                    .name = "VulkanImageFormatUnsupported",
+                    .subsystem = Subsystem::Vulkan,
+                },
+                ErrorMetadata{
+                    .code = Code::VulkanImageFormatQueryFailed,
+                    .name = "VulkanImageFormatQueryFailed",
+                    .subsystem = Subsystem::Vulkan,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {

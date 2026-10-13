@@ -147,5 +147,15 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto queryMemoryAllocationStatistics() const
             -> VulkanMemoryAllocationStatistics;
+
+        /**
+         * @brief Returns the physical device associated with the allocator.
+         *
+         * The returned handle is non-owning and remains valid only while
+         * the originating Vulkan instance is alive.
+         *
+         * @return Physical-device handle used to initialize the allocator.
+         */
+        [[nodiscard]] auto physicalDevice() const noexcept -> VkPhysicalDevice;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vulkan_memory_allocator.hpp"
+#include <cstdint>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -34,6 +35,18 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Vulkan usage flags describing how the image may be used.
          */
         VkImageUsageFlags usage{0U};
+
+        /**
+         * @brief Number of mip levels allocated for the image.
+         *
+         * One level contains only the original image resolution.
+         * Additional levels allow progressively smaller image resolutions
+         * for texture sampling and other image operations.
+         *
+         * Must be greater than zero and supported by the image's extent,
+         * format, and Vulkan device capabilities.
+         */
+        std::uint32_t mip_levels{1U};
     };
 
     /**

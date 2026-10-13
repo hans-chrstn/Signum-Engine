@@ -117,6 +117,11 @@ namespace SNE::Engine::Core::Error {
         VulkanImageViewCreationFailed,
         /** Required Vulkan depth format could not be obtained. */
         VulkanDepthFormatUnavailable,
+        /** Requested Vulkan image format configuration is unsupported. */
+        VulkanImageFormatUnsupported,
+
+        /** Query of Vulkan image format capabilities failed. */
+        VulkanImageFormatQueryFailed,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *
