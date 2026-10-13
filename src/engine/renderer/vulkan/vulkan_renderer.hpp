@@ -18,6 +18,7 @@
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
+#include "engine/renderer/vulkan/synchronization/vulkan_queue_submission_state.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_instance.hpp"
@@ -363,6 +364,28 @@ namespace SNE::Engine::Renderer::Vulkan {
          * independent from the number of images owned by the swapchain.
          */
         std::vector<VulkanFrameResources> m_FrameResources;
+
+        /**
+         * @brief Tracks graphics queue submission and completion state.
+         *
+         * Associates graphics submissions with reusable frame-in-flight slots
+         * and records completion confirmed by their corresponding fences.
+         *
+         * Maintains CPU-side submission identifiers without owning Vulkan
+         * queues, fences, command buffers, or GPU resources.
+         *
+         * The tracked frame-slot count matches m_FrameResources.
+         *
+         * This state is specific to the graphics queue submission stream.
+         * Independent compute or transfer queues require separate completion
+         * tracking unless their synchronization dependencies are established.
+         *
+         * The renderer is responsible for validating submissions before
+         * queue submission and recording completion only after GPU execution
+         * has been confirmed.
+         */
+        VulkanQueueSubmissionState m_GraphicsSubmissionState;
+
         /**
          * @brief Index of the frame-in-flight slot currently being processed.
          *

@@ -106,7 +106,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                             m_Device.nativeHandle(), kRequiredApiVersion,
                             m_PhysicalDevice.capabilities.optional_capabilities
                                 .memory_budget_extension_supported),
-          m_InitialCamera(initial_camera) {
+          m_InitialCamera(initial_camera),
+          m_GraphicsSubmissionState(kFramesInFlight) {
         const std::uint32_t graphics_queue_family_index =
             m_PhysicalDevice.queue_families.graphics_family.family_index;
 
@@ -790,6 +791,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_FrameResources[m_CurrentFrameIndex];
 
         current_frame.inFlightFence().wait();
+        m_GraphicsSubmissionState.recordCompletion(m_CurrentFrameIndex);
 
         if (swapchain_resources.m_DepthAttachments.size() !=
             m_FrameResources.size()) {
@@ -888,7 +890,13 @@ namespace SNE::Engine::Renderer::Vulkan {
         const VkSemaphore render_finished_handle =
             render_finished_semaphore.nativeHandle();
 
+        m_GraphicsSubmissionState.validateCanRecordSubmission(
+            m_CurrentFrameIndex);
+
         submitFrame(current_frame, command_buffer, render_finished_handle);
+
+        static_cast<void>(
+            m_GraphicsSubmissionState.recordSubmission(m_CurrentFrameIndex));
 
         VkPresentInfoKHR present_info{};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
