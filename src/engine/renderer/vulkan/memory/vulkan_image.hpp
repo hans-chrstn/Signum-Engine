@@ -47,6 +47,39 @@ namespace SNE::Engine::Renderer::Vulkan {
          * format, and Vulkan device capabilities.
          */
         std::uint32_t mip_levels{1U};
+
+        /**
+         * @brief Number of array layers allocated for the image.
+         *
+         * One layer represents a single image slice. Multiple layers
+         * support image arrays and other layered image resources.
+         *
+         * Must be greater than zero and supported by the Vulkan device.
+         */
+        std::uint32_t array_layers{1U};
+
+        /**
+         * @brief Number of samples stored per image texel.
+         *
+         * A sample count of one creates a single-sampled image.
+         * Higher sample counts support multisampled rendering.
+         *
+         * Must be supported by the Vulkan device for the requested
+         * image format and usage. Multisampled images must satisfy
+         * Vulkan's image type, mip-level, and tiling restrictions.
+         */
+        VkSampleCountFlagBits samples{VK_SAMPLE_COUNT_1_BIT};
+
+        /**
+         * @brief Additional Vulkan image creation flags.
+         *
+         * Controls optional image properties, such as compatibility
+         * with cube image views.
+         *
+         * Requested flags must satisfy Vulkan image creation
+         * requirements and device capabilities.
+         */
+        VkImageCreateFlags flags{0U};
     };
 
     /**

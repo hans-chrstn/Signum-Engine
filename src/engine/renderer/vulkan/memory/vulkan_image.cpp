@@ -18,7 +18,7 @@ namespace Core = SNE::Engine::Core;
 
 namespace {
     auto
-    validateImageCreateInfo(const Vulkan::VulkanImageCreateInfo &create_info)
+    validateImageDimensions(const Vulkan::VulkanImageCreateInfo &create_info)
         -> void {
         switch (create_info.image_type) {
         case VK_IMAGE_TYPE_1D:
@@ -76,6 +76,11 @@ namespace {
                 Core::Error::Subsystem::Vulkan,
                 "VulkanImage requires a supported image type");
         }
+    }
+
+    auto
+    validateImageCreateInfo(const Vulkan::VulkanImageCreateInfo &create_info)
+        -> void {
 
         if (create_info.format == VK_FORMAT_UNDEFINED) {
             Core::Assertion::failAssertion(
@@ -90,7 +95,11 @@ namespace {
                 Core::Error::Subsystem::Vulkan,
                 "VulkanImage requires at least one image usage flag");
         }
+    }
 
+    auto
+    validateImageMipLevels(const Vulkan::VulkanImageCreateInfo &create_info)
+        -> void {
         if (create_info.mip_levels == 0U) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
@@ -114,26 +123,101 @@ namespace {
                 "VulkanImage mip level count exceeds the image dimensions");
         }
     }
+
+    auto validateImageLayerAndSampleRules(
+        const Vulkan::VulkanImageCreateInfo &create_info) -> void {
+        const bool is_multisampled =
+            create_info.samples != VK_SAMPLE_COUNT_1_BIT;
+
+        const bool cube_compatible =
+            (create_info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) != 0U;
+
+        if (create_info.array_layers == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanImage requires at least one array layer");
+        }
+
+        if (create_info.image_type == VK_IMAGE_TYPE_3D &&
+            create_info.array_layers != 1U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanImage requires exactly one array layer for 3D images");
+        }
+
+        if (is_multisampled && create_info.image_type != VK_IMAGE_TYPE_2D) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanImage multisampled images must be 2D");
+        }
+
+        if (is_multisampled && create_info.mip_levels != 1U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanImage multisampled images require exactly one mip "
+                "level");
+        }
+
+        if (is_multisampled && cube_compatible) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanImage multisampled images cannot be cube-compatible");
+        }
+
+        constexpr std::uint32_t kCubeFaceCount = 6U;
+
+        if (cube_compatible) {
+            if (create_info.image_type != VK_IMAGE_TYPE_2D) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanImage cube-compatible images must be 2D");
+            }
+            if (create_info.extent.width != create_info.extent.height) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanImage cube-compatible images require equal width "
+                    "and height");
+            }
+            if (create_info.array_layers < kCubeFaceCount) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanImage cube-compatible images require at least six "
+                    "array layers");
+            }
+        }
+    }
 } // namespace
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanImage::VulkanImage(const VulkanMemoryAllocator &allocator,
                              const VulkanImageCreateInfo &create_info)
         : m_Allocator(allocator.nativeHandle()) {
+        validateImageDimensions(create_info);
         validateImageCreateInfo(create_info);
+        validateImageMipLevels(create_info);
+        validateImageLayerAndSampleRules(create_info);
 
         VkImageCreateInfo image_create_info{};
         image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         image_create_info.imageType = create_info.image_type;
         image_create_info.extent = create_info.extent;
         image_create_info.mipLevels = create_info.mip_levels;
-        image_create_info.arrayLayers = 1U;
+        image_create_info.arrayLayers = create_info.array_layers;
         image_create_info.format = create_info.format;
         image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         image_create_info.usage = create_info.usage;
-        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_create_info.samples = create_info.samples;
         image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        image_create_info.flags = create_info.flags;
 
         const VulkanMemoryPolicy memory_policy =
             selectVulkanMemoryPolicy(GpuMemoryUsage::Device);
@@ -177,6 +261,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Requested Vulkan image mip level count exceeds device "
                 "capabilities",
                 "Validate Vulkan Image Mip Level Support");
+        }
+
+        if (create_info.array_layers > image_format_properties.maxArrayLayers) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanImageFormatUnsupported,
+                "Requested Vulkan image array layer count exceeds device "
+                "capabilities",
+                "Validate Vulkan Image Array Layer Support");
         }
 
         if (create_info.extent.width >

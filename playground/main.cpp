@@ -128,8 +128,9 @@ auto main() -> int {
         constexpr float kCameraFovRadians = std::numbers::pi_v<float> / 3.0F;
         constexpr float kCameraNearPlane = 0.1F;
         constexpr float kCameraFarPlane = 100.0F;
-        constexpr float kCubeRotationXDegrees = -35.0F;
+        constexpr float kCubeRotationXDegrees = 5.0F;
         constexpr float kCubeRotationYDegrees = 45.0F;
+        constexpr float kCubeRotationZDegrees = -5.0F;
 
         const Math::Vector3f translate{
             .x = 0.0F,
@@ -140,7 +141,7 @@ auto main() -> int {
         const Math::Vector3f rotation{
             .x = toRadians(kCubeRotationXDegrees),
             .y = toRadians(kCubeRotationYDegrees),
-            .z = 0.0F,
+            .z = toRadians(kCubeRotationZDegrees),
         };
 
         const Math::Vector3f scale{

@@ -9,6 +9,27 @@
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
+namespace {
+    constexpr std::uint32_t kTestImageExtent = 8U;
+    constexpr std::uint32_t kTestImageDepth = 1U;
+    constexpr std::uint32_t kCubeFaceCount = 6U;
+
+    [[nodiscard]] auto makeTestImageCreateInfo()
+        -> Vulkan::VulkanImageCreateInfo {
+        return Vulkan::VulkanImageCreateInfo{
+            .extent =
+                {
+                    .width = kTestImageExtent,
+                    .height = kTestImageExtent,
+                    .depth = kTestImageDepth,
+                },
+            .image_type = VK_IMAGE_TYPE_2D,
+            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+        };
+    }
+} // namespace
+
 TEST_F(VulkanIntegrationTest, CreatesAndDestroysVmaBackedImage) {
     const std::uint32_t width = 64U;
     const std::uint32_t height = 64U;
@@ -228,10 +249,10 @@ TEST_F(VulkanIntegrationTest, CreatesImageWithMultipleMipLevels) {
         ASSERT_NE(image.nativeHandle(), VK_NULL_HANDLE);
 
         VkImageViewCreateInfo view_create_info{};
-        view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        view_create_info.image = image.nativeHandle(),
-        view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D,
-        view_create_info.format = kImageFormat,
+        view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        view_create_info.image = image.nativeHandle();
+        view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_create_info.format = kImageFormat;
         view_create_info.subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = kMipLevels - 1U,
@@ -297,4 +318,158 @@ TEST_F(VulkanIntegrationTest, RejectsMipLevelsExceedingImageDimensions) {
     ASSERT_DEATH(
         static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
         "VulkanImage mip level count exceeds the image dimensions");
+}
+
+TEST_F(VulkanIntegrationTest, CreatesImageWithMultipleArrayLayers) {
+    constexpr std::uint32_t kArrayLayers = 4U;
+
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.array_layers = kArrayLayers;
+
+    const Vulkan::VulkanImage image{memoryAllocator(), create_info};
+    ASSERT_NE(image.nativeHandle(), VK_NULL_HANDLE);
+
+    VkImageViewCreateInfo view_create_info{};
+    view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_create_info.image = image.nativeHandle();
+    view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+    view_create_info.format = create_info.format;
+    view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    view_create_info.subresourceRange.baseMipLevel = 0U;
+    view_create_info.subresourceRange.levelCount = 1U;
+    view_create_info.subresourceRange.baseArrayLayer = kArrayLayers - 1U;
+    view_create_info.subresourceRange.layerCount = 1U;
+
+    const Vulkan::VulkanImageView image_view{m_Device, view_create_info};
+    EXPECT_NE(image_view.nativeHandle(), VK_NULL_HANDLE);
+}
+
+TEST_F(VulkanIntegrationTest, CreatesCubeCompatibleImage) {
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.array_layers = kCubeFaceCount;
+    create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+    const Vulkan::VulkanImage image{memoryAllocator(), create_info};
+    ASSERT_NE(image.nativeHandle(), VK_NULL_HANDLE);
+
+    VkImageViewCreateInfo view_create_info{};
+    view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_create_info.image = image.nativeHandle();
+    view_create_info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+    view_create_info.format = create_info.format;
+    view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    view_create_info.subresourceRange.baseMipLevel = 0U;
+    view_create_info.subresourceRange.levelCount = 1U;
+    view_create_info.subresourceRange.baseArrayLayer = 0U;
+    view_create_info.subresourceRange.layerCount = kCubeFaceCount;
+
+    const Vulkan::VulkanImageView image_view{m_Device, view_create_info};
+    EXPECT_NE(image_view.nativeHandle(), VK_NULL_HANDLE);
+}
+
+TEST_F(VulkanIntegrationTest, CreatesMultisampledImageWhenSupported) {
+    constexpr VkSampleCountFlagBits kSampleCount = VK_SAMPLE_COUNT_4_BIT;
+
+    VkImageFormatProperties properties{};
+
+    const VkResult query_result = vkGetPhysicalDeviceImageFormatProperties(
+        m_PhysicalDevice, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TYPE_2D,
+        VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0U,
+        &properties);
+
+    if (query_result == VK_ERROR_FORMAT_NOT_SUPPORTED) {
+        GTEST_SKIP() << "Requested image configuration is unsupported";
+    }
+
+    ASSERT_EQ(query_result, VK_SUCCESS);
+
+    if ((properties.sampleCounts &
+         static_cast<VkSampleCountFlags>(kSampleCount)) == 0U) {
+        GTEST_SKIP() << "Four-sample images are unsupported";
+    }
+
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    create_info.samples = kSampleCount;
+
+    const Vulkan::VulkanImage image{memoryAllocator(), create_info};
+
+    EXPECT_NE(image.nativeHandle(), VK_NULL_HANDLE);
+}
+
+TEST_F(VulkanIntegrationTest, RejectsInvalidArrayLayerCounts) {
+    constexpr std::uint32_t kInvalid3DArrayLayers = 2U;
+
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+
+    create_info.array_layers = 0U;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage requires at least one array layer");
+
+    create_info.image_type = VK_IMAGE_TYPE_3D;
+    create_info.array_layers = kInvalid3DArrayLayers;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage requires exactly one array layer for 3D images");
+}
+
+TEST_F(VulkanIntegrationTest, RejectsInvalidCubeCompatibleImages) {
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    create_info.array_layers = kCubeFaceCount;
+
+    create_info.image_type = VK_IMAGE_TYPE_1D;
+    create_info.extent.height = 1U;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage cube-compatible images must be 2D");
+
+    create_info.image_type = VK_IMAGE_TYPE_2D;
+    create_info.extent.height = kTestImageExtent / 2U;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage cube-compatible images require equal width and height");
+
+    create_info.extent.height = kTestImageExtent;
+    create_info.array_layers = kCubeFaceCount - 1U;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage cube-compatible images require at least six array layers");
+}
+
+TEST_F(VulkanIntegrationTest, RejectsInvalidMultisampledImages) {
+    constexpr VkSampleCountFlagBits kSampleCount = VK_SAMPLE_COUNT_4_BIT;
+    constexpr std::uint32_t kInvalidMipLevels = 2U;
+
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.samples = kSampleCount;
+
+    create_info.image_type = VK_IMAGE_TYPE_1D;
+    create_info.extent.height = 1U;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage multisampled images must be 2D");
+
+    create_info.image_type = VK_IMAGE_TYPE_2D;
+    create_info.extent.height = kTestImageExtent;
+    create_info.mip_levels = kInvalidMipLevels;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage multisampled images require exactly one mip level");
+
+    create_info.mip_levels = 1U;
+    create_info.array_layers = kCubeFaceCount;
+    create_info.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+    ASSERT_DEATH(
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
+        "VulkanImage multisampled images cannot be cube-compatible");
 }
