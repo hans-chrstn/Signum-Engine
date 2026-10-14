@@ -952,17 +952,17 @@
 - [x] shaders
 - [x] graphics pipelines
 - [x] buffers
-- [ ] textures
-- [ ] descriptors
-- [ ] descriptor/binding models
+- [x] textures
+- [x] descriptors
+- [x] descriptor/binding models
 - [ ] materials
 - [ ] shader and pipeline variants
 - [ ] compute pipelines
 - [ ] GPU resource lifetime
 - [ ] GPU resource dependency tracking
 
-- [ ] SPIR-V compilation, shader stages, entry points, and compiler diagnostics
-- [ ] shader interface reflection and descriptor/push-constant compatibility
+- [x] SPIR-V compilation, shader stages, entry points, and compiler diagnostics
+- [x] shader interface reflection and descriptor/push-constant compatibility
 - [ ] shader specialization constants and pipeline variant identity
 - [ ] image formats, image views, mip levels, array layers, and color spaces
 - [ ] sRGB versus linear sampling and texture usage
@@ -973,13 +973,13 @@
 
 - [x] Define a compiler-independent shader artifact contract with SPIR-V as the initial Vulkan backend input
 - [ ] Define shader-stage, entry-point, compilation error, and diagnostic ownership
-- [ ] Define shader-interface metadata for bindings, stages, push constants, and pipeline compatibility
+- [x] Define shader-interface metadata for bindings, stages, push constants, and pipeline compatibility
 - [x] Define a minimal shader reflection/validation boundary without depending on gameplay C++ reflection
 - [ ] Define pipeline/layout compatibility and variant-key responsibilities
-- [ ] Define texture/resource descriptions that preserve format, extent, sample count, mip levels, array layers, and intended usage
+- [x] Define texture/resource descriptions that preserve format, extent, sample count, mip levels, array layers, and intended usage
 - [ ] Define resource initialization and readiness separately from eventual logical resource handles
-- [ ] Define GPU-completion-aware resource retention for submissions still in flight
-- [ ] Keep optional device-feature requirements explicit rather than assuming all Vulkan hardware supports descriptor indexing or advanced shaders
+- [x] Define GPU-completion-aware resource retention for submissions still in flight
+- [x] Keep optional device-feature requirements explicit rather than assuming all Vulkan hardware supports descriptor indexing or advanced shaders
 - [ ] Record criteria for evaluating Slang against the initial shader toolchain before committing to a compiler migration
 - [x] Define shader-stage and entry-point selection contracts
 - [x] Define SPIR-V validation failure and diagnostic contracts
@@ -997,7 +997,7 @@
 - [x] Integrate entry-point validation into Vulkan graphics-pipeline creation
 - [ ] Add uniform/storage buffers
 - [ ] Add textures
-- [ ] Add descriptor/binding infrastructure
+- [x] Add descriptor/binding infrastructure
 - [ ] Add reusable shader/pipeline variant infrastructure
 - [ ] Add compute-pipeline support when a real workload requires it
 - [ ] Add material parameter/binding foundation
@@ -1013,10 +1013,10 @@
 - [ ] Expose resource lifetime/dependency data needed by later frame scheduling
 
 - [ ] Connect the first shader compilation or validated SPIR-V loading path to explicit compiler diagnostics
-- [ ] Validate descriptor and push-constant declarations against the shader/pipeline interface
+- [x] Validate descriptor and push-constant declarations against the shader/pipeline interface
 - [ ] Represent texture format, color space, mip ranges, and resource usage explicitly in Vulkan resource setup
-- [ ] Preserve submitted GPU resource lifetimes until the relevant completion signal is observed
-- [ ] Keep conventional descriptors and draw calls as the working baseline
+- [x] Preserve submitted GPU resource lifetimes until the relevant completion signal is observed
+- [x] Keep conventional descriptors and draw calls as the working baseline
 
 ### Test
 
@@ -1026,19 +1026,19 @@
 - [x] Test structured SPIR-V validation and entry-point error codes
 - [x] Test SPIR-V validation without GPU resources
 - [ ] Test pure resource descriptions
-- [ ] Test shader/pipeline/binding descriptions without optional rendering modules
+- [x] Test shader/pipeline/binding descriptions without optional rendering modules
 - [ ] Test material parameter/binding behavior without effect-specific assumptions
-- [ ] Test partial creation failures
-- [ ] Test swapchain recreation failures after `oldSwapchain` retirement
-- [ ] Verify failed swapchain recreation does not reuse retired swapchain resources
+- [x] Test partial creation failures
+- [x] Test swapchain recreation failures after `oldSwapchain` retirement
+- [x] Verify failed swapchain recreation does not reuse retired swapchain resources
 - [ ] Verify dependency-safe resource destruction and clean fatal shutdown after failed recreation
-- [ ] Verify destruction ordering
+- [x] Verify destruction ordering
 - [ ] Use a simple sphere, star, or planet-like mesh as reference content without adding celestial concepts to renderer APIs
 - [ ] Increase reference object counts to expose resource, transform, synchronization, and rendering bugs
 - [ ] Run Vulkan validation
 - [ ] Run sanitizers
 
-- [ ] Reject incompatible shader stages, bindings, and pipeline layouts with useful diagnostics
+- [x] Reject incompatible shader stages, bindings, and pipeline layouts with useful diagnostics
 - [ ] Test missing, invalid, and incompatible shader artifacts without resource leaks
 - [ ] Test shader/pipeline variant identity and compatible reuse
 - [ ] Test texture mip-level, view-range, format, and sRGB/linear interpretation cases
