@@ -205,6 +205,14 @@ namespace SNE::Engine::Renderer::Vulkan {
         shader_interface.descriptor_bindings.reserve(descriptor_binding_count);
 
         for (const SpvReflectDescriptorBinding *binding : bindings) {
+            if (binding->count == 0U) {
+                throw Core::Error::EngineError(
+                    Core::Error::Code::VulkanSpirvReflectionFailed,
+                    "Runtime-sized or zero-count shader descriptor arrays are "
+                    "not supported",
+                    "Reflect SPIR-V Descriptor Bindings");
+            }
+
             Shader::ShaderDescriptorBinding descriptor{
                 .set = binding->set,
                 .binding = binding->binding,

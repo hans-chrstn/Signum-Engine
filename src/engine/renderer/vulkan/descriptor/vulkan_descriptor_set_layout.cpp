@@ -6,6 +6,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include <cstddef>
 #include <string>
 #include <utility>
 
@@ -37,6 +38,20 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "binding count is non-zero");
         }
 
+        m_DescriptorBindingDescriptions.reserve(create_info.bindingCount);
+
+        for (std::size_t i{}; i < create_info.bindingCount; ++i) {
+            const auto &bindings = create_info.pBindings[i];
+            VulkanDescriptorBindingDescription binding_description{
+                .binding = bindings.binding,
+                .descriptor_type = bindings.descriptorType,
+                .descriptor_count = bindings.descriptorCount,
+                .stage_flags = bindings.stageFlags,
+            };
+
+            m_DescriptorBindingDescriptions.push_back(binding_description);
+        }
+
         const VkResult result = vkCreateDescriptorSetLayout(
             m_Device, &create_info, nullptr, &m_DescriptorSetLayout);
         if (result != VK_SUCCESS) {
@@ -65,6 +80,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         m_Device = VK_NULL_HANDLE;
         m_DescriptorSetLayout = VK_NULL_HANDLE;
+        m_DescriptorBindingDescriptions.clear();
     }
 
     VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout() noexcept {
@@ -75,7 +91,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanDescriptorSetLayout &&other) noexcept
         : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)),
           m_DescriptorSetLayout(
-              std::exchange(other.m_DescriptorSetLayout, VK_NULL_HANDLE)) {}
+              std::exchange(other.m_DescriptorSetLayout, VK_NULL_HANDLE)),
+          m_DescriptorBindingDescriptions(
+              std::move(other.m_DescriptorBindingDescriptions)) {}
 
     auto VulkanDescriptorSetLayout::operator=(
         VulkanDescriptorSetLayout &&other) noexcept
@@ -89,6 +107,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_Device = std::exchange(other.m_Device, VK_NULL_HANDLE);
         m_DescriptorSetLayout =
             std::exchange(other.m_DescriptorSetLayout, VK_NULL_HANDLE);
+        m_DescriptorBindingDescriptions =
+            std::move(other.m_DescriptorBindingDescriptions);
 
         return *this;
     }
@@ -96,5 +116,10 @@ namespace SNE::Engine::Renderer::Vulkan {
     auto VulkanDescriptorSetLayout::nativeHandle() const noexcept
         -> VkDescriptorSetLayout {
         return m_DescriptorSetLayout;
+    }
+
+    auto VulkanDescriptorSetLayout::bindingDescriptions() const noexcept
+        -> std::span<const VulkanDescriptorBindingDescription> {
+        return m_DescriptorBindingDescriptions;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

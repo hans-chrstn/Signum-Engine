@@ -1,8 +1,46 @@
 #pragma once
 
+#include <cstdint>
+#include <span>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    /**
+     * @brief Describes a binding in a Vulkan descriptor-set layout.
+     *
+     * Stores the resource type, binding index, descriptor count, and
+     * shader-stage visibility needed for descriptor compatibility checks.
+     *
+     * Contains only values and does not own GPU resources or retain
+     * pointers from Vulkan descriptor layout creation structures.
+     */
+    struct VulkanDescriptorBindingDescription {
+        /**
+         * @brief Binding index within the descriptor set.
+         */
+        std::uint32_t binding{};
+
+        /**
+         * @brief Vulkan descriptor type required by the binding.
+         */
+        VkDescriptorType descriptor_type{};
+
+        /**
+         * @brief Number of descriptors available at this binding.
+         *
+         * Must be greater than zero for a valid binding.
+         */
+        std::uint32_t descriptor_count{};
+
+        /**
+         * @brief Shader stages permitted to access this binding.
+         *
+         * Contains a combination of VkShaderStageFlagBits.
+         */
+        VkShaderStageFlags stage_flags{};
+    };
+
     /**
      * @brief Owns a Vulkan descriptor-set layout.
      *
@@ -24,9 +62,24 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkDescriptorSetLayout m_DescriptorSetLayout{VK_NULL_HANDLE};
 
         /**
+         * @brief Owned metadata describing the descriptor-set layout bindings.
+         *
+         * Stores copies of binding indices, descriptor types, descriptor
+         * counts, and shader-stage visibility from the layout creation
+         * descriptions.
+         *
+         * Does not retain Vulkan creation-info pointers or immutable sampler
+         * handles. The metadata is used for shader-interface compatibility
+         * validation.
+         */
+        std::vector<VulkanDescriptorBindingDescription>
+            m_DescriptorBindingDescriptions;
+
+        /**
          * @brief Releases the owned descriptor-set layout.
          *
-         * Destroys the layout when present and resets the stored handles.
+         * Destroys the Vulkan layout when present, resets the stored handles,
+         * and clears the retained binding descriptions.
          *
          * Safe to call when no layout is owned.
          */
@@ -85,5 +138,21 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto nativeHandle() const noexcept
             -> VkDescriptorSetLayout;
+
+        /**
+         * @brief Returns the descriptor bindings retained by this layout.
+         *
+         * Provides a read-only view of the binding descriptions copied
+         * during descriptor-set layout construction.
+         *
+         * The returned view does not own the metadata and must not outlive
+         * this object or be used after its metadata is moved or replaced.
+         *
+         * @return Read-only span of descriptor binding descriptions.
+         *
+         * @note Returns an empty span when the layout contains no bindings.
+         */
+        [[nodiscard]] auto bindingDescriptions() const noexcept
+            -> std::span<const VulkanDescriptorBindingDescription>;
     };
 } // namespace SNE::Engine::Renderer::Vulkan
