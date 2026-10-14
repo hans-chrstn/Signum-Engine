@@ -3,6 +3,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/renderer/shader/push_constant_range.hpp"
+#include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_validation.hpp"
 #include <spirv_reflect.h>
 #include <string>
@@ -10,6 +11,7 @@
 #include <vector>
 
 namespace Core = SNE::Engine::Core;
+namespace Shader = SNE::Engine::Renderer::Shader;
 
 namespace {
     [[nodiscard]] constexpr auto toString(SpvReflectResult result) noexcept
@@ -66,6 +68,32 @@ namespace {
         }
     }
 
+    [[nodiscard]] auto toShaderResource(SpvReflectDescriptorType type)
+        -> Shader::ShaderResourceType {
+        switch (type) {
+        case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            return Shader::ShaderResourceType::CombinedImageSampler;
+        case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            return Shader::ShaderResourceType::UniformBuffer;
+        case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            return Shader::ShaderResourceType::StorageBuffer;
+        case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+        case SPV_REFLECT_DESCRIPTOR_TYPE_TENSOR_ARM:
+        default:
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanSpirvReflectionFailed,
+                "Unsupported SPIR-V descriptor type",
+                "Reflect SPIR-V Descriptor Type");
+        }
+    }
 } // namespace
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -135,6 +163,56 @@ namespace SNE::Engine::Renderer::Vulkan {
 
             shader_interface.push_constant_ranges.push_back(
                 push_constant_range);
+        }
+
+        std::uint32_t descriptor_binding_count{};
+
+        const SpvReflectResult descriptor_enumeration_count_result =
+            shader_module.EnumerateEntryPointDescriptorBindings(
+                selection.entry_point.c_str(), &descriptor_binding_count,
+                nullptr);
+
+        if (descriptor_enumeration_count_result != SPV_REFLECT_RESULT_SUCCESS) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanSpirvReflectionFailed,
+                "Failed to enumerate SPIR-V descriptor bindings",
+                Core::Error::NativeError(
+                    static_cast<int>(descriptor_enumeration_count_result),
+                    std::string(toString(descriptor_enumeration_count_result))),
+                "Enumerate SPIR-V Descriptor Bindings");
+        }
+
+        std::vector<SpvReflectDescriptorBinding *> bindings(
+            descriptor_binding_count);
+
+        if (descriptor_binding_count > 0U) {
+            const SpvReflectResult descriptor_enumeration_result =
+                shader_module.EnumerateEntryPointDescriptorBindings(
+                    selection.entry_point.c_str(), &descriptor_binding_count,
+                    bindings.data());
+
+            if (descriptor_enumeration_result != SPV_REFLECT_RESULT_SUCCESS) {
+                throw Core::Error::EngineError(
+                    Core::Error::Code::VulkanSpirvReflectionFailed,
+                    "Failed to retrieve SPIR-V descriptor bindings",
+                    Core::Error::NativeError(
+                        static_cast<int>(descriptor_enumeration_result),
+                        std::string(toString(descriptor_enumeration_result))),
+                    "Retrieve SPIR-V Descriptor Bindings");
+            }
+        }
+
+        shader_interface.descriptor_bindings.reserve(descriptor_binding_count);
+
+        for (const SpvReflectDescriptorBinding *binding : bindings) {
+            Shader::ShaderDescriptorBinding descriptor{
+                .set = binding->set,
+                .binding = binding->binding,
+                .type = toShaderResource(binding->descriptor_type),
+                .count = binding->count,
+            };
+
+            shader_interface.descriptor_bindings.push_back(descriptor);
         }
 
         return shader_interface;

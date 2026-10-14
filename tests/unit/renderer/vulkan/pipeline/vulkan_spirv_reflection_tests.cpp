@@ -2,6 +2,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/renderer/shader/shader_entry_point_selection.hpp"
 #include "engine/renderer/shader/shader_interface.hpp"
+#include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.hpp"
@@ -35,6 +36,19 @@ namespace {
         const auto artifact = Vulkan::loadSpirv(fixturePath(filename));
 
         return Vulkan::reflectSpirvInterface(artifact.words, selection);
+    }
+
+    [[nodiscard]] auto
+    findDescriptorBinding(const Shader::ShaderInterface &shader_interface,
+                          std::uint32_t set, std::uint32_t binding)
+        -> const Shader::ShaderDescriptorBinding * {
+        for (const auto &candidate : shader_interface.descriptor_bindings) {
+            if (candidate.set == set && candidate.binding == binding) {
+                return &candidate;
+            }
+        }
+
+        return nullptr;
     }
 } // namespace
 
@@ -189,5 +203,97 @@ TEST(SpirvReflectionTests, RejectsMismatchedEntryPointStage) {
     } catch (const Core::Error::EngineError &error) {
         EXPECT_EQ(error.getCode(),
                   Core::Error::Code::VulkanShaderEntryPointUnavailable);
+    }
+}
+
+TEST(SpirvReflectionTests, ReturnsEmptyDescriptorBindingsWhenAbsent) {
+    const auto result = reflectFixture("triangle.vert.spv", vertexSelection());
+
+    EXPECT_TRUE(result.descriptor_bindings.empty());
+}
+
+TEST(SpirvReflectionTests, ReflectsCombinedImageSamplerBinding) {
+    const Shader::ShaderEntryPointSelection selection{
+        .stage = Shader::ShaderStage::Fragment,
+        .entry_point = "main",
+    };
+
+    const auto result = reflectFixture("textured.frag.spv", selection);
+
+    ASSERT_EQ(result.descriptor_bindings.size(), 1U);
+
+    const auto &binding = result.descriptor_bindings[0];
+
+    EXPECT_EQ(binding.set, 0U);
+    EXPECT_EQ(binding.binding, 0U);
+    EXPECT_EQ(binding.type, Shader::ShaderResourceType::CombinedImageSampler);
+    EXPECT_EQ(binding.count, 1U);
+}
+
+TEST(SpirvReflectionTests, ReflectsDescriptorTypesAndArrayCounts) {
+    const Shader::ShaderEntryPointSelection selection{
+        .stage = Shader::ShaderStage::Fragment,
+        .entry_point = "main",
+    };
+
+    const auto result = reflectFixture("descriptor_types.frag.spv", selection);
+
+    ASSERT_EQ(result.descriptor_bindings.size(), 3U);
+
+    const auto *textures = findDescriptorBinding(result, 0U, 0U);
+    ASSERT_NE(textures, nullptr);
+
+    EXPECT_EQ(textures->type, Shader::ShaderResourceType::CombinedImageSampler);
+    EXPECT_EQ(textures->count, 3U);
+
+    const auto *uniform_buffer = findDescriptorBinding(result, 1U, 2U);
+    ASSERT_NE(uniform_buffer, nullptr);
+
+    EXPECT_EQ(uniform_buffer->type, Shader::ShaderResourceType::UniformBuffer);
+    EXPECT_EQ(uniform_buffer->count, 1U);
+
+    const auto *storage_buffer = findDescriptorBinding(result, 2U, 4U);
+    ASSERT_NE(storage_buffer, nullptr);
+
+    EXPECT_EQ(storage_buffer->type, Shader::ShaderResourceType::StorageBuffer);
+    EXPECT_EQ(storage_buffer->count, 1U);
+}
+
+TEST(SpirvReflectionTests, PreservesDescriptorMetadataAfterReturn) {
+    const Shader::ShaderInterface result = [] -> Shader::ShaderInterface {
+        const auto artifact =
+            Vulkan::loadSpirv(fixturePath("textured.frag.spv"));
+
+        const Shader::ShaderEntryPointSelection selection{
+            .stage = Shader::ShaderStage::Fragment,
+            .entry_point = "main",
+        };
+
+        return Vulkan::reflectSpirvInterface(artifact.words, selection);
+    }();
+
+    ASSERT_EQ(result.descriptor_bindings.size(), 1U);
+
+    const auto &binding = result.descriptor_bindings[0];
+
+    EXPECT_EQ(binding.set, 0U);
+    EXPECT_EQ(binding.binding, 0U);
+    EXPECT_EQ(binding.type, Shader::ShaderResourceType::CombinedImageSampler);
+    EXPECT_EQ(binding.count, 1U);
+}
+
+TEST(SpirvReflectionTests, RejectsUnsupportedDescriptorType) {
+    const Shader::ShaderEntryPointSelection selection{
+        .stage = Shader::ShaderStage::Fragment,
+        .entry_point = "main",
+    };
+
+    try {
+        (void)reflectFixture("unsupported_descriptor.frag.spv", selection);
+
+        FAIL() << "Expected unsupported descriptor type to be rejected";
+    } catch (const Core::Error::EngineError &error) {
+        EXPECT_EQ(error.getCode(),
+                  Core::Error::Code::VulkanSpirvReflectionFailed);
     }
 }
