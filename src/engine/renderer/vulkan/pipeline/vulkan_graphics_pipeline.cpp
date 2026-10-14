@@ -10,6 +10,8 @@
 #include "engine/renderer/shader/shader_interface.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include "engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_descriptor_compatibility.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_push_constant_compatibility.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_validation.hpp"
@@ -19,6 +21,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto validateGraphicsShaderData(const Shader::GraphicsShaderData &data)
@@ -105,6 +108,48 @@ namespace SNE::Engine::Renderer::Vulkan {
             fragment_interface,
             graphics_pipeline_layout_data.push_constant_ranges,
             max_push_constants_size);
+
+        std::vector<VkDescriptorSetLayout> layouts;
+        std::vector<DescriptorSetLayoutBindingView>
+            descriptor_set_layout_binding_views;
+
+        const auto &borrowed_layouts =
+            graphics_pipeline_layout_data.descriptor_set_layouts;
+
+        layouts.reserve(borrowed_layouts.size());
+        descriptor_set_layout_binding_views.reserve(borrowed_layouts.size());
+
+        for (const VulkanDescriptorSetLayout *layout : borrowed_layouts) {
+            if (layout == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanGraphicsPipeline requires non-null descriptor-set "
+                    "layout references");
+            }
+
+            const VkDescriptorSetLayout handle = layout->nativeHandle();
+
+            if (handle == VK_NULL_HANDLE) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanGraphicsPipeline requires valid descriptor-set "
+                    "layout handles");
+            }
+
+            layouts.push_back(handle);
+            descriptor_set_layout_binding_views.push_back(
+                DescriptorSetLayoutBindingView{
+                    .bindings = layout->bindingDescriptions(),
+                });
+        }
+
+        validateDescriptorCompatibility(vertex_interface,
+                                        descriptor_set_layout_binding_views);
+
+        validateDescriptorCompatibility(fragment_interface,
+                                        descriptor_set_layout_binding_views);
 
         VulkanShaderModule vertex_shader = VulkanShaderModule(
             m_Device, graphics_shader_data.vertex.artifact.words);
@@ -266,11 +311,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         pipeline_layout_create_info.sType =
             VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-        const auto &layouts =
-            graphics_pipeline_layout_data.descriptor_set_layouts;
-
         const auto layout_count =
             Core::Numeric::tryConvertToUint32(layouts.size());
+
         if (!layout_count.has_value()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
@@ -280,17 +323,6 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         pipeline_layout_create_info.setLayoutCount = layout_count.value();
-
-        for (VkDescriptorSetLayout layout : layouts) {
-            if (layout == VK_NULL_HANDLE) {
-                Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Precondition,
-                    Core::Error::Subsystem::Vulkan,
-                    "VulkanGraphicsPipeline requires valid descriptor-set "
-                    "layout handles");
-            }
-        }
-
         pipeline_layout_create_info.pSetLayouts = layouts.data();
 
         const auto push_constant_range_count =

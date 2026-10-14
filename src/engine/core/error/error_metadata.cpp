@@ -288,6 +288,11 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanDescriptorSetAllocationFailed",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::VulkanDescriptorLayoutIncompatible,
+                    .name = "VulkanDescriptorLayoutIncompatible",
+                    .subsystem = Subsystem::Vulkan,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {

@@ -321,6 +321,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanDescriptorSetAllocationFailed,
             "VulkanDescriptorSetAllocationFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDescriptorLayoutIncompatible,
+            "VulkanDescriptorLayoutIncompatible",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

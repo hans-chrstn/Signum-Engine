@@ -130,6 +130,9 @@ namespace SNE::Engine::Core::Error {
         VulkanDescriptorPoolCreationFailed,
         /** Allocation of Vulkan descriptor-sets failed. */
         VulkanDescriptorSetAllocationFailed,
+        /** Shader descriptor requirements are incompatible with the pipeline
+           layout. */
+        VulkanDescriptorLayoutIncompatible,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

@@ -628,13 +628,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                             },
                     };
 
-                    std::array<VkDescriptorSetLayout, 1> texture_layouts{};
-                    std::span<const VkDescriptorSetLayout>
+                    std::array<const VulkanDescriptorSetLayout *, 1>
+                        texture_layouts{};
+
+                    std::span<const VulkanDescriptorSetLayout *const>
                         descriptor_set_layouts{};
 
                     if (m_TextureDescriptorSetLayout.has_value()) {
-                        texture_layouts[0] =
-                            m_TextureDescriptorSetLayout->nativeHandle();
+                        const auto &owned_layout =
+                            m_TextureDescriptorSetLayout.value();
+                        texture_layouts[0] = &owned_layout;
                         descriptor_set_layouts = texture_layouts;
                     }
 

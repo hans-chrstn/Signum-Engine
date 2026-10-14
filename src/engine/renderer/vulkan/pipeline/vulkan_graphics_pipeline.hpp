@@ -6,6 +6,8 @@
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    class VulkanDescriptorSetLayout;
+
     /**
      * @brief Describes resource interface requirements for a graphics pipeline.
      *
@@ -21,11 +23,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::span<const VkPushConstantRange> push_constant_ranges;
 
         /**
-         * @brief Borrowed descriptor-set layouts, ordered by set number.
+         * @brief Borrowed descriptor-set layouts ordered by descriptor set
+         * index.
+         *
+         * Each entry references a descriptor-set layout containing both its
+         * native Vulkan handle and retained binding descriptions.
+         *
+         * The referenced layout objects must remain valid throughout pipeline
+         * construction. The graphics pipeline does not take ownership of them.
          *
          * An empty span indicates that no descriptor sets are used.
+         *
+         * @note Entries must not be null. Descriptor set indices correspond
+         * to their positions in the span.
          */
-        std::span<const VkDescriptorSetLayout> descriptor_set_layouts;
+        std::span<const VulkanDescriptorSetLayout *const>
+            descriptor_set_layouts;
     };
 
     /**
@@ -129,9 +142,14 @@ namespace SNE::Engine::Renderer::Vulkan {
          * descriptions are borrowed only during construction and are not
          * retained by the graphics pipeline.
          *
-         * Shader entry points and reflected push-constant requirements are
-         * validated against the supplied pipeline layout before Vulkan pipeline
-         * resources are created.
+         * Shader entry points, reflected push-constant requirements, and
+         * descriptor bindings are validated against the supplied pipeline
+         * layout before Vulkan pipeline resources are created.
+         *
+         * Descriptor-set layouts are borrowed during construction. Their
+         * retained binding descriptions are used to validate descriptor
+         * set indices, binding indices, descriptor types, counts, and
+         * shader-stage visibility.
          *
          * The physical device's push-constant size limit is supplied by the
          * caller. The constructor does not query physical-device properties
@@ -165,13 +183,16 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @pre max_push_constants_size must be a valid, nonzero device limit.
          * @pre Pipeline push-constant ranges must satisfy Vulkan alignment,
          * stage-usage, and physical-device limit requirements.
+         * @pre Descriptor-set layout references must be non-null and
+         * refer to valid Vulkan descriptor-set layout handles.
          *
          * @post Successful construction produces a non-null Vulkan pipeline
          * layout and graphics pipeline.
          *
          * @throws Core::Error::EngineError if shader validation or reflection
-         * fails, shader push-constant requirements are incompatible with the
-         * pipeline layout, or Vulkan resource creation fails.
+         * fails, shader push-constant or descriptor requirements are
+         * incompatible with the pipeline layout, or Vulkan resource
+         * creation fails.
          *
          * @note Violated input contracts trigger precondition assertions.
          */

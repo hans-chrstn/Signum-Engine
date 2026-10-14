@@ -33,10 +33,11 @@ namespace {
     static_assert(
         std::is_nothrow_move_assignable_v<Vulkan::VulkanGraphicsPipeline>);
 
-    [[nodiscard]] auto makeDepthPipeline(
-        VkDevice device, VkPhysicalDevice physical_device,
-        VkFormat depth_format,
-        std::span<const VkDescriptorSetLayout> descriptor_set_layouts = {})
+    [[nodiscard]] auto
+    makeDepthPipeline(VkDevice device, VkPhysicalDevice physical_device,
+                      VkFormat depth_format,
+                      std::span<const Vulkan::VulkanDescriptorSetLayout *const>
+                          descriptor_set_layouts = {})
         -> Vulkan::VulkanGraphicsPipeline {
         auto vertex_artifact =
             Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
@@ -302,7 +303,9 @@ TEST_F(DepthGraphicsPipelineIntegrationTest,
     const Vulkan::VulkanDescriptorSetLayout descriptor_layout{m_Device,
                                                               create_info};
 
-    const std::array layouts{descriptor_layout.nativeHandle()};
+    const std::array<const Vulkan::VulkanDescriptorSetLayout *, 1> layouts{
+        &descriptor_layout,
+    };
 
     const Vulkan::VulkanGraphicsPipeline pipeline =
         makeDepthPipeline(m_Device, m_PhysicalDevice, m_DepthFormat, layouts);
@@ -312,12 +315,12 @@ TEST_F(DepthGraphicsPipelineIntegrationTest,
 }
 
 TEST_F(DepthGraphicsPipelineIntegrationTest,
-       RejectsNullDescriptorSetLayoutHandle) {
-    const std::array<VkDescriptorSetLayout, 1> layouts{
-        VK_NULL_HANDLE,
+       RejectsNullDescriptorSetLayoutReference) {
+    const std::array<const Vulkan::VulkanDescriptorSetLayout *, 1> layouts{
+        nullptr,
     };
 
     ASSERT_DEATH(static_cast<void>(makeDepthPipeline(m_Device, m_PhysicalDevice,
                                                      m_DepthFormat, layouts)),
-                 "requires valid descriptor-set layout handles");
+                 "requires non-null descriptor-set layout references");
 }
