@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <utility>
 
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanShaderModule::VulkanShaderModule(VkDevice device,
@@ -57,13 +58,35 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
-    VulkanShaderModule::~VulkanShaderModule() noexcept {
+    auto VulkanShaderModule::destroy() noexcept -> void {
         if (m_ShaderModule != VK_NULL_HANDLE) {
             vkDestroyShaderModule(m_Device, m_ShaderModule, nullptr);
         }
 
-        m_Device = VK_NULL_HANDLE;
         m_ShaderModule = VK_NULL_HANDLE;
+        m_Device = VK_NULL_HANDLE;
+    }
+
+    VulkanShaderModule::~VulkanShaderModule() noexcept {
+        destroy();
+    }
+
+    VulkanShaderModule::VulkanShaderModule(VulkanShaderModule &&other) noexcept
+        : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)),
+          m_ShaderModule(std::exchange(other.m_ShaderModule, VK_NULL_HANDLE)) {}
+
+    auto VulkanShaderModule::operator=(VulkanShaderModule &&other) noexcept
+        -> VulkanShaderModule & {
+        if (this == &other) {
+            return *this;
+        }
+
+        destroy();
+
+        m_Device = std::exchange(other.m_Device, VK_NULL_HANDLE);
+        m_ShaderModule = std::exchange(other.m_ShaderModule, VK_NULL_HANDLE);
+
+        return *this;
     }
 
     auto VulkanShaderModule::nativeHandle() const noexcept -> VkShaderModule {

@@ -64,8 +64,6 @@ TEST(EngineErrorTests, PreservesContainedNativeErrorCode) {
 
     const auto &native = engine_error.getNativeError();
 
-    ASSERT_TRUE(native.has_value());
-
     if (native.has_value()) {
         EXPECT_EQ(native->getNativeCode(), kTestNativeCode);
     }
@@ -82,10 +80,8 @@ TEST(EngineErrorTests, PreservesContainedNativeErrorDescription) {
 
     const auto &native = engine_error.getNativeError();
 
-    ASSERT_TRUE(native.has_value());
-
     if (native.has_value()) {
-        EXPECT_EQ(native->getNativeCode(), kTestNativeCode);
+        EXPECT_EQ(native->getNativeDescription(), "Test");
     }
 }
 

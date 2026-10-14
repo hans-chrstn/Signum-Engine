@@ -113,6 +113,11 @@ auto VulkanIntegrationTest::SetUp() -> void {
 }
 
 auto VulkanIntegrationTest::TearDown() -> void {
+    if (m_Device != VK_NULL_HANDLE) {
+        const VkResult result = vkDeviceWaitIdle(m_Device);
+        EXPECT_EQ(result, VK_SUCCESS);
+    }
+
     m_ImmediateSubmission.reset();
 
     m_MemoryAllocator.reset();

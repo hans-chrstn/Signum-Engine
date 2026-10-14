@@ -2,6 +2,7 @@ add_executable(
   signum_integration_tests
   renderer/vulkan/vulkan_integration_test_fixture.cpp
   renderer/vulkan/vulkan_renderer_mesh_replacement_integration_tests.cpp
+  renderer/vulkan/vulkan_renderer_texture_replacement_integration_tests.cpp
   renderer/vulkan/command/vulkan_immediate_submission_integration_tests.cpp
   renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
   renderer/vulkan/compute/vulkan_matrix_transform_integration_tests.cpp
@@ -18,6 +19,7 @@ add_executable(
   renderer/vulkan/memory/vulkan_sampler_integration_tests.cpp
   renderer/vulkan/pipeline/vulkan_push_constant_reflection_integration_tests.cpp
   renderer/vulkan/pipeline/vulkan_graphics_pipeline_integration_tests.cpp
+  renderer/vulkan/pipeline/vulkan_shader_module_integration_tests.cpp
   renderer/vulkan/presentation/vulkan_swapchain_retirement_integration_tests.cpp
 )
 

@@ -138,16 +138,6 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         if (initial_texture.has_value()) {
-            uploadTexture(initial_texture.value());
-
-            if (!m_TextureResources.has_value()) {
-                Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Invariant,
-                    Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer requires initialized texture resources "
-                    "after successful texture upload");
-            }
-
             VkDescriptorSetLayoutBinding descriptor_set_layout_binding{};
             descriptor_set_layout_binding.binding = 0U;
             descriptor_set_layout_binding.descriptorType =
@@ -166,53 +156,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_TextureDescriptorSetLayout.emplace(
                 m_Device.nativeHandle(), descriptor_set_layout_create_info);
 
-            VkDescriptorPoolSize descriptor_pool_size{};
-            descriptor_pool_size.type =
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptor_pool_size.descriptorCount = 1U;
-
-            VkDescriptorPoolCreateInfo descriptor_pool_create_info{};
-            descriptor_pool_create_info.sType =
-                VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-            descriptor_pool_create_info.maxSets = 1U;
-            descriptor_pool_create_info.poolSizeCount = 1U;
-            descriptor_pool_create_info.pPoolSizes = &descriptor_pool_size;
-
-            m_TextureDescriptorPool.emplace(m_Device.nativeHandle(),
-                                            descriptor_pool_create_info);
-
-            std::array<VkDescriptorSetLayout, 1> layouts{
-                m_TextureDescriptorSetLayout->nativeHandle(),
-            };
-
-            const auto descriptor_sets =
-                m_TextureDescriptorPool->allocateDescriptorSets(layouts);
-
-            m_TextureDescriptorSet = descriptor_sets.front();
-
-            VkDescriptorImageInfo descriptor_image_info{};
-            descriptor_image_info.sampler =
-                m_TextureResources->m_Sampler.nativeHandle();
-            descriptor_image_info.imageView =
-                m_TextureResources->m_ImageView.nativeHandle();
-            descriptor_image_info.imageLayout =
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-            VkWriteDescriptorSet write_descriptor_set{};
-            write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write_descriptor_set.dstSet = m_TextureDescriptorSet;
-            write_descriptor_set.dstBinding = 0U;
-            write_descriptor_set.dstArrayElement = 0U;
-            write_descriptor_set.descriptorCount = 1U;
-            write_descriptor_set.descriptorType =
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            write_descriptor_set.pImageInfo = &descriptor_image_info;
-
-            std::array<VkWriteDescriptorSet, 1> writes{
-                write_descriptor_set,
-            };
-
-            updateDescriptorSets(m_Device.nativeHandle(), writes);
+            m_TextureBindingResources.emplace(createTextureBindingResources(
+                initial_texture.value(), m_TextureDescriptorSetLayout.value()));
         }
 
         if (isFramebufferDrawable()) {
@@ -355,7 +300,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::uploadTexture(const TextureUploadData &texture)
-        -> void {
+        -> TextureResources {
         if (texture.width == 0U || texture.height == 0U) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
@@ -474,7 +419,102 @@ namespace SNE::Engine::Renderer::Vulkan {
             .m_Sampler = std::move(sampler),
         };
 
-        m_TextureResources.emplace(std::move(texture_resources));
+        return texture_resources;
+    }
+
+    auto VulkanRenderer::createTextureBindingResources(
+        const TextureUploadData &texture,
+        const VulkanDescriptorSetLayout &layout) -> TextureBindingResources {
+        TextureResources texture_resources = uploadTexture(texture);
+
+        VkDescriptorPoolSize descriptor_pool_size{};
+        descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptor_pool_size.descriptorCount = 1U;
+
+        VkDescriptorPoolCreateInfo descriptor_pool_create_info{};
+        descriptor_pool_create_info.sType =
+            VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        descriptor_pool_create_info.maxSets = 1U;
+        descriptor_pool_create_info.poolSizeCount = 1U;
+        descriptor_pool_create_info.pPoolSizes = &descriptor_pool_size;
+
+        VulkanDescriptorPool descriptor_pool{m_Device.nativeHandle(),
+                                             descriptor_pool_create_info};
+
+        std::array<VkDescriptorSetLayout, 1> layouts{
+            layout.nativeHandle(),
+        };
+
+        std::vector<VkDescriptorSet> descriptor_sets =
+            descriptor_pool.allocateDescriptorSets(layouts);
+
+        VkDescriptorImageInfo descriptor_image_info{};
+        descriptor_image_info.sampler =
+            texture_resources.m_Sampler.nativeHandle();
+        descriptor_image_info.imageView =
+            texture_resources.m_ImageView.nativeHandle();
+        descriptor_image_info.imageLayout =
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkWriteDescriptorSet write_descriptor_set{};
+        write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write_descriptor_set.dstSet = descriptor_sets.front();
+        write_descriptor_set.dstBinding = 0U;
+        write_descriptor_set.dstArrayElement = 0U;
+        write_descriptor_set.descriptorCount = 1U;
+        write_descriptor_set.descriptorType =
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write_descriptor_set.pImageInfo = &descriptor_image_info;
+
+        std::array<VkWriteDescriptorSet, 1> writes{
+            write_descriptor_set,
+        };
+
+        updateDescriptorSets(m_Device.nativeHandle(), writes);
+
+        return TextureBindingResources{
+            .m_Resources = std::move(texture_resources),
+            .m_DescriptorPool = std::move(descriptor_pool),
+            .m_DescriptorSet = descriptor_sets.front(),
+        };
+    }
+
+    auto VulkanRenderer::replaceTexture(const TextureUploadData &texture)
+        -> void {
+        if (!m_TextureBindingResources.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::replaceTexture requires an existing texture "
+                "binding");
+        }
+
+        if (!m_TextureDescriptorSetLayout.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::replaceTexture requires an existing "
+                "descriptor-set layout");
+        }
+
+        TextureBindingResources &active_texture_resources =
+            m_TextureBindingResources.value();
+
+        TextureBindingResources texture_resources =
+            createTextureBindingResources(texture,
+                                          m_TextureDescriptorSetLayout.value());
+
+        m_GraphicsResourceRetirementQueue.retire(
+            m_GraphicsSubmissionState.lastSubmitted(),
+            active_texture_resources);
+
+        m_TextureBindingResources.emplace(std::move(texture_resources));
+    }
+
+    auto VulkanRenderer::isFramebufferDrawable() const -> bool {
+        const Platform::FramebufferSize framebuffer_size =
+            m_Window->framebufferSize();
+        return framebuffer_size.width > 0 && framebuffer_size.height > 0;
     }
 
     auto VulkanRenderer::waitForDrawableFramebuffer() const -> bool {
@@ -483,12 +523,6 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         return isFramebufferDrawable();
-    }
-
-    auto VulkanRenderer::isFramebufferDrawable() const -> bool {
-        const Platform::FramebufferSize framebuffer_size =
-            m_Window->framebufferSize();
-        return framebuffer_size.width > 0 && framebuffer_size.height > 0;
     }
 
     auto VulkanRenderer::recreateSwapchainResources() -> bool {
@@ -722,11 +756,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());
 
-        if (m_TextureDescriptorSet != VK_NULL_HANDLE) {
-            vkCmdBindDescriptorSets(command_buffer,
-                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    graphics_pipeline.layoutHandle(), 0U, 1U,
-                                    &m_TextureDescriptorSet, 0U, nullptr);
+        if (m_TextureBindingResources.has_value()) {
+            vkCmdBindDescriptorSets(
+                command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                graphics_pipeline.layoutHandle(), 0U, 1U,
+                &m_TextureBindingResources->m_DescriptorSet, 0U, nullptr);
         }
 
         const VkDeviceSize vertex_offset = 0U;

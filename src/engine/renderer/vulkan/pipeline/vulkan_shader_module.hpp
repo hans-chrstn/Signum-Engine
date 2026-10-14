@@ -27,10 +27,16 @@ namespace SNE::Engine::Renderer::Vulkan {
          * object.
          */
         VkDevice m_Device{VK_NULL_HANDLE};
+
         /**
          * @brief Vulkan shader-module handle owned by this object.
          */
         VkShaderModule m_ShaderModule{VK_NULL_HANDLE};
+
+        /**
+         * @brief Releases the owned shader module and resets its handles.
+         */
+        auto destroy() noexcept -> void;
 
       public:
         /**
@@ -63,9 +69,29 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Destroys the owned Vulkan shader module.
          */
         ~VulkanShaderModule() noexcept;
+
         VulkanShaderModule(const VulkanShaderModule &) = delete;
         auto operator=(const VulkanShaderModule &)
             -> VulkanShaderModule & = delete;
+
+        /**
+         * @brief Transfers ownership of a Vulkan shader module.
+         *
+         * @param other Shader module whose ownership is transferred.
+         */
+        VulkanShaderModule(VulkanShaderModule &&other) noexcept;
+
+        /**
+         * @brief Replaces the owned shader module through move assignment.
+         *
+         * Releases the currently owned module before transferring ownership.
+         * Self-move assignment has no effect.
+         *
+         * @param other Shader module whose ownership is transferred.
+         * @return Reference to this object.
+         */
+        auto operator=(VulkanShaderModule &&other) noexcept
+            -> VulkanShaderModule &;
 
         /**
          * @brief Returns the underlying Vulkan shader-module handle.

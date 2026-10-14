@@ -34,6 +34,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
@@ -85,6 +86,38 @@ namespace SNE::Engine::Renderer::Vulkan {
             /** @brief Owns the sampler used for texture sampling. */
             VulkanSampler m_Sampler;
         };
+
+        /**
+         * @brief Owns a sampled texture and its descriptor binding resources.
+         *
+         * Groups the texture image, image view, sampler, and descriptor pool
+         * required to bind the texture during rendering.
+         *
+         * The descriptor set is a non-owning handle allocated from the
+         * descriptor pool. Destroying the pool implicitly frees the set.
+         *
+         * Members are declared in dependency order so the descriptor pool
+         * is destroyed before the texture resources it references.
+         *
+         * The structure is move-only because its Vulkan resources have
+         * exclusive ownership.
+         */
+        struct TextureBindingResources {
+            /** @brief Owns the texture image, image view, and sampler. */
+            TextureResources m_Resources;
+            /** @brief Owns the descriptor pool and its allocated descriptor
+             * sets. */
+            VulkanDescriptorPool m_DescriptorPool;
+            /**
+             * @brief Non-owning descriptor-set handle allocated from
+             * m_DescriptorPool.
+             *
+             * Remains valid while the descriptor pool exists and is not reset.
+             */
+            VkDescriptorSet m_DescriptorSet{VK_NULL_HANDLE};
+        };
+        static_assert(
+            std::is_nothrow_move_constructible_v<TextureBindingResources>);
 
         /**
          * @brief Owns a depth image and its corresponding image view.
@@ -310,22 +343,6 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanMemoryAllocator m_MemoryAllocator;
 
         /**
-         * @brief Owns the renderer's currently initialized texture.
-         *
-         * Groups the texture image, image view, and sampler independently
-         * of swapchain-dependent rendering resources.
-         *
-         * Texture resources remain valid across swapchain recreation.
-         *
-         * The optional remains empty when no initial texture was
-         * supplied or uploaded.
-         *
-         * The texture must remain alive while GPU submissions or
-         * descriptor sets reference its resources.
-         */
-        std::optional<TextureResources> m_TextureResources;
-
-        /**
          * @brief Owns the descriptor-set layout for the initial sampled
          * texture.
          *
@@ -340,29 +357,21 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<VulkanDescriptorSetLayout> m_TextureDescriptorSetLayout;
 
         /**
-         * @brief Owns the descriptor pool for the initial sampled texture.
+         * @brief Owns the renderer's active sampled texture and descriptor
+         * binding.
          *
-         * Provides storage for the texture descriptor set.
+         * Groups the texture resources, descriptor pool, and allocated
+         * descriptor set into one ownership unit.
          *
-         * The pool remains valid across swapchain recreation and
-         * implicitly releases its allocated descriptor sets when destroyed.
+         * The resources remain valid across swapchain recreation and must not
+         * be destroyed while outstanding GPU submissions reference them.
          *
-         * The pool and its descriptor sets must remain valid while GPU
-         * submissions reference them.
+         * Replaced resources are retained until their associated GPU work
+         * completes.
          *
-         * Empty when no texture descriptor pool has been created.
+         * Empty when no texture has been initialized.
          */
-        std::optional<VulkanDescriptorPool> m_TextureDescriptorPool;
-
-        /**
-         * @brief Descriptor set referencing the renderer's sampled texture.
-         *
-         * Allocated from m_TextureDescriptorPool and owned by that pool.
-         * The handle remains valid until the pool is reset or destroyed.
-         *
-         * VK_NULL_HANDLE when no texture descriptor set has been allocated.
-         */
-        VkDescriptorSet m_TextureDescriptorSet{VK_NULL_HANDLE};
+        std::optional<TextureBindingResources> m_TextureBindingResources;
 
         /**
          * @brief Owns the currently active GPU mesh resources.
@@ -712,8 +721,6 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The uploaded image is transitioned to a layout suitable
          * for fragment-shader sampling.
          *
-         * The renderer retains ownership of the resulting resources.
-         *
          * @param texture Borrowed texture dimensions and RGBA8 pixel data.
          *
          * @pre Texture width and height must be nonzero.
@@ -721,14 +728,22 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @pre The renderer's allocator and immediate submission
          * infrastructure must be initialized.
          *
-         * @post On success, the renderer owns a complete sampled texture.
+         * @post On success, the returned texture contains valid GPU resources.
+         *
+         * @return Owned texture image, image view, and sampler.
          *
          * @throws Core::Error::EngineError if Vulkan resource creation,
          * allocation, or upload fails.
          *
          * @note Invalid texture descriptions trigger precondition assertions.
          */
-        auto uploadTexture(const TextureUploadData &texture) -> void;
+        auto uploadTexture(const TextureUploadData &texture)
+            -> TextureResources;
+
+        [[nodiscard]] auto
+        createTextureBindingResources(const TextureUploadData &texture,
+                                      const VulkanDescriptorSetLayout &layout)
+            -> TextureBindingResources;
 
       public:
         /**
@@ -828,6 +843,36 @@ namespace SNE::Engine::Renderer::Vulkan {
          * operation completes.
          */
         auto replaceMesh(const MeshUploadData &mesh) -> void;
+
+        /**
+         * @brief Replaces the currently active sampled texture.
+         *
+         * Creates and uploads a replacement texture and descriptor binding
+         * before changing the active resources.
+         *
+         * The previous texture and descriptor resources remain alive until
+         * graphics submissions referencing them have completed.
+         *
+         * The replacement uses the existing descriptor-set layout and does
+         * not recreate the graphics pipeline.
+         *
+         * @param texture Borrowed RGBA8 texture data for the replacement.
+         *
+         * @pre An active texture binding and descriptor-set layout must exist.
+         * @pre The caller must serialize replacement with rendering and other
+         * resource replacement operations.
+         *
+         * @post On success, subsequent frames use the replacement texture.
+         * @post If preparation or retirement fails, the previous texture
+         * remains active.
+         *
+         * @throws Core::Error::EngineError if Vulkan resource creation,
+         * allocation, or upload fails.
+         *
+         * @note The supplied CPU data must remain valid until this
+         * operation completes.
+         */
+        auto replaceTexture(const TextureUploadData &texture) -> void;
 
         /**
          * @brief Processes one renderer frame.
