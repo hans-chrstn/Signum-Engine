@@ -4,6 +4,8 @@
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/texture/texture_upload_data.hpp"
 #include <optional>
 #include <string>
 
@@ -74,6 +76,19 @@ namespace SNE::Engine::Core {
         std::optional<Renderer::InitialMeshData> initial_mesh;
 
         /**
+         * @brief Optional initial texture supplied to the renderer.
+         *
+         * Contains the dimensions and borrowed RGBA8 pixel data
+         * used to initialize a GPU texture.
+         *
+         * The referenced pixel storage must remain valid until the
+         * renderer has finished consuming it during initialization.
+         *
+         * When absent, no initial texture is requested.
+         */
+        std::optional<Renderer::TextureUploadData> initial_texture;
+
+        /**
          * @brief Optional initial camera configuration supplied to the
          * renderer.
          *
@@ -90,5 +105,19 @@ namespace SNE::Engine::Core {
          * When absent, no application-provided camera is configured.
          */
         std::optional<Renderer::InitialCameraData> initial_camera;
+
+        /**
+         * @brief Optional initial graphics shaders supplied to the renderer.
+         *
+         * Owns the compiled SPIR-V bytecode and entry-point selections
+         * for the vertex and fragment shader stages.
+         *
+         * The renderer may take ownership of these shaders during
+         * initialization and retain them for graphics-pipeline recreation.
+         *
+         * When absent, no application-provided graphics shaders are configured.
+         */
+        std::optional<Renderer::Shader::GraphicsShaderData>
+            initial_graphics_shaders;
     };
 } // namespace SNE::Engine::Core

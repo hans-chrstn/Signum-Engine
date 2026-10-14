@@ -6,6 +6,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
+#include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_interface.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
@@ -18,10 +19,10 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <vulkan/vulkan_core.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
-    auto validateGraphicsShaderData(const GraphicsShaderData &data) -> void {
+    auto validateGraphicsShaderData(const Shader::GraphicsShaderData &data)
+        -> void {
         if (data.vertex.selection.stage != Shader::ShaderStage::Vertex) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
@@ -57,7 +58,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(
         VkDevice device, GraphicsAttachmentFormats attachment_formats,
-        const GraphicsShaderData &graphics_shader_data,
+        const Shader::GraphicsShaderData &graphics_shader_data,
         const GraphicsVertexInputData &graphics_vertex_input_data,
         const GraphicsPipelineLayoutData &graphics_pipeline_layout_data,
         std::uint32_t max_push_constants_size)
@@ -86,15 +87,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         validateGraphicsShaderData(graphics_shader_data);
-        validateSpirvEntryPoint(graphics_shader_data.vertex.words,
+        validateSpirvEntryPoint(graphics_shader_data.vertex.artifact.words,
                                 graphics_shader_data.vertex.selection);
-        validateSpirvEntryPoint(graphics_shader_data.fragment.words,
+        validateSpirvEntryPoint(graphics_shader_data.fragment.artifact.words,
                                 graphics_shader_data.fragment.selection);
         const Shader::ShaderInterface vertex_interface =
-            reflectSpirvInterface(graphics_shader_data.vertex.words,
+            reflectSpirvInterface(graphics_shader_data.vertex.artifact.words,
                                   graphics_shader_data.vertex.selection);
         const Shader::ShaderInterface fragment_interface =
-            reflectSpirvInterface(graphics_shader_data.fragment.words,
+            reflectSpirvInterface(graphics_shader_data.fragment.artifact.words,
                                   graphics_shader_data.fragment.selection);
         validatePushConstantCompatibility(
             vertex_interface,
@@ -105,10 +106,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             graphics_pipeline_layout_data.push_constant_ranges,
             max_push_constants_size);
 
-        VulkanShaderModule vertex_shader =
-            VulkanShaderModule(m_Device, graphics_shader_data.vertex.words);
-        VulkanShaderModule fragment_shader =
-            VulkanShaderModule(m_Device, graphics_shader_data.fragment.words);
+        VulkanShaderModule vertex_shader = VulkanShaderModule(
+            m_Device, graphics_shader_data.vertex.artifact.words);
+        VulkanShaderModule fragment_shader = VulkanShaderModule(
+            m_Device, graphics_shader_data.fragment.artifact.words);
 
         VkPipelineShaderStageCreateInfo vertex_stage_description{};
         vertex_stage_description.sType =

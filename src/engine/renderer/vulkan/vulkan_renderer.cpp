@@ -12,10 +12,10 @@
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/presentation_preference.hpp"
-#include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include "engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
@@ -24,9 +24,10 @@
 #include "engine/renderer/vulkan/geometry/vulkan_vertex_input.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_image.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_image_view.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_sampler.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
-#include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include "engine/renderer/vulkan/presentation/fail_closed_replacement.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
@@ -34,6 +35,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string>
@@ -84,7 +86,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         PresentationPreference presentation_preference,
         bool development_diagnostics_enabled,
         std::optional<InitialMeshData> initial_mesh,
-        std::optional<InitialCameraData> initial_camera)
+        std::optional<TextureUploadData> initial_texture,
+        std::optional<InitialCameraData> initial_camera,
+        std::optional<Shader::GraphicsShaderData> initial_graphics_shaders)
         : m_Window(&window),
           m_Instance(application_name, development_diagnostics_enabled),
           m_Surface(m_Instance.nativeHandle(), window.nativeHandle()),
@@ -108,6 +112,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                             m_PhysicalDevice.capabilities.optional_capabilities
                                 .memory_budget_extension_supported),
           m_InitialCamera(initial_camera),
+          m_GraphicsShaders(std::move(initial_graphics_shaders)),
           m_GraphicsSubmissionState(kFramesInFlight) {
         const std::uint32_t graphics_queue_family_index =
             m_PhysicalDevice.queue_families.graphics_family.family_index;
@@ -130,6 +135,84 @@ namespace SNE::Engine::Renderer::Vulkan {
                                    initial_mesh->model_matrices.end());
 
             uploadMesh(initial_mesh->mesh);
+        }
+
+        if (initial_texture.has_value()) {
+            uploadTexture(initial_texture.value());
+
+            if (!m_TextureResources.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer requires initialized texture resources "
+                    "after successful texture upload");
+            }
+
+            VkDescriptorSetLayoutBinding descriptor_set_layout_binding{};
+            descriptor_set_layout_binding.binding = 0U;
+            descriptor_set_layout_binding.descriptorType =
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptor_set_layout_binding.descriptorCount = 1U;
+            descriptor_set_layout_binding.stageFlags =
+                VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info{};
+            descriptor_set_layout_create_info.sType =
+                VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            descriptor_set_layout_create_info.bindingCount = 1U;
+            descriptor_set_layout_create_info.pBindings =
+                &descriptor_set_layout_binding;
+
+            m_TextureDescriptorSetLayout.emplace(
+                m_Device.nativeHandle(), descriptor_set_layout_create_info);
+
+            VkDescriptorPoolSize descriptor_pool_size{};
+            descriptor_pool_size.type =
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            descriptor_pool_size.descriptorCount = 1U;
+
+            VkDescriptorPoolCreateInfo descriptor_pool_create_info{};
+            descriptor_pool_create_info.sType =
+                VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            descriptor_pool_create_info.maxSets = 1U;
+            descriptor_pool_create_info.poolSizeCount = 1U;
+            descriptor_pool_create_info.pPoolSizes = &descriptor_pool_size;
+
+            m_TextureDescriptorPool.emplace(m_Device.nativeHandle(),
+                                            descriptor_pool_create_info);
+
+            std::array<VkDescriptorSetLayout, 1> layouts{
+                m_TextureDescriptorSetLayout->nativeHandle(),
+            };
+
+            const auto descriptor_sets =
+                m_TextureDescriptorPool->allocateDescriptorSets(layouts);
+
+            m_TextureDescriptorSet = descriptor_sets.front();
+
+            VkDescriptorImageInfo descriptor_image_info{};
+            descriptor_image_info.sampler =
+                m_TextureResources->m_Sampler.nativeHandle();
+            descriptor_image_info.imageView =
+                m_TextureResources->m_ImageView.nativeHandle();
+            descriptor_image_info.imageLayout =
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            VkWriteDescriptorSet write_descriptor_set{};
+            write_descriptor_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_descriptor_set.dstSet = m_TextureDescriptorSet;
+            write_descriptor_set.dstBinding = 0U;
+            write_descriptor_set.dstArrayElement = 0U;
+            write_descriptor_set.descriptorCount = 1U;
+            write_descriptor_set.descriptorType =
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write_descriptor_set.pImageInfo = &descriptor_image_info;
+
+            std::array<VkWriteDescriptorSet, 1> writes{
+                write_descriptor_set,
+            };
+
+            updateDescriptorSets(m_Device.nativeHandle(), writes);
         }
 
         if (isFramebufferDrawable()) {
@@ -271,6 +354,129 @@ namespace SNE::Engine::Renderer::Vulkan {
         uploadMesh(mesh);
     }
 
+    auto VulkanRenderer::uploadTexture(const TextureUploadData &texture)
+        -> void {
+        if (texture.width == 0U || texture.height == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan texture upload requires nonzero width and height");
+        }
+
+        const auto width = static_cast<std::size_t>(texture.width);
+        const auto height = static_cast<std::size_t>(texture.height);
+        const std::size_t max = std::numeric_limits<std::size_t>::max();
+
+        if (width > max / height) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan texture upload pixel count exceeds size_t");
+        }
+
+        const std::size_t pixel_count = width * height;
+
+        constexpr std::size_t kRgba8BytesPerPixel = 4U;
+
+        if (pixel_count > max / kRgba8BytesPerPixel) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan texture upload byte count exceeds size_t");
+        }
+
+        const std::size_t byte_count = pixel_count * kRgba8BytesPerPixel;
+
+        if (texture.pixels.size() != byte_count) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan texture upload pixel data size does not match texture "
+                "dimensions");
+        }
+
+        VulkanImageCreateInfo image_create_info{};
+        image_create_info.extent = {
+            .width = texture.width,
+            .height = texture.height,
+            .depth = 1U,
+        };
+
+        image_create_info.image_type = VK_IMAGE_TYPE_2D;
+
+        image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+
+        image_create_info.usage =
+            static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_TRANSFER_DST_BIT) |
+            static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_SAMPLED_BIT);
+
+        VulkanImage image{m_MemoryAllocator, image_create_info};
+
+        uploadImageData(m_MemoryAllocator, m_ImmediateSubmission, image,
+                        texture.pixels);
+
+        VkImageMemoryBarrier2 memory_barrier{};
+        memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        memory_barrier.image = image.nativeHandle();
+        memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        memory_barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        memory_barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        memory_barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+        memory_barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+        memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        memory_barrier.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0U,
+            .levelCount = 1U,
+            .baseArrayLayer = 0U,
+            .layerCount = 1U,
+        };
+
+        m_ImmediateSubmission.execute(
+            [&](VkCommandBuffer command_buffer) -> void {
+                recordImageBarrier(command_buffer, memory_barrier);
+            });
+
+        VkImageViewCreateInfo image_view_create_info{};
+        image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        image_view_create_info.image = image.nativeHandle();
+        image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        image_view_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        image_view_create_info.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0U,
+            .levelCount = 1U,
+            .baseArrayLayer = 0U,
+            .layerCount = 1U,
+        };
+
+        VulkanImageView image_view{m_Device.nativeHandle(),
+                                   image_view_create_info};
+
+        VkSamplerCreateInfo sampler_create_info{};
+        sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_create_info.magFilter = VK_FILTER_NEAREST;
+        sampler_create_info.minFilter = VK_FILTER_NEAREST;
+        sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        sampler_create_info.minLod = 0.0F;
+        sampler_create_info.maxLod = 0.0F;
+
+        VulkanSampler sampler{m_Device.nativeHandle(), sampler_create_info};
+
+        TextureResources texture_resources{
+            .m_Image = std::move(image),
+            .m_ImageView = std::move(image_view),
+            .m_Sampler = std::move(sampler),
+        };
+
+        m_TextureResources.emplace(std::move(texture_resources));
+    }
+
     auto VulkanRenderer::waitForDrawableFramebuffer() const -> bool {
         while (!isFramebufferDrawable() && !m_Window->shouldClose()) {
             Platform::Window::waitEvents();
@@ -379,30 +585,17 @@ namespace SNE::Engine::Renderer::Vulkan {
                              .format ||
                      depth_format.value() !=
                          m_SwapchainResources->m_DepthFormat)) {
-                    const auto fragment_data =
-                        loadSpirv("build/shaders/triangle.frag.spv");
-                    const auto vertex_data =
-                        loadSpirv("build/shaders/triangle.vert.spv");
-                    const GraphicsShaderData graphics_data{
-                        .vertex =
-                            {
-                                .words = vertex_data.words,
-                                .selection =
-                                    {
-                                        .stage = Shader::ShaderStage::Vertex,
-                                        .entry_point = "main",
-                                    },
-                            },
-                        .fragment =
-                            {
-                                .words = fragment_data.words,
-                                .selection =
-                                    {
-                                        .stage = Shader::ShaderStage::Fragment,
-                                        .entry_point = "main",
-                                    },
-                            },
-                    };
+
+                    if (!m_GraphicsShaders.has_value()) {
+                        Core::Assertion::failAssertion(
+                            Core::Assertion::AssertionType::Precondition,
+                            Core::Error::Subsystem::Vulkan,
+                            "VulkanRenderer requires graphics shaders when "
+                            "rendering a mesh");
+                    }
+
+                    const Shader::GraphicsShaderData &graphics_data =
+                        m_GraphicsShaders.value();
 
                     const VertexLayoutDescription vertex_layout{
                         .attributes = m_MeshVertexAttributes,
@@ -435,10 +628,20 @@ namespace SNE::Engine::Renderer::Vulkan {
                             },
                     };
 
+                    std::array<VkDescriptorSetLayout, 1> texture_layouts{};
+                    std::span<const VkDescriptorSetLayout>
+                        descriptor_set_layouts{};
+
+                    if (m_TextureDescriptorSetLayout.has_value()) {
+                        texture_layouts[0] =
+                            m_TextureDescriptorSetLayout->nativeHandle();
+                        descriptor_set_layouts = texture_layouts;
+                    }
+
                     const GraphicsPipelineLayoutData
                         graphics_pipeline_layout_data{
                             .push_constant_ranges = push_constant_ranges,
-                            .descriptor_set_layouts = {},
+                            .descriptor_set_layouts = descriptor_set_layouts,
                     };
 
                     const GraphicsAttachmentFormats attachment_formats{
@@ -515,6 +718,14 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());
+
+        if (m_TextureDescriptorSet != VK_NULL_HANDLE) {
+            vkCmdBindDescriptorSets(command_buffer,
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    graphics_pipeline.layoutHandle(), 0U, 1U,
+                                    &m_TextureDescriptorSet, 0U, nullptr);
+        }
+
         const VkDeviceSize vertex_offset = 0U;
         const VkBuffer vertex_buffer = mesh.m_VertexBuffer.nativeHandle();
         vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,

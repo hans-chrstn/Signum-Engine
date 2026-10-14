@@ -6,7 +6,7 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Shader = SNE::Engine::Renderer::Shader;
 
 TEST(GraphicsShaderDataTests, AcceptsValidShaderStageSelectionsAndEntryPoints) {
-    Vulkan::GraphicsShaderData data;
+    Shader::GraphicsShaderData data;
     data.vertex.selection.stage = Shader::ShaderStage::Vertex;
     data.vertex.selection.entry_point = "main";
     data.fragment.selection.stage = Shader::ShaderStage::Fragment;
@@ -16,7 +16,7 @@ TEST(GraphicsShaderDataTests, AcceptsValidShaderStageSelectionsAndEntryPoints) {
 }
 
 TEST(GraphicsShaderDataTests, RejectsIncorrectVertexStage) {
-    Vulkan::GraphicsShaderData data;
+    Shader::GraphicsShaderData data;
     data.vertex.selection.stage = Shader::ShaderStage::Fragment;
     data.vertex.selection.entry_point = "main";
     data.fragment.selection.stage = Shader::ShaderStage::Fragment;
@@ -28,7 +28,7 @@ TEST(GraphicsShaderDataTests, RejectsIncorrectVertexStage) {
 }
 
 TEST(GraphicsShaderDataTests, RejectsIncorrectFragmentStage) {
-    Vulkan::GraphicsShaderData data;
+    Shader::GraphicsShaderData data;
     data.vertex.selection.stage = Shader::ShaderStage::Vertex;
     data.vertex.selection.entry_point = "main";
     data.fragment.selection.stage = Shader::ShaderStage::Vertex;
@@ -40,7 +40,7 @@ TEST(GraphicsShaderDataTests, RejectsIncorrectFragmentStage) {
 }
 
 TEST(GraphicsShaderDataTests, RejectsEmptyFragmentEntryPoint) {
-    Vulkan::GraphicsShaderData data;
+    Shader::GraphicsShaderData data;
     data.vertex.selection.stage = Shader::ShaderStage::Vertex;
     data.vertex.selection.entry_point = "main";
     data.fragment.selection.stage = Shader::ShaderStage::Fragment;
@@ -51,7 +51,7 @@ TEST(GraphicsShaderDataTests, RejectsEmptyFragmentEntryPoint) {
 }
 
 TEST(GraphicsShaderDataTests, RejectsEmptyVertexEntryPoint) {
-    Vulkan::GraphicsShaderData data;
+    Shader::GraphicsShaderData data;
     data.vertex.selection.stage = Shader::ShaderStage::Vertex;
     data.fragment.selection.stage = Shader::ShaderStage::Fragment;
     data.fragment.selection.entry_point = "main";

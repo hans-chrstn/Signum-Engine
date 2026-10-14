@@ -1,5 +1,6 @@
 #pragma once
-#include "engine/renderer/shader/shader_stage_input.hpp"
+
+#include "engine/renderer/shader/graphics_shader_data.hpp"
 #include <cstdint>
 #include <span>
 #include <vulkan/vulkan.h>
@@ -67,37 +68,6 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         /** @brief Format of the depth attachment. */
         VkFormat depth{VK_FORMAT_UNDEFINED};
-    };
-
-    /**
-     * @brief Describes shader inputs required to create a graphics pipeline.
-     *
-     * Contains vertex and fragment shader descriptions, each specifying
-     * borrowed SPIR-V bytecode, an execution stage, and an exported
-     * entry-point name.
-     *
-     * The underlying SPIR-V storage must remain valid throughout
-     * pipeline construction.
-     *
-     * Entry-point names are owned by their respective shader descriptions.
-     * The descriptions are not retained by the graphics pipeline.
-     */
-    struct GraphicsShaderData {
-        /**
-         * @brief Vertex shader input used during pipeline creation.
-         *
-         * Must specify the vertex execution stage, nonempty SPIR-V
-         * bytecode, and a valid exported entry-point name.
-         */
-        Shader::ShaderStageInput vertex{};
-
-        /**
-         * @brief Fragment shader input used during pipeline creation.
-         *
-         * Must specify the fragment execution stage, nonempty SPIR-V
-         * bytecode, and a valid exported entry-point name.
-         */
-        Shader::ShaderStageInput fragment{};
     };
 
     /**
@@ -172,7 +142,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param attachment_formats Color and depth attachment formats
          * required for compatibility with Vulkan dynamic rendering.
          * @param graphics_shader_data Vertex and fragment shader inputs,
-         * including borrowed SPIR-V bytecode and selected entry points.
+         * including owned SPIR-V bytecode and selected entry points.
          * @param graphics_vertex_input_data Borrowed vertex input binding and
          * attribute descriptions.
          * @param graphics_pipeline_layout_data Borrowed pipeline-layout
@@ -207,7 +177,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         VulkanGraphicsPipeline(
             VkDevice device, GraphicsAttachmentFormats attachment_formats,
-            const GraphicsShaderData &graphics_shader_data,
+            const Shader::GraphicsShaderData &graphics_shader_data,
             const GraphicsVertexInputData &graphics_vertex_input_data,
             const GraphicsPipelineLayoutData &graphics_pipeline_layout_data,
             std::uint32_t max_push_constants_size);
@@ -298,5 +268,6 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @note Invalid configuration triggers a fatal precondition assertion
      * rather than throwing an exception.
      */
-    auto validateGraphicsShaderData(const GraphicsShaderData &data) -> void;
+    auto validateGraphicsShaderData(const Shader::GraphicsShaderData &data)
+        -> void;
 } // namespace SNE::Engine::Renderer::Vulkan

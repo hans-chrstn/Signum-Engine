@@ -1,38 +1,33 @@
 #pragma once
 
+#include "engine/renderer/shader/shader_artifact.hpp"
 #include "engine/renderer/shader/shader_entry_point_selection.hpp"
-#include <cstdint>
-#include <span>
+
 namespace SNE::Engine::Renderer::Shader {
     /**
-     * @brief Describes borrowed SPIR-V bytecode and its selected shader entry
-     * point.
+     * @brief Owns compiled shader bytecode and its selected entry point.
      *
-     * Provides a non-owning view of compiled SPIR-V words together with
-     * the shader execution stage and exported entry-point name.
+     * Stores a compiled shader artifact alongside the execution stage
+     * and exported entry-point name used to execute it.
      *
-     * The referenced SPIR-V storage must remain valid throughout
-     * any operation that consumes this description.
+     * The shader bytecode and entry-point selection are owned by this
+     * description and remain available for subsequent pipeline creation
+     * or recreation.
      *
-     * This type is independent of Vulkan resource ownership.
+     * This type is independent of graphics APIs and does not own
+     * GPU resources.
      */
     struct ShaderStageInput {
         /**
-         * @brief Borrowed view of compiled SPIR-V bytecode.
-         *
-         * Contains 32-bit SPIR-V words without copying or owning
-         * the underlying storage.
-         *
-         * The owning shader artifact must remain valid while this
-         * view is accessed.
+         * @brief Compiled shader bytecode owned by this stage.
          */
-        std::span<const std::uint32_t> words;
+        ShaderArtifact artifact;
 
         /**
          * @brief Selected execution stage and exported entry-point name.
          *
          * The consumer must validate that the entry point exists
-         * in the supplied SPIR-V and matches the requested stage.
+         * in the supplied shader artifact and matches the requested stage.
          */
         ShaderEntryPointSelection selection{};
     };

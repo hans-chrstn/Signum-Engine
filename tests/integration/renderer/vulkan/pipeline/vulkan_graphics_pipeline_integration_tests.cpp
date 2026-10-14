@@ -38,18 +38,18 @@ namespace {
         VkFormat depth_format,
         std::span<const VkDescriptorSetLayout> descriptor_set_layouts = {})
         -> Vulkan::VulkanGraphicsPipeline {
-        const auto vertex_artifact =
+        auto vertex_artifact =
             Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
                               "triangle.vert.spv");
 
-        const auto fragment_artifact =
+        auto fragment_artifact =
             Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
                               "triangle.frag.spv");
 
-        const Vulkan::GraphicsShaderData shaders{
+        const Shader::GraphicsShaderData shaders{
             .vertex =
                 {
-                    .words = vertex_artifact.words,
+                    .artifact = std::move(vertex_artifact),
                     .selection =
                         {
                             .stage = Shader::ShaderStage::Vertex,
@@ -58,7 +58,7 @@ namespace {
                 },
             .fragment =
                 {
-                    .words = fragment_artifact.words,
+                    .artifact = std::move(fragment_artifact),
                     .selection =
                         {
                             .stage = Shader::ShaderStage::Fragment,

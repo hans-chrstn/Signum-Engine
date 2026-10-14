@@ -7,7 +7,11 @@
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/texture/texture_upload_data.hpp"
 #include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
+#include "engine/renderer/vulkan/descriptor/vulkan_descriptor_pool.hpp"
+#include "engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_features.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
@@ -15,6 +19,7 @@
 #include "engine/renderer/vulkan/memory/vulkan_image.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_image_view.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_sampler.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
@@ -55,6 +60,32 @@ namespace SNE::Engine::Renderer::Vulkan {
      */
     class VulkanRenderer {
       private:
+        /**
+         * @brief Owns the Vulkan resources for a sampled texture.
+         *
+         * Groups the GPU image, its image view, and the sampler used
+         * to access the texture from shaders.
+         *
+         * The image view references the owned image, while the sampler
+         * defines filtering and texture-coordinate addressing behavior.
+         *
+         * Members are declared in dependency order so the image view
+         * is destroyed before the underlying image.
+         *
+         * The structure is move-only because its Vulkan resources
+         * have exclusive ownership.
+         */
+        struct TextureResources {
+            /** @brief Owns the GPU image containing the texture pixels. */
+            VulkanImage m_Image;
+
+            /** @brief Owns the image view used to access the texture. */
+            VulkanImageView m_ImageView;
+
+            /** @brief Owns the sampler used for texture sampling. */
+            VulkanSampler m_Sampler;
+        };
+
         /**
          * @brief Owns a depth image and its corresponding image view.
          *
@@ -279,6 +310,61 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanMemoryAllocator m_MemoryAllocator;
 
         /**
+         * @brief Owns the renderer's currently initialized texture.
+         *
+         * Groups the texture image, image view, and sampler independently
+         * of swapchain-dependent rendering resources.
+         *
+         * Texture resources remain valid across swapchain recreation.
+         *
+         * The optional remains empty when no initial texture was
+         * supplied or uploaded.
+         *
+         * The texture must remain alive while GPU submissions or
+         * descriptor sets reference its resources.
+         */
+        std::optional<TextureResources> m_TextureResources;
+
+        /**
+         * @brief Owns the descriptor-set layout for the initial sampled
+         * texture.
+         *
+         * Describes the resource binding expected by the textured graphics
+         * pipeline.
+         *
+         * The layout remains valid across swapchain recreation and must
+         * outlive graphics pipeline layouts created from it.
+         *
+         * Empty when no texture descriptor layout has been created.
+         */
+        std::optional<VulkanDescriptorSetLayout> m_TextureDescriptorSetLayout;
+
+        /**
+         * @brief Owns the descriptor pool for the initial sampled texture.
+         *
+         * Provides storage for the texture descriptor set.
+         *
+         * The pool remains valid across swapchain recreation and
+         * implicitly releases its allocated descriptor sets when destroyed.
+         *
+         * The pool and its descriptor sets must remain valid while GPU
+         * submissions reference them.
+         *
+         * Empty when no texture descriptor pool has been created.
+         */
+        std::optional<VulkanDescriptorPool> m_TextureDescriptorPool;
+
+        /**
+         * @brief Descriptor set referencing the renderer's sampled texture.
+         *
+         * Allocated from m_TextureDescriptorPool and owned by that pool.
+         * The handle remains valid until the pool is reset or destroyed.
+         *
+         * VK_NULL_HANDLE when no texture descriptor set has been allocated.
+         */
+        VkDescriptorSet m_TextureDescriptorSet{VK_NULL_HANDLE};
+
+        /**
          * @brief Owns the currently active GPU mesh resources.
          *
          * Groups the vertex buffer, index buffer, and index count into one
@@ -341,6 +427,18 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Empty when no initial camera has been configured.
          */
         std::optional<InitialCameraData> m_InitialCamera;
+
+        /**
+         * @brief Optional graphics shaders owned by the renderer.
+         *
+         * Retains the vertex and fragment SPIR-V artifacts and their
+         * entry-point selections independently of Vulkan pipeline resources.
+         *
+         * The shaders remain available for graphics-pipeline recreation.
+         *
+         * Empty when no application-provided graphics shaders are configured.
+         */
+        std::optional<Shader::GraphicsShaderData> m_GraphicsShaders;
 
         /**
          * @brief Swapchain-dependent renderer resources when presentation is
@@ -604,6 +702,34 @@ namespace SNE::Engine::Renderer::Vulkan {
                          VkCommandBuffer command_buffer,
                          VkSemaphore render_finished_semaphore) -> void;
 
+        /**
+         * @brief Creates and uploads a texture to GPU memory.
+         *
+         * Validates the supplied RGBA8 texture description, creates
+         * a device-local Vulkan image, uploads the pixel data, and
+         * initializes the corresponding image view and sampler.
+         *
+         * The uploaded image is transitioned to a layout suitable
+         * for fragment-shader sampling.
+         *
+         * The renderer retains ownership of the resulting resources.
+         *
+         * @param texture Borrowed texture dimensions and RGBA8 pixel data.
+         *
+         * @pre Texture width and height must be nonzero.
+         * @pre Pixel storage must contain exactly width * height * 4 bytes.
+         * @pre The renderer's allocator and immediate submission
+         * infrastructure must be initialized.
+         *
+         * @post On success, the renderer owns a complete sampled texture.
+         *
+         * @throws Core::Error::EngineError if Vulkan resource creation,
+         * allocation, or upload fails.
+         *
+         * @note Invalid texture descriptions trigger precondition assertions.
+         */
+        auto uploadTexture(const TextureUploadData &texture) -> void;
+
       public:
         /**
          * @brief Initializes the Vulkan renderer for an application window.
@@ -628,10 +754,17 @@ namespace SNE::Engine::Renderer::Vulkan {
          * during renderer initialization. When absent, the renderer starts
          * without application-provided geometry. The underlying CPU storage
          * must remain valid until construction completes.
+         * @param initial_texture Optional borrowed RGBA8 texture data consumed
+         * during renderer initialization. The referenced pixel storage must
+         * remain valid until construction completes.
          * @param initial_camera Optional initial camera configuration
          * containing the view transformation and perspective projection
          * parameters. The configuration is retained by value for subsequent
          * rendering.
+         * @param initial_graphics_shaders Optional vertex and fragment shaders
+         * supplied by the application. Ownership of the compiled SPIR-V
+         * artifacts is transferred to the renderer for pipeline creation
+         * and recreation.
          *
          * @throws Core::Error::EngineError if a required Vulkan resource or
          * capability cannot be initialized.
@@ -641,7 +774,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             PresentationPreference presentation_preference,
             bool development_diagnostics_enabled,
             std::optional<InitialMeshData> initial_mesh = std::nullopt,
-            std::optional<InitialCameraData> initial_camera = std::nullopt);
+            std::optional<TextureUploadData> initial_texture = std::nullopt,
+            std::optional<InitialCameraData> initial_camera = std::nullopt,
+            std::optional<Shader::GraphicsShaderData> initial_graphics_shaders =
+                std::nullopt);
 
         /**
          * @brief Releases the Vulkan renderer runtime.

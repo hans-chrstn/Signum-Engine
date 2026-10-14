@@ -5,8 +5,11 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_discovery.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
@@ -14,14 +17,18 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 #include <gtest/gtest.h>
+#include <optional>
 #include <span>
 #include <type_traits>
+#include <utility>
 
 namespace Math = SNE::Engine::Core::Math;
 namespace Platform = SNE::Engine::Platform;
 namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
+namespace Shader = SNE::Engine::Renderer::Shader;
 
 namespace {
     struct TestVertex {
@@ -190,12 +197,40 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         .model_matrices = model_matrices,
     };
 
+    Shader::GraphicsShaderData graphics_data{
+        .vertex =
+            {
+                .artifact = Vulkan::loadSpirv(
+                    std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                    "triangle.vert.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Vertex,
+                        .entry_point = "main",
+                    },
+            },
+        .fragment =
+            {
+                .artifact = Vulkan::loadSpirv(
+                    std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                    "triangle.frag.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            },
+    };
+
     Vulkan::VulkanRenderer renderer{
         "Signum Mesh Replacement Test",
         window,
         Renderer::PresentationPreference::VSync,
         false,
         initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        std::move(graphics_data),
     };
 
     for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {

@@ -10,7 +10,9 @@ namespace SNE::Engine::Core {
                      m_Configuration.presentation_preference,
                      m_Configuration.development_diagnostics_enabled,
                      m_Configuration.initial_mesh,
-                     m_Configuration.initial_camera) {}
+                     m_Configuration.initial_texture,
+                     m_Configuration.initial_camera,
+                     std::move(m_Configuration.initial_graphics_shaders)) {}
 
     void Application::run() {
         while (!m_Window.shouldClose()) {
