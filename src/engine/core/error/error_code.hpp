@@ -122,6 +122,8 @@ namespace SNE::Engine::Core::Error {
 
         /** Query of Vulkan image format capabilities failed. */
         VulkanImageFormatQueryFailed,
+        /** Creation of a Vulkan sampler failed. */
+        VulkanSamplerCreationFailed,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

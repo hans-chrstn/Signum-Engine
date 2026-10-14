@@ -30,6 +30,7 @@ add_library(
     engine/renderer/vulkan/command/vulkan_command_pool.cpp
     engine/renderer/vulkan/command/vulkan_transfer_commands.cpp
     engine/renderer/vulkan/command/vulkan_immediate_submission.cpp
+    engine/renderer/vulkan/command/vulkan_image_barrier.cpp
     engine/renderer/vulkan/device/vulkan_device_discovery.cpp
     engine/renderer/vulkan/device/vulkan_device_capabilities.cpp
     engine/renderer/vulkan/device/vulkan_queue_families.cpp
@@ -49,6 +50,7 @@ add_library(
     engine/renderer/vulkan/memory/vulkan_memory_policy.cpp
     engine/renderer/vulkan/memory/vulkan_image.cpp
     engine/renderer/vulkan/memory/vulkan_image_view.cpp
+    engine/renderer/vulkan/memory/vulkan_sampler.cpp
     engine/renderer/vulkan/pipeline/vulkan_spirv.cpp
     engine/renderer/vulkan/pipeline/vulkan_spirv_validation.cpp
     engine/renderer/vulkan/pipeline/vulkan_shader_module.cpp

@@ -1,6 +1,8 @@
 #pragma once
+
 #include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
 #include "vulkan_buffer.hpp"
+#include "vulkan_image.hpp"
 #include "vulkan_memory_allocator.hpp"
 #include <cstddef>
 #include <span>
@@ -38,4 +40,36 @@ namespace SNE::Engine::Renderer::Vulkan {
                           const VulkanBuffer &destination,
                           std::span<const std::byte> bytes,
                           VkDeviceSize destination_offset = 0U) -> void;
+
+    /**
+     * @brief Uploads tightly packed RGBA8 pixel data to a Vulkan image.
+     *
+     * Creates a temporary staging buffer, copies the supplied pixels
+     * into it, transitions the destination image from UNDEFINED to
+     * TRANSFER_DST_OPTIMAL, and records a buffer-to-image copy.
+     *
+     * Submission is synchronous. The temporary staging buffer remains
+     * valid until GPU execution completes.
+     *
+     * The destination remains in VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+     * The caller must transition it before using it for another purpose.
+     *
+     * @param allocator Allocator used to create the staging buffer.
+     * @param immediate_submission Context used for synchronous GPU submission.
+     * @param destination Newly created image receiving the pixel data.
+     * @param pixels Tightly packed RGBA8 pixel data.
+     *
+     * @pre pixels must not be empty.
+     * @pre destination must be a single-sampled 2D image using
+     * VK_FORMAT_R8G8B8A8_UNORM.
+     * @pre destination must have one mip level and one array layer.
+     * @pre destination must support transfer-destination usage.
+     * @pre pixels must contain exactly the required image data.
+     * @pre destination must initially have VK_IMAGE_LAYOUT_UNDEFINED.
+     */
+    auto uploadImageData(const VulkanMemoryAllocator &allocator,
+                         VulkanImmediateSubmission &immediate_submission,
+                         const VulkanImage &destination,
+                         std::span<const std::byte> pixels) -> void;
+
 } // namespace SNE::Engine::Renderer::Vulkan

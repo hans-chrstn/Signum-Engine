@@ -117,12 +117,20 @@ namespace SNE::Engine::Renderer::Vulkan {
         VmaAllocation m_Allocation{nullptr};
 
         /**
+         * @brief Creation properties of the owned Vulkan image.
+         *
+         * Retains the image configuration for validating operations
+         * involving image dimensions, subresources, and usage.
+         */
+        VulkanImageCreateInfo m_CreateInfo{};
+
+        /**
          * @brief Releases the currently owned Vulkan image and backing
          * allocation.
          *
          * Destroys the owned image and its VMA allocation when present, then
-         * resets the stored allocator handle, Vulkan image handle, and
-         * allocation handle to their empty defaults.
+         * resets the allocator handle, image handle, allocation handle, and
+         * stored creation properties to their defaults.
          *
          * Safe to call when no image resources are owned.
          */
@@ -224,5 +232,26 @@ namespace SNE::Engine::Renderer::Vulkan {
          * has been moved from.
          */
         [[nodiscard]] auto nativeHandle() const noexcept -> VkImage;
+
+        /**
+         * @brief Returns the Vulkan usage flags assigned to this image.
+         *
+         * The returned flags describe the operations supported by the
+         * image, such as transfer, sampling, and attachment usage.
+         *
+         * @return Vulkan image usage flags assigned during construction.
+         */
+        [[nodiscard]] auto usage() const noexcept -> VkImageUsageFlags;
+
+        /**
+         * @brief Returns the image's creation properties.
+         *
+         * Provides read-only access to the image type, extent, format,
+         * usage, mip levels, array layers, sample count, and flags.
+         *
+         * @return Reference to the stored image creation properties.
+         */
+        [[nodiscard]] auto createInfo() const noexcept
+            -> const VulkanImageCreateInfo &;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

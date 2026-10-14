@@ -473,3 +473,117 @@ TEST_F(VulkanIntegrationTest, RejectsInvalidMultisampledImages) {
         static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info}),
         "VulkanImage multisampled images cannot be cube-compatible");
 }
+
+TEST_F(VulkanIntegrationTest, ReportsConfiguredImageUsageFlags) {
+    constexpr VkImageUsageFlags kImageUsage =
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.usage = kImageUsage;
+
+    const Vulkan::VulkanImage image{memoryAllocator(), create_info};
+
+    EXPECT_EQ(image.usage(), kImageUsage);
+}
+
+TEST_F(VulkanIntegrationTest, MoveConstructionTransfersImageUsageFlags) {
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+    Vulkan::VulkanImage source{memoryAllocator(), create_info};
+
+    ASSERT_EQ(source.usage(), create_info.usage);
+
+    const Vulkan::VulkanImage destination{std::move(source)};
+
+    EXPECT_EQ(destination.usage(), create_info.usage);
+}
+
+TEST_F(VulkanIntegrationTest, MoveAssignmentTransfersImageUsageFlags) {
+    Vulkan::VulkanImageCreateInfo source_create_info =
+        makeTestImageCreateInfo();
+    source_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+    Vulkan::VulkanImageCreateInfo destination_create_info =
+        makeTestImageCreateInfo();
+    destination_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    Vulkan::VulkanImage source{memoryAllocator(), source_create_info};
+    Vulkan::VulkanImage destination{memoryAllocator(), destination_create_info};
+
+    ASSERT_EQ(source.usage(), source_create_info.usage);
+    ASSERT_EQ(destination.usage(), destination_create_info.usage);
+
+    destination = std::move(source);
+
+    EXPECT_EQ(destination.usage(), source_create_info.usage);
+}
+
+TEST_F(VulkanIntegrationTest, PreservesImageCreationProperties) {
+    constexpr std::uint32_t kMipLevels = 3U;
+    constexpr std::uint32_t kArrayLayers = 2U;
+    constexpr VkImageUsageFlags kImageUsage =
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.usage = kImageUsage;
+    create_info.mip_levels = kMipLevels;
+    create_info.array_layers = kArrayLayers;
+
+    const Vulkan::VulkanImage image{memoryAllocator(), create_info};
+
+    const Vulkan::VulkanImageCreateInfo &stored = image.createInfo();
+
+    EXPECT_EQ(stored.extent.width, create_info.extent.width);
+    EXPECT_EQ(stored.extent.height, create_info.extent.height);
+    EXPECT_EQ(stored.extent.depth, create_info.extent.depth);
+    EXPECT_EQ(stored.image_type, create_info.image_type);
+    EXPECT_EQ(stored.format, create_info.format);
+    EXPECT_EQ(stored.usage, kImageUsage);
+    EXPECT_EQ(stored.mip_levels, kMipLevels);
+    EXPECT_EQ(stored.array_layers, kArrayLayers);
+    EXPECT_EQ(stored.samples, create_info.samples);
+    EXPECT_EQ(stored.flags, create_info.flags);
+    EXPECT_EQ(image.usage(), stored.usage);
+
+    create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    EXPECT_EQ(image.createInfo().usage, kImageUsage);
+}
+
+TEST_F(VulkanIntegrationTest,
+       MoveConstructionPreservesImageCreationProperties) {
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+    create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    create_info.mip_levels = 2U;
+    create_info.array_layers = 2U;
+
+    Vulkan::VulkanImage source{memoryAllocator(), create_info};
+    const Vulkan::VulkanImage destination{std::move(source)};
+
+    EXPECT_EQ(destination.createInfo().usage, create_info.usage);
+    EXPECT_EQ(destination.createInfo().mip_levels, create_info.mip_levels);
+    EXPECT_EQ(destination.createInfo().array_layers, create_info.array_layers);
+    EXPECT_EQ(destination.createInfo().format, create_info.format);
+}
+
+TEST_F(VulkanIntegrationTest, MoveAssignmentReplacesImageCreationProperties) {
+    Vulkan::VulkanImageCreateInfo source_info = makeTestImageCreateInfo();
+    source_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    source_info.mip_levels = 3U;
+    source_info.array_layers = 2U;
+
+    Vulkan::VulkanImageCreateInfo destination_info = makeTestImageCreateInfo();
+    destination_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+
+    Vulkan::VulkanImage source{memoryAllocator(), source_info};
+    Vulkan::VulkanImage destination{memoryAllocator(), destination_info};
+
+    destination = std::move(source);
+
+    EXPECT_EQ(destination.createInfo().usage, source_info.usage);
+    EXPECT_EQ(destination.createInfo().mip_levels, source_info.mip_levels);
+    EXPECT_EQ(destination.createInfo().array_layers, source_info.array_layers);
+    EXPECT_EQ(destination.createInfo().format, source_info.format);
+    EXPECT_EQ(destination.usage(), source_info.usage);
+}

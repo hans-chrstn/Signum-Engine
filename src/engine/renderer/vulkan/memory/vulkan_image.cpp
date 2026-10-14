@@ -199,7 +199,7 @@ namespace {
 namespace SNE::Engine::Renderer::Vulkan {
     VulkanImage::VulkanImage(const VulkanMemoryAllocator &allocator,
                              const VulkanImageCreateInfo &create_info)
-        : m_Allocator(allocator.nativeHandle()) {
+        : m_Allocator(allocator.nativeHandle()), m_CreateInfo(create_info) {
         validateImageDimensions(create_info);
         validateImageCreateInfo(create_info);
         validateImageMipLevels(create_info);
@@ -331,6 +331,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_Image = VK_NULL_HANDLE;
         m_Allocation = nullptr;
         m_Allocator = nullptr;
+        m_CreateInfo = VulkanImageCreateInfo{};
     }
 
     VulkanImage::~VulkanImage() noexcept {
@@ -340,7 +341,9 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanImage::VulkanImage(VulkanImage &&other) noexcept
         : m_Allocator(std::exchange(other.m_Allocator, nullptr)),
           m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)),
-          m_Allocation(std::exchange(other.m_Allocation, nullptr)) {}
+          m_Allocation(std::exchange(other.m_Allocation, nullptr)),
+          m_CreateInfo(
+              std::exchange(other.m_CreateInfo, VulkanImageCreateInfo{})) {}
 
     auto VulkanImage::operator=(VulkanImage &&other) noexcept -> VulkanImage & {
         if (this == &other) {
@@ -352,11 +355,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_Allocator = std::exchange(other.m_Allocator, nullptr);
         m_Image = std::exchange(other.m_Image, VK_NULL_HANDLE);
         m_Allocation = std::exchange(other.m_Allocation, nullptr);
+        m_CreateInfo =
+            std::exchange(other.m_CreateInfo, VulkanImageCreateInfo{});
 
         return *this;
     }
 
     auto VulkanImage::nativeHandle() const noexcept -> VkImage {
         return m_Image;
+    }
+
+    auto VulkanImage::usage() const noexcept -> VkImageUsageFlags {
+        return m_CreateInfo.usage;
+    }
+
+    auto VulkanImage::createInfo() const noexcept
+        -> const VulkanImageCreateInfo & {
+        return m_CreateInfo;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

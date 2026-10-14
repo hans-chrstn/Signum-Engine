@@ -1,9 +1,43 @@
 #pragma once
 
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_image.hpp"
+#include <span>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    /**
+     * @brief Describes a buffer-to-image copy operation.
+     *
+     * Identifies the source buffer, destination image, destination
+     * layout, and image subresources receiving copied data.
+     *
+     * Multiple copy regions may target different mip levels,
+     * array layers, or image regions.
+     *
+     * The source buffer and destination image are borrowed and
+     * must remain valid until the recorded GPU work completes.
+     *
+     * The copy regions are borrowed for command recording and
+     * must remain valid for the duration of the recording call.
+     *
+     * This structure does not manage image layout transitions,
+     * queue submission, or synchronization.
+     */
+    struct BufferToImageCopyRequest {
+        /** Source buffer containing the data to copy. */
+        const VulkanBuffer &source;
+
+        /** Destination image receiving the copied data. */
+        const VulkanImage &destination;
+
+        /** Layout required for the destination image during copying. */
+        VkImageLayout destination_layout{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+
+        /** Regions describing the image subresources and buffer offsets. */
+        std::span<const VkBufferImageCopy2> regions;
+    };
+
     /**
      * @brief Describes a buffer-to-buffer copy operation.
      *
@@ -90,4 +124,26 @@ namespace SNE::Engine::Renderer::Vulkan {
      */
     auto recordBufferCopy(VkCommandBuffer command_buffer,
                           const BufferCopyRequest &buffer_copy_request) -> void;
+
+    /**
+     * @brief Records a buffer-to-image copy using Vulkan synchronization2-era
+     * copy commands.
+     *
+     * Records the requested regions using vkCmdCopyBufferToImage2.
+     * Does not submit the command buffer or transition image layouts.
+     *
+     * @param command_buffer Command buffer receiving the copy command.
+     * @param request Source, destination, layout, and regions to copy.
+     *
+     * @pre command_buffer must be a valid recording command buffer.
+     * @pre The source buffer must support transfer-source usage.
+     * @pre The destination image must support transfer-destination usage.
+     * @pre The destination image must already be in the requested layout.
+     * @pre The request must contain at least one valid copy region.
+     * @pre All copy regions must satisfy Vulkan's buffer-to-image copy
+     * requirements.
+     */
+    auto recordBufferToImageCopy(VkCommandBuffer command_buffer,
+                                 const BufferToImageCopyRequest &request)
+        -> void;
 } // namespace SNE::Engine::Renderer::Vulkan

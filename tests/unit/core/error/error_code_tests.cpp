@@ -301,6 +301,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanImageFormatQueryFailed,
             "VulkanImageFormatQueryFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanSamplerCreationFailed,
+            "VulkanSamplerCreationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

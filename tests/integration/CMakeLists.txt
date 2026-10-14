@@ -15,6 +15,7 @@ add_executable(
   renderer/vulkan/pipeline/vulkan_push_constant_reflection_integration_tests.cpp
   renderer/vulkan/pipeline/vulkan_graphics_pipeline_integration_tests.cpp
   renderer/vulkan/presentation/vulkan_swapchain_retirement_integration_tests.cpp
+  renderer/vulkan/memory/vulkan_sampler_integration_tests.cpp
 )
 
 target_link_libraries(

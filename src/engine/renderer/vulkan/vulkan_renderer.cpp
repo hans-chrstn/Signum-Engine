@@ -13,6 +13,7 @@
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
+#include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
@@ -735,12 +736,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             .layerCount = 1U,
         };
 
-        VkDependencyInfo present_dependency_info{};
-        present_dependency_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-        present_dependency_info.imageMemoryBarrierCount = 1U;
-        present_dependency_info.pImageMemoryBarriers = &present_barrier;
-
-        vkCmdPipelineBarrier2(command_buffer, &present_dependency_info);
+        recordImageBarrier(command_buffer, present_barrier);
 
         const VkResult command_buffer_end_result =
             vkEndCommandBuffer(command_buffer);

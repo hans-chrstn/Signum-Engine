@@ -268,6 +268,11 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanImageFormatQueryFailed",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::VulkanSamplerCreationFailed,
+                    .name = "VulkanSamplerCreationFailed",
+                    .subsystem = Subsystem::Vulkan,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {
