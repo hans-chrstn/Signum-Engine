@@ -31,6 +31,9 @@ add_library(
     engine/renderer/vulkan/command/vulkan_transfer_commands.cpp
     engine/renderer/vulkan/command/vulkan_immediate_submission.cpp
     engine/renderer/vulkan/command/vulkan_image_barrier.cpp
+    engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.cpp
+    engine/renderer/vulkan/descriptor/vulkan_descriptor_pool.cpp
+    engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.cpp
     engine/renderer/vulkan/device/vulkan_device_discovery.cpp
     engine/renderer/vulkan/device/vulkan_device_capabilities.cpp
     engine/renderer/vulkan/device/vulkan_queue_families.cpp

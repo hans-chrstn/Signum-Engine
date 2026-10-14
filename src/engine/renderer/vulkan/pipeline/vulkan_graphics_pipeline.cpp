@@ -265,10 +265,32 @@ namespace SNE::Engine::Renderer::Vulkan {
         pipeline_layout_create_info.sType =
             VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-        // No descriptor-set layouts yet
-        pipeline_layout_create_info.setLayoutCount = 0U;
-        // No descriptor-set layout array because count is zero
-        pipeline_layout_create_info.pSetLayouts = nullptr;
+        const auto &layouts =
+            graphics_pipeline_layout_data.descriptor_set_layouts;
+
+        const auto layout_count =
+            Core::Numeric::tryConvertToUint32(layouts.size());
+        if (!layout_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanGraphicsPipeline descriptor-set layout count exceeds "
+                "uint32_t");
+        }
+
+        pipeline_layout_create_info.setLayoutCount = layout_count.value();
+
+        for (VkDescriptorSetLayout layout : layouts) {
+            if (layout == VK_NULL_HANDLE) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanGraphicsPipeline requires valid descriptor-set "
+                    "layout handles");
+            }
+        }
+
+        pipeline_layout_create_info.pSetLayouts = layouts.data();
 
         const auto push_constant_range_count =
             Core::Numeric::tryConvertToUint32(

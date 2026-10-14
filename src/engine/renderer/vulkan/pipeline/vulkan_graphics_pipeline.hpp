@@ -8,16 +8,23 @@ namespace SNE::Engine::Renderer::Vulkan {
     /**
      * @brief Describes resource interface requirements for a graphics pipeline.
      *
-     * Contains non-owning push-constant range descriptions used during
-     * pipeline-layout creation.
+     * Contains borrowed descriptor-set layouts and push-constant ranges
+     * used during pipeline-layout creation.
      *
-     * The caller must keep the descriptions valid throughout construction.
+     * The caller must keep these descriptions valid throughout construction.
      */
     struct GraphicsPipelineLayoutData {
         /**
          * @brief Borrowed push-constant ranges required by the pipeline.
          */
         std::span<const VkPushConstantRange> push_constant_ranges;
+
+        /**
+         * @brief Borrowed descriptor-set layouts, ordered by set number.
+         *
+         * An empty span indicates that no descriptor sets are used.
+         */
+        std::span<const VkDescriptorSetLayout> descriptor_set_layouts;
     };
 
     /**

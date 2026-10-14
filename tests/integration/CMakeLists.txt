@@ -2,6 +2,12 @@ add_executable(
   signum_integration_tests
   renderer/vulkan/vulkan_integration_test_fixture.cpp
   renderer/vulkan/vulkan_renderer_mesh_replacement_integration_tests.cpp
+  renderer/vulkan/command/vulkan_immediate_submission_integration_tests.cpp
+  renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
+  renderer/vulkan/compute/vulkan_matrix_transform_integration_tests.cpp
+  renderer/vulkan/descriptor/vulkan_descriptor_set_layout_integration_tests.cpp
+  renderer/vulkan/descriptor/vulkan_descriptor_pool_integration_tests.cpp
+  renderer/vulkan/descriptor/vulkan_descriptor_updates_integration_tests.cpp
   renderer/vulkan/device/vulkan_device_capabilities_integration_tests.cpp
   renderer/vulkan/device/vulkan_depth_format_integration_tests.cpp
   renderer/vulkan/memory/vulkan_buffer_integration_tests.cpp
@@ -9,13 +15,10 @@ add_executable(
   renderer/vulkan/memory/vulkan_transfer_integration_tests.cpp
   renderer/vulkan/memory/vulkan_image_integration_tests.cpp
   renderer/vulkan/memory/vulkan_image_view_integration_tests.cpp
-  renderer/vulkan/command/vulkan_immediate_submission_integration_tests.cpp
-  renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
-  renderer/vulkan/compute/vulkan_matrix_transform_integration_tests.cpp
+  renderer/vulkan/memory/vulkan_sampler_integration_tests.cpp
   renderer/vulkan/pipeline/vulkan_push_constant_reflection_integration_tests.cpp
   renderer/vulkan/pipeline/vulkan_graphics_pipeline_integration_tests.cpp
   renderer/vulkan/presentation/vulkan_swapchain_retirement_integration_tests.cpp
-  renderer/vulkan/memory/vulkan_sampler_integration_tests.cpp
 )
 
 target_link_libraries(

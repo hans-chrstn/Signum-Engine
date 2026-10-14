@@ -124,6 +124,12 @@ namespace SNE::Engine::Core::Error {
         VulkanImageFormatQueryFailed,
         /** Creation of a Vulkan sampler failed. */
         VulkanSamplerCreationFailed,
+        /** Creation of a Vulkan descriptor-set layout failed. */
+        VulkanDescriptorSetLayoutCreationFailed,
+        /** Creation of a Vulkan descriptor pool failed. */
+        VulkanDescriptorPoolCreationFailed,
+        /** Allocation of Vulkan descriptor-sets failed. */
+        VulkanDescriptorSetAllocationFailed,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

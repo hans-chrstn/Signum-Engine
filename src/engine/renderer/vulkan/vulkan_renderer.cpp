@@ -438,6 +438,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                     const GraphicsPipelineLayoutData
                         graphics_pipeline_layout_data{
                             .push_constant_ranges = push_constant_ranges,
+                            .descriptor_set_layouts = {},
                     };
 
                     const GraphicsAttachmentFormats attachment_formats{

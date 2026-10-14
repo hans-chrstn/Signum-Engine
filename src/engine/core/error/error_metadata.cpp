@@ -273,6 +273,21 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanSamplerCreationFailed",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::VulkanDescriptorSetLayoutCreationFailed,
+                    .name = "VulkanDescriptorSetLayoutCreationFailed",
+                    .subsystem = Subsystem::Vulkan,
+                },
+                ErrorMetadata{
+                    .code = Code::VulkanDescriptorPoolCreationFailed,
+                    .name = "VulkanDescriptorPoolCreationFailed",
+                    .subsystem = Subsystem::Vulkan,
+                },
+                ErrorMetadata{
+                    .code = Code::VulkanDescriptorSetAllocationFailed,
+                    .name = "VulkanDescriptorSetAllocationFailed",
+                    .subsystem = Subsystem::Vulkan,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {

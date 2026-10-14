@@ -1,6 +1,7 @@
 #include "../vulkan_integration_test_fixture.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
+#include "engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
@@ -9,6 +10,7 @@
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <optional>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vulkan/vulkan.h>
@@ -31,9 +33,10 @@ namespace {
     static_assert(
         std::is_nothrow_move_assignable_v<Vulkan::VulkanGraphicsPipeline>);
 
-    [[nodiscard]] auto makeDepthPipeline(VkDevice device,
-                                         VkPhysicalDevice physical_device,
-                                         VkFormat depth_format)
+    [[nodiscard]] auto makeDepthPipeline(
+        VkDevice device, VkPhysicalDevice physical_device,
+        VkFormat depth_format,
+        std::span<const VkDescriptorSetLayout> descriptor_set_layouts = {})
         -> Vulkan::VulkanGraphicsPipeline {
         const auto vertex_artifact =
             Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
@@ -110,6 +113,7 @@ namespace {
 
         const Vulkan::GraphicsPipelineLayoutData layout{
             .push_constant_ranges = push_constant_ranges,
+            .descriptor_set_layouts = descriptor_set_layouts,
         };
 
         return Vulkan::VulkanGraphicsPipeline{
@@ -238,7 +242,6 @@ TEST_F(DepthGraphicsPipelineIntegrationTest,
     Vulkan::VulkanGraphicsPipeline destination = createPipeline();
 
     const VkPipeline old_destination_pipeline = destination.nativeHandle();
-
     const VkPipelineLayout old_destination_layout = destination.layoutHandle();
 
     VkPipeline source_pipeline{VK_NULL_HANDLE};
@@ -279,4 +282,42 @@ TEST_F(DepthGraphicsPipelineIntegrationTest,
 
     EXPECT_NE(source.nativeHandle(), destination.nativeHandle());
     EXPECT_NE(source.layoutHandle(), destination.layoutHandle());
+}
+
+TEST_F(DepthGraphicsPipelineIntegrationTest,
+       CreatesGraphicsPipelineWithDescriptorSetLayout) {
+    const VkDescriptorSetLayoutBinding texture_binding{
+        .binding = 0U,
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 1U,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = nullptr,
+    };
+
+    VkDescriptorSetLayoutCreateInfo create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    create_info.bindingCount = 1U;
+    create_info.pBindings = &texture_binding;
+
+    const Vulkan::VulkanDescriptorSetLayout descriptor_layout{m_Device,
+                                                              create_info};
+
+    const std::array layouts{descriptor_layout.nativeHandle()};
+
+    const Vulkan::VulkanGraphicsPipeline pipeline =
+        makeDepthPipeline(m_Device, m_PhysicalDevice, m_DepthFormat, layouts);
+
+    EXPECT_NE(pipeline.nativeHandle(), VK_NULL_HANDLE);
+    EXPECT_NE(pipeline.layoutHandle(), VK_NULL_HANDLE);
+}
+
+TEST_F(DepthGraphicsPipelineIntegrationTest,
+       RejectsNullDescriptorSetLayoutHandle) {
+    const std::array<VkDescriptorSetLayout, 1> layouts{
+        VK_NULL_HANDLE,
+    };
+
+    ASSERT_DEATH(static_cast<void>(makeDepthPipeline(m_Device, m_PhysicalDevice,
+                                                     m_DepthFormat, layouts)),
+                 "requires valid descriptor-set layout handles");
 }

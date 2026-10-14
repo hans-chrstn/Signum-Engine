@@ -306,6 +306,21 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanSamplerCreationFailed,
             "VulkanSamplerCreationFailed",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDescriptorSetLayoutCreationFailed,
+            "VulkanDescriptorSetLayoutCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDescriptorPoolCreationFailed,
+            "VulkanDescriptorPoolCreationFailed",
+            Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanDescriptorSetAllocationFailed,
+            "VulkanDescriptorSetAllocationFailed",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {
