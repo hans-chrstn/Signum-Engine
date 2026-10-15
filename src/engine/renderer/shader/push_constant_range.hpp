@@ -30,5 +30,16 @@ namespace SNE::Engine::Renderer::Shader {
          * @brief Shader execution stage that accesses the range.
          */
         ShaderStage stage{};
+
+        /**
+         * @brief Compares two push-constant range descriptions.
+         *
+         * @param other Push-constant range to compare.
+         *
+         * @return True when offset, size, and shader stage match.
+         */
+        [[nodiscard]] constexpr auto
+        operator==(const PushConstantRange &other) const noexcept
+            -> bool = default;
     };
 } // namespace SNE::Engine::Renderer::Shader

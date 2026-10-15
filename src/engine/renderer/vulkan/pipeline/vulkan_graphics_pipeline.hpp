@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/renderer/pipeline/graphics_pipeline_state.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include <cstdint>
 #include <span>
@@ -81,6 +82,17 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         /** @brief Format of the depth attachment. */
         VkFormat depth{VK_FORMAT_UNDEFINED};
+
+        /**
+         * @brief Compares two graphics attachment format descriptions.
+         *
+         * @param other Attachment formats to compare.
+         *
+         * @return True when color and depth attachment formats match.
+         */
+        [[nodiscard]] constexpr auto
+        operator==(const GraphicsAttachmentFormats &other) const noexcept
+            -> bool = default;
     };
 
     /**
@@ -167,6 +179,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * requirements, including push-constant ranges.
          * @param max_push_constants_size Maximum push-constant storage size
          * in bytes supported by the selected physical device.
+         * @param state Backend-independent graphics pipeline state used to
+         * configure rendering behavior. defaults to depth testing and depth
+         * writing enabled.
          *
          * @pre device must be a valid Vulkan logical-device handle.
          * @pre attachment_formats.color must be a defined color
@@ -201,7 +216,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             const Shader::GraphicsShaderData &graphics_shader_data,
             const GraphicsVertexInputData &graphics_vertex_input_data,
             const GraphicsPipelineLayoutData &graphics_pipeline_layout_data,
-            std::uint32_t max_push_constants_size);
+            std::uint32_t max_push_constants_size,
+            GraphicsPipelineState state = {});
 
         VulkanGraphicsPipeline(const VulkanGraphicsPipeline &) = delete;
 

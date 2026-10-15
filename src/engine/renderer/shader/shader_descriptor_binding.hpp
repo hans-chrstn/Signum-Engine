@@ -35,5 +35,16 @@ namespace SNE::Engine::Renderer::Shader {
          * Must be greater than zero for a valid descriptor binding.
          */
         std::uint32_t count{};
+
+        /**
+         * @brief Compares two shader descriptor binding requirements.
+         *
+         * @param other Descriptor binding requirement to compare.
+         *
+         * @return True when set, binding, resource type, and count match.
+         */
+        [[nodiscard]] constexpr auto
+        operator==(const ShaderDescriptorBinding &other) const noexcept
+            -> bool = default;
     };
 } // namespace SNE::Engine::Renderer::Shader

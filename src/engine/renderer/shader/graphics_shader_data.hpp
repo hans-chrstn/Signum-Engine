@@ -32,5 +32,16 @@ namespace SNE::Engine::Renderer::Shader {
          * entry point.
          */
         ShaderStageInput fragment{};
+
+        /**
+         * @brief Compares two graphics shader configurations.
+         *
+         * @param other Graphics shader configuration to compare.
+         *
+         * @return True when both vertex and fragment shader inputs
+         * are equal.
+         */
+        [[nodiscard]] constexpr auto
+        operator==(const GraphicsShaderData &other) const -> bool = default;
     };
 } // namespace SNE::Engine::Renderer::Shader

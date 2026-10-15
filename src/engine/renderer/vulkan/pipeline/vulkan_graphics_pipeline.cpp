@@ -6,6 +6,13 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
+#include "engine/renderer/pipeline/blend_factor.hpp"
+#include "engine/renderer/pipeline/blend_operation.hpp"
+#include "engine/renderer/pipeline/color_write_mask.hpp"
+#include "engine/renderer/pipeline/compare_op.hpp"
+#include "engine/renderer/pipeline/cull_mode.hpp"
+#include "engine/renderer/pipeline/front_face.hpp"
+#include "engine/renderer/pipeline/primitive_topology.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_interface.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
@@ -22,6 +29,171 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace Renderer = SNE::Engine::Renderer;
+namespace Core = SNE::Engine::Core;
+
+namespace {
+    [[nodiscard]] auto toVulkanCullMode(Renderer::CullMode mode)
+        -> VkCullModeFlags {
+        switch (mode) {
+        case Renderer::CullMode::None:
+            return VK_CULL_MODE_NONE;
+        case Renderer::CullMode::Front:
+            return VK_CULL_MODE_FRONT_BIT;
+        case Renderer::CullMode::Back:
+            return VK_CULL_MODE_BACK_BIT;
+        }
+
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Precondition,
+            Core::Error::Subsystem::Vulkan,
+            "Vulkan cull mode conversion requires a valid CullMode value");
+    }
+
+    [[nodiscard]] auto toVulkanFrontFace(Renderer::FrontFace front_face)
+        -> VkFrontFace {
+        switch (front_face) {
+        case Renderer::FrontFace::Clockwise:
+            return VK_FRONT_FACE_CLOCKWISE;
+        case Renderer::FrontFace::CounterClockwise:
+            return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        }
+
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Precondition,
+            Core::Error::Subsystem::Vulkan,
+            "Vulkan front-face conversion requires a valid FrontFace value");
+    }
+
+    [[nodiscard]] auto
+    toVulkanPrimitiveTopology(Renderer::PrimitiveTopology topology)
+        -> VkPrimitiveTopology {
+        switch (topology) {
+        case Renderer::PrimitiveTopology::PointList:
+            return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        case Renderer::PrimitiveTopology::LineList:
+            return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        case Renderer::PrimitiveTopology::LineStrip:
+            return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        case Renderer::PrimitiveTopology::TriangleList:
+            return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        case Renderer::PrimitiveTopology::TriangleStrip:
+            return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        }
+
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Precondition,
+            Core::Error::Subsystem::Vulkan,
+            "Vulkan primitive topology conversion requires a valid "
+            "PrimitiveTopology value");
+    }
+
+    [[nodiscard]] auto toVulkanCompareOp(Renderer::CompareOp operation)
+        -> VkCompareOp {
+        switch (operation) {
+        case Renderer::CompareOp::Never:
+            return VK_COMPARE_OP_NEVER;
+        case Renderer::CompareOp::Less:
+            return VK_COMPARE_OP_LESS;
+        case Renderer::CompareOp::Equal:
+            return VK_COMPARE_OP_EQUAL;
+        case Renderer::CompareOp::LessOrEqual:
+            return VK_COMPARE_OP_LESS_OR_EQUAL;
+        case Renderer::CompareOp::Greater:
+            return VK_COMPARE_OP_GREATER;
+        case Renderer::CompareOp::NotEqual:
+            return VK_COMPARE_OP_NOT_EQUAL;
+        case Renderer::CompareOp::GreaterOrEqual:
+            return VK_COMPARE_OP_GREATER_OR_EQUAL;
+        case Renderer::CompareOp::Always:
+            return VK_COMPARE_OP_ALWAYS;
+        }
+
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Precondition,
+            Core::Error::Subsystem::Vulkan,
+            "Vulkan comparison conversion requires a valid CompareOp value");
+    }
+
+    [[nodiscard]] auto toVulkanBlendFactor(Renderer::BlendFactor factor)
+        -> VkBlendFactor {
+        switch (factor) {
+        case Renderer::BlendFactor::Zero:
+            return VK_BLEND_FACTOR_ZERO;
+        case Renderer::BlendFactor::One:
+            return VK_BLEND_FACTOR_ONE;
+        case Renderer::BlendFactor::SrcColor:
+            return VK_BLEND_FACTOR_SRC_COLOR;
+        case Renderer::BlendFactor::OneMinusSrcColor:
+            return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+        case Renderer::BlendFactor::DstColor:
+            return VK_BLEND_FACTOR_DST_COLOR;
+        case Renderer::BlendFactor::OneMinusDstColor:
+            return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+        case Renderer::BlendFactor::SrcAlpha:
+            return VK_BLEND_FACTOR_SRC_ALPHA;
+        case Renderer::BlendFactor::OneMinusSrcAlpha:
+            return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        case Renderer::BlendFactor::DstAlpha:
+            return VK_BLEND_FACTOR_DST_ALPHA;
+        case Renderer::BlendFactor::OneMinusDstAlpha:
+            return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+        }
+
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Precondition,
+            Core::Error::Subsystem::Vulkan,
+            "Vulkan blend factor conversion requires a valid BlendFactor "
+            "value");
+    }
+
+    [[nodiscard]] auto
+    toVulkanBlendOperation(Renderer::BlendOperation operation) -> VkBlendOp {
+        switch (operation) {
+        case Renderer::BlendOperation::Add:
+            return VK_BLEND_OP_ADD;
+        case Renderer::BlendOperation::Subtract:
+            return VK_BLEND_OP_SUBTRACT;
+        case Renderer::BlendOperation::ReverseSubtract:
+            return VK_BLEND_OP_REVERSE_SUBTRACT;
+        case Renderer::BlendOperation::Min:
+            return VK_BLEND_OP_MIN;
+        case Renderer::BlendOperation::Max:
+            return VK_BLEND_OP_MAX;
+        }
+
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Precondition,
+            Core::Error::Subsystem::Vulkan,
+            "Vulkan blend operation conversion requires a valid BlendOperation "
+            "value");
+    }
+
+    [[nodiscard]] auto
+    toVulkanColorWriteMask(const Renderer::ColorWriteMask &mask)
+        -> VkColorComponentFlags {
+        VkColorComponentFlags flags{0U};
+
+        if (mask.red) {
+            flags |= VK_COLOR_COMPONENT_R_BIT;
+        }
+
+        if (mask.green) {
+            flags |= VK_COLOR_COMPONENT_G_BIT;
+        }
+
+        if (mask.blue) {
+            flags |= VK_COLOR_COMPONENT_B_BIT;
+        }
+
+        if (mask.alpha) {
+            flags |= VK_COLOR_COMPONENT_A_BIT;
+        }
+
+        return flags;
+    }
+} // namespace
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto validateGraphicsShaderData(const Shader::GraphicsShaderData &data)
@@ -64,7 +236,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         const Shader::GraphicsShaderData &graphics_shader_data,
         const GraphicsVertexInputData &graphics_vertex_input_data,
         const GraphicsPipelineLayoutData &graphics_pipeline_layout_data,
-        std::uint32_t max_push_constants_size)
+        std::uint32_t max_push_constants_size, GraphicsPipelineState state)
         : m_Device(device) {
         if (device == VK_NULL_HANDLE) {
             Core::Assertion::failAssertion(
@@ -215,9 +387,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             input_assembly_state_create_info{};
         input_assembly_state_create_info.sType =
             VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        // Every 3 vertices form an independent triangle
         input_assembly_state_create_info.topology =
-            VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            toVulkanPrimitiveTopology(state.topology);
         // Don't use special restart indices to break primitive strips
         input_assembly_state_create_info.primitiveRestartEnable = VK_FALSE;
 
@@ -250,10 +421,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         raster_state_create_info.rasterizerDiscardEnable = VK_FALSE;
         // Fill triangle interiors normally
         raster_state_create_info.polygonMode = VK_POLYGON_MODE_FILL;
-        // Don't throw away front-facing or back-facing triangles
-        raster_state_create_info.cullMode = VK_CULL_MODE_NONE;
-        // Counter-clockwise vertex order is considered front-facing
-        raster_state_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        raster_state_create_info.cullMode = toVulkanCullMode(state.cull_mode);
+        raster_state_create_info.frontFace =
+            toVulkanFrontFace(state.front_face);
         // Don't offset fragment depth values
         raster_state_create_info.depthBiasEnable = VK_FALSE;
         // Normal line width
@@ -271,21 +441,32 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkPipelineDepthStencilStateCreateInfo depth_stencil_state_create_info{};
         depth_stencil_state_create_info.sType =
             VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depth_stencil_state_create_info.depthTestEnable = VK_TRUE;
-        depth_stencil_state_create_info.depthWriteEnable = VK_TRUE;
-        depth_stencil_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+        depth_stencil_state_create_info.depthTestEnable =
+            state.depth_test_enabled ? VK_TRUE : VK_FALSE;
+        depth_stencil_state_create_info.depthWriteEnable =
+            state.depth_write_enabled ? VK_TRUE : VK_FALSE;
+        depth_stencil_state_create_info.depthCompareOp =
+            toVulkanCompareOp(state.depth_compare);
         depth_stencil_state_create_info.depthBoundsTestEnable = VK_FALSE;
         depth_stencil_state_create_info.stencilTestEnable = VK_FALSE;
 
         VkPipelineColorBlendAttachmentState color_blend_attachment_state{};
-        // Fragment shader output replaces the existing color directly
-        color_blend_attachment_state.blendEnable = VK_FALSE;
-        // Allow the pipeline to write all RGBA channels
+        color_blend_attachment_state.blendEnable =
+            state.color_blend.enabled ? VK_TRUE : VK_FALSE;
+        color_blend_attachment_state.srcColorBlendFactor =
+            toVulkanBlendFactor(state.color_blend.source_color_factor);
+        color_blend_attachment_state.dstColorBlendFactor =
+            toVulkanBlendFactor(state.color_blend.destination_color_factor);
+        color_blend_attachment_state.colorBlendOp =
+            toVulkanBlendOperation(state.color_blend.color_operation);
+        color_blend_attachment_state.srcAlphaBlendFactor =
+            toVulkanBlendFactor(state.color_blend.source_alpha_factor);
+        color_blend_attachment_state.dstAlphaBlendFactor =
+            toVulkanBlendFactor(state.color_blend.destination_alpha_factor);
+        color_blend_attachment_state.alphaBlendOp =
+            toVulkanBlendOperation(state.color_blend.alpha_operation);
         color_blend_attachment_state.colorWriteMask =
-            static_cast<VkColorComponentFlags>(VK_COLOR_COMPONENT_R_BIT) |
-            static_cast<VkColorComponentFlags>(VK_COLOR_COMPONENT_G_BIT) |
-            static_cast<VkColorComponentFlags>(VK_COLOR_COMPONENT_B_BIT) |
-            static_cast<VkColorComponentFlags>(VK_COLOR_COMPONENT_A_BIT);
+            toVulkanColorWriteMask(state.color_blend.write_mask);
 
         VkPipelineColorBlendStateCreateInfo color_blend_state_create_info{};
         color_blend_state_create_info.sType =

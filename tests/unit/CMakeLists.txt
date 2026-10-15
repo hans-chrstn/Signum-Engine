@@ -22,6 +22,10 @@ add_executable(
   core/math/vector4d_tests.cpp
   core/math/quaternion_tests.cpp
   renderer/geometry/vertex_format_tests.cpp
+  renderer/material/material_description_tests.cpp
+  renderer/pipeline/graphics_pipeline_state_tests.cpp
+  renderer/pipeline/pipeline_identity_value_tests.cpp
+  renderer/shader/shader_equality_tests.cpp
   renderer/vulkan/common/vulkan_result_tests.cpp
   renderer/vulkan/common/vulkan_extension_support_tests.cpp
   renderer/vulkan/common/vulkan_api_version_tests.cpp
@@ -44,6 +48,7 @@ add_executable(
   renderer/vulkan/pipeline/vulkan_spirv_reflection_tests.cpp
   renderer/vulkan/pipeline/vulkan_descriptor_compatibility_tests.cpp
   renderer/vulkan/pipeline/vulkan_push_constant_compatibility_tests.cpp
+  renderer/vulkan/pipeline/vulkan_graphics_pipeline_variant_key_tests.cpp
   renderer/vulkan/synchronization/vulkan_queue_submission_state_tests.cpp
   renderer/vulkan/synchronization/vulkan_resource_retirement_queue_tests.cpp
 )

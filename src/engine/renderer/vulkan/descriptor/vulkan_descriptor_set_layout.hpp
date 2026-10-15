@@ -39,6 +39,18 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Contains a combination of VkShaderStageFlagBits.
          */
         VkShaderStageFlags stage_flags{};
+
+        /**
+         * @brief Compares two Vulkan descriptor binding descriptions.
+         *
+         * @param other Descriptor binding description to compare.
+         *
+         * @return True when binding index, descriptor type, count,
+         * and shader-stage visibility match.
+         */
+        [[nodiscard]] constexpr auto operator==(
+            const VulkanDescriptorBindingDescription &other) const noexcept
+            -> bool = default;
     };
 
     /**

@@ -1,11 +1,20 @@
 #include "../vulkan_integration_test_fixture.hpp"
 #include "engine/core/math/matrix4.hpp"
+#include "engine/renderer/pipeline/blend_factor.hpp"
+#include "engine/renderer/pipeline/blend_operation.hpp"
+#include "engine/renderer/pipeline/color_write_mask.hpp"
+#include "engine/renderer/pipeline/compare_op.hpp"
+#include "engine/renderer/pipeline/cull_mode.hpp"
+#include "engine/renderer/pipeline/front_face.hpp"
+#include "engine/renderer/pipeline/graphics_pipeline_state.hpp"
+#include "engine/renderer/pipeline/primitive_topology.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <filesystem>
 #include <gtest/gtest.h>
@@ -18,6 +27,7 @@
 namespace Math = SNE::Engine::Core::Math;
 namespace Shader = SNE::Engine::Renderer::Shader;
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
+namespace Renderer = SNE::Engine::Renderer;
 
 namespace {
     constexpr VkFormat kColorFormat = VK_FORMAT_R8G8B8A8_UNORM;
@@ -37,7 +47,8 @@ namespace {
     makeDepthPipeline(VkDevice device, VkPhysicalDevice physical_device,
                       VkFormat depth_format,
                       std::span<const Vulkan::VulkanDescriptorSetLayout *const>
-                          descriptor_set_layouts = {})
+                          descriptor_set_layouts = {},
+                      Renderer::GraphicsPipelineState state = {})
         -> Vulkan::VulkanGraphicsPipeline {
         auto vertex_artifact =
             Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
@@ -120,6 +131,7 @@ namespace {
         return Vulkan::VulkanGraphicsPipeline{
             device,       formats, shaders,
             vertex_input, layout,  properties.limits.maxPushConstantsSize,
+            state,
         };
     }
 
@@ -323,4 +335,76 @@ TEST_F(DepthGraphicsPipelineIntegrationTest,
     ASSERT_DEATH(static_cast<void>(makeDepthPipeline(m_Device, m_PhysicalDevice,
                                                      m_DepthFormat, layouts)),
                  "requires non-null descriptor-set layout references");
+}
+
+TEST_F(DepthGraphicsPipelineIntegrationTest,
+       CreatesGraphicsPipelineWithCustomRasterDepthAndBlendState) {
+    Renderer::GraphicsPipelineState state{};
+
+    state.cull_mode = Renderer::CullMode::Back;
+    state.front_face = Renderer::FrontFace::Clockwise;
+    state.topology = Renderer::PrimitiveTopology::TriangleStrip;
+
+    state.depth_test_enabled = true;
+    state.depth_write_enabled = false;
+    state.depth_compare = Renderer::CompareOp::Greater;
+
+    state.color_blend.enabled = true;
+    state.color_blend.source_color_factor = Renderer::BlendFactor::One;
+    state.color_blend.destination_color_factor =
+        Renderer::BlendFactor::OneMinusSrcAlpha;
+    state.color_blend.color_operation = Renderer::BlendOperation::Subtract;
+
+    state.color_blend.source_alpha_factor = Renderer::BlendFactor::Zero;
+    state.color_blend.destination_alpha_factor = Renderer::BlendFactor::One;
+    state.color_blend.alpha_operation = Renderer::BlendOperation::Max;
+
+    state.color_blend.write_mask = {
+        .red = true,
+        .green = false,
+        .blue = true,
+        .alpha = false,
+    };
+
+    const Vulkan::VulkanGraphicsPipeline pipeline =
+        makeDepthPipeline(m_Device, m_PhysicalDevice, m_DepthFormat, {}, state);
+
+    EXPECT_NE(pipeline.nativeHandle(), VK_NULL_HANDLE);
+    EXPECT_NE(pipeline.layoutHandle(), VK_NULL_HANDLE);
+}
+
+TEST_F(DepthGraphicsPipelineIntegrationTest,
+       CreatesGraphicsPipelineWithDepthAndColorWritesDisabled) {
+    Renderer::GraphicsPipelineState state{};
+
+    state.depth_test_enabled = false;
+    state.depth_write_enabled = false;
+    state.depth_compare = Renderer::CompareOp::Always;
+
+    state.topology = Renderer::PrimitiveTopology::LineList;
+
+    state.color_blend.write_mask = {
+        .red = false,
+        .green = false,
+        .blue = false,
+        .alpha = false,
+    };
+
+    const Vulkan::VulkanGraphicsPipeline pipeline =
+        makeDepthPipeline(m_Device, m_PhysicalDevice, m_DepthFormat, {}, state);
+
+    EXPECT_NE(pipeline.nativeHandle(), VK_NULL_HANDLE);
+    EXPECT_NE(pipeline.layoutHandle(), VK_NULL_HANDLE);
+}
+
+TEST_F(DepthGraphicsPipelineIntegrationTest, RejectsInvalidCullMode) {
+    Renderer::GraphicsPipelineState state{};
+
+    constexpr std::uint8_t kInvalidCullModeValue{255U};
+
+    state.cull_mode = std::bit_cast<Renderer::CullMode>(kInvalidCullModeValue);
+
+    EXPECT_DEATH(static_cast<void>(makeDepthPipeline(m_Device, m_PhysicalDevice,
+                                                     m_DepthFormat, {}, state)),
+                 "Vulkan cull mode conversion requires a valid CullMode value");
 }

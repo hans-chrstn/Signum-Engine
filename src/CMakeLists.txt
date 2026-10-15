@@ -61,6 +61,8 @@ add_library(
     engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.cpp
     engine/renderer/vulkan/pipeline/vulkan_push_constant_compatibility.cpp
     engine/renderer/vulkan/pipeline/vulkan_descriptor_compatibility.cpp
+    engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline_variant_key.cpp
+    engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline_cache.cpp
     engine/renderer/vulkan/presentation/vulkan_surface.cpp
     engine/renderer/vulkan/presentation/vulkan_swapchain_support.cpp
     engine/renderer/vulkan/presentation/vulkan_swapchain_selection.cpp

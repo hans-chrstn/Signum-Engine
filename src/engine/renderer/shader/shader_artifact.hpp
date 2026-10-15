@@ -20,5 +20,15 @@ namespace SNE::Engine::Renderer::Shader {
          * the number of words rather than the total byte count.
          */
         std::vector<std::uint32_t> words;
+
+        /**
+         * @brief Compares two compiled shader artifacts.
+         *
+         * @param other Shader artifact to compare.
+         *
+         * @return True when both artifacts contain identical SPIR-V words.
+         */
+        [[nodiscard]] constexpr auto
+        operator==(const ShaderArtifact &other) const -> bool = default;
     };
 } // namespace SNE::Engine::Renderer::Shader

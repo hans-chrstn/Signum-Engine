@@ -43,5 +43,16 @@ namespace SNE::Engine::Renderer {
          * supplied by the associated vertex layout.
          */
         std::uint32_t offset{};
+
+        /**
+         * @brief Compares two vertex attribute descriptions.
+         *
+         * @param other Vertex attribute description to compare.
+         *
+         * @return True when location, format, and offset match.
+         */
+        [[nodiscard]] constexpr auto
+        operator==(const VertexAttributeDescription &other) const noexcept
+            -> bool = default;
     };
 } // namespace SNE::Engine::Renderer

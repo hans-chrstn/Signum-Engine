@@ -112,7 +112,6 @@ namespace SNE::Engine::Renderer::Vulkan {
                             m_PhysicalDevice.capabilities.optional_capabilities
                                 .memory_budget_extension_supported),
           m_InitialCamera(initial_camera),
-          m_GraphicsShaders(std::move(initial_graphics_shaders)),
           m_GraphicsSubmissionState(kFramesInFlight) {
         const std::uint32_t graphics_queue_family_index =
             m_PhysicalDevice.queue_families.graphics_family.family_index;
@@ -158,6 +157,13 @@ namespace SNE::Engine::Renderer::Vulkan {
 
             m_TextureBindingResources.emplace(createTextureBindingResources(
                 initial_texture.value(), m_TextureDescriptorSetLayout.value()));
+        }
+
+        if (initial_graphics_shaders.has_value()) {
+            m_Material.emplace(MaterialDescription{
+                .shaders = std::move(initial_graphics_shaders.value()),
+                .pipeline_state = {},
+            });
         }
 
         if (isFramebufferDrawable()) {
@@ -610,7 +616,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                     });
                 }
 
-                std::optional<VulkanGraphicsPipeline> new_graphics_pipeline{};
+                const VulkanGraphicsPipeline *new_graphics_pipeline{nullptr};
 
                 if (m_MeshBuffers.has_value() &&
                     (!m_SwapchainResources.has_value() ||
@@ -620,16 +626,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                      depth_format.value() !=
                          m_SwapchainResources->m_DepthFormat)) {
 
-                    if (!m_GraphicsShaders.has_value()) {
+                    if (!m_Material.has_value()) {
                         Core::Assertion::failAssertion(
                             Core::Assertion::AssertionType::Precondition,
                             Core::Error::Subsystem::Vulkan,
-                            "VulkanRenderer requires graphics shaders when "
-                            "rendering a mesh");
+                            "VulkanRenderer requires a material configuration "
+                            "when rendering a mesh");
                     }
 
                     const Shader::GraphicsShaderData &graphics_data =
-                        m_GraphicsShaders.value();
+                        m_Material->shaders;
 
                     const VertexLayoutDescription vertex_layout{
                         .attributes = m_MeshVertexAttributes,
@@ -686,12 +692,13 @@ namespace SNE::Engine::Renderer::Vulkan {
                         .depth = depth_format.value(),
                     };
 
-                    new_graphics_pipeline.emplace(
+                    new_graphics_pipeline = m_GraphicsPipelineCache.getOrCreate(
                         m_Device.nativeHandle(), attachment_formats,
                         graphics_data, vertex_input_data,
                         graphics_pipeline_layout_data,
                         m_PhysicalDevice.capabilities.properties.limits
-                            .maxPushConstantsSize);
+                            .maxPushConstantsSize,
+                        m_Material->pipeline_state);
                 }
 
                 std::vector<VulkanSemaphore> new_render_finished_semaphores;
@@ -703,20 +710,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                         m_Device.nativeHandle());
                 }
 
-                if (!new_graphics_pipeline.has_value() &&
-                    m_SwapchainResources.has_value() &&
-                    m_SwapchainResources->m_VulkanGraphicsPipeline
-                        .has_value()) {
-                    new_graphics_pipeline.emplace(
-                        std::move(m_SwapchainResources->m_VulkanGraphicsPipeline
-                                      .value()));
+                if (new_graphics_pipeline == nullptr &&
+                    m_SwapchainResources.has_value()) {
+                    new_graphics_pipeline =
+                        m_SwapchainResources->m_VulkanGraphicsPipeline;
                 }
 
                 return SwapchainResources{
                     .m_VulkanSwapchain = std::move(new_swapchain),
                     .m_DepthFormat = depth_format.value(),
-                    .m_VulkanGraphicsPipeline =
-                        std::move(new_graphics_pipeline),
+                    .m_VulkanGraphicsPipeline = new_graphics_pipeline,
                     .m_VulkanSemaphores =
                         std::move(new_render_finished_semaphores),
                     .m_DepthAttachments = std::move(new_depth_attachments),
@@ -733,7 +736,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         const VulkanSwapchain &swapchain =
             swapchain_resources.m_VulkanSwapchain;
 
-        if (!swapchain_resources.m_VulkanGraphicsPipeline.has_value()) {
+        if (swapchain_resources.m_VulkanGraphicsPipeline == nullptr) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
@@ -751,7 +754,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         const MeshBufferResources &mesh = m_MeshBuffers.value();
 
         const VulkanGraphicsPipeline &graphics_pipeline =
-            swapchain_resources.m_VulkanGraphicsPipeline.value();
+            *swapchain_resources.m_VulkanGraphicsPipeline;
 
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());

@@ -30,5 +30,16 @@ namespace SNE::Engine::Renderer::Shader {
          * in the supplied shader artifact and matches the requested stage.
          */
         ShaderEntryPointSelection selection{};
+
+        /**
+         * @brief Compares two shader stage inputs.
+         *
+         * @param other Shader stage input to compare.
+         *
+         * @return True when the shader artifacts and entry-point
+         * selections are equal.
+         */
+        [[nodiscard]] constexpr auto
+        operator==(const ShaderStageInput &other) const -> bool = default;
     };
 } // namespace SNE::Engine::Renderer::Shader

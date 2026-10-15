@@ -6,6 +6,7 @@
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
+#include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
@@ -21,6 +22,7 @@
 #include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_sampler.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline_cache.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_queue_submission_state.hpp"
@@ -34,7 +36,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     /**
@@ -172,16 +174,16 @@ namespace SNE::Engine::Renderer::Vulkan {
         /**
          * @brief Owns resources associated with a presentation swapchain.
          *
-         * Groups the Vulkan swapchain, optional graphics pipeline,
+         * Groups the Vulkan swapchain, a borrowed graphics pipeline,
          * presentation synchronization objects, and depth attachments.
+         *
+         * The graphics pipeline is owned by VulkanGraphicsPipelineCache
+         * and remains valid across swapchain recreation.
          *
          * Render-finished semaphores are maintained per swapchain image,
          * while depth attachments are maintained per frame-in-flight slot.
          *
-         * Depth attachments are recreated alongside the swapchain to
-         * match its current framebuffer extent.
-         *
-         * The resources must not be destroyed while outstanding GPU
+         * Resources must not be destroyed while outstanding GPU
          * operations still reference them.
          */
         struct SwapchainResources {
@@ -206,18 +208,17 @@ namespace SNE::Engine::Renderer::Vulkan {
             VkFormat m_DepthFormat{VK_FORMAT_UNDEFINED};
 
             /**
-             * @brief Owns the graphics pipeline used for swapchain rendering.
+             * @brief Non-owning pointer to the graphics pipeline used for
+             * rendering.
              *
-             * Contains the Vulkan graphics pipeline and its pipeline layout
-             * when renderable geometry is available.
+             * References a pipeline owned by m_GraphicsPipelineCache.
              *
-             * The pipeline is created using attachment formats compatible
-             * with the current rendering configuration.
+             * Remains null when no graphics pipeline is required.
              *
-             * The optional remains empty when no graphics pipeline is
-             * required.
+             * The cache must outlive this pointer and must not remove its
+             * referenced pipeline while it is in use by the GPU.
              */
-            std::optional<VulkanGraphicsPipeline> m_VulkanGraphicsPipeline;
+            const VulkanGraphicsPipeline *m_VulkanGraphicsPipeline{nullptr};
 
             /**
              * @brief Owns render-finished semaphores for swapchain images.
@@ -357,6 +358,18 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<VulkanDescriptorSetLayout> m_TextureDescriptorSetLayout;
 
         /**
+         * @brief Owns reusable Vulkan graphics pipelines.
+         *
+         * Stores pipelines identified by their complete variant configurations.
+         *
+         * The cache outlives swapchain resources that borrow its pipelines
+         * and is destroyed before the logical device.
+         *
+         * Cached pipelines remain available across swapchain recreation.
+         */
+        VulkanGraphicsPipelineCache m_GraphicsPipelineCache;
+
+        /**
          * @brief Owns the renderer's active sampled texture and descriptor
          * binding.
          *
@@ -438,31 +451,29 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<InitialCameraData> m_InitialCamera;
 
         /**
-         * @brief Optional graphics shaders owned by the renderer.
+         * @brief Optional material configuration owned by the renderer.
          *
-         * Retains the vertex and fragment SPIR-V artifacts and their
-         * entry-point selections independently of Vulkan pipeline resources.
+         * Retains the material's shader bytecode, entry-point selections,
+         * and graphics pipeline state independently of Vulkan resources.
          *
-         * The shaders remain available for graphics-pipeline recreation.
+         * The configuration remains available for pipeline creation
+         * and swapchain recreation.
          *
-         * Empty when no application-provided graphics shaders are configured.
+         * Empty when no application-provided material is configured.
          */
-        std::optional<Shader::GraphicsShaderData> m_GraphicsShaders;
+        std::optional<MaterialDescription> m_Material;
 
         /**
-         * @brief Swapchain-dependent renderer resources when presentation is
-         * available.
+         * @brief Optional swapchain-dependent renderer resources.
          *
-         * Owns the presentation swapchain, optional graphics pipeline, and
-         * render-finished semaphores associated with swapchain images.
+         * Owns the presentation swapchain, synchronization objects,
+         * and depth attachments while borrowing its graphics pipeline
+         * from m_GraphicsPipelineCache.
          *
-         * The optional is empty while no drawable framebuffer is available,
-         * allowing the renderer to remain initialized without presentation
-         * resources.
+         * Empty when no drawable framebuffer is available.
          *
-         * When present, the swapchain and render-finished semaphores are
-         * initialized together. A graphics pipeline is only required when
-         * geometry is available for drawing.
+         * The graphics pipeline pointer remains null when no
+         * renderable geometry is configured.
          */
         std::optional<SwapchainResources> m_SwapchainResources;
         /**
