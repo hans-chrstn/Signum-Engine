@@ -34,6 +34,7 @@ add_library(
     engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.cpp
     engine/renderer/vulkan/descriptor/vulkan_descriptor_pool.cpp
     engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.cpp
+    engine/renderer/vulkan/descriptor/vulkan_descriptor_type.cpp
     engine/renderer/vulkan/device/vulkan_device_discovery.cpp
     engine/renderer/vulkan/device/vulkan_device_capabilities.cpp
     engine/renderer/vulkan/device/vulkan_queue_families.cpp
@@ -63,6 +64,7 @@ add_library(
     engine/renderer/vulkan/pipeline/vulkan_descriptor_compatibility.cpp
     engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline_variant_key.cpp
     engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline_cache.cpp
+    engine/renderer/vulkan/pipeline/vulkan_shader_stage.cpp
     engine/renderer/vulkan/presentation/vulkan_surface.cpp
     engine/renderer/vulkan/presentation/vulkan_swapchain_support.cpp
     engine/renderer/vulkan/presentation/vulkan_swapchain_selection.cpp

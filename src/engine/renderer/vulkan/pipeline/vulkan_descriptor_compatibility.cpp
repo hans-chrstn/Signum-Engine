@@ -5,8 +5,9 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/shader/shader_descriptor_binding.hpp"
-#include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
+#include "engine/renderer/vulkan/descriptor/vulkan_descriptor_type.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_shader_stage.hpp"
 #include <cstddef>
 #include <span>
 #include <utility>
@@ -16,42 +17,6 @@ namespace Core = SNE::Engine::Core;
 namespace Shader = SNE::Engine::Renderer::Shader;
 
 namespace {
-    [[nodiscard]] auto toVkDescriptorType(Shader::ShaderResourceType type)
-        -> VkDescriptorType {
-        switch (type) {
-        case Shader::ShaderResourceType::CombinedImageSampler:
-            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        case Shader::ShaderResourceType::UniformBuffer:
-            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        case Shader::ShaderResourceType::StorageBuffer:
-            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        default:
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "Descriptor compatibility validation requires a supported "
-                "shader resource type");
-        }
-    }
-
-    [[nodiscard]] auto toVkShaderStage(Shader::ShaderStage stage)
-        -> VkShaderStageFlagBits {
-        switch (stage) {
-        case Shader::ShaderStage::Vertex:
-            return VK_SHADER_STAGE_VERTEX_BIT;
-        case Shader::ShaderStage::Fragment:
-            return VK_SHADER_STAGE_FRAGMENT_BIT;
-        case Shader::ShaderStage::Compute:
-            return VK_SHADER_STAGE_COMPUTE_BIT;
-        default:
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "Descriptor compatibility validation requires a supported "
-                "shader stage");
-        }
-    }
-
     auto validatePipelineLayoutDescriptions(
         std::span<const Vulkan::DescriptorSetLayoutBindingView>
             pipeline_layouts) -> void {
@@ -86,7 +51,8 @@ namespace {
         const Shader::ShaderDescriptorBinding &required,
         const Vulkan::VulkanDescriptorBindingDescription &provided,
         Shader::ShaderStage shader_stage) -> void {
-        if (toVkDescriptorType(required.type) != provided.descriptor_type) {
+        if (Vulkan::toVkDescriptorType(required.type) !=
+            provided.descriptor_type) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanDescriptorLayoutIncompatible,
                 "Pipeline descriptor binding type does not match shader "
@@ -102,8 +68,8 @@ namespace {
                 "Validate Descriptor Compatibility");
         }
 
-        const auto required_stage =
-            static_cast<VkShaderStageFlags>(toVkShaderStage(shader_stage));
+        const auto required_stage = static_cast<VkShaderStageFlags>(
+            Vulkan::toVkShaderStage(shader_stage));
 
         if ((provided.stage_flags & required_stage) == 0U) {
             throw Core::Error::EngineError(

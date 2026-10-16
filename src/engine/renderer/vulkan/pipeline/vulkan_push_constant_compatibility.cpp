@@ -3,35 +3,19 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/shader/push_constant_range.hpp"
 #include "engine/renderer/shader/shader_interface.hpp"
+#include "vulkan_shader_stage.hpp"
 #include <cstdint>
 #include <span>
 #include <vulkan/vulkan.h>
 
 namespace Shader = SNE::Engine::Renderer::Shader;
 namespace Core = SNE::Engine::Core;
+namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 namespace {
-    [[nodiscard]] auto toVkShaderStage(Shader::ShaderStage stage)
-        -> VkShaderStageFlagBits {
-        switch (stage) {
-        case Shader::ShaderStage::Vertex:
-            return VK_SHADER_STAGE_VERTEX_BIT;
-
-        case Shader::ShaderStage::Fragment:
-            return VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        case Shader::ShaderStage::Compute:
-            return VK_SHADER_STAGE_COMPUTE_BIT;
-        }
-
-        Core::Assertion::failAssertion(
-            Core::Assertion::AssertionType::Precondition,
-            Core::Error::Subsystem::Vulkan,
-            "Vulkan shader-stage conversion requires a supported shader stage");
-    }
-
     auto validatePipelinePushConstantRanges(
         std::span<const VkPushConstantRange> pipeline_ranges,
         std::uint32_t max_push_constants_size) -> void {
@@ -104,8 +88,8 @@ namespace {
     coversPushConstantRequirement(const Shader::PushConstantRange &required,
                                   const VkPushConstantRange &provided) -> bool {
 
-        const auto required_stage =
-            static_cast<VkShaderStageFlags>(toVkShaderStage(required.stage));
+        const auto required_stage = static_cast<VkShaderStageFlags>(
+            Vulkan::toVkShaderStage(required.stage));
 
         const std::uint64_t required_end =
             std::uint64_t{required.offset} + required.size;
