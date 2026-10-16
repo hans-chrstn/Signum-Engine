@@ -5,6 +5,7 @@
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
+#include "engine/renderer/resource/gpu_resource_registry_id.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <limits>
@@ -16,10 +17,15 @@
 
 namespace SNE::Engine::Renderer {
     /**
-     * @brief Stores resources using generation-checked handles.
+     * @brief Owns resources through registry-scoped, generation-checked
+     * handles.
      *
-     * Associates resource ownership with logical slot identities.
-     * The registry does not perform GPU synchronization.
+     * Each registry has a unique identity. Resource handles contain that
+     * identity, a slot index, and a generation. Handles from other registries
+     * and stale handles are rejected.
+     *
+     * Registry operations require external synchronization when accessed from
+     * multiple threads. The registry does not synchronize GPU execution.
      *
      * @tparam Resource Resource type owned by the registry.
      */
@@ -61,19 +67,96 @@ namespace SNE::Engine::Renderer {
          */
         std::optional<std::uint32_t> m_FreeHead;
 
+        /**
+         * @brief Unique identity currently owned by this registry.
+         *
+         * Moves transfer this identity together with resource ownership.
+         * Zero identifies a moved-from registry.
+         */
+        std::uint64_t m_RegistryId{};
+
       public:
+        /**
+         * @brief Creates a GPU resource registry with a unique identity.
+         *
+         * Acquires a nonzero registry identity shared across all resource
+         * registry types. The identity is used to validate resource ownership.
+         */
+        GpuResourceRegistry() : m_RegistryId(allocateGpuResourceRegistryId()) {}
+
+        /**
+         * @brief Prevents copying a registry and duplicating its identity.
+         */
+        GpuResourceRegistry(const GpuResourceRegistry &) = delete;
+
+        /**
+         * @brief Prevents copy assignment of registry ownership and identity.
+         */
+        auto operator=(const GpuResourceRegistry &)
+            -> GpuResourceRegistry & = delete;
+
+        /**
+         * @brief Transfers resource ownership and identity from another
+         * registry.
+         *
+         * Existing handles remain valid in the destination registry.
+         * The source registry is left with an invalid identity and must not
+         * be used for resource insertion.
+         *
+         * @param other Registry whose resources and identity are transferred.
+         */
+        GpuResourceRegistry(GpuResourceRegistry &&other) noexcept
+            : m_Slots(std::move(other.m_Slots)),
+              m_FreeHead(std::exchange(other.m_FreeHead, std::nullopt)),
+              m_RegistryId(std::exchange(other.m_RegistryId, 0U)) {}
+
+        /**
+         * @brief Replaces this registry with another registry's resources and
+         * identity.
+         *
+         * Releases resources previously owned by this registry and transfers
+         * the source registry's slots, free-list state, and identity.
+         *
+         * Existing source handles remain valid in the destination. Handles
+         * previously issued by the destination become invalid.
+         *
+         * Self-assignment has no effect.
+         *
+         * @param other Registry whose resources and identity are transferred.
+         * @return Reference to this registry.
+         *
+         * @pre Resources currently owned by the destination must be safe to
+         * destroy.
+         *
+         * @note The source registry is left with an invalid identity and must
+         * not be used for resource insertion.
+         */
+        auto operator=(GpuResourceRegistry &&other) noexcept
+            -> GpuResourceRegistry & {
+            if (this == &other) {
+                return *this;
+            }
+
+            m_Slots = std::move(other.m_Slots);
+            m_FreeHead = std::exchange(other.m_FreeHead, std::nullopt);
+            m_RegistryId = std::exchange(other.m_RegistryId, 0U);
+
+            return *this;
+        }
+
         /**
          * @brief Inserts a resource and returns its logical handle.
          *
          * Transfers ownership of the supplied resource into a registry slot.
-         * The returned handle identifies that slot and its generation.
+         * The returned handle contains the registry identity, slot index,
+         * and slot generation.
          *
          * @param resource Resource whose ownership is transferred.
-         *
          * @return Handle identifying the inserted resource.
          *
-         * @pre The registry must have an available slot index
-         * representable by std::uint32_t.
+         * @pre The registry must have a valid identity.
+         * @pre A newly allocated slot index must be representable by
+         * std::uint32_t.
          *
          * @throws std::bad_alloc if slot storage allocation fails.
          *
@@ -85,6 +168,14 @@ namespace SNE::Engine::Renderer {
                 std::is_nothrow_move_constructible_v<Resource>,
                 "Registry resources must be nothrow move-constructible");
 
+            if (m_RegistryId == 0U) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Renderer,
+                    "GPU resource insertion requires a valid registry "
+                    "identity");
+            }
+
             if (m_FreeHead.has_value()) {
                 const std::uint32_t free_index = *m_FreeHead;
                 Slot &slot = m_Slots[free_index];
@@ -95,6 +186,7 @@ namespace SNE::Engine::Renderer {
                 return GpuResourceHandle{
                     .index = free_index,
                     .generation = slot.generation,
+                    .registry_id = m_RegistryId,
                 };
             }
 
@@ -115,25 +207,30 @@ namespace SNE::Engine::Renderer {
             return GpuResourceHandle{
                 .index = next_index.value(),
                 .generation = m_Slots.back().generation,
+                .registry_id = m_RegistryId,
             };
         }
 
         /**
          * @brief Finds a resource using its logical handle.
          *
-         * Validates the handle's slot index and generation before
-         * returning access to the stored resource.
+         * Validates the registry identity, slot index, generation, and slot
+         * occupancy before returning access to the resource.
          *
          * @param handle Resource identity to resolve.
-         *
-         * @return Non-owning pointer to the resource, or nullptr if
-         * the handle is invalid, stale, or references an empty slot.
+         * @return Non-owning pointer to the resource, or nullptr if the
+         * handle is invalid, stale, belongs to another registry, or
+         * references an empty slot.
          *
          * @note The returned pointer must not outlive the resource.
          * Inserting additional resources may invalidate the pointer.
          */
         [[nodiscard]] auto find(GpuResourceHandle handle) noexcept
             -> Resource * {
+            if (m_RegistryId == 0U || handle.registry_id != m_RegistryId) {
+                return nullptr;
+            }
+
             if (std::cmp_greater_equal(handle.index, m_Slots.size())) {
                 return nullptr;
             }
@@ -155,15 +252,15 @@ namespace SNE::Engine::Renderer {
         /**
          * @brief Removes a resource and transfers ownership to the caller.
          *
-         * Resolves the supplied handle and removes its associated resource.
+         * Validates the supplied handle and removes its associated resource.
          * Successful removal invalidates the handle.
          *
          * This operation does not synchronize with GPU execution.
          *
          * @param handle Resource identity to remove.
-         *
          * @return Owned resource on success, or std::nullopt if the handle
-         * is invalid, stale, or references an empty slot.
+         * is invalid, stale, belongs to another registry, or references
+         * an empty slot.
          *
          * @note The caller must keep the returned resource alive until
          * all GPU work referencing it has completed.

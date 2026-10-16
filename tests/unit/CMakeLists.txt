@@ -28,6 +28,7 @@ add_executable(
   renderer/shader/shader_equality_tests.cpp
   renderer/resource/gpu_resource_handle_tests.cpp
   renderer/resource/gpu_resource_registry_tests.cpp
+  renderer/resource/gpu_resource_registry_id_tests.cpp
   renderer/vulkan/common/vulkan_result_tests.cpp
   renderer/vulkan/common/vulkan_extension_support_tests.cpp
   renderer/vulkan/common/vulkan_api_version_tests.cpp

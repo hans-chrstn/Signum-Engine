@@ -28,7 +28,7 @@ TEST(GpuResourceRegistryTests, RejectsDefaultHandleOnEmptyRegistry) {
 TEST(GpuResourceRegistryTests, InsertsMoveOnlyResource) {
     Renderer::GpuResourceRegistry<std::unique_ptr<int>> registry;
 
-    const int num = 42;
+    constexpr int num = 42;
 
     auto resource = std::make_unique<int>(num);
 
@@ -37,13 +37,14 @@ TEST(GpuResourceRegistryTests, InsertsMoveOnlyResource) {
     EXPECT_EQ(resource, nullptr);
     EXPECT_EQ(handle.index, 0U);
     EXPECT_EQ(handle.generation, 1U);
+    EXPECT_NE(handle.registry_id, 0U);
 
     auto *stored = registry.find(handle);
 
     ASSERT_NE(stored, nullptr);
     ASSERT_NE(*stored, nullptr);
 
-    EXPECT_EQ(**stored, 42);
+    EXPECT_EQ(**stored, num);
 }
 
 TEST(GpuResourceRegistryTests, AssignsSequentialSlotIndices) {
@@ -57,6 +58,9 @@ TEST(GpuResourceRegistryTests, AssignsSequentialSlotIndices) {
 
     EXPECT_EQ(first.generation, 1U);
     EXPECT_EQ(second.generation, 1U);
+
+    EXPECT_NE(first.registry_id, 0U);
+    EXPECT_EQ(first.registry_id, second.registry_id);
 
     EXPECT_FALSE(first == second);
 }
@@ -82,16 +86,19 @@ TEST(GpuResourceRegistryTests, RejectsInvalidResourceHandles) {
     const Renderer::GpuResourceHandle invalid_generation{
         .index = valid.index,
         .generation = 0U,
+        .registry_id = valid.registry_id,
     };
 
     const Renderer::GpuResourceHandle stale_generation{
         .index = valid.index,
         .generation = valid.generation + 1U,
+        .registry_id = valid.registry_id,
     };
 
     const Renderer::GpuResourceHandle invalid_index{
         .index = valid.index + 1U,
         .generation = valid.generation,
+        .registry_id = valid.registry_id,
     };
 
     EXPECT_EQ(registry.find({}), nullptr);
@@ -129,11 +136,13 @@ TEST(GpuResourceRegistryTests, InvalidRemovalPreservesExistingResource) {
     const Renderer::GpuResourceHandle invalid_index{
         .index = valid.index + 1U,
         .generation = valid.generation,
+        .registry_id = valid.registry_id,
     };
 
     const Renderer::GpuResourceHandle stale_generation{
         .index = valid.index,
         .generation = valid.generation + 1U,
+        .registry_id = valid.registry_id,
     };
 
     EXPECT_FALSE(registry.remove({}).has_value());
@@ -288,4 +297,153 @@ TEST(GpuResourceRegistryTests, RemovalPreservesResourceLifetime) {
     removed.reset();
 
     EXPECT_EQ(destruction_count, 1);
+}
+
+TEST(GpuResourceRegistryTests, RejectsHandleFromDifferentRegistry) {
+    Renderer::GpuResourceRegistry<std::unique_ptr<int>> first_registry;
+    Renderer::GpuResourceRegistry<std::unique_ptr<int>> second_registry;
+
+    const auto first_handle = first_registry.insert(std::make_unique<int>(10));
+
+    const auto second_handle =
+        second_registry.insert(std::make_unique<int>(20));
+
+    EXPECT_NE(first_registry.find(first_handle), nullptr);
+    EXPECT_NE(second_registry.find(second_handle), nullptr);
+
+    EXPECT_EQ(second_registry.find(first_handle), nullptr);
+    EXPECT_EQ(first_registry.find(second_handle), nullptr);
+}
+
+TEST(GpuResourceRegistryTests, RejectsHandleFromDifferentResourceType) {
+    Renderer::GpuResourceRegistry<std::unique_ptr<int>> first_registry;
+    Renderer::GpuResourceRegistry<std::unique_ptr<long>> second_registry;
+
+    const auto first = first_registry.insert(std::make_unique<int>(10));
+    const auto second = second_registry.insert(std::make_unique<long>(20L));
+
+    EXPECT_NE(first.registry_id, 0U);
+    EXPECT_NE(second.registry_id, 0U);
+    EXPECT_NE(first.registry_id, second.registry_id);
+
+    EXPECT_EQ(first_registry.find(second), nullptr);
+    EXPECT_EQ(second_registry.find(first), nullptr);
+}
+
+TEST(GpuResourceRegistryTests, DestroyedRegistryIdentityIsNotReused) {
+    using Registry = Renderer::GpuResourceRegistry<std::unique_ptr<int>>;
+
+    Renderer::GpuResourceHandle old_handle{};
+
+    constexpr int val = 10;
+
+    {
+        Registry first_registry;
+        old_handle = first_registry.insert(std::make_unique<int>(val));
+    }
+
+    Registry second_registry;
+    const auto new_handle = second_registry.insert(std::make_unique<int>(20));
+
+    EXPECT_EQ(old_handle.index, new_handle.index);
+    EXPECT_EQ(old_handle.generation, new_handle.generation);
+    EXPECT_NE(old_handle.registry_id, new_handle.registry_id);
+
+    EXPECT_EQ(second_registry.find(old_handle), nullptr);
+    EXPECT_NE(second_registry.find(new_handle), nullptr);
+}
+
+TEST(GpuResourceRegistryTests, MoveConstructionPreservesHandlesAndFreeList) {
+    using Registry = Renderer::GpuResourceRegistry<std::unique_ptr<int>>;
+
+    Registry source;
+
+    const auto first = source.insert(std::make_unique<int>(10));
+    const auto second = source.insert(std::make_unique<int>(20));
+
+    auto removed = source.remove(first);
+    EXPECT_TRUE(removed.has_value());
+
+    Registry destination{std::move(source)};
+
+    EXPECT_NE(destination.find(second), nullptr);
+    EXPECT_EQ(destination.find(first), nullptr);
+
+    const auto replacement = destination.insert(std::make_unique<int>(30));
+
+    EXPECT_EQ(replacement.index, first.index);
+    EXPECT_EQ(replacement.generation, first.generation + 1U);
+    EXPECT_EQ(replacement.registry_id, first.registry_id);
+
+    EXPECT_NE(destination.find(replacement), nullptr);
+}
+
+TEST(GpuResourceRegistryTests, MoveAssignmentTransfersRegistryIdentity) {
+    using Registry = Renderer::GpuResourceRegistry<std::unique_ptr<int>>;
+
+    Registry destination;
+    const auto old_handle = destination.insert(std::make_unique<int>(10));
+
+    Registry source;
+    const auto transferred_handle = source.insert(std::make_unique<int>(20));
+
+    destination = std::move(source);
+
+    EXPECT_EQ(destination.find(old_handle), nullptr);
+    EXPECT_FALSE(destination.remove(old_handle).has_value());
+
+    auto *resource = destination.find(transferred_handle);
+
+    ASSERT_NE(resource, nullptr);
+    ASSERT_NE(*resource, nullptr);
+
+    EXPECT_EQ(**resource, 20);
+}
+
+TEST(GpuResourceRegistryTests, SelfMoveAssignmentPreservesResources) {
+    using Registry = Renderer::GpuResourceRegistry<std::unique_ptr<int>>;
+
+    Registry registry;
+    const auto handle = registry.insert(std::make_unique<int>(42));
+
+    auto *same_registry = &registry;
+    registry = std::move(*same_registry);
+
+    auto *resource = registry.find(handle);
+
+    ASSERT_NE(resource, nullptr);
+    ASSERT_NE(*resource, nullptr);
+
+    EXPECT_EQ(**resource, 42);
+}
+
+TEST(GpuResourceRegistryTests, MovedFromRegistryRejectsLookups) {
+    using Registry = Renderer::GpuResourceRegistry<std::unique_ptr<int>>;
+
+    Registry source;
+    const auto handle = source.insert(std::make_unique<int>(42));
+
+    auto *moved_from = &source;
+    Registry destination{std::move(source)};
+
+    EXPECT_EQ(moved_from->find(handle), nullptr);
+    EXPECT_FALSE(moved_from->remove(handle).has_value());
+    EXPECT_NE(destination.find(handle), nullptr);
+}
+
+TEST(GpuResourceRegistryTests, MovedFromRegistryRejectsInsertion) {
+    using Registry = Renderer::GpuResourceRegistry<std::unique_ptr<int>>;
+
+    ASSERT_DEATH(
+        {
+            Registry source;
+            auto *moved_from = &source;
+
+            Registry destination{std::move(source)};
+
+            // Intentionally violates the moved-from registry precondition.
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
+            static_cast<void>(moved_from->insert(std::make_unique<int>(42)));
+        },
+        "GPU resource insertion requires a valid registry identity");
 }

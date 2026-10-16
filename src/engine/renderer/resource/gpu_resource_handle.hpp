@@ -5,8 +5,8 @@ namespace SNE::Engine::Renderer {
     /**
      * @brief Identifies a GPU resource independently of the rendering backend.
      *
-     * Stores a resource slot index and generation used to distinguish
-     * individual resource lifetimes.
+     * Stores the owning registry identity, resource slot index, and
+     * generation used to distinguish individual resource lifetimes.
      *
      * This value does not own GPU resources or memory allocations.
      * Resource lookup and lifetime validation belong to the owning registry.
@@ -23,10 +23,18 @@ namespace SNE::Engine::Renderer {
         std::uint32_t generation{};
 
         /**
+         * @brief Identifies the registry that owns this resource.
+         *
+         * Zero is reserved for an invalid registry identity.
+         */
+        std::uint64_t registry_id{};
+
+        /**
          * @brief Compares two GPU resource identities.
          *
          * @param other Resource handle to compare.
-         * @return True when both index and generation match.
+         * @return True when registry identity, slot index, and generation
+         * match.
          */
         [[nodiscard]] constexpr auto
         operator==(const GpuResourceHandle &other) const noexcept
