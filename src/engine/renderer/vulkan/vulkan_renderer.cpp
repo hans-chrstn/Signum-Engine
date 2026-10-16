@@ -32,7 +32,10 @@
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
+#include "engine/renderer/vulkan/texture/vulkan_texture_format.hpp"
+#include <algorithm>
 #include <array>
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -314,37 +317,68 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Vulkan texture upload requires nonzero width and height");
         }
 
-        const auto width = static_cast<std::size_t>(texture.width);
-        const auto height = static_cast<std::size_t>(texture.height);
-        const std::size_t max = std::numeric_limits<std::size_t>::max();
+        const auto maximum_mip_levels = static_cast<std::uint32_t>(
+            std::bit_width(std::max(texture.width, texture.height)));
 
-        if (width > max / height) {
+        if (texture.mip_levels == 0U ||
+            texture.mip_levels > maximum_mip_levels) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "Vulkan texture upload pixel count exceeds size_t");
+                "Vulkan texture upload requires a valid mip-level count");
         }
 
-        const std::size_t pixel_count = width * height;
-
+        const std::size_t max = std::numeric_limits<std::size_t>::max();
         constexpr std::size_t kRgba8BytesPerPixel = 4U;
 
-        if (pixel_count > max / kRgba8BytesPerPixel) {
+        std::size_t total_byte_count{};
+
+        for (std::uint32_t level{}; level < texture.mip_levels; ++level) {
+            const auto mip_width =
+                static_cast<std::size_t>(std::max(1U, texture.width >> level));
+
+            const auto mip_height =
+                static_cast<std::size_t>(std::max(1U, texture.height >> level));
+
+            if (mip_width > max / mip_height) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan texture upload mip pixel count exceeds size_t");
+            }
+
+            const std::size_t mip_pixel_count = mip_width * mip_height;
+
+            if (mip_pixel_count > max / kRgba8BytesPerPixel) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan texture upload mip byte count exceeds size_t");
+            }
+
+            const std::size_t mip_byte_count =
+                mip_pixel_count * kRgba8BytesPerPixel;
+
+            if (mip_byte_count > max - total_byte_count) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan texture upload total mip byte count exceeds "
+                    "size_t");
+            }
+
+            total_byte_count += mip_byte_count;
+        }
+
+        if (texture.pixels.size() != total_byte_count) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "Vulkan texture upload byte count exceeds size_t");
+                "Vulkan texture upload pixel data size does not match mip "
+                "chain");
         }
 
-        const std::size_t byte_count = pixel_count * kRgba8BytesPerPixel;
-
-        if (texture.pixels.size() != byte_count) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "Vulkan texture upload pixel data size does not match texture "
-                "dimensions");
-        }
+        const VkFormat native_format = toVkFormat(texture.format);
 
         VulkanImageCreateInfo image_create_info{};
         image_create_info.extent = {
@@ -355,7 +389,8 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         image_create_info.image_type = VK_IMAGE_TYPE_2D;
 
-        image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        image_create_info.format = native_format;
+        image_create_info.mip_levels = texture.mip_levels;
 
         image_create_info.usage =
             static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_TRANSFER_DST_BIT) |
@@ -380,7 +415,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         memory_barrier.subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0U,
-            .levelCount = 1U,
+            .levelCount = texture.mip_levels,
             .baseArrayLayer = 0U,
             .layerCount = 1U,
         };
@@ -394,11 +429,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         image_view_create_info.image = image.nativeHandle();
         image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        image_view_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+        image_view_create_info.format = native_format;
         image_view_create_info.subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0U,
-            .levelCount = 1U,
+            .levelCount = texture.mip_levels,
             .baseArrayLayer = 0U,
             .layerCount = 1U,
         };
@@ -415,7 +450,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         sampler_create_info.minLod = 0.0F;
-        sampler_create_info.maxLod = 0.0F;
+        sampler_create_info.maxLod =
+            static_cast<float>(texture.mip_levels - 1U);
 
         VulkanSampler sampler{m_Device.nativeHandle(), sampler_create_info};
 

@@ -168,3 +168,19 @@ TEST_F(VulkanIntegrationTest, StoresRequestedBufferUsageFlags) {
 
     EXPECT_EQ(buffer.usage(), requested_usage);
 }
+
+TEST_F(VulkanIntegrationTest, CreatesUniformBuffer) {
+    constexpr VkDeviceSize kBufferSize = 64U;
+
+    const Vulkan::VulkanBufferCreateInfo create_info{
+        .size = kBufferSize,
+        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        .memory_usage = Renderer::GpuMemoryUsage::Upload,
+    };
+
+    const Vulkan::VulkanBuffer buffer{memoryAllocator(), create_info};
+
+    EXPECT_NE(buffer.nativeHandle(), VK_NULL_HANDLE);
+    EXPECT_EQ(buffer.size(), kBufferSize);
+    EXPECT_EQ(buffer.usage(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+}

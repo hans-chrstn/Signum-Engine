@@ -59,12 +59,12 @@ namespace SNE::Engine::Renderer::Vulkan {
      * @param destination Newly created image receiving the pixel data.
      * @param pixels Tightly packed RGBA8 pixel data.
      *
-     * @pre pixels must not be empty.
      * @pre destination must be a single-sampled 2D image using
-     * VK_FORMAT_R8G8B8A8_UNORM.
-     * @pre destination must have one mip level and one array layer.
+     * VK_FORMAT_R8G8B8A8_UNORM or VK_FORMAT_R8G8B8A8_SRGB.
+     * @pre destination must have exactly one array layer.
      * @pre destination must support transfer-destination usage.
-     * @pre pixels must contain exactly the required image data.
+     * @pre pixels must contain every mip level, tightly packed
+     * from level zero through the final mip level.
      * @pre destination must initially have VK_IMAGE_LAYOUT_UNDEFINED.
      */
     auto uploadImageData(const VulkanMemoryAllocator &allocator,

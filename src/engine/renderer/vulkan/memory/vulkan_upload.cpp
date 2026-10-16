@@ -6,8 +6,11 @@
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/command/vulkan_transfer_commands.hpp"
 #include "vulkan_byte_range.hpp"
-#include <array>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto uploadBufferData(const VulkanMemoryAllocator &allocator,
@@ -80,11 +83,13 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "uploadImageData requires a 2D destination image");
         }
 
-        if (destination_info.format != VK_FORMAT_R8G8B8A8_UNORM) {
+        if (destination_info.format != VK_FORMAT_R8G8B8A8_UNORM &&
+            destination_info.format != VK_FORMAT_R8G8B8A8_SRGB) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "uploadImageData requires an RGBA8 UNORM destination image");
+                "uploadImageData requires an RGBA8 UNORM or sRGB destination "
+                "image");
         }
 
         if (destination_info.samples != VK_SAMPLE_COUNT_1_BIT) {
@@ -94,12 +99,11 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "uploadImageData requires a single-sampled destination image");
         }
 
-        if (destination_info.mip_levels != 1U ||
-            destination_info.array_layers != 1U) {
+        if (destination_info.array_layers != 1U) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "uploadImageData requires one mip level and one array layer");
+                "uploadImageData requires exactly one array layer");
         }
 
         if ((destination.usage() & VK_IMAGE_USAGE_TRANSFER_DST_BIT) == 0U) {
@@ -110,33 +114,48 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         constexpr std::size_t kBytesPerPixel = 4U;
-
-        const auto image_width =
-            static_cast<std::size_t>(destination_info.extent.width);
-
-        const auto image_height =
-            static_cast<std::size_t>(destination_info.extent.height);
-
         const std::size_t maximum_size =
             std::numeric_limits<std::size_t>::max();
 
-        if (image_width > maximum_size / image_height) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "uploadImageData required pixel size exceeds size_t");
+        auto mip_width =
+            static_cast<std::size_t>(destination_info.extent.width);
+        auto mip_height =
+            static_cast<std::size_t>(destination_info.extent.height);
+
+        std::size_t required_pixel_size{};
+
+        for (std::uint32_t level{}; level < destination_info.mip_levels;
+             ++level) {
+            if (mip_width > maximum_size / mip_height) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "uploadImageData required mip pixel count exceeds size_t");
+            }
+
+            const std::size_t mip_pixel_count = mip_width * mip_height;
+
+            if (mip_pixel_count > maximum_size / kBytesPerPixel) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "uploadImageData required mip byte count exceeds size_t");
+            }
+
+            const std::size_t mip_byte_count = mip_pixel_count * kBytesPerPixel;
+
+            if (mip_byte_count > maximum_size - required_pixel_size) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "uploadImageData total mip byte count exceeds size_t");
+            }
+
+            required_pixel_size += mip_byte_count;
+
+            mip_width = std::max(std::size_t{1U}, mip_width / 2U);
+            mip_height = std::max(std::size_t{1U}, mip_height / 2U);
         }
-
-        const std::size_t pixel_count = image_width * image_height;
-
-        if (pixel_count > maximum_size / kBytesPerPixel) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "uploadImageData required pixel size exceeds size_t");
-        }
-
-        const std::size_t required_pixel_size = pixel_count * kBytesPerPixel;
 
         if (pixels.size() != required_pixel_size) {
             Core::Assertion::failAssertion(
@@ -169,23 +188,45 @@ namespace SNE::Engine::Renderer::Vulkan {
         transfer_barrier.subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0U,
-            .levelCount = 1U,
+            .levelCount = destination_info.mip_levels,
             .baseArrayLayer = 0U,
             .layerCount = 1U,
         };
 
-        VkBufferImageCopy2 copy_region{};
-        copy_region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
-        copy_region.bufferOffset = 0U;
-        copy_region.imageSubresource = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = 0U,
-            .baseArrayLayer = 0U,
-            .layerCount = 1U,
-        };
-        copy_region.imageExtent = destination_info.extent;
+        std::vector<VkBufferImageCopy2> regions;
+        regions.reserve(destination_info.mip_levels);
 
-        const std::array<VkBufferImageCopy2, 1U> regions{copy_region};
+        mip_width = static_cast<std::size_t>(destination_info.extent.width);
+        mip_height = static_cast<std::size_t>(destination_info.extent.height);
+
+        std::size_t buffer_offset{};
+
+        for (std::uint32_t level{}; level < destination_info.mip_levels;
+             ++level) {
+            VkBufferImageCopy2 region{};
+            region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
+            region.bufferOffset = static_cast<VkDeviceSize>(buffer_offset);
+
+            region.imageSubresource = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = level,
+                .baseArrayLayer = 0U,
+                .layerCount = 1U,
+            };
+
+            region.imageExtent = {
+                .width = static_cast<std::uint32_t>(mip_width),
+                .height = static_cast<std::uint32_t>(mip_height),
+                .depth = 1U,
+            };
+
+            regions.push_back(region);
+
+            buffer_offset += mip_width * mip_height * kBytesPerPixel;
+
+            mip_width = std::max(std::size_t{1U}, mip_width / 2U);
+            mip_height = std::max(std::size_t{1U}, mip_height / 2U);
+        }
 
         const BufferToImageCopyRequest copy_request{
             .source = staging_buffer,

@@ -164,6 +164,22 @@ namespace {
                 },
         };
     }
+
+    constexpr std::array<std::uint8_t, 20U> kMipmappedPixels{
+        255U, 0U,   0U,   255U, 0U,   255U, 0U,   255U, 0U,   0U,
+        255U, 255U, 255U, 255U, 255U, 255U, 128U, 128U, 128U, 255U,
+    };
+
+    [[nodiscard]] auto makeMipmappedTexture() -> Renderer::TextureUploadData {
+        return {
+            .width = 2U,
+            .height = 2U,
+            .pixels = std::as_bytes(std::span{kMipmappedPixels}),
+            .format = Renderer::TextureFormat::Rgba8Srgb,
+            .mip_levels = 2U,
+        };
+    }
+
 } // namespace
 
 class VulkanRendererTextureReplacementIntegrationTests
@@ -240,6 +256,12 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
     ASSERT_NO_THROW(renderer.replaceTexture(makeThirdTexture()));
 
     for (std::size_t i{}; i < 3U; ++i) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+
+    ASSERT_NO_THROW(renderer.replaceTexture(makeMipmappedTexture()));
+
+    for (std::size_t i{}; i < 2U; ++i) {
         ASSERT_NO_THROW(renderer.renderFrame());
     }
 }

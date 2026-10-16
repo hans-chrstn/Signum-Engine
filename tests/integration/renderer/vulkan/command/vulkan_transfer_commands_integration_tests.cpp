@@ -1,3 +1,4 @@
+
 #include "../vulkan_integration_test_fixture.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
@@ -561,6 +562,31 @@ TEST_F(VulkanIntegrationTest, UploadsImageData) {
         memoryAllocator(), immediateSubmission(), destination, pixels));
 }
 
+TEST_F(VulkanIntegrationTest, UploadsSrgbImageData) {
+    constexpr std::uint32_t kImageExtent = 4U;
+    constexpr std::size_t kBytesPerPixel = 4U;
+    constexpr std::size_t kPixelDataSize =
+        static_cast<std::size_t>(kImageExtent) * kImageExtent * kBytesPerPixel;
+
+    const Vulkan::VulkanImageCreateInfo image_info{
+        .extent =
+            {
+                .width = kImageExtent,
+                .height = kImageExtent,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_SRGB,
+        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
+    const Vulkan::VulkanImage destination{memoryAllocator(), image_info};
+    const std::array<std::byte, kPixelDataSize> pixels{};
+
+    EXPECT_NO_THROW(Vulkan::uploadImageData(
+        memoryAllocator(), immediateSubmission(), destination, pixels));
+}
+
 TEST_F(VulkanIntegrationTest, UploadImageDataRejectsInvalidPixelSizes) {
     const Vulkan::VulkanImageCreateInfo image_info{
         .extent =
@@ -642,20 +668,10 @@ TEST_F(VulkanIntegrationTest, UploadImageDataRejectsUnsupportedDestinations) {
     const Vulkan::VulkanImage invalid_format{memoryAllocator(),
                                              invalid_format_info};
 
-    ASSERT_DEATH(Vulkan::uploadImageData(memoryAllocator(),
-                                         immediateSubmission(), invalid_format,
-                                         pixels),
-                 "uploadImageData requires an RGBA8 UNORM destination image");
-
-    Vulkan::VulkanImageCreateInfo invalid_mip_info = valid_image_info;
-    invalid_mip_info.mip_levels = 2U;
-
-    const Vulkan::VulkanImage invalid_mip{memoryAllocator(), invalid_mip_info};
-
-    ASSERT_DEATH(Vulkan::uploadImageData(memoryAllocator(),
-                                         immediateSubmission(), invalid_mip,
-                                         pixels),
-                 "uploadImageData requires one mip level and one array layer");
+    ASSERT_DEATH(
+        Vulkan::uploadImageData(memoryAllocator(), immediateSubmission(),
+                                invalid_format, pixels),
+        "uploadImageData requires an RGBA8 UNORM or sRGB destination image");
 
     Vulkan::VulkanImageCreateInfo invalid_layers_info = valid_image_info;
     invalid_layers_info.array_layers = 2U;
@@ -666,7 +682,7 @@ TEST_F(VulkanIntegrationTest, UploadImageDataRejectsUnsupportedDestinations) {
     ASSERT_DEATH(Vulkan::uploadImageData(memoryAllocator(),
                                          immediateSubmission(), invalid_layers,
                                          pixels),
-                 "uploadImageData requires one mip level and one array layer");
+                 "uploadImageData requires exactly one array layer");
 
     Vulkan::VulkanImageCreateInfo invalid_usage_info = valid_image_info;
     invalid_usage_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -678,4 +694,100 @@ TEST_F(VulkanIntegrationTest, UploadImageDataRejectsUnsupportedDestinations) {
                                          immediateSubmission(), invalid_usage,
                                          pixels),
                  "uploadImageData requires transfer-destination image usage");
+}
+
+TEST_F(VulkanIntegrationTest, UploadsCompleteUnormMipChain) {
+    constexpr std::uint32_t kImageExtent = 4U;
+    constexpr std::uint32_t kMipLevels = 3U;
+    constexpr std::size_t kBytesPerPixel = 4U;
+
+    constexpr auto kExtent = static_cast<std::size_t>(kImageExtent);
+    constexpr std::size_t kHalfExtent = kExtent / 2U;
+
+    constexpr std::size_t kPixelCount =
+        (kExtent * kExtent) + (kHalfExtent * kHalfExtent) + std::size_t{1U};
+
+    constexpr std::size_t kPixelDataSize = kPixelCount * kBytesPerPixel;
+
+    Vulkan::VulkanImageCreateInfo image_info{};
+    image_info.extent = {
+        .width = kImageExtent,
+        .height = kImageExtent,
+        .depth = 1U,
+    };
+    image_info.image_type = VK_IMAGE_TYPE_2D;
+    image_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_info.mip_levels = kMipLevels;
+
+    const Vulkan::VulkanImage destination{memoryAllocator(), image_info};
+
+    const std::array<std::byte, kPixelDataSize> pixels{};
+
+    EXPECT_NO_THROW(Vulkan::uploadImageData(
+        memoryAllocator(), immediateSubmission(), destination, pixels));
+}
+
+TEST_F(VulkanIntegrationTest, UploadsNonSquareSrgbMipChain) {
+    constexpr std::uint32_t kWidth = 4U;
+    constexpr std::uint32_t kHeight = 2U;
+    constexpr std::uint32_t kMipLevels = 3U;
+    constexpr std::size_t kBytesPerPixel = 4U;
+
+    constexpr auto kWidthSize = static_cast<std::size_t>(kWidth);
+    constexpr auto kHeightSize = static_cast<std::size_t>(kHeight);
+
+    constexpr std::size_t kPixelCount =
+        (kWidthSize * kHeightSize) + ((kWidthSize / 2U) * (kHeightSize / 2U)) +
+        std::size_t{1U};
+
+    constexpr std::size_t kPixelDataSize = kPixelCount * kBytesPerPixel;
+
+    Vulkan::VulkanImageCreateInfo image_info{};
+    image_info.extent = {
+        .width = kWidth,
+        .height = kHeight,
+        .depth = 1U,
+    };
+    image_info.image_type = VK_IMAGE_TYPE_2D;
+    image_info.format = VK_FORMAT_R8G8B8A8_SRGB;
+    image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_info.mip_levels = kMipLevels;
+
+    const Vulkan::VulkanImage destination{memoryAllocator(), image_info};
+
+    const std::array<std::byte, kPixelDataSize> pixels{};
+
+    EXPECT_NO_THROW(Vulkan::uploadImageData(
+        memoryAllocator(), immediateSubmission(), destination, pixels));
+}
+
+TEST_F(VulkanIntegrationTest, RejectsIncompleteMipChainData) {
+    constexpr std::uint32_t kImageExtent = 4U;
+    constexpr std::uint32_t kMipLevels = 3U;
+    constexpr std::size_t kBytesPerPixel = 4U;
+
+    constexpr auto kExtent = static_cast<std::size_t>(kImageExtent);
+
+    constexpr std::size_t kBaseLevelSize = kExtent * kExtent * kBytesPerPixel;
+
+    Vulkan::VulkanImageCreateInfo image_info{};
+    image_info.extent = {
+        .width = kImageExtent,
+        .height = kImageExtent,
+        .depth = 1U,
+    };
+    image_info.image_type = VK_IMAGE_TYPE_2D;
+    image_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+    image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    image_info.mip_levels = kMipLevels;
+
+    const Vulkan::VulkanImage destination{memoryAllocator(), image_info};
+
+    const std::array<std::byte, kBaseLevelSize> pixels{};
+
+    ASSERT_DEATH(Vulkan::uploadImageData(memoryAllocator(),
+                                         immediateSubmission(), destination,
+                                         pixels),
+                 "pixel data size does not match image dimensions");
 }

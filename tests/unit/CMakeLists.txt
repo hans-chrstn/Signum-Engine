@@ -51,6 +51,7 @@ add_executable(
   renderer/vulkan/pipeline/vulkan_graphics_pipeline_variant_key_tests.cpp
   renderer/vulkan/synchronization/vulkan_queue_submission_state_tests.cpp
   renderer/vulkan/synchronization/vulkan_resource_retirement_queue_tests.cpp
+  renderer/vulkan/texture/vulkan_texture_format_tests.cpp
 )
 
 target_link_libraries(

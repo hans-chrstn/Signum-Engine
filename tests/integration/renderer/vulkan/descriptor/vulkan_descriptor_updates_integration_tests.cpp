@@ -1,7 +1,9 @@
 #include "../vulkan_integration_test_fixture.hpp"
+#include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_pool.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_image.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_image_view.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_sampler.hpp"
@@ -125,4 +127,103 @@ TEST_F(VulkanIntegrationTest, RejectsNullDestinationDescriptorSet) {
     ASSERT_DEATH(
         Vulkan::updateDescriptorSets(m_Device, writes),
         "Descriptor updates require valid destination descriptor-set handles");
+}
+
+TEST_F(VulkanIntegrationTest, UpdatesUniformAndStorageBufferDescriptors) {
+    constexpr VkDeviceSize kUniformSize = 64U;
+    constexpr VkDeviceSize kStorageSize = 128U;
+
+    const Vulkan::VulkanBufferCreateInfo uniform_create_info{
+        .size = kUniformSize,
+        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        .memory_usage = SNE::Engine::Renderer::GpuMemoryUsage::Upload,
+    };
+
+    const Vulkan::VulkanBufferCreateInfo storage_create_info{
+        .size = kStorageSize,
+        .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        .memory_usage = SNE::Engine::Renderer::GpuMemoryUsage::Device,
+    };
+
+    const Vulkan::VulkanBuffer uniform_buffer{memoryAllocator(),
+                                              uniform_create_info};
+    const Vulkan::VulkanBuffer storage_buffer{memoryAllocator(),
+                                              storage_create_info};
+
+    VkDescriptorSetLayoutBinding uniform_binding{};
+    uniform_binding.binding = 0U;
+    uniform_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uniform_binding.descriptorCount = 1U;
+    uniform_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutBinding storage_binding{};
+    storage_binding.binding = 1U;
+    storage_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    storage_binding.descriptorCount = 1U;
+    storage_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    const std::array<VkDescriptorSetLayoutBinding, 2> bindings{
+        uniform_binding,
+        storage_binding,
+    };
+
+    VkDescriptorSetLayoutCreateInfo layout_info{};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 2U;
+    layout_info.pBindings = bindings.data();
+
+    const Vulkan::VulkanDescriptorSetLayout layout{m_Device, layout_info};
+
+    const std::array<VkDescriptorPoolSize, 2> pool_sizes{
+        {
+            {.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1U},
+            {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 1U},
+        },
+    };
+
+    VkDescriptorPoolCreateInfo pool_info{};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.maxSets = 1U;
+    pool_info.poolSizeCount = 2U;
+    pool_info.pPoolSizes = pool_sizes.data();
+
+    Vulkan::VulkanDescriptorPool pool{m_Device, pool_info};
+
+    const std::array layouts{layout.nativeHandle()};
+    const auto sets = pool.allocateDescriptorSets(layouts);
+
+    ASSERT_EQ(sets.size(), 1U);
+    ASSERT_NE(sets[0], VK_NULL_HANDLE);
+
+    const VkDescriptorBufferInfo uniform_info{
+        .buffer = uniform_buffer.nativeHandle(),
+        .offset = 0U,
+        .range = kUniformSize,
+    };
+
+    const VkDescriptorBufferInfo storage_info{
+        .buffer = storage_buffer.nativeHandle(),
+        .offset = 0U,
+        .range = kStorageSize,
+    };
+
+    VkWriteDescriptorSet uniform_write{};
+    uniform_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    uniform_write.dstSet = sets[0];
+    uniform_write.dstBinding = 0U;
+    uniform_write.descriptorCount = 1U;
+    uniform_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uniform_write.pBufferInfo = &uniform_info;
+
+    VkWriteDescriptorSet storage_write{};
+    storage_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    storage_write.dstSet = sets[0];
+    storage_write.dstBinding = 1U;
+    storage_write.descriptorCount = 1U;
+    storage_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    storage_write.pBufferInfo = &storage_info;
+
+    const std::array writes{uniform_write, storage_write};
+
+    EXPECT_NO_THROW(Vulkan::updateDescriptorSets(m_Device, writes));
 }
