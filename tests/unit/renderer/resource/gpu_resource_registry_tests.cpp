@@ -5,19 +5,45 @@
 
 namespace Renderer = SNE::Engine::Renderer;
 
+namespace {
+    struct CountingDeleter {
+        int *destruction_count{};
+
+        auto operator()(const int *value) const noexcept -> void {
+            ++(*destruction_count);
+            delete value;
+        }
+    };
+
+    using TrackedResource = std::unique_ptr<int, CountingDeleter>;
+} // namespace
+
+TEST(GpuResourceRegistryTests, RejectsDefaultHandleOnEmptyRegistry) {
+    Renderer::GpuResourceRegistry<std::unique_ptr<int>> registry;
+
+    EXPECT_EQ(registry.find({}), nullptr);
+    EXPECT_FALSE(registry.remove({}).has_value());
+}
+
 TEST(GpuResourceRegistryTests, InsertsMoveOnlyResource) {
     Renderer::GpuResourceRegistry<std::unique_ptr<int>> registry;
 
-    const int unique_int = 42;
+    const int num = 42;
 
-    auto resource = std::make_unique<int>(unique_int);
+    auto resource = std::make_unique<int>(num);
 
-    const Renderer::GpuResourceHandle handle =
-        registry.insert(std::move(resource));
+    const auto handle = registry.insert(std::move(resource));
 
     EXPECT_EQ(resource, nullptr);
     EXPECT_EQ(handle.index, 0U);
     EXPECT_EQ(handle.generation, 1U);
+
+    auto *stored = registry.find(handle);
+
+    ASSERT_NE(stored, nullptr);
+    ASSERT_NE(*stored, nullptr);
+
+    EXPECT_EQ(**stored, 42);
 }
 
 TEST(GpuResourceRegistryTests, AssignsSequentialSlotIndices) {
@@ -92,7 +118,6 @@ TEST(GpuResourceRegistryTests, RemovesResourceAndTransfersOwnership) {
 
     EXPECT_EQ(**removed, 42);
     EXPECT_EQ(registry.find(handle), nullptr);
-
     EXPECT_FALSE(registry.remove(handle).has_value());
 }
 
@@ -123,6 +148,7 @@ TEST(GpuResourceRegistryTests, InvalidRemovalPreservesExistingResource) {
     }
 
     ASSERT_NE(*removed, nullptr);
+
     EXPECT_EQ(**removed, 42);
 }
 
@@ -205,4 +231,61 @@ TEST(GpuResourceRegistryTests, AppendsAfterFreeListIsExhausted) {
     EXPECT_NE(registry.find(second), nullptr);
     EXPECT_NE(registry.find(reused), nullptr);
     EXPECT_NE(registry.find(appended), nullptr);
+}
+
+TEST(GpuResourceRegistryTests, KeepsEarlierHandlesStaleAcrossRepeatedReuse) {
+    Renderer::GpuResourceRegistry<std::unique_ptr<int>> registry;
+
+    const auto first = registry.insert(std::make_unique<int>(10));
+
+    auto removed_first = registry.remove(first);
+
+    EXPECT_TRUE(removed_first.has_value());
+
+    const auto second = registry.insert(std::make_unique<int>(20));
+
+    auto removed_second = registry.remove(second);
+
+    EXPECT_TRUE(removed_second.has_value());
+
+    const auto third = registry.insert(std::make_unique<int>(30));
+
+    EXPECT_EQ(first.index, second.index);
+    EXPECT_EQ(second.index, third.index);
+
+    EXPECT_EQ(second.generation, first.generation + 1U);
+    EXPECT_EQ(third.generation, first.generation + 2U);
+
+    EXPECT_EQ(registry.find(first), nullptr);
+    EXPECT_EQ(registry.find(second), nullptr);
+    EXPECT_NE(registry.find(third), nullptr);
+
+    EXPECT_FALSE(registry.remove(first).has_value());
+    EXPECT_FALSE(registry.remove(second).has_value());
+}
+
+TEST(GpuResourceRegistryTests, RemovalPreservesResourceLifetime) {
+    int destruction_count = 0;
+
+    Renderer::GpuResourceRegistry<TrackedResource> registry;
+
+    const auto handle = registry.insert(
+        TrackedResource{new int{42}, CountingDeleter{&destruction_count}});
+
+    EXPECT_EQ(destruction_count, 0);
+
+    auto removed = registry.remove(handle);
+
+    if (!removed.has_value()) {
+        FAIL() << "Expected resource ownership to be transferred";
+        return;
+    }
+
+    EXPECT_EQ(destruction_count, 0);
+    EXPECT_NE(removed->get(), nullptr);
+    EXPECT_EQ(registry.find(handle), nullptr);
+
+    removed.reset();
+
+    EXPECT_EQ(destruction_count, 1);
 }
