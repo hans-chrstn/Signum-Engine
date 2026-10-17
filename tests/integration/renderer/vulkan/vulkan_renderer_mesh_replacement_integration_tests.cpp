@@ -238,6 +238,8 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
     }
 
     ASSERT_NO_THROW(renderer.replaceMesh(quad_mesh));
+    ASSERT_NO_THROW(renderer.replaceMesh(triangle_mesh));
+    ASSERT_NO_THROW(renderer.replaceMesh(quad_mesh));
 
     for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
         ASSERT_NO_THROW(renderer.renderFrame());

@@ -8,6 +8,7 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/resource/gpu_resource_registry.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
 #include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
@@ -387,19 +388,29 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<TextureBindingResources> m_TextureBindingResources;
 
         /**
-         * @brief Owns the currently active GPU mesh resources.
+         * @brief Owns the renderer's registered GPU mesh resources.
          *
-         * Groups the vertex buffer, index buffer, and index count into one
-         * optional resource ownership unit.
+         * Stores mesh buffers and index counts using generation-checked,
+         * registry-scoped handles.
          *
-         * The optional remains empty when no mesh has been uploaded.
+         * Registered meshes remain owned until explicitly removed or until
+         * the registry is destroyed.
          *
-         * Active mesh resources survive swapchain recreation.
-         *
-         * Replaced mesh resources must remain alive until all GPU submissions
-         * referencing them have completed.
+         * GPU submissions must complete before referenced resources are
+         * destroyed.
          */
-        std::optional<MeshBufferResources> m_MeshBuffers;
+        GpuResourceRegistry<MeshBufferResources> m_MeshRegistry;
+
+        /**
+         * @brief Identifies the mesh currently selected for rendering.
+         *
+         * References a resource owned by m_MeshRegistry without taking
+         * ownership.
+         *
+         * Empty when no active mesh has been selected.
+         * The handle must resolve to a valid resource before drawing.
+         */
+        std::optional<GpuResourceHandle> m_ActiveMeshHandle;
 
         /**
          * @brief Owns the model transformations for the uploaded mesh.
@@ -604,35 +615,41 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto recreateSwapchainResources() -> bool;
 
         /**
-         * @brief Creates and uploads GPU buffers for the supplied mesh.
+         * @brief Creates, uploads, and registers GPU mesh buffers.
          *
-         * Consumes borrowed CPU-side vertex and index data to create
-         * device-local Vulkan buffers through the renderer's memory allocator
-         * and immediate submission infrastructure.
+         * Validates the supplied mesh data and uploads vertex and index buffers
+         * using the renderer's memory allocator and immediate submission
+         * resources.
          *
-         * The renderer retains ownership of the resulting GPU buffers. The
-         * supplied mesh data is not retained, and its underlying CPU storage
-         * must remain valid until the upload operation completes.
+         * On initial upload, registers the mesh and selects its logical handle.
+         * On replacement, registers the new mesh before retiring the previous
+         * GPU resources. Retired resources remain alive until the graphics
+         * submissions referencing them have completed.
          *
-         * Initially intended for renderer initialization before normal frame
-         * submission begins. Runtime mesh replacement and synchronization with
-         * in-flight rendering work are not supported by this contract.
+         * The supplied CPU storage is borrowed only for the duration of the
+         * upload operation.
          *
-         * @param mesh Non-owning description of vertex data, vertex stride, and
-         * index data to upload.
+         * @param mesh Non-owning vertex data, vertex stride, and index data.
          *
          * @pre Vertex data and indices must be nonempty.
+         * @pre The index count must be representable by std::uint32_t.
          * @pre Vertex stride must be nonzero and divide the vertex byte count
          * evenly.
          * @pre Every index must reference an existing vertex.
-         * @pre The renderer's memory allocator and immediate submission
-         * resources must be initialized.
+         * @pre The memory allocator and immediate submission resources must
+         * be initialized.
+         * @pre Upload and replacement operations must be serialized with
+         * frame recording and graphics queue submission.
          *
-         * @post On successful completion, the renderer owns device-local vertex
-         * and index buffers containing the supplied mesh data.
+         * @post On success, the active handle identifies the newly registered
+         * mesh containing the uploaded GPU buffers.
+         * @post If replacement preparation or retirement fails, the previous
+         * mesh remains registered and active.
          *
-         * @throws Core::Error::EngineError if Vulkan buffer creation, memory
-         * allocation, or data upload fails.
+         * @throws Core::Error::EngineError if Vulkan resource creation,
+         * allocation, or upload fails.
+         * @throws std::bad_alloc if registry insertion or retirement
+         * preparation fails due to memory allocation.
          *
          * @note Invalid mesh descriptions trigger fatal precondition
          * assertions.

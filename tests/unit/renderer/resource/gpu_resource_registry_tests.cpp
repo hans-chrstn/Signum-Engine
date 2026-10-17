@@ -1,6 +1,7 @@
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
 #include <gtest/gtest.h>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace Renderer = SNE::Engine::Renderer;
@@ -446,4 +447,51 @@ TEST(GpuResourceRegistryTests, MovedFromRegistryRejectsInsertion) {
             static_cast<void>(moved_from->insert(std::make_unique<int>(42)));
         },
         "GPU resource insertion requires a valid registry identity");
+}
+
+TEST(GpuResourceRegistryTests, ConstFindReturnsConstResourcePointer) {
+    using Registry = Renderer::GpuResourceRegistry<std::unique_ptr<int>>;
+
+    Registry registry;
+    const auto handle = registry.insert(std::make_unique<int>(42));
+
+    const Registry &const_registry = registry;
+
+    static_assert(std::is_same_v<decltype(const_registry.find(handle)),
+                                 const std::unique_ptr<int> *>);
+
+    const auto *resource = const_registry.find(handle);
+
+    ASSERT_NE(resource, nullptr);
+    ASSERT_NE(*resource, nullptr);
+
+    EXPECT_EQ(**resource, 42);
+}
+
+TEST(GpuResourceRegistryTests, ConstFindRejectsInvalidAndStaleHandles) {
+    using Registry = Renderer::GpuResourceRegistry<std::unique_ptr<int>>;
+
+    Registry registry;
+    Registry other_registry;
+
+    const auto valid = registry.insert(std::make_unique<int>(42));
+    const auto foreign = other_registry.insert(std::make_unique<int>(20));
+
+    const Renderer::GpuResourceHandle invalid_index{
+        .index = valid.index + 1U,
+        .generation = valid.generation,
+        .registry_id = valid.registry_id,
+    };
+
+    const Registry &const_registry = registry;
+
+    EXPECT_EQ(const_registry.find({}), nullptr);
+    EXPECT_EQ(const_registry.find(foreign), nullptr);
+    EXPECT_EQ(const_registry.find(invalid_index), nullptr);
+    EXPECT_NE(const_registry.find(valid), nullptr);
+
+    auto removed = registry.remove(valid);
+
+    EXPECT_TRUE(removed.has_value());
+    EXPECT_EQ(const_registry.find(valid), nullptr);
 }

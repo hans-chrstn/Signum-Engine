@@ -250,6 +250,45 @@ namespace SNE::Engine::Renderer {
         }
 
         /**
+         * @brief Finds a resource through a const registry.
+         *
+         * Validates the registry identity, slot index, generation, and
+         * occupancy without allowing modification of the stored Resource
+         * object through the returned pointer.
+         *
+         * @param handle Resource identity to resolve.
+         * @return Non-owning const pointer to the resource, or nullptr if
+         * the handle is invalid, stale, belongs to another registry, or
+         * references an empty slot.
+         *
+         * @note The returned pointer must not outlive the resource.
+         * Inserting additional resources may invalidate the pointer.
+         */
+        [[nodiscard]] auto find(GpuResourceHandle handle) const noexcept
+            -> const Resource * {
+            if (m_RegistryId == 0U || handle.registry_id != m_RegistryId) {
+                return nullptr;
+            }
+
+            if (std::cmp_greater_equal(handle.index, m_Slots.size())) {
+                return nullptr;
+            }
+
+            const Slot &slot = m_Slots[handle.index];
+
+            if (handle.generation == 0U ||
+                handle.generation != slot.generation) {
+                return nullptr;
+            }
+
+            if (!slot.resource.has_value()) {
+                return nullptr;
+            }
+
+            return std::addressof(*slot.resource);
+        }
+
+        /**
          * @brief Removes a resource and transfers ownership to the caller.
          *
          * Validates the supplied handle and removes its associated resource.

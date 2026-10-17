@@ -12,6 +12,7 @@
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
@@ -280,17 +281,43 @@ namespace SNE::Engine::Renderer::Vulkan {
             .m_IndexCount = mesh_indices_size.value(),
         };
 
-        if (m_MeshBuffers.has_value()) {
-            m_GraphicsResourceRetirementQueue.retire(
-                m_GraphicsSubmissionState.lastSubmitted(),
-                m_MeshBuffers.value());
+        if (!m_ActiveMeshHandle.has_value()) {
+            m_ActiveMeshHandle =
+                m_MeshRegistry.insert(std::move(new_mesh_buffers));
+
+            return;
         }
 
-        m_MeshBuffers.emplace(std::move(new_mesh_buffers));
+        const GpuResourceHandle previous_handle = m_ActiveMeshHandle.value();
+
+        const GpuResourceHandle replacement_handle =
+            m_MeshRegistry.insert(std::move(new_mesh_buffers));
+
+        MeshBufferResources *previous_mesh =
+            m_MeshRegistry.find(previous_handle);
+
+        if (previous_mesh == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer previous mesh handle does not resolve to a "
+                "registered mesh");
+        }
+
+        try {
+            m_GraphicsResourceRetirementQueue.retire(
+                m_GraphicsSubmissionState.lastSubmitted(), *previous_mesh);
+        } catch (...) {
+            static_cast<void>(m_MeshRegistry.remove(replacement_handle));
+            throw;
+        }
+        static_cast<void>(m_MeshRegistry.remove(previous_handle));
+
+        m_ActiveMeshHandle.emplace(replacement_handle);
     }
 
     auto VulkanRenderer::replaceMesh(const MeshUploadData &mesh) -> void {
-        if (!m_MeshBuffers.has_value()) {
+        if (!m_ActiveMeshHandle.has_value()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
@@ -654,7 +681,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
                 const VulkanGraphicsPipeline *new_graphics_pipeline{nullptr};
 
-                if (m_MeshBuffers.has_value() &&
+                if (m_ActiveMeshHandle.has_value() &&
                     (!m_SwapchainResources.has_value() ||
                      new_swapchain.surfaceFormat().format !=
                          m_SwapchainResources->m_VulkanSwapchain.surfaceFormat()
@@ -779,15 +806,26 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanRenderer requires a graphics pipeline when drawing");
         }
 
-        if (!m_MeshBuffers.has_value()) {
+        if (!m_ActiveMeshHandle.has_value()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires an initialized mesh before recording "
-                "draw commands");
+                "VulkanRenderer requires an active mesh handle before "
+                "recording draw commands");
         }
 
-        const MeshBufferResources &mesh = m_MeshBuffers.value();
+        const MeshBufferResources *active_mesh =
+            m_MeshRegistry.find(m_ActiveMeshHandle.value());
+
+        if (active_mesh == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active mesh handle does not resolve to a "
+                "registered mesh");
+        }
+
+        const MeshBufferResources &mesh = *active_mesh;
 
         const VulkanGraphicsPipeline &graphics_pipeline =
             *swapchain_resources.m_VulkanGraphicsPipeline;
@@ -998,7 +1036,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdBeginRendering(command_buffer, &render_info);
 
-        if (m_MeshBuffers.has_value()) {
+        if (m_ActiveMeshHandle.has_value()) {
             recordMeshDraws(command_buffer, swapchain_resources);
         }
 
