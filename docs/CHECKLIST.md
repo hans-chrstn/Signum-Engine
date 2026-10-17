@@ -975,7 +975,7 @@
 - [ ] Define shader-stage, entry-point, compilation error, and diagnostic ownership
 - [x] Define shader-interface metadata for bindings, stages, push constants, and pipeline compatibility
 - [x] Define a minimal shader reflection/validation boundary without depending on gameplay C++ reflection
-- [ ] Define pipeline/layout compatibility and variant-key responsibilities
+- [x] Define pipeline/layout compatibility and variant-key responsibilities
 - [x] Define texture/resource descriptions that preserve format, extent, sample count, mip levels, array layers, and intended usage
 - [ ] Define resource initialization and readiness separately from eventual logical resource handles
 - [x] Define GPU-completion-aware resource retention for submissions still in flight
@@ -996,15 +996,15 @@
 - [x] Integrate shader validation into Vulkan shader-module creation
 - [x] Integrate entry-point validation into Vulkan graphics-pipeline creation
 - [ ] Add uniform/storage buffers
-- [ ] Add textures
+- [x] Add textures
 - [x] Add descriptor/binding infrastructure
-- [ ] Add reusable shader/pipeline variant infrastructure
+- [x] Add reusable shader/pipeline variant infrastructure
 - [ ] Add compute-pipeline support when a real workload requires it
 - [ ] Add material parameter/binding foundation
 - [x] Add depth buffering
 - [x] Render first simple 3D reference object
 - [x] Render multiple objects
-- [ ] Scale the reference rendering workload from one 3D object to multiple independently transformed objects
+- [x] Scale the reference rendering workload from one 3D object to multiple independently transformed objects
 - [ ] Separate scene data from GPU resources
 - [x] Define rendering-facing data contracts
 - [x] Define GPU resource ownership
@@ -1014,7 +1014,7 @@
 
 - [ ] Connect the first shader compilation or validated SPIR-V loading path to explicit compiler diagnostics
 - [x] Validate descriptor and push-constant declarations against the shader/pipeline interface
-- [ ] Represent texture format, color space, mip ranges, and resource usage explicitly in Vulkan resource setup
+- [x] Represent texture format, color space, mip ranges, and resource usage explicitly in Vulkan resource setup
 - [x] Preserve submitted GPU resource lifetimes until the relevant completion signal is observed
 - [x] Keep conventional descriptors and draw calls as the working baseline
 
@@ -1035,12 +1035,12 @@
 - [x] Verify destruction ordering
 - [ ] Use a simple sphere, star, or planet-like mesh as reference content without adding celestial concepts to renderer APIs
 - [ ] Increase reference object counts to expose resource, transform, synchronization, and rendering bugs
-- [ ] Run Vulkan validation
-- [ ] Run sanitizers
+- [x] Run Vulkan validation
+- [x] Run sanitizers
 
 - [x] Reject incompatible shader stages, bindings, and pipeline layouts with useful diagnostics
 - [ ] Test missing, invalid, and incompatible shader artifacts without resource leaks
-- [ ] Test shader/pipeline variant identity and compatible reuse
+- [x] Test shader/pipeline variant identity and compatible reuse
 - [ ] Test texture mip-level, view-range, format, and sRGB/linear interpretation cases
 - [ ] Test resource replacement and shutdown while previously submitted GPU work is still in flight
 - [ ] Verify missing optional binding capabilities do not block the conventional rendering path
