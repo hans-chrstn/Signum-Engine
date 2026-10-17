@@ -493,7 +493,7 @@
 - [x] Respect Vulkan resource and allocation alignment requirements
 - [x] Add memory-budget queries when supported
 - [x] Add basic allocation statistics
-- [ ] Add deferred resource retirement when frame lifetime requires it
+- [x] Add deferred resource retirement when frame lifetime requires it
 
 ### Test
 
@@ -503,7 +503,7 @@
 - [x] Test image allocation lifecycle
 - [x] Test upload correctness
 - [ ] Test partial allocation failure
-- [ ] Test deferred retirement
+- [x] Test deferred retirement
 - [x] Run Vulkan validation
 - [x] Run sanitizers
 
@@ -512,7 +512,7 @@
 - [x] Keep VMA behind engine-owned GPU allocation/resource abstractions
 - [x] Do not expose VMA types to normal renderer or game-facing APIs
 - [x] Keep the allocation backend replaceable without redesigning GPU resource identity or callers
-- [ ] Separate GPU resource identity from memory allocation
+- [x] Separate GPU resource identity from memory allocation
 - [x] Keep allocation backend-specific
 - [x] Keep allocation policy replaceable without changing resource identity or normal renderer callers
 - [ ] Keep future streaming requirements possible
@@ -1454,35 +1454,35 @@
 
 ### Design
 
-- [ ] Define runtime resource identity
-- [ ] Define invalid handle behavior
-- [ ] Define stale handle behavior
-- [ ] Define owning versus non-owning access
+- [x] Define runtime resource identity
+- [x] Define invalid handle behavior
+- [x] Define stale handle behavior
+- [x] Define owning versus non-owning access
 
 - [ ] Distinguish resource identity, creation readiness, GPU residency, and pending destruction in resource contracts
 
 ### Implement
 
 - [ ] Add typed handle mechanism when needed
-- [ ] Add stale-handle protection when needed
+- [x] Add stale-handle protection when needed
 
 ### Test
 
-- [ ] Test invalid handles
-- [ ] Test destroyed resources
-- [ ] Test reused IDs
-- [ ] Test stale generations if used
+- [x] Test invalid handles
+- [x] Test destroyed resources
+- [x] Test reused IDs
+- [x] Test stale generations if used
 - [ ] Repeatedly create, destroy, and reuse reference-workload resources to exercise invalid and stale-handle behavior
 
 - [ ] Test handle invalidation while underlying GPU work or delayed resource release remains pending
 
 ### Architecture
 
-- [ ] Keep logical identity independent from memory address and backend-native handle values
-- [ ] Keep handle representation replaceable without changing resource ownership semantics
-- [ ] Avoid requiring globally persistent identity for temporary or representation-local resources that do not need it
+- [x] Keep logical identity independent from memory address and backend-native handle values
+- [x] Keep handle representation replaceable without changing resource ownership semantics
+- [x] Avoid requiring globally persistent identity for temporary or representation-local resources that do not need it
 
-- [ ] Do not encode descriptor slot, GPU virtual address, or allocation location as permanent logical resource identity
+- [x] Do not encode descriptor slot, GPU virtual address, or allocation location as permanent logical resource identity
 
 ---
 
