@@ -90,11 +90,14 @@ namespace SNE::Engine::Renderer::Vulkan {
             VulkanSampler m_Sampler;
         };
 
+        static_assert(std::is_nothrow_move_constructible_v<TextureResources>);
+
         /**
-         * @brief Owns a sampled texture and its descriptor binding resources.
+         * @brief Owns a sampled texture and its descriptor binding
+         * resources.
          *
-         * Groups the texture image, image view, sampler, and descriptor pool
-         * required to bind the texture during rendering.
+         * Groups the texture image, image view, sampler, and descriptor
+         * pool required to bind the texture during rendering.
          *
          * The descriptor set is a non-owning handle allocated from the
          * descriptor pool. Destroying the pool implicitly frees the set.
@@ -108,9 +111,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         struct TextureBindingResources {
             /** @brief Owns the texture image, image view, and sampler. */
             TextureResources m_Resources;
+
             /** @brief Owns the descriptor pool and its allocated descriptor
              * sets. */
             VulkanDescriptorPool m_DescriptorPool;
+
             /**
              * @brief Non-owning descriptor-set handle allocated from
              * m_DescriptorPool.
@@ -118,7 +123,20 @@ namespace SNE::Engine::Renderer::Vulkan {
              * Remains valid while the descriptor pool exists and is not reset.
              */
             VkDescriptorSet m_DescriptorSet{VK_NULL_HANDLE};
+
+            /**
+             * @brief Identifies the registered texture referenced by this
+             * binding.
+             *
+             * References a texture owned by m_TextureRegistry without taking
+             * ownership of its GPU resources.
+             *
+             * The handle must resolve to a registered texture for the binding
+             * to remain valid.
+             */
+            GpuResourceHandle m_TextureHandle{};
         };
+
         static_assert(
             std::is_nothrow_move_constructible_v<TextureBindingResources>);
 
@@ -371,6 +389,23 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanGraphicsPipelineCache m_GraphicsPipelineCache;
 
         /**
+         * @brief Owns the renderer's registered GPU texture resources.
+         *
+         * Stores texture images, image views, and samplers using
+         * generation-checked, registry-scoped handles.
+         *
+         * Descriptor bindings may reference registered textures without
+         * taking ownership of their GPU resources.
+         *
+         * Registered textures must remain alive while descriptor bindings
+         * or outstanding GPU submissions reference them.
+         *
+         * Resources still referenced by GPU submissions must be retired
+         * before their registry ownership is released.
+         */
+        GpuResourceRegistry<TextureResources> m_TextureRegistry;
+
+        /**
          * @brief Owns the renderer's active sampled texture and descriptor
          * binding.
          *
@@ -386,6 +421,17 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Empty when no texture has been initialized.
          */
         std::optional<TextureBindingResources> m_TextureBindingResources;
+
+        /**
+         * @brief Identifies the texture currently selected for rendering.
+         *
+         * References a resource owned by m_TextureRegistry without taking
+         * ownership.
+         *
+         * Empty when no active texture has been selected.
+         * The handle must resolve to a valid registered texture before use.
+         */
+        std::optional<GpuResourceHandle> m_ActiveTextureHandle;
 
         /**
          * @brief Owns the renderer's registered GPU mesh resources.
@@ -769,7 +815,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> TextureResources;
 
         [[nodiscard]] auto
-        createTextureBindingResources(const TextureUploadData &texture,
+        createTextureBindingResources(TextureResources &&texture,
                                       const VulkanDescriptorSetLayout &layout)
             -> TextureBindingResources;
 

@@ -156,11 +156,15 @@ namespace SNE::Engine::Renderer::Vulkan {
             descriptor_set_layout_create_info.pBindings =
                 &descriptor_set_layout_binding;
 
-            m_TextureDescriptorSetLayout.emplace(
-                m_Device.nativeHandle(), descriptor_set_layout_create_info);
+            const VulkanDescriptorSetLayout &descriptor_layout =
+                m_TextureDescriptorSetLayout.emplace(
+                    m_Device.nativeHandle(), descriptor_set_layout_create_info);
+
+            TextureResources texture_resources =
+                uploadTexture(initial_texture.value());
 
             m_TextureBindingResources.emplace(createTextureBindingResources(
-                initial_texture.value(), m_TextureDescriptorSetLayout.value()));
+                std::move(texture_resources), descriptor_layout));
         }
 
         if (initial_graphics_shaders.has_value()) {
@@ -492,10 +496,8 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::createTextureBindingResources(
-        const TextureUploadData &texture,
+        TextureResources &&texture_resources,
         const VulkanDescriptorSetLayout &layout) -> TextureBindingResources {
-        TextureResources texture_resources = uploadTexture(texture);
-
         VkDescriptorPoolSize descriptor_pool_size{};
         descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptor_pool_size.descriptorCount = 1U;
@@ -566,12 +568,17 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "descriptor-set layout");
         }
 
+        const VulkanDescriptorSetLayout &descriptor_layout =
+            m_TextureDescriptorSetLayout.value();
+
         TextureBindingResources &active_texture_resources =
             m_TextureBindingResources.value();
 
+        TextureResources new_texture_resources = uploadTexture(texture);
+
         TextureBindingResources texture_resources =
-            createTextureBindingResources(texture,
-                                          m_TextureDescriptorSetLayout.value());
+            createTextureBindingResources(std::move(new_texture_resources),
+                                          descriptor_layout);
 
         m_GraphicsResourceRetirementQueue.retire(
             m_GraphicsSubmissionState.lastSubmitted(),

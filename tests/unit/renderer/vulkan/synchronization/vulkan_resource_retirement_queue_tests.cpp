@@ -1,5 +1,6 @@
 #include "engine/renderer/vulkan/synchronization/vulkan_queue_submission_state.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_resource_retirement_queue.hpp"
+#include <array>
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <memory>
@@ -15,6 +16,18 @@ namespace {
         auto operator()(const int *value) const noexcept -> void {
             ++(*destruction_count);
             delete value;
+        }
+    };
+
+    struct OrderRecordingDeleter {
+        std::array<int, 2> *destruction_order{};
+        std::size_t *next_index{};
+        int resource_id{};
+
+        template <typename T>
+        auto operator()(T *resource) const noexcept -> void {
+            (*destruction_order)[(*next_index)++] = resource_id;
+            delete resource;
         }
     };
 
@@ -221,4 +234,113 @@ TEST(VulkanResourceRetirementQueueTests,
 
     EXPECT_EQ(old_destructions, 1);
     EXPECT_EQ(replacement_destructions, 1);
+}
+
+TEST(VulkanResourceRetirementQueueTests, RetiresTwoResourcesWithOneSubmission) {
+    int first_destructions{};
+    int second_destructions{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto first = makeTrackedResource(first_destructions);
+    auto second = makeTrackedResource(second_destructions);
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retire(submission_id, first, second);
+
+    EXPECT_EQ(first.get(), nullptr);
+    EXPECT_EQ(second.get(), nullptr);
+
+    EXPECT_EQ(first_destructions, 0);
+    EXPECT_EQ(second_destructions, 0);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(first_destructions, 1);
+    EXPECT_EQ(second_destructions, 1);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetainsPairedResourcesUntilSubmissionCompletes) {
+    int first_destructions{};
+    int second_destructions{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto first = makeTrackedResource(first_destructions);
+    auto second = makeTrackedResource(second_destructions);
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retire(submission_id, first, second);
+
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(first_destructions, 0);
+    EXPECT_EQ(second_destructions, 0);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(first_destructions, 1);
+    EXPECT_EQ(second_destructions, 1);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     DestroysPairedResourcesInReverseOrder) {
+    std::array<int, 2> destruction_order{};
+    std::size_t next_index{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    std::unique_ptr<int, OrderRecordingDeleter> first{
+        new int{1},
+        OrderRecordingDeleter{
+            .destruction_order = &destruction_order,
+            .next_index = &next_index,
+            .resource_id = 1,
+        },
+    };
+
+    std::unique_ptr<long, OrderRecordingDeleter> second{
+        new long{2L},
+        OrderRecordingDeleter{
+            .destruction_order = &destruction_order,
+            .next_index = &next_index,
+            .resource_id = 2,
+        },
+    };
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retire(submission_id, first, second);
+
+    EXPECT_EQ(first.get(), nullptr);
+    EXPECT_EQ(second.get(), nullptr);
+    EXPECT_EQ(next_index, 0U);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    ASSERT_EQ(next_index, 2U);
+    EXPECT_EQ(destruction_order[0], 2);
+    EXPECT_EQ(destruction_order[1], 1);
+}
+
+TEST(VulkanResourceRetirementQueueTests, RejectsRetiringTheSameResourceTwice) {
+    ASSERT_DEATH(
+        {
+            int destruction_count{};
+
+            Vulkan::VulkanResourceRetirementQueue queue;
+            auto resource = makeTrackedResource(destruction_count);
+
+            queue.retire(0U, resource, resource);
+        },
+        "requires distinct resource objects");
 }

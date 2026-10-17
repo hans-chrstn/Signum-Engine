@@ -1,10 +1,14 @@
 #pragma once
 
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -177,6 +181,102 @@ namespace SNE::Engine::Renderer::Vulkan {
             });
 
             storage->emplace(std::move(resource));
+        }
+
+        /**
+         * @brief Retains two resources until their GPU submission completes.
+         *
+         * Transfers ownership of two move-only resources into a single
+         * retirement record associated with the last submission that references
+         * them.
+         *
+         * The resources remain alive until completion is confirmed. The second
+         * resource is destroyed before the first, allowing it to depend on the
+         * first resource during its lifetime.
+         *
+         * All potentially throwing retirement preparation completes before
+         * either resource is moved.
+         *
+         * @tparam FirstResource Type of the resource destroyed second.
+         * @tparam SecondResource Type of the resource destroyed first.
+         *
+         * @param submission_id Identifier of the final submission referencing
+         * either resource.
+         * @param first_resource First resource whose ownership is transferred.
+         * @param second_resource Second resource whose ownership is
+         * transferred.
+         *
+         * @pre Both arguments must reference distinct resource objects.
+         * @pre Both resource types must be nothrow move-constructible and
+         * nothrow destructible.
+         * @pre submission_id must belong to the associated submission stream.
+         * @pre submission_id must cover all outstanding GPU uses of both
+         * resources.
+         *
+         * @post On success, ownership of both resources is transferred to the
+         * retirement queue.
+         * @post If retirement preparation fails, both resources remain
+         * unchanged.
+         *
+         * @throws std::bad_alloc if retirement preparation allocation fails.
+         *
+         * @note This operation does not wait for GPU completion.
+         * @note Both resources are released together after the associated
+         * submission completes.
+         */
+        template <typename FirstResource, typename SecondResource>
+        auto retire(std::uint64_t submission_id, FirstResource &first_resource,
+                    SecondResource &second_resource) -> void {
+            static_assert(
+                std::is_nothrow_move_constructible_v<FirstResource>,
+                "Retired resources must be nothrow move-constructible");
+
+            static_assert(std::is_nothrow_destructible_v<FirstResource>,
+                          "Retired resources must be nothrow destructible");
+
+            static_assert(
+                std::is_nothrow_move_constructible_v<SecondResource>,
+                "Retired resources must be nothrow move-constructible");
+
+            static_assert(std::is_nothrow_destructible_v<SecondResource>,
+                          "Retired resources must be nothrow destructible");
+
+            const void *first_address =
+                static_cast<const void *>(std::addressof(first_resource));
+            const void *second_address =
+                static_cast<const void *>(std::addressof(second_resource));
+
+            if (first_address == second_address) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan resource retirement requires distinct resource "
+                    "objects");
+            }
+
+            using Resources = std::pair<FirstResource, SecondResource>;
+
+            auto holder = std::make_unique<std::optional<Resources>>();
+
+            auto *storage = holder.get();
+
+            std::move_only_function<void() noexcept> release =
+                [owner = std::move(holder)] noexcept -> void {
+                (*owner).reset();
+            };
+
+            static_assert(
+                std::is_nothrow_constructible_v<Resources, FirstResource &&,
+                                                SecondResource &&>,
+                "Resource pair must be nothrow-constructible");
+
+            m_PendingResources.emplace_back(RetiredResource{
+                .submission_id = submission_id,
+                .release = std::move(release),
+            });
+
+            storage->emplace(std::move(first_resource),
+                             std::move(second_resource));
         }
 
         /**
