@@ -1,4 +1,5 @@
 #include "engine/renderer/material/material_resource_binding_compatibility.hpp"
+#include "engine/renderer/material/material_resource_binding_set.hpp"
 #include <array>
 #include <gtest/gtest.h>
 
@@ -193,4 +194,34 @@ TEST(MaterialResourceBindingCompatibilityTests,
 
     EXPECT_TRUE(
         Renderer::areMaterialResourceBindingsCompatible(provided, required));
+}
+
+TEST(MaterialResourceBindingCompatibilityTests,
+     AcceptsMaterialResourceBindingSet) {
+    const Renderer::MaterialResourceBindingSet provided{
+        .bindings =
+            {
+                Renderer::MaterialResourceBinding{
+                    .set = 0U,
+                    .binding = 1U,
+                    .array_element = 0U,
+                },
+                Renderer::MaterialResourceBinding{
+                    .set = 0U,
+                    .binding = 1U,
+                    .array_element = 1U,
+                },
+            },
+    };
+
+    const std::array required{
+        Shader::ShaderDescriptorBinding{
+            .set = 0U,
+            .binding = 1U,
+            .count = 2U,
+        },
+    };
+
+    EXPECT_TRUE(Renderer::areMaterialResourceBindingsCompatible(
+        provided.bindings, required));
 }

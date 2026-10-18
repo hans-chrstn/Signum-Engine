@@ -8,6 +8,7 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
+#include "engine/renderer/material/material_resource_binding_set.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
@@ -420,15 +421,21 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<TextureBindingResources> m_TextureBindingResources;
 
         /**
-         * @brief Identifies the texture currently selected for rendering.
+         * @brief Stores the material resource bindings used for rendering.
          *
-         * References a resource owned by m_TextureRegistry without taking
-         * ownership.
+         * Owns backend-independent binding descriptions containing descriptor
+         * locations, resource types, and non-owning GPU resource handles.
          *
-         * Empty when no active texture has been selected.
-         * The handle must resolve to a valid registered texture before use.
+         * Referenced GPU resources remain owned by their resource registries.
+         * Vulkan descriptor allocations are owned separately.
+         *
+         * An empty collection indicates that no material resource bindings
+         * have been configured.
+         *
+         * The current rendering path supports one combined image sampler
+         * at descriptor set zero, binding zero.
          */
-        std::optional<GpuResourceHandle> m_ActiveTextureHandle;
+        MaterialResourceBindingSet m_MaterialBindings;
 
         /**
          * @brief Owns the renderer's registered GPU mesh resources.

@@ -178,7 +178,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_TextureBindingResources.emplace(createTextureBindingResources(
                 material_binding, descriptor_layout));
 
-            m_ActiveTextureHandle.emplace(texture_handle);
+            m_MaterialBindings.bindings.push_back(material_binding);
         }
 
         if (initial_graphics_shaders.has_value()) {
@@ -613,16 +613,16 @@ namespace SNE::Engine::Renderer::Vulkan {
         TextureBindingResources &active_texture_resources =
             m_TextureBindingResources.value();
 
-        if (!m_ActiveTextureHandle.has_value()) {
+        if (m_MaterialBindings.bindings.size() != 1U) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires an active texture handle when "
-                "replacing a texture");
+                "VulkanRenderer requires exactly one active material texture "
+                "binding when replacing a texture");
         }
 
         const GpuResourceHandle old_texture_handle =
-            m_ActiveTextureHandle.value();
+            m_MaterialBindings.bindings.front().resource_handle;
 
         if (old_texture_handle != active_texture_resources.m_TextureHandle) {
             Core::Assertion::failAssertion(
@@ -682,7 +682,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_TextureBindingResources.emplace(
             std::move(new_texture_binding.value()));
 
-        m_ActiveTextureHandle.emplace(new_texture_handle);
+        m_MaterialBindings.bindings.front() = resource_binding;
     }
 
     auto VulkanRenderer::isFramebufferDrawable() const -> bool {
@@ -939,16 +939,18 @@ namespace SNE::Engine::Renderer::Vulkan {
                           graphics_pipeline.nativeHandle());
 
         if (m_TextureBindingResources.has_value()) {
-            if (!m_ActiveTextureHandle.has_value()) {
+            if (m_MaterialBindings.bindings.size() != 1U) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer requires an active texture handle when "
-                    "binding a texture");
+                    "VulkanRenderer requires exactly one active material "
+                    "texture binding when drawing");
             }
 
-            if (m_ActiveTextureHandle.value() !=
-                m_TextureBindingResources->m_TextureHandle) {
+            const GpuResourceHandle &resource_handle =
+                m_MaterialBindings.bindings.front().resource_handle;
+
+            if (resource_handle != m_TextureBindingResources->m_TextureHandle) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
@@ -957,7 +959,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             }
 
             const TextureResources *active_texture =
-                m_TextureRegistry.find(m_ActiveTextureHandle.value());
+                m_TextureRegistry.find(resource_handle);
 
             if (active_texture == nullptr) {
                 Core::Assertion::failAssertion(
