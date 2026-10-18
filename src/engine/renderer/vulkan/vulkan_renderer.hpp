@@ -7,6 +7,7 @@
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/material/material_description.hpp"
+#include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
@@ -817,34 +818,44 @@ namespace SNE::Engine::Renderer::Vulkan {
         /**
          * @brief Creates a descriptor binding for a registered texture.
          *
-         * Resolves the texture handle through m_TextureRegistry, allocates
+         * Validates the material resource binding against the supported
+         * sampled-texture descriptor location and resource type.
+         *
+         * Resolves the resource handle through m_TextureRegistry, allocates
          * a descriptor pool and descriptor set, and writes the registered
          * texture's image view and sampler into the descriptor set.
          *
          * The returned binding owns its descriptor pool but does not take
          * ownership of the registered texture.
          *
-         * @param texture_handle Handle identifying the registered texture.
+         * @param resource_binding Material resource binding identifying the
+         * descriptor location, resource type, and registered texture.
          * @param layout Descriptor-set layout used to allocate the binding.
          *
-         * @pre texture_handle must resolve to a registered texture.
-         * @pre layout must reference a valid descriptor-set layout.
+         * @pre resource_binding must specify descriptor set zero, binding zero,
+         * array element zero, and
+         * Shader::ShaderResourceType::CombinedImageSampler.
+         * @pre resource_binding.resource_handle must resolve to a registered
+         * texture in m_TextureRegistry.
+         * @pre layout must reference a valid, compatible descriptor-set layout.
          *
          * @return Owned descriptor binding referencing the registered texture.
          *
-         * @post The texture remains owned by m_TextureRegistry.
+         * @post The registered texture remains owned by m_TextureRegistry.
          *
          * @throws Core::Error::EngineError if descriptor pool creation
          * or descriptor-set allocation fails.
          * @throws std::bad_alloc if host allocation fails.
          *
+         * @note Invalid material resource bindings trigger precondition
+         * assertions.
+         *
          * @note The registered texture must outlive the descriptor binding
          * and all GPU submissions referencing it.
          */
-        [[nodiscard]] auto
-        createTextureBindingResources(GpuResourceHandle texture_handle,
-                                      const VulkanDescriptorSetLayout &layout)
-            -> TextureBindingResources;
+        [[nodiscard]] auto createTextureBindingResources(
+            const MaterialResourceBinding &resource_binding,
+            const VulkanDescriptorSetLayout &layout) -> TextureBindingResources;
 
       public:
         /**

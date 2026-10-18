@@ -13,6 +13,7 @@
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
+#include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
@@ -166,8 +167,16 @@ namespace SNE::Engine::Renderer::Vulkan {
             GpuResourceHandle texture_handle =
                 m_TextureRegistry.insert(std::move(texture_resources));
 
+            const MaterialResourceBinding material_binding{
+                .set = 0U,
+                .binding = 0U,
+                .array_element = 0U,
+                .type = Shader::ShaderResourceType::CombinedImageSampler,
+                .resource_handle = texture_handle,
+            };
+
             m_TextureBindingResources.emplace(createTextureBindingResources(
-                texture_handle, descriptor_layout));
+                material_binding, descriptor_layout));
 
             m_ActiveTextureHandle.emplace(texture_handle);
         }
@@ -501,8 +510,22 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::createTextureBindingResources(
-        GpuResourceHandle texture_handle,
+        const MaterialResourceBinding &resource_binding,
         const VulkanDescriptorSetLayout &layout) -> TextureBindingResources {
+        if (resource_binding.set != 0U || resource_binding.binding != 0U ||
+            resource_binding.array_element != 0U ||
+            resource_binding.type !=
+                Shader::ShaderResourceType::CombinedImageSampler) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::createTextureBindingResources requires a "
+                "supported sampled-texture material binding");
+        }
+
+        const GpuResourceHandle &texture_handle =
+            resource_binding.resource_handle;
+
         const TextureResources *texture_resources =
             m_TextureRegistry.find(texture_handle);
 
@@ -616,9 +639,17 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         std::optional<TextureBindingResources> new_texture_binding;
 
+        const MaterialResourceBinding resource_binding{
+            .set = 0U,
+            .binding = 0U,
+            .array_element = 0U,
+            .type = Shader::ShaderResourceType::CombinedImageSampler,
+            .resource_handle = new_texture_handle,
+        };
+
         try {
             new_texture_binding.emplace(createTextureBindingResources(
-                new_texture_handle, descriptor_layout));
+                resource_binding, descriptor_layout));
 
         } catch (...) {
             static_cast<void>(m_TextureRegistry.remove(new_texture_handle));
