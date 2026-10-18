@@ -93,25 +93,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         static_assert(std::is_nothrow_move_constructible_v<TextureResources>);
 
         /**
-         * @brief Owns a sampled texture and its descriptor binding
-         * resources.
+         * @brief Owns the descriptor binding for a registered texture.
          *
-         * Groups the texture image, image view, sampler, and descriptor
-         * pool required to bind the texture during rendering.
+         * Owns the descriptor pool and stores the descriptor set allocated
+         * from that pool.
          *
-         * The descriptor set is a non-owning handle allocated from the
-         * descriptor pool. Destroying the pool implicitly frees the set.
+         * References a texture through a generation-checked resource handle.
+         * The texture image, image view, and sampler remain owned by
+         * m_TextureRegistry.
          *
-         * Members are declared in dependency order so the descriptor pool
-         * is destroyed before the texture resources it references.
+         * The registered texture must remain alive while this binding or
+         * outstanding GPU submissions reference it.
          *
-         * The structure is move-only because its Vulkan resources have
+         * The structure is move-only because its descriptor pool has
          * exclusive ownership.
          */
         struct TextureBindingResources {
-            /** @brief Owns the texture image, image view, and sampler. */
-            TextureResources m_Resources;
-
             /** @brief Owns the descriptor pool and its allocated descriptor
              * sets. */
             VulkanDescriptorPool m_DescriptorPool;
@@ -406,19 +403,18 @@ namespace SNE::Engine::Renderer::Vulkan {
         GpuResourceRegistry<TextureResources> m_TextureRegistry;
 
         /**
-         * @brief Owns the renderer's active sampled texture and descriptor
-         * binding.
+         * @brief Owns the active sampled-texture descriptor binding.
          *
-         * Groups the texture resources, descriptor pool, and allocated
-         * descriptor set into one ownership unit.
+         * Stores the descriptor pool, allocated descriptor set, and handle
+         * identifying the registered texture referenced by the binding.
          *
-         * The resources remain valid across swapchain recreation and must not
-         * be destroyed while outstanding GPU submissions reference them.
+         * The texture's GPU resources are owned separately by
+         * m_TextureRegistry.
          *
-         * Replaced resources are retained until their associated GPU work
-         * completes.
+         * Replaced descriptor bindings and their referenced textures are
+         * retired together until outstanding GPU submissions complete.
          *
-         * Empty when no texture has been initialized.
+         * Empty when no texture binding has been initialized.
          */
         std::optional<TextureBindingResources> m_TextureBindingResources;
 
@@ -798,7 +794,11 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param texture Borrowed texture dimensions and RGBA8 pixel data.
          *
          * @pre Texture width and height must be nonzero.
-         * @pre Pixel storage must contain exactly width * height * 4 bytes.
+         * @pre Texture width and height must be nonzero.
+         * @pre The mip-level count must be at least one and must not exceed
+         * the maximum supported by the texture dimensions.
+         * @pre Pixel storage must contain the complete, tightly packed RGBA8
+         * mip chain, with four bytes per texel across all supplied levels.
          * @pre The renderer's allocator and immediate submission
          * infrastructure must be initialized.
          *
@@ -814,8 +814,35 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto uploadTexture(const TextureUploadData &texture)
             -> TextureResources;
 
+        /**
+         * @brief Creates a descriptor binding for a registered texture.
+         *
+         * Resolves the texture handle through m_TextureRegistry, allocates
+         * a descriptor pool and descriptor set, and writes the registered
+         * texture's image view and sampler into the descriptor set.
+         *
+         * The returned binding owns its descriptor pool but does not take
+         * ownership of the registered texture.
+         *
+         * @param texture_handle Handle identifying the registered texture.
+         * @param layout Descriptor-set layout used to allocate the binding.
+         *
+         * @pre texture_handle must resolve to a registered texture.
+         * @pre layout must reference a valid descriptor-set layout.
+         *
+         * @return Owned descriptor binding referencing the registered texture.
+         *
+         * @post The texture remains owned by m_TextureRegistry.
+         *
+         * @throws Core::Error::EngineError if descriptor pool creation
+         * or descriptor-set allocation fails.
+         * @throws std::bad_alloc if host allocation fails.
+         *
+         * @note The registered texture must outlive the descriptor binding
+         * and all GPU submissions referencing it.
+         */
         [[nodiscard]] auto
-        createTextureBindingResources(TextureResources &&texture,
+        createTextureBindingResources(GpuResourceHandle texture_handle,
                                       const VulkanDescriptorSetLayout &layout)
             -> TextureBindingResources;
 

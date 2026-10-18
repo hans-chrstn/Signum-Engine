@@ -163,8 +163,13 @@ namespace SNE::Engine::Renderer::Vulkan {
             TextureResources texture_resources =
                 uploadTexture(initial_texture.value());
 
+            GpuResourceHandle texture_handle =
+                m_TextureRegistry.insert(std::move(texture_resources));
+
             m_TextureBindingResources.emplace(createTextureBindingResources(
-                std::move(texture_resources), descriptor_layout));
+                texture_handle, descriptor_layout));
+
+            m_ActiveTextureHandle.emplace(texture_handle);
         }
 
         if (initial_graphics_shaders.has_value()) {
@@ -496,8 +501,19 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::createTextureBindingResources(
-        TextureResources &&texture_resources,
+        GpuResourceHandle texture_handle,
         const VulkanDescriptorSetLayout &layout) -> TextureBindingResources {
+        const TextureResources *texture_resources =
+            m_TextureRegistry.find(texture_handle);
+
+        if (texture_resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::createTextureBindingResources requires a "
+                "registered texture handle");
+        }
+
         VkDescriptorPoolSize descriptor_pool_size{};
         descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptor_pool_size.descriptorCount = 1U;
@@ -521,9 +537,9 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         VkDescriptorImageInfo descriptor_image_info{};
         descriptor_image_info.sampler =
-            texture_resources.m_Sampler.nativeHandle();
+            texture_resources->m_Sampler.nativeHandle();
         descriptor_image_info.imageView =
-            texture_resources.m_ImageView.nativeHandle();
+            texture_resources->m_ImageView.nativeHandle();
         descriptor_image_info.imageLayout =
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -544,9 +560,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         updateDescriptorSets(m_Device.nativeHandle(), writes);
 
         return TextureBindingResources{
-            .m_Resources = std::move(texture_resources),
             .m_DescriptorPool = std::move(descriptor_pool),
             .m_DescriptorSet = descriptor_sets.front(),
+            .m_TextureHandle = texture_handle,
         };
     }
 
@@ -574,17 +590,68 @@ namespace SNE::Engine::Renderer::Vulkan {
         TextureBindingResources &active_texture_resources =
             m_TextureBindingResources.value();
 
+        if (!m_ActiveTextureHandle.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires an active texture handle when "
+                "replacing a texture");
+        }
+
+        const GpuResourceHandle old_texture_handle =
+            m_ActiveTextureHandle.value();
+
+        if (old_texture_handle != active_texture_resources.m_TextureHandle) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active texture handle does not match its "
+                "descriptor binding");
+        }
+
         TextureResources new_texture_resources = uploadTexture(texture);
 
-        TextureBindingResources texture_resources =
-            createTextureBindingResources(std::move(new_texture_resources),
-                                          descriptor_layout);
+        GpuResourceHandle new_texture_handle =
+            m_TextureRegistry.insert(std::move(new_texture_resources));
 
-        m_GraphicsResourceRetirementQueue.retire(
-            m_GraphicsSubmissionState.lastSubmitted(),
-            active_texture_resources);
+        std::optional<TextureBindingResources> new_texture_binding;
 
-        m_TextureBindingResources.emplace(std::move(texture_resources));
+        try {
+            new_texture_binding.emplace(createTextureBindingResources(
+                new_texture_handle, descriptor_layout));
+
+        } catch (...) {
+            static_cast<void>(m_TextureRegistry.remove(new_texture_handle));
+            throw;
+        }
+
+        TextureResources *old_texture_resources =
+            m_TextureRegistry.find(old_texture_handle);
+
+        if (old_texture_resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active texture handle does not resolve to a "
+                "registered texture");
+        }
+
+        try {
+            m_GraphicsResourceRetirementQueue.retire(
+                m_GraphicsSubmissionState.lastSubmitted(),
+                *old_texture_resources, active_texture_resources);
+        } catch (...) {
+            new_texture_binding.reset();
+            static_cast<void>(m_TextureRegistry.remove(new_texture_handle));
+            throw;
+        }
+
+        static_cast<void>(m_TextureRegistry.remove(old_texture_handle));
+
+        m_TextureBindingResources.emplace(
+            std::move(new_texture_binding.value()));
+
+        m_ActiveTextureHandle.emplace(new_texture_handle);
     }
 
     auto VulkanRenderer::isFramebufferDrawable() const -> bool {
@@ -841,6 +908,34 @@ namespace SNE::Engine::Renderer::Vulkan {
                           graphics_pipeline.nativeHandle());
 
         if (m_TextureBindingResources.has_value()) {
+            if (!m_ActiveTextureHandle.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer requires an active texture handle when "
+                    "binding a texture");
+            }
+
+            if (m_ActiveTextureHandle.value() !=
+                m_TextureBindingResources->m_TextureHandle) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer active texture handle does not match its "
+                    "descriptor binding");
+            }
+
+            const TextureResources *active_texture =
+                m_TextureRegistry.find(m_ActiveTextureHandle.value());
+
+            if (active_texture == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer active texture handle does not resolve to "
+                    "a registered texture");
+            }
+
             vkCmdBindDescriptorSets(
                 command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 graphics_pipeline.layoutHandle(), 0U, 1U,
