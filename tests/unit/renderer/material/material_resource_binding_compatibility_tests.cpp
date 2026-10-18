@@ -1,4 +1,5 @@
 #include "engine/renderer/material/material_resource_binding_compatibility.hpp"
+#include <array>
 #include <gtest/gtest.h>
 
 namespace Renderer = SNE::Engine::Renderer;
