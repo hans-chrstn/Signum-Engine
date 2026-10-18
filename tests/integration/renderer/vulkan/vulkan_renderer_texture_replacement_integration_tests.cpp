@@ -23,6 +23,7 @@
 #include <optional>
 #include <span>
 #include <type_traits>
+#include <utility>
 
 namespace Math = SNE::Engine::Core::Math;
 namespace Platform = SNE::Engine::Platform;
@@ -334,4 +335,72 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
     ASSERT_DEATH(
         { renderer.replaceTexture(makeReplacementTexture()); },
         "requires an existing texture binding");
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RejectsMissingFragmentShaderMaterialBinding) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Material binding validation test requires an "
+                  "initialized window";
+    }
+
+    Shader::GraphicsShaderData graphics_shaders = makeGraphicsShaders();
+
+    graphics_shaders.fragment.artifact = Vulkan::loadSpirv(
+        std::filesystem::path{SIGNUM_TEST_FIXTURE_DIR} / "textured.frag.spv");
+
+    ASSERT_DEATH(
+        {
+            Vulkan::VulkanRenderer renderer(
+                "Signum Material Binding Validation Test", m_Window.value(),
+                Renderer::PresentationPreference::VSync, false, std::nullopt,
+                std::nullopt, std::nullopt, std::move(graphics_shaders));
+        },
+        "initial material bindings do not satisfy fragment shader "
+        "descriptor requirements");
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       AcceptsCompatibleFragmentShaderMaterialBinding) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Material binding validation test requires an "
+                  "initialized window";
+    }
+
+    Shader::GraphicsShaderData graphics_shaders = makeGraphicsShaders();
+
+    graphics_shaders.fragment.artifact = Vulkan::loadSpirv(
+        std::filesystem::path{SIGNUM_TEST_FIXTURE_DIR} / "textured.frag.spv");
+
+    ASSERT_NO_THROW({
+        Vulkan::VulkanRenderer renderer(
+            "Signum Material Binding Validation Test", m_Window.value(),
+            Renderer::PresentationPreference::VSync, false, std::nullopt,
+            makeInitialTexture(), std::nullopt, std::move(graphics_shaders));
+    });
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RejectsIncompatibleVertexShaderMaterialBinding) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Vertex material binding validation test requires "
+                  "an initialized window";
+    }
+
+    Shader::GraphicsShaderData graphics_shaders = makeGraphicsShaders();
+
+    graphics_shaders.vertex.artifact =
+        Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_FIXTURE_DIR} /
+                          "material_uniform.vert.spv");
+
+    ASSERT_DEATH(
+        {
+            Vulkan::VulkanRenderer renderer(
+                "Signum Vertex Material Binding Test", m_Window.value(),
+                Renderer::PresentationPreference::VSync, false, std::nullopt,
+                makeInitialTexture(), std::nullopt,
+                std::move(graphics_shaders));
+        },
+        "initial material bindings do not satisfy vertex shader "
+        "descriptor requirements");
 }

@@ -36,6 +36,7 @@ target_compile_definitions(
   signum_integration_tests
   PRIVATE
     SIGNUM_TEST_SHADER_DIR="${CMAKE_SOURCE_DIR}/build/shaders"
+    SIGNUM_TEST_FIXTURE_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures/shaders"
 )
 
 include(GoogleTest)

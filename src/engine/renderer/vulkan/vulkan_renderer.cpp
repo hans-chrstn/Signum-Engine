@@ -11,9 +11,12 @@
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/material/material_resource_binding_compatibility.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
+#include "engine/renderer/shader/shader_interface.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
+#include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
@@ -30,6 +33,7 @@
 #include "engine/renderer/vulkan/memory/vulkan_sampler.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.hpp"
 #include "engine/renderer/vulkan/presentation/fail_closed_replacement.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
@@ -186,6 +190,44 @@ namespace SNE::Engine::Renderer::Vulkan {
                 .shaders = std::move(initial_graphics_shaders.value()),
                 .pipeline_state = {},
             });
+
+            const Shader::ShaderStageInput &fragment =
+                m_Material->shaders.fragment;
+
+            const Shader::ShaderInterface fragment_shader_interface =
+                reflectSpirvInterface(fragment.artifact.words,
+                                      fragment.selection);
+
+            const bool fragment_material_compatible =
+                areMaterialResourceBindingsCompatible(
+                    m_MaterialBindings.bindings,
+                    fragment_shader_interface.descriptor_bindings);
+
+            if (!fragment_material_compatible) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer initial material bindings do not satisfy "
+                    "fragment shader descriptor requirements");
+            }
+
+            const Shader::ShaderStageInput &vertex = m_Material->shaders.vertex;
+
+            const Shader::ShaderInterface vertex_shader_interface =
+                reflectSpirvInterface(vertex.artifact.words, vertex.selection);
+
+            const bool vertex_material_compatible =
+                areMaterialResourceBindingsCompatible(
+                    m_MaterialBindings.bindings,
+                    vertex_shader_interface.descriptor_bindings);
+
+            if (!vertex_material_compatible) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer initial material bindings do not satisfy "
+                    "vertex shader descriptor requirements");
+            }
         }
 
         if (isFramebufferDrawable()) {
