@@ -6,6 +6,7 @@
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
+#include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_set.hpp"
@@ -36,6 +37,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -386,6 +388,23 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Cached pipelines remain available across swapchain recreation.
          */
         VulkanGraphicsPipelineCache m_GraphicsPipelineCache;
+
+        /**
+         * @brief Owns the renderer's registered standalone GPU buffers.
+         *
+         * Stores Vulkan buffers and their VMA-backed allocations using
+         * generation-checked, registry-scoped resource handles.
+         *
+         * Material bindings reference registered buffers without taking
+         * ownership of their GPU resources.
+         *
+         * Buffers referenced by outstanding GPU submissions must remain
+         * alive until the corresponding GPU work has completed.
+         *
+         * Resources removed while GPU work is in flight must be retained
+         * through the renderer's resource retirement mechanism.
+         */
+        GpuResourceRegistry<VulkanBuffer> m_BufferRegistry;
 
         /**
          * @brief Owns the renderer's registered GPU texture resources.
@@ -863,6 +882,55 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto createTextureBindingResources(
             const MaterialResourceBinding &resource_binding,
             const VulkanDescriptorSetLayout &layout) -> TextureBindingResources;
+
+        /**
+         * @brief Creates and registers a CPU-writable uniform buffer.
+         *
+         * Allocates a Vulkan uniform buffer, copies the supplied initial data,
+         * and transfers ownership to m_BufferRegistry.
+         *
+         * @param data Initial buffer contents borrowed from the caller.
+         *
+         * @return Handle identifying the registered uniform buffer.
+         *
+         * @pre data must not be empty.
+         *
+         * @post The returned handle resolves to an initialized buffer owned
+         * by m_BufferRegistry.
+         *
+         * @throws Core::Error::EngineError if buffer allocation or writing
+         * fails.
+         * @throws std::bad_alloc if registry insertion fails.
+         */
+        [[nodiscard]] auto
+        registerUniformBuffer(std::span<const std::byte> data)
+            -> GpuResourceHandle;
+
+        /**
+         * @brief Creates a material binding for a registered uniform buffer.
+         *
+         * Registers a uniform buffer initialized with the supplied CPU data
+         * and associates its resource handle with the requested shader
+         * descriptor location.
+         *
+         * The returned binding does not own the registered buffer.
+         *
+         * @param input Initial buffer data and shader binding information.
+         *
+         * @pre input.type must identify a uniform buffer.
+         * @pre input.data must not be empty.
+         *
+         * @return Material binding referencing the registered uniform buffer.
+         *
+         * @post The returned resource handle resolves to a buffer owned
+         * by m_BufferRegistry.
+         *
+         * @throws Core::Error::EngineError if buffer creation or writing fails.
+         * @throws std::bad_alloc if resource registration fails.
+         */
+        [[nodiscard]] auto
+        registerMaterialBufferBinding(const MaterialBufferBindingInput &input)
+            -> MaterialResourceBinding;
 
       public:
         /**

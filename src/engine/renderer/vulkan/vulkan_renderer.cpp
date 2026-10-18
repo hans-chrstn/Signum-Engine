@@ -11,6 +11,7 @@
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_compatibility.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
@@ -655,16 +656,24 @@ namespace SNE::Engine::Renderer::Vulkan {
         TextureBindingResources &active_texture_resources =
             m_TextureBindingResources.value();
 
-        if (m_MaterialBindings.bindings.size() != 1U) {
+        auto texture_binding_it = std::ranges::find_if(
+            m_MaterialBindings.bindings,
+            [](const MaterialResourceBinding &binding) -> bool {
+                return binding.set == 0U && binding.binding == 0U &&
+                       binding.array_element == 0U &&
+                       binding.type ==
+                           Shader::ShaderResourceType::CombinedImageSampler;
+            });
+
+        if (texture_binding_it == m_MaterialBindings.bindings.end()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires exactly one active material texture "
-                "binding when replacing a texture");
+                "VulkanRenderer active material texture binding was not found");
         }
 
         const GpuResourceHandle old_texture_handle =
-            m_MaterialBindings.bindings.front().resource_handle;
+            texture_binding_it->resource_handle;
 
         if (old_texture_handle != active_texture_resources.m_TextureHandle) {
             Core::Assertion::failAssertion(
@@ -724,7 +733,54 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_TextureBindingResources.emplace(
             std::move(new_texture_binding.value()));
 
-        m_MaterialBindings.bindings.front() = resource_binding;
+        *texture_binding_it = resource_binding;
+    }
+
+    auto VulkanRenderer::registerUniformBuffer(std::span<const std::byte> data)
+        -> GpuResourceHandle {
+        if (data.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer uniform buffer registration requires nonempty "
+                "data");
+        }
+
+        VulkanBufferCreateInfo buffer_create_info{
+            .size = data.size_bytes(),
+            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            .memory_usage = GpuMemoryUsage::Upload,
+        };
+
+        VulkanBuffer buffer{m_MemoryAllocator, buffer_create_info};
+
+        buffer.write(data);
+
+        GpuResourceHandle buffer_handle =
+            m_BufferRegistry.insert(std::move(buffer));
+
+        return buffer_handle;
+    }
+
+    auto VulkanRenderer::registerMaterialBufferBinding(
+        const MaterialBufferBindingInput &input) -> MaterialResourceBinding {
+        if (input.type != Shader::ShaderResourceType::UniformBuffer) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material buffer binding requires a uniform "
+                "buffer resource type");
+        }
+
+        GpuResourceHandle buffer_handle = registerUniformBuffer(input.data);
+
+        return MaterialResourceBinding{
+            .set = input.set,
+            .binding = input.binding,
+            .array_element = input.array_element,
+            .type = input.type,
+            .resource_handle = buffer_handle,
+        };
     }
 
     auto VulkanRenderer::isFramebufferDrawable() const -> bool {
@@ -981,16 +1037,25 @@ namespace SNE::Engine::Renderer::Vulkan {
                           graphics_pipeline.nativeHandle());
 
         if (m_TextureBindingResources.has_value()) {
-            if (m_MaterialBindings.bindings.size() != 1U) {
+            auto texture_binding_it = std::ranges::find_if(
+                m_MaterialBindings.bindings,
+                [](const MaterialResourceBinding &binding) -> bool {
+                    return binding.set == 0U && binding.binding == 0U &&
+                           binding.array_element == 0U &&
+                           binding.type ==
+                               Shader::ShaderResourceType::CombinedImageSampler;
+                });
+
+            if (texture_binding_it == m_MaterialBindings.bindings.end()) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer requires exactly one active material "
-                    "texture binding when drawing");
+                    "VulkanRenderer active material texture binding was not "
+                    "found");
             }
 
             const GpuResourceHandle &resource_handle =
-                m_MaterialBindings.bindings.front().resource_handle;
+                texture_binding_it->resource_handle;
 
             if (resource_handle != m_TextureBindingResources->m_TextureHandle) {
                 Core::Assertion::failAssertion(

@@ -42,6 +42,8 @@ add_executable(
   renderer/vulkan/device/vulkan_device_features_tests.cpp
   renderer/vulkan/device/vulkan_device_extensions_tests.cpp
   renderer/vulkan/device/vulkan_queue_requests_tests.cpp
+  renderer/vulkan/descriptor/vulkan_descriptor_set_layout_binding_tests.cpp
+  renderer/vulkan/descriptor/vulkan_descriptor_set_layout_requirements_tests.cpp
   renderer/vulkan/geometry/vulkan_vertex_format_tests.cpp
   renderer/vulkan/geometry/vulkan_vertex_input_tests.cpp
   renderer/vulkan/memory/vulkan_memory_policy_tests.cpp

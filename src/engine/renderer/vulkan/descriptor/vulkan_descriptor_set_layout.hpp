@@ -1,5 +1,8 @@
 #pragma once
 
+#include "engine/renderer/shader/shader_descriptor_binding.hpp"
+#include "engine/renderer/shader/shader_interface.hpp"
+#include "engine/renderer/shader/shader_stage.hpp"
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -52,6 +55,73 @@ namespace SNE::Engine::Renderer::Vulkan {
             const VulkanDescriptorBindingDescription &other) const noexcept
             -> bool = default;
     };
+
+    /**
+     * @brief Groups Vulkan descriptor bindings belonging to one descriptor set.
+     *
+     * Stores the set index and its descriptor binding descriptions.
+     *
+     * The bindings do not own Vulkan resources. Immutable samplers are
+     * not supported by this initial layout-building path.
+     */
+    struct VulkanDescriptorSetLayoutRequirements {
+        /** @brief Descriptor-set index represented by this group. */
+        std::uint32_t set{};
+
+        /**
+         * @brief Descriptor bindings belonging to this set.
+         *
+         * Each binding index must appear at most once.
+         * Stage visibility may include multiple shader stages.
+         */
+        std::vector<VkDescriptorSetLayoutBinding> bindings;
+    };
+
+    /**
+     * @brief Converts a reflected shader descriptor requirement into a Vulkan
+     * descriptor-set layout binding.
+     *
+     * Preserves the descriptor binding index and count, and converts the
+     * backend-independent resource type and shader stage into Vulkan values.
+     *
+     * The returned description represents one shader stage. Requirements
+     * shared between shader stages must be merged before creating a
+     * descriptor-set layout.
+     *
+     * @param requirement Reflected shader descriptor requirement.
+     * @param stage Shader stage accessing the descriptor.
+     *
+     * @return Vulkan descriptor-set layout binding description.
+     *
+     * @pre requirement.count must be greater than zero.
+     *
+     * @note The descriptor-set index is not part of
+     * VkDescriptorSetLayoutBinding. The caller is responsible for grouping
+     * bindings by descriptor set.
+     */
+    [[nodiscard]] auto makeVkDescriptorSetLayoutBinding(
+        const Shader::ShaderDescriptorBinding &requirement,
+        Shader::ShaderStage stage) -> VkDescriptorSetLayoutBinding;
+
+    /**
+     * @brief Combines reflected shader descriptor requirements by set and
+     * binding.
+     *
+     * Requirements shared by multiple shader stages are combined by merging
+     * their stage visibility.
+     *
+     * Bindings at different descriptor locations remain independent.
+     *
+     * @param interfaces Shader interfaces to combine.
+     *
+     * @return Descriptor requirements grouped by descriptor-set index.
+     *
+     * @throws Core::Error::EngineError if shaders declare incompatible
+     * resource types or descriptor counts at the same location.
+     */
+    [[nodiscard]] auto mergeVkDescriptorSetLayoutRequirements(
+        std::span<const Shader::ShaderInterface> interfaces)
+        -> std::vector<VulkanDescriptorSetLayoutRequirements>;
 
     /**
      * @brief Owns a Vulkan descriptor-set layout.
