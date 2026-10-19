@@ -283,12 +283,13 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @brief Retains three resources until their GPU submission completes.
          *
          * Transfers ownership of three move-only resources into a single
-         * retirement record associated with the last submission referencing
+         * retirement record associated with the last submission that references
          * them.
          *
-         * Resources are destroyed in reverse dependency order: the third
-         * resource first, the second resource next, and the first resource
-         * last.
+         * Resources are destroyed in reverse order: the third resource first,
+         * followed by the second resource, then the first resource. This allows
+         * earlier resources to remain alive while later resources are
+         * destroyed.
          *
          * All potentially throwing retirement preparation completes before
          * any resource is moved.
@@ -298,26 +299,29 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @tparam ThirdResource Type of the resource destroyed first.
          *
          * @param submission_id Identifier of the final submission referencing
-         * the resources.
+         * any of the resources.
          * @param first_resource First resource whose ownership is transferred.
          * @param second_resource Second resource whose ownership is
          * transferred.
          * @param third_resource Third resource whose ownership is transferred.
          *
-         * @pre All arguments must reference distinct resource objects.
+         * @pre All three arguments must reference distinct resource objects.
          * @pre All resource types must be nothrow move-constructible and
          * nothrow destructible.
-         * @pre submission_id must belong to the associated submission stream
-         * and cover all outstanding GPU uses of the resources.
+         * @pre submission_id must belong to the associated submission stream.
+         * @pre submission_id must cover all outstanding GPU uses of all three
+         * resources.
          *
-         * @post On success, ownership of all three resources is transferred
-         * to the retirement queue.
+         * @post On success, ownership of all three resources is transferred to
+         * the retirement queue.
          * @post If retirement preparation fails, all three resources remain
          * unchanged.
          *
-         * @throws std::bad_alloc if retirement preparation allocation fails.
+         * @throws std::bad_alloc if retirement storage allocation fails.
          *
          * @note This operation does not wait for GPU completion.
+         * @note All three resources are released together after the associated
+         * submission completes.
          */
         template <typename FirstResource, typename SecondResource,
                   typename ThirdResource>
