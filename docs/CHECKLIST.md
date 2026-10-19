@@ -995,12 +995,23 @@
 - [x] Preserve SPIRV-Tools parser result codes in structured errors
 - [x] Integrate shader validation into Vulkan shader-module creation
 - [x] Integrate entry-point validation into Vulkan graphics-pipeline creation
-- [ ] Add uniform/storage buffers
+- [x] Add uniform-buffer creation, initialization, and registration
+- [ ] Add storage-buffer support
 - [x] Add textures
 - [x] Add descriptor/binding infrastructure
+- [x] Reflect descriptor requirements from graphics shaders
+- [x] Merge descriptor requirements across shader stages
+- [x] Create descriptor-set layouts from shader requirements
+- [x] Support sparse descriptor-set indices with empty layouts
+- [x] Calculate descriptor-pool sizes from shader requirements
+- [x] Allocate and own material descriptor pools and descriptor sets
+- [x] Validate initial material resource bindings against shaders
+- [x] Write sampled-texture and uniform-buffer descriptors
+- [x] Bind shader-driven material descriptor sets during rendering
 - [x] Add reusable shader/pipeline variant infrastructure
 - [ ] Add compute-pipeline support when a real workload requires it
-- [ ] Add material parameter/binding foundation
+- [x] Add initial material resource binding foundation
+- [ ] Complete runtime material parameter updates and resource replacement
 - [x] Add depth buffering
 - [x] Render first simple 3D reference object
 - [x] Render multiple objects
@@ -1011,7 +1022,6 @@
 - [x] Define GPU lifetime ordering
 - [ ] Track GPU resource dependencies
 - [ ] Expose resource lifetime/dependency data needed by later frame scheduling
-
 - [ ] Connect the first shader compilation or validated SPIR-V loading path to explicit compiler diagnostics
 - [x] Validate descriptor and push-constant declarations against the shader/pipeline interface
 - [x] Represent texture format, color space, mip ranges, and resource usage explicitly in Vulkan resource setup
@@ -1027,7 +1037,17 @@
 - [x] Test SPIR-V validation without GPU resources
 - [ ] Test pure resource descriptions
 - [x] Test shader/pipeline/binding descriptions without optional rendering modules
-- [ ] Test material parameter/binding behavior without effect-specific assumptions
+- [x] Test material descriptions and resource-binding compatibility
+- [x] Test descriptor-pool sizing for empty requirements and multiple descriptor sets
+- [x] Test descriptor-pool sizing with multiple descriptor types
+- [x] Test descriptor-count overflow
+- [x] Test shader-derived descriptor-set layout creation
+- [x] Test sparse descriptor-set indices and empty layouts
+- [x] Test descriptor-set limits and invalid set ordering
+- [x] Test descriptor-set layout ownership after moving
+- [ ] Test runtime material parameter updates without effect-specific assumptions
+- [ ] Test shader-driven texture replacement across rendered frames
+- [ ] Test descriptor resource replacement with GPU submissions in flight
 - [x] Test partial creation failures
 - [x] Test swapchain recreation failures after `oldSwapchain` retirement
 - [x] Verify failed swapchain recreation does not reuse retired swapchain resources
