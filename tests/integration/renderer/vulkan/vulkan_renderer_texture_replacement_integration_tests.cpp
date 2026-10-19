@@ -24,6 +24,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -71,7 +72,7 @@ namespace {
         2U,
     };
 
-    constexpr std::array kVertexAttributes{
+    constexpr std::array kTriangleVertexAttributes{
         Renderer::VertexAttributeDescription{
             .location = 0U,
             .format = Renderer::VertexFormat::Float32x3,
@@ -82,6 +83,15 @@ namespace {
             .location = 1U,
             .format = Renderer::VertexFormat::Float32x3,
             .offset = static_cast<std::uint32_t>(offsetof(TestVertex, color)),
+        },
+    };
+
+    constexpr std::array kTexturedVertexAttributes{
+        Renderer::VertexAttributeDescription{
+            .location = 0U,
+            .format = Renderer::VertexFormat::Float32x3,
+            .offset =
+                static_cast<std::uint32_t>(offsetof(TestVertex, position)),
         },
         Renderer::VertexAttributeDescription{
             .location = 2U,
@@ -131,8 +141,9 @@ namespace {
         };
     }
 
-    [[nodiscard]] auto
-    makeInitialMesh(std::span<const Math::Matrix4f> model_matrices)
+    [[nodiscard]] auto makeInitialMesh(
+        std::span<const Math::Matrix4f> model_matrices,
+        std::span<const Renderer::VertexAttributeDescription> attributes)
         -> Renderer::InitialMeshData {
         return {
             .mesh =
@@ -144,10 +155,16 @@ namespace {
                 },
             .layout =
                 {
-                    .attributes = kVertexAttributes,
+                    .attributes = attributes,
                 },
             .model_matrices = model_matrices,
         };
+    }
+
+    [[nodiscard]] auto
+    makeInitialMesh(std::span<const Math::Matrix4f> model_matrices)
+        -> Renderer::InitialMeshData {
+        return makeInitialMesh(model_matrices, kTriangleVertexAttributes);
     }
 
     [[nodiscard]] auto makeGraphicsShaders() -> Shader::GraphicsShaderData {
@@ -239,6 +256,50 @@ namespace {
             testing::internal::GetCapturedStderr();
 
         return {validation_output, operation_error};
+    }
+
+    [[nodiscard]] auto
+    hasUnexpectedVulkanValidationOutput(std::string_view output) -> bool {
+        constexpr std::string_view kDiagnosticPrefix = "Vulkan validation:";
+        constexpr std::string_view kSkippedDriverPrefix =
+            " terminator_CreateInstance: Received return code ";
+        constexpr std::string_view kSkippedDriverSuffix =
+            "Skipping this driver.";
+
+        std::size_t search_position{};
+
+        while ((search_position =
+                    output.find(kDiagnosticPrefix, search_position)) !=
+               std::string_view::npos) {
+            const std::size_t message_start =
+                search_position + kDiagnosticPrefix.size();
+
+            const std::size_t message_end = output.find('\n', message_start);
+
+            const std::size_t message_length =
+                message_end == std::string_view::npos
+                    ? output.size() - message_start
+                    : message_end - message_start;
+
+            const std::string_view message =
+                output.substr(message_start, message_length);
+
+            const bool skipped_driver_warning =
+                message.starts_with(kSkippedDriverPrefix) &&
+                message.ends_with(kSkippedDriverSuffix);
+
+            if (!skipped_driver_warning) {
+                return true;
+            }
+
+            if (message_end == std::string_view::npos) {
+                break;
+            }
+
+            search_position = message_end + 1U;
+        }
+
+        return false;
     }
 
 } // namespace
@@ -334,30 +395,30 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
     };
 
     const Renderer::InitialMeshData initial_mesh =
-        makeInitialMesh(model_matrices);
+        makeInitialMesh(model_matrices, kTexturedVertexAttributes);
 
     if (!m_Window.has_value()) {
         FAIL() << "Shader-driven texture replacement test requires an "
                   "initialized window";
     }
 
-    Vulkan::VulkanRenderer renderer{
-        "Signum Shader-Driven Texture Replacement Test",
-        m_Window.value(),
-        Renderer::PresentationPreference::VSync,
-        true,
-        initial_mesh,
-        makeInitialTexture(),
-        std::nullopt,
-        makeTexturedGraphicsShaders(),
-    };
-
-    for (std::size_t i{}; i < 2U; ++i) {
-        ASSERT_NO_THROW(renderer.renderFrame());
-    }
-
     const auto [validation_output, operation_error] =
         captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Shader-Driven Texture Replacement Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                initial_mesh,
+                makeInitialTexture(),
+                std::nullopt,
+                makeTexturedGraphicsShaders(),
+            };
+
+            for (std::size_t i{}; i < 2U; ++i) {
+                renderer.renderFrame();
+            }
+
             renderer.replaceTexture(makeReplacementTexture());
 
             for (std::size_t i{}; i < 4U; ++i) {
@@ -380,7 +441,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
     EXPECT_TRUE(operation_error.empty())
         << "Texture replacement or rendering failed: " << operation_error;
 
-    EXPECT_EQ(validation_output.find("Vulkan validation:"), std::string::npos)
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
         << "Unexpected Vulkan validation output:\n"
         << validation_output;
 }
@@ -392,27 +453,28 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
     };
 
     const Renderer::InitialMeshData initial_mesh =
-        makeInitialMesh(model_matrices);
+        makeInitialMesh(model_matrices, kTexturedVertexAttributes);
 
     if (!m_Window.has_value()) {
         FAIL() << "Repeated shader-driven texture replacement test requires "
                   "an initialized window";
     }
 
-    Vulkan::VulkanRenderer renderer{
-        "Signum Shader-Driven Texture Replacement Test",
-        m_Window.value(),
-        Renderer::PresentationPreference::VSync,
-        true,
-        initial_mesh,
-        makeInitialTexture(),
-        std::nullopt,
-        makeTexturedGraphicsShaders(),
-    };
+    constexpr std::size_t kFramesAfterReplacement = 5U;
 
-    constexpr std::size_t val = 5U;
     const auto [validation_output, operation_error] =
         captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Shader-Driven Texture Replacement Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                initial_mesh,
+                makeInitialTexture(),
+                std::nullopt,
+                makeTexturedGraphicsShaders(),
+            };
+
             constexpr std::size_t kReplacementCount = 12U;
 
             for (std::size_t i{}; i < kReplacementCount; ++i) {
@@ -423,7 +485,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
                 }
             }
 
-            for (std::size_t i{}; i < val; ++i) {
+            for (std::size_t i{}; i < kFramesAfterReplacement; ++i) {
                 renderer.renderFrame();
             }
         });
@@ -432,7 +494,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
         << "Repeated texture replacement or rendering failed: "
         << operation_error;
 
-    EXPECT_EQ(validation_output.find("Vulkan validation:"), std::string::npos)
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
         << "Unexpected Vulkan validation output:\n"
         << validation_output;
 }
