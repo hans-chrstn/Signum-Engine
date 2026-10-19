@@ -237,4 +237,34 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto bindingDescriptions() const noexcept
             -> std::span<const VulkanDescriptorBindingDescription>;
     };
+
+    /**
+     * @brief Creates Vulkan descriptor-set layouts from merged shader
+     * requirements.
+     *
+     * Creates one owned layout for every descriptor-set index up to the highest
+     * required index. Missing indices receive empty descriptor-set layouts.
+     *
+     * The returned layouts are ordered by descriptor-set index and own their
+     * Vulkan handles through RAII.
+     *
+     * @param device Logical device used to create the layouts.
+     * @param requirements Merged descriptor requirements grouped by set index.
+     * @param max_bound_descriptor_sets Maximum number of bound descriptor sets
+     * supported by the selected physical device.
+     *
+     * @return Owned descriptor-set layouts indexed by descriptor-set number.
+     * Returns an empty vector when no descriptor sets are required.
+     *
+     * @pre device must be a valid logical-device handle.
+     * @pre requirements must be ordered by strictly increasing set index.
+     * @pre All required set indices must be below max_bound_descriptor_sets.
+     *
+     * @throws Core::Error::EngineError if Vulkan layout creation fails.
+     */
+    [[nodiscard]] auto createVulkanDescriptorSetLayouts(
+        VkDevice device,
+        std::span<const VulkanDescriptorSetLayoutRequirements> requirements,
+        std::uint32_t max_bound_descriptor_sets)
+        -> std::vector<VulkanDescriptorSetLayout>;
 } // namespace SNE::Engine::Renderer::Vulkan

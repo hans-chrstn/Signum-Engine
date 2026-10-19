@@ -5,6 +5,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/shader/shader_descriptor_binding.hpp"
 #include "engine/renderer/shader/shader_interface.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
@@ -12,8 +13,11 @@
 #include "engine/renderer/vulkan/pipeline/vulkan_shader_stage.hpp"
 #include <cstddef>
 #include <map>
+#include <optional>
+#include <span>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto makeVkDescriptorSetLayoutBinding(
@@ -93,6 +97,85 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         return groups;
+    }
+
+    auto createVulkanDescriptorSetLayouts(
+        VkDevice device,
+        std::span<const VulkanDescriptorSetLayoutRequirements> requirements,
+        std::uint32_t max_bound_descriptor_sets)
+        -> std::vector<VulkanDescriptorSetLayout> {
+        if (device == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan descriptor-set layout creation requires a valid "
+                "logical device");
+        }
+
+        if (requirements.empty()) {
+            return {};
+        }
+
+        for (std::size_t i{1U}; i < requirements.size(); ++i) {
+            if (requirements[i - 1U].set >= requirements[i].set) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan descriptor-set layout requirements must be ordered "
+                    "by strictly increasing set indices");
+            }
+        }
+
+        if (requirements.back().set >= max_bound_descriptor_sets) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Vulkan descriptor-set layout requirements exceed the "
+                "device's maximum bound descriptor-set count");
+        }
+
+        const std::size_t layout_count =
+            static_cast<std::size_t>(requirements.back().set) + 1U;
+
+        std::vector<VulkanDescriptorSetLayout> layouts;
+
+        layouts.reserve(layout_count);
+
+        std::size_t requirement_index{};
+        for (std::size_t i{}; i < layout_count; ++i) {
+            const bool has_requirement =
+                requirement_index < requirements.size() &&
+                requirements[requirement_index].set == i;
+
+            std::span<const VkDescriptorSetLayoutBinding> bindings;
+
+            if (has_requirement) {
+                bindings = requirements[requirement_index].bindings;
+                ++requirement_index;
+            }
+
+            const std::optional<std::uint32_t> binding_count =
+                Core::Numeric::tryConvertToUint32(bindings.size());
+
+            if (binding_count == std::nullopt) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan descriptor-set layout binding count exceeds "
+                    "uint32_t");
+            }
+
+            VkDescriptorSetLayoutCreateInfo create_info{};
+            create_info.sType =
+                VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            create_info.bindingCount = binding_count.value();
+            create_info.pBindings =
+                bindings.empty() ? nullptr : bindings.data();
+
+            layouts.emplace_back(device, create_info);
+        }
+
+        return layouts;
     }
 
     VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(

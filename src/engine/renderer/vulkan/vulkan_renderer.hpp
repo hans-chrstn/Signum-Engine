@@ -13,6 +13,7 @@
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/shader/shader_interface.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
 #include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_pool.hpp"
@@ -140,6 +141,31 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         static_assert(
             std::is_nothrow_move_constructible_v<TextureBindingResources>);
+
+        /**
+         * @brief Owns descriptor allocations for a material.
+         *
+         * Owns the descriptor pool and stores descriptor sets allocated
+         * from that pool.
+         *
+         * Descriptor-set positions correspond to shader descriptor-set
+         * indices. The descriptor sets remain valid while their pool
+         * exists and is not reset.
+         *
+         * The structure is move-only because its descriptor pool
+         * has exclusive Vulkan ownership.
+         */
+        struct MaterialDescriptorResources {
+            /** @brief Owns the pool backing the allocated descriptor sets. */
+            VulkanDescriptorPool m_DescriptorPool;
+
+            /**
+             * @brief Descriptor-set handles allocated from m_DescriptorPool.
+             *
+             * The handles are non-owning and ordered by descriptor-set index.
+             */
+            std::vector<VkDescriptorSet> m_DescriptorSets;
+        };
 
         /**
          * @brief Owns a depth image and its corresponding image view.
@@ -272,6 +298,20 @@ namespace SNE::Engine::Renderer::Vulkan {
         static_assert(std::is_nothrow_move_constructible_v<SwapchainResources>);
 
         /**
+         * @brief Stores the reflected interfaces of a graphics shader pair.
+         *
+         * Retains the vertex and fragment shader interfaces used during
+         * initial material validation and descriptor layout generation.
+         */
+        struct ReflectedGraphicsShaderInterfaces {
+            /** @brief Reflected vertex shader interface. */
+            Shader::ShaderInterface vertex;
+
+            /** @brief Reflected fragment shader interface. */
+            Shader::ShaderInterface fragment;
+        };
+
+        /**
          * @brief Application window borrowed by the renderer.
          *
          * Provides access to the current framebuffer dimensions required for
@@ -378,6 +418,18 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<VulkanDescriptorSetLayout> m_TextureDescriptorSetLayout;
 
         /**
+         * @brief Owns descriptor-set layouts generated from shader
+         * requirements.
+         *
+         * Layout positions correspond to descriptor-set indices.
+         * Empty descriptor sets have valid layouts with no bindings.
+         *
+         * These layouts must outlive cached graphics pipelines that reference
+         * them.
+         */
+        std::vector<VulkanDescriptorSetLayout> m_DescriptorSetLayouts;
+
+        /**
          * @brief Owns reusable Vulkan graphics pipelines.
          *
          * Stores pipelines identified by their complete variant configurations.
@@ -438,6 +490,18 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Empty when no texture binding has been initialized.
          */
         std::optional<TextureBindingResources> m_TextureBindingResources;
+
+        /**
+         * @brief Owns the active material's Vulkan descriptor allocations.
+         *
+         * Empty until the shader-driven material descriptor sets have been
+         * allocated. The descriptor pool owns the allocated sets.
+         *
+         * Must release descriptor allocations before their referenced GPU
+         * resources are destroyed.
+         */
+        std::optional<MaterialDescriptorResources>
+            m_MaterialDescriptorResources;
 
         /**
          * @brief Stores the material resource bindings used for rendering.
@@ -656,6 +720,56 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto isFramebufferDrawable() const -> bool;
 
         /**
+         * @brief Creates depth attachments for the frame-in-flight slots.
+         *
+         * Creates one depth image and image view per frame slot using
+         * the requested extent and depth format.
+         *
+         * @param extent Extent of the replacement swapchain.
+         * @param depth_format Supported Vulkan depth attachment format.
+         *
+         * @pre extent must have nonzero dimensions.
+         * @pre depth_format must be a supported depth attachment format.
+         *
+         * @return Owned depth attachment resources.
+         *
+         * @post The returned collection contains one depth attachment
+         * per frame-in-flight slot.
+         *
+         * @throws Core::Error::EngineError if Vulkan resource creation fails.
+         * @throws std::bad_alloc if resource storage allocation fails.
+         */
+        [[nodiscard]] auto createDepthAttachments(VkExtent2D extent,
+                                                  VkFormat depth_format)
+            -> std::vector<DepthAttachmentResources>;
+
+        /**
+         * @brief Selects the graphics pipeline for a replacement swapchain.
+         *
+         * Creates or retrieves a compatible graphics pipeline when the
+         * attachment formats require one.
+         *
+         * Reuses the previous pipeline when its configuration remains
+         * compatible with the replacement swapchain.
+         *
+         * @param swapchain Replacement swapchain.
+         * @param depth_format Selected depth attachment format.
+         *
+         * @return Non-owning pointer to the selected graphics pipeline,
+         * or nullptr when no pipeline is available or required.
+         *
+         * @pre A material must exist when pipeline creation is required.
+         *
+         * @note Returned pipelines are owned by m_GraphicsPipelineCache.
+         *
+         * @throws Core::Error::EngineError if pipeline creation fails.
+         */
+        [[nodiscard]] auto
+        selectGraphicsPipeline(const VulkanSwapchain &swapchain,
+                               VkFormat depth_format)
+            -> const VulkanGraphicsPipeline *;
+
+        /**
          * @brief Recreates resources that depend on the presentation swapchain.
          *
          * Waits until the application framebuffer is drawable, synchronizes
@@ -821,7 +935,6 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param texture Borrowed texture dimensions and RGBA8 pixel data.
          *
          * @pre Texture width and height must be nonzero.
-         * @pre Texture width and height must be nonzero.
          * @pre The mip-level count must be at least one and must not exceed
          * the maximum supported by the texture dimensions.
          * @pre Pixel storage must contain the complete, tightly packed RGBA8
@@ -884,6 +997,28 @@ namespace SNE::Engine::Renderer::Vulkan {
             const VulkanDescriptorSetLayout &layout) -> TextureBindingResources;
 
         /**
+         * @brief Writes registered material resources into Vulkan descriptor
+         * sets.
+         *
+         * Resolves material resource handles through their GPU resource
+         * registries and updates the corresponding shader-defined descriptor
+         * locations.
+         *
+         * Descriptor sets are owned by m_MaterialDescriptorResources.
+         * Referenced GPU resources remain owned by their respective registries.
+         *
+         * @pre Material descriptor sets must already be allocated.
+         * @pre Material bindings must reference registered, compatible
+         * resources.
+         * @pre Descriptor sets must not be in use by pending GPU submissions
+         * when updated without the required Vulkan update-after-bind support.
+         *
+         * @note This function does not allocate descriptor sets or transfer
+         * ownership of GPU resources.
+         */
+        auto updateMaterialDescriptorSets() -> void;
+
+        /**
          * @brief Creates and registers a CPU-writable uniform buffer.
          *
          * Allocates a Vulkan uniform buffer, copies the supplied initial data,
@@ -932,6 +1067,129 @@ namespace SNE::Engine::Renderer::Vulkan {
         registerMaterialBufferBinding(const MaterialBufferBindingInput &input)
             -> MaterialResourceBinding;
 
+        /**
+         * @brief Initializes the renderer's frame-in-flight resources.
+         *
+         * Creates one VulkanFrameResources instance for each frame-in-flight
+         * slot using the selected graphics queue family.
+         *
+         * The frame resources remain owned by m_FrameResources.
+         *
+         * @post m_FrameResources contains kFramesInFlight initialized
+         * frame-resource instances.
+         *
+         * @throws Core::Error::EngineError if Vulkan resource creation fails.
+         * @throws std::bad_alloc if resource storage allocation fails.
+         */
+        auto initializeFrameResources() -> void;
+
+        /**
+         * @brief Initializes the renderer's initial mesh.
+         *
+         * Copies the supplied vertex layout and model transformations into
+         * renderer-owned storage, then uploads and registers the mesh.
+         *
+         * The supplied CPU data is borrowed only during initialization.
+         *
+         * @param mesh Initial mesh data, vertex layout, and model matrices.
+         *
+         * @post On success, the renderer owns the mesh's GPU resources and
+         * retains its vertex layout and model transformations.
+         *
+         * @throws Core::Error::EngineError if GPU resource creation or
+         * upload fails.
+         * @throws std::bad_alloc if resource storage allocation fails.
+         *
+         * @note Invalid mesh data triggers precondition assertions.
+         */
+        auto initializeInitialMesh(const InitialMeshData &mesh) -> void;
+
+        /**
+         * @brief Initializes the renderer's graphics material.
+         *
+         * Transfers ownership of the supplied shaders to m_Material,
+         * reflects their interfaces, and creates the descriptor-set
+         * layouts and initial descriptor allocations.
+         *
+         * @param shaders Graphics shaders whose ownership is transferred.
+         *
+         * @return Reflected vertex and fragment shader interfaces.
+         *
+         * @post On success, m_Material contains the supplied shaders
+         * and descriptor resources have been initialized when required.
+         *
+         * @throws Core::Error::EngineError if shader reflection or
+         * Vulkan descriptor resource creation fails.
+         * @throws std::bad_alloc if resource allocation fails.
+         */
+        [[nodiscard]] auto
+        initializeInitialMaterial(Shader::GraphicsShaderData shaders)
+            -> ReflectedGraphicsShaderInterfaces;
+
+        /**
+         * @brief Allocates descriptor resources for the current material.
+         *
+         * Creates a descriptor pool using the supplied descriptor counts
+         * and allocates descriptor sets from m_DescriptorSetLayouts.
+         *
+         * Does not replace the currently active material descriptor
+         * resources.
+         *
+         * @param pool_sizes Descriptor counts required by the material.
+         *
+         * @pre m_DescriptorSetLayouts must not be empty.
+         *
+         * @return Owned descriptor pool and allocated descriptor sets.
+         *
+         * @throws Core::Error::EngineError if Vulkan descriptor resource
+         * creation or allocation fails.
+         * @throws std::bad_alloc if host allocation fails.
+         *
+         * @note The caller is responsible for installing or retiring
+         * the returned resources.
+         */
+        [[nodiscard]] auto createMaterialDescriptorResources(
+            std::span<const VkDescriptorPoolSize> pool_sizes)
+            -> MaterialDescriptorResources;
+
+        /**
+         * @brief Validates initial material bindings against shader
+         * requirements.
+         *
+         * Checks that the registered material bindings satisfy the reflected
+         * vertex and fragment shader descriptor requirements.
+         *
+         * @param interfaces Reflected interfaces of the initialized shaders.
+         *
+         * @pre The initial material resources must already be registered.
+         *
+         * @note Incompatible bindings trigger precondition assertions.
+         */
+        auto validateInitialMaterialBindings(
+            const ReflectedGraphicsShaderInterfaces &interfaces) const -> void;
+
+        /**
+         * @brief Initializes the renderer's initial sampled texture.
+         *
+         * Creates the existing texture descriptor-set layout, uploads and
+         * registers the texture, and establishes its material binding.
+         *
+         * The supplied CPU pixel storage is borrowed only during
+         * initialization.
+         *
+         * @param texture Initial texture data and pixel storage.
+         *
+         * @post On success, the renderer owns the registered texture and
+         * its initial descriptor binding.
+         *
+         * @throws Core::Error::EngineError if Vulkan resource creation or
+         * upload fails.
+         * @throws std::bad_alloc if resource storage allocation fails.
+         *
+         * @note Invalid texture data triggers precondition assertions.
+         */
+        auto initializeInitialTexture(const TextureUploadData &texture) -> void;
+
       public:
         /**
          * @brief Initializes the Vulkan renderer for an application window.
@@ -967,6 +1225,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * supplied by the application. Ownership of the compiled SPIR-V
          * artifacts is transferred to the renderer for pipeline creation
          * and recreation.
+         * @param initial_buffer_bindings Optional material buffer bindings
+         * initialized during renderer construction. The supplied data is
+         * borrowed only until construction completes.
          *
          * @throws Core::Error::EngineError if a required Vulkan resource or
          * capability cannot be initialized.
@@ -979,7 +1240,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             std::optional<TextureUploadData> initial_texture = std::nullopt,
             std::optional<InitialCameraData> initial_camera = std::nullopt,
             std::optional<Shader::GraphicsShaderData> initial_graphics_shaders =
-                std::nullopt);
+                std::nullopt,
+            std::span<const MaterialBufferBindingInput>
+                initial_buffer_bindings = {});
 
         /**
          * @brief Releases the Vulkan renderer runtime.

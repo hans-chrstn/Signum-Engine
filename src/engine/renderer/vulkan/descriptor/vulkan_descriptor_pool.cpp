@@ -7,11 +7,54 @@
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include <cstdint>
+#include <map>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    auto calculateVkDescriptorPoolSizes(
+        std::span<const VulkanDescriptorSetLayoutRequirements> requirements)
+        -> std::vector<VkDescriptorPoolSize> {
+        std::map<VkDescriptorType, std::uint64_t> descriptor_counts;
+
+        for (const VulkanDescriptorSetLayoutRequirements &requirement :
+             requirements) {
+            for (const VkDescriptorSetLayoutBinding &binding :
+                 requirement.bindings) {
+
+                descriptor_counts[binding.descriptorType] +=
+                    binding.descriptorCount;
+            }
+        }
+
+        std::vector<VkDescriptorPoolSize> pool_sizes;
+        pool_sizes.reserve(descriptor_counts.size());
+
+        for (const auto &[type, count] : descriptor_counts) {
+            std::optional<std::uint32_t> descriptor_count =
+                Core::Numeric::tryConvertToUint32(count);
+
+            if (!descriptor_count.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan descriptor pool descriptor count exceeds uint32_t");
+            }
+
+            VkDescriptorPoolSize pool_size{
+                .type = type,
+                .descriptorCount = descriptor_count.value(),
+            };
+
+            pool_sizes.push_back(pool_size);
+        }
+
+        return pool_sizes;
+    }
+
     VulkanDescriptorPool::VulkanDescriptorPool(
         VkDevice device, const VkDescriptorPoolCreateInfo &create_info)
         : m_Device(device) {

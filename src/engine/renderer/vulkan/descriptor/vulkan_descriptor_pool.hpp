@@ -1,10 +1,27 @@
 #pragma once
 
+#include "engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.hpp"
 #include <span>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    /**
+     * @brief Calculates descriptor-pool capacities from layout requirements.
+     *
+     * Combines descriptor counts for bindings of the same Vulkan
+     * descriptor type across all required descriptor sets.
+     *
+     * @param requirements Descriptor requirements grouped by set index.
+     *
+     * @return Descriptor-pool sizes grouped by descriptor type.
+     *
+     * @pre Summed descriptor counts must fit within std::uint32_t.
+     */
+    [[nodiscard]] auto calculateVkDescriptorPoolSizes(
+        std::span<const VulkanDescriptorSetLayoutRequirements> requirements)
+        -> std::vector<VkDescriptorPoolSize>;
+
     /**
      * @brief Owns a Vulkan descriptor pool.
      *

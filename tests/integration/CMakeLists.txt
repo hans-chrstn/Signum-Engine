@@ -10,6 +10,7 @@ add_executable(
   renderer/vulkan/descriptor/vulkan_descriptor_set_layout_integration_tests.cpp
   renderer/vulkan/descriptor/vulkan_descriptor_pool_integration_tests.cpp
   renderer/vulkan/descriptor/vulkan_descriptor_updates_integration_tests.cpp
+  renderer/vulkan/descriptor/vulkan_layout_creation_integration_tests.cpp
   renderer/vulkan/device/vulkan_device_capabilities_integration_tests.cpp
   renderer/vulkan/device/vulkan_depth_format_integration_tests.cpp
   renderer/vulkan/memory/vulkan_buffer_integration_tests.cpp

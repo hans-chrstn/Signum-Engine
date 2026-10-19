@@ -25,8 +25,12 @@ add_library(
     engine/renderer/material/material_resource_binding_compatibility.cpp
     engine/renderer/resource/gpu_resource_registry_id.cpp
     engine/renderer/vulkan/vulkan_instance.cpp
-    engine/renderer/vulkan/vulkan_frame_resources.cpp
     engine/renderer/vulkan/vulkan_renderer.cpp
+    engine/renderer/vulkan/vulkan_frame_resources.cpp
+    engine/renderer/vulkan/vulkan_renderer_material.cpp
+    engine/renderer/vulkan/vulkan_renderer_resources.cpp
+    engine/renderer/vulkan/vulkan_renderer_swapchain.cpp
+    engine/renderer/vulkan/vulkan_renderer_frame.cpp
     engine/renderer/vulkan/common/vulkan_result.cpp
     engine/renderer/vulkan/common/vulkan_extension_support.cpp
     engine/renderer/vulkan/command/vulkan_command_pool.cpp
