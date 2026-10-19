@@ -63,6 +63,24 @@ slangc "${slang_shader_source_dir}/triangle.slang" \
 
 spirv-val "${shader_output_dir}/triangle.frag.spv"
 
+slangc "${slang_shader_source_dir}/textured.slang" \
+    -target spirv \
+    -entry vertexMain \
+    -stage vertex \
+    -matrix-layout-column-major \
+    -o "${shader_output_dir}/textured.vert.spv"
+
+spirv-val "${shader_output_dir}/textured.vert.spv"
+
+slangc "${slang_shader_source_dir}/textured.slang" \
+    -target spirv \
+    -entry fragmentMain \
+    -stage fragment \
+    -matrix-layout-column-major \
+    -o "${shader_output_dir}/textured.frag.spv"
+
+spirv-val "${shader_output_dir}/textured.frag.spv"
+
 slangc "${slang_test_shader_source_dir}/matrix_transform.slang" \
     -target spirv \
     -entry computeMain \

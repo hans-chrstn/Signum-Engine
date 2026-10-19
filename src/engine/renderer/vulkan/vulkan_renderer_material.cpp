@@ -94,29 +94,23 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
     }
 
-    auto VulkanRenderer::updateMaterialDescriptorSets() -> void {
-        if (!m_MaterialDescriptorResources.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer material descriptor updates require allocated "
-                "descriptor sets");
-        }
+    auto VulkanRenderer::writeMaterialDescriptorSets(
+        MaterialDescriptorResources &destination,
+        std::span<const MaterialResourceBinding> bindings) -> void {
 
         const std::vector<VkDescriptorSet> &descriptor_sets =
-            m_MaterialDescriptorResources->m_DescriptorSets;
+            destination.m_DescriptorSets;
 
         std::vector<VkDescriptorImageInfo> image_infos;
-        image_infos.reserve(m_MaterialBindings.bindings.size());
+        image_infos.reserve(bindings.size());
 
         std::vector<VkDescriptorBufferInfo> buffer_infos;
-        buffer_infos.reserve(m_MaterialBindings.bindings.size());
+        buffer_infos.reserve(bindings.size());
 
         std::vector<VkWriteDescriptorSet> writes;
-        writes.reserve(m_MaterialBindings.bindings.size());
+        writes.reserve(bindings.size());
 
-        for (const MaterialResourceBinding &binding :
-             m_MaterialBindings.bindings) {
+        for (const MaterialResourceBinding &binding : bindings) {
 
             if (std::cmp_greater_equal(binding.set, descriptor_sets.size()) ||
                 std::cmp_greater_equal(binding.set,
@@ -237,6 +231,19 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         updateDescriptorSets(m_Device.nativeHandle(), writes);
+    }
+
+    auto VulkanRenderer::updateMaterialDescriptorSets() -> void {
+        if (!m_MaterialDescriptorResources.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material descriptor updates require allocated "
+                "descriptor sets");
+        }
+
+        writeMaterialDescriptorSets(m_MaterialDescriptorResources.value(),
+                                    m_MaterialBindings.bindings);
     }
 
     auto VulkanRenderer::registerUniformBuffer(std::span<const std::byte> data)
@@ -368,12 +375,13 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_PhysicalDevice.capabilities.properties.limits
                 .maxBoundDescriptorSets);
 
-        const std::vector<VkDescriptorPoolSize> pool_sizes =
+        m_MaterialDescriptorPoolSizes =
             calculateVkDescriptorPoolSizes(requirements);
 
         if (!m_DescriptorSetLayouts.empty()) {
             m_MaterialDescriptorResources.emplace(
-                createMaterialDescriptorResources(pool_sizes));
+                createMaterialDescriptorResources(
+                    m_MaterialDescriptorPoolSizes));
         }
 
         return reflected_interfaces;

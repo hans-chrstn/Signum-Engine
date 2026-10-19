@@ -280,6 +280,124 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         /**
+         * @brief Retains three resources until their GPU submission completes.
+         *
+         * Transfers ownership of three move-only resources into a single
+         * retirement record associated with the last submission referencing
+         * them.
+         *
+         * Resources are destroyed in reverse dependency order: the third
+         * resource first, the second resource next, and the first resource
+         * last.
+         *
+         * All potentially throwing retirement preparation completes before
+         * any resource is moved.
+         *
+         * @tparam FirstResource Type of the resource destroyed last.
+         * @tparam SecondResource Type of the resource destroyed second.
+         * @tparam ThirdResource Type of the resource destroyed first.
+         *
+         * @param submission_id Identifier of the final submission referencing
+         * the resources.
+         * @param first_resource First resource whose ownership is transferred.
+         * @param second_resource Second resource whose ownership is
+         * transferred.
+         * @param third_resource Third resource whose ownership is transferred.
+         *
+         * @pre All arguments must reference distinct resource objects.
+         * @pre All resource types must be nothrow move-constructible and
+         * nothrow destructible.
+         * @pre submission_id must belong to the associated submission stream
+         * and cover all outstanding GPU uses of the resources.
+         *
+         * @post On success, ownership of all three resources is transferred
+         * to the retirement queue.
+         * @post If retirement preparation fails, all three resources remain
+         * unchanged.
+         *
+         * @throws std::bad_alloc if retirement preparation allocation fails.
+         *
+         * @note This operation does not wait for GPU completion.
+         */
+        template <typename FirstResource, typename SecondResource,
+                  typename ThirdResource>
+        auto retire(std::uint64_t submission_id, FirstResource &first_resource,
+                    SecondResource &second_resource,
+                    ThirdResource &third_resource) -> void {
+            static_assert(
+                std::is_nothrow_move_constructible_v<FirstResource>,
+                "Retired resources must be nothrow move-constructible");
+
+            static_assert(std::is_nothrow_destructible_v<FirstResource>,
+                          "Retired resources must be nothrow destructible");
+
+            static_assert(
+                std::is_nothrow_move_constructible_v<SecondResource>,
+                "Retired resources must be nothrow move-constructible");
+
+            static_assert(std::is_nothrow_destructible_v<SecondResource>,
+                          "Retired resources must be nothrow destructible");
+
+            static_assert(
+                std::is_nothrow_move_constructible_v<ThirdResource>,
+                "Retired resources must be nothrow move-constructible");
+
+            static_assert(std::is_nothrow_destructible_v<ThirdResource>,
+                          "Retired resources must be nothrow destructible");
+
+            const void *first_address =
+                static_cast<const void *>(std::addressof(first_resource));
+            const void *second_address =
+                static_cast<const void *>(std::addressof(second_resource));
+            const void *third_address =
+                static_cast<const void *>(std::addressof(third_resource));
+
+            if (first_address == second_address ||
+                first_address == third_address ||
+                second_address == third_address) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "Vulkan resource retirement requires distinct resource "
+                    "objects");
+            }
+
+            using RemainingResources = std::pair<SecondResource, ThirdResource>;
+
+            using Resources = std::pair<FirstResource, RemainingResources>;
+
+            auto holder = std::make_unique<std::optional<Resources>>();
+
+            auto *storage = holder.get();
+
+            std::move_only_function<void() noexcept> release =
+                [owner = std::move(holder)] noexcept -> void {
+                (*owner).reset();
+            };
+
+            static_assert(
+                std::is_nothrow_constructible_v<
+                    RemainingResources, SecondResource &&, ThirdResource &&>,
+                "Nested retired resources must be nothrow-constructible");
+
+            static_assert(
+                std::is_nothrow_constructible_v<Resources, FirstResource &&,
+                                                RemainingResources &&>,
+                "Retired resources must be nothrow-constructible");
+
+            m_PendingResources.emplace_back(RetiredResource{
+                .submission_id = submission_id,
+                .release = std::move(release),
+            });
+
+            storage->emplace(std::move(first_resource),
+                             RemainingResources{
+                                 std::move(second_resource),
+                                 std::move(third_resource),
+                             });
+        }
+
+        /**
          * @brief Releases retired resources whose GPU submissions have
          * completed.
          *

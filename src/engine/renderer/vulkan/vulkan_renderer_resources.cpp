@@ -371,8 +371,6 @@ namespace SNE::Engine::Renderer::Vulkan {
         GpuResourceHandle new_texture_handle =
             m_TextureRegistry.insert(std::move(new_texture_resources));
 
-        std::optional<TextureBindingResources> new_texture_binding;
-
         const MaterialResourceBinding resource_binding{
             .set = 0U,
             .binding = 0U,
@@ -381,12 +379,51 @@ namespace SNE::Engine::Renderer::Vulkan {
             .resource_handle = new_texture_handle,
         };
 
+        std::optional<TextureBindingResources> new_texture_binding;
+        std::optional<MaterialDescriptorResources>
+            new_material_descriptor_resources;
+
         try {
             new_texture_binding.emplace(createTextureBindingResources(
                 resource_binding, descriptor_layout));
 
+            if (m_MaterialDescriptorResources.has_value()) {
+                std::vector<MaterialResourceBinding> new_material_bindings =
+                    m_MaterialBindings.bindings;
+
+                const auto replacement_binding_it = std::ranges::find_if(
+                    new_material_bindings,
+                    [](const MaterialResourceBinding &binding) -> bool {
+                        return binding.set == 0U && binding.binding == 0U &&
+                               binding.array_element == 0U &&
+                               binding.type == Shader::ShaderResourceType::
+                                                   CombinedImageSampler;
+                    });
+
+                if (replacement_binding_it == new_material_bindings.end()) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Invariant,
+                        Core::Error::Subsystem::Vulkan,
+                        "VulkanRenderer replacement material texture binding "
+                        "was not found");
+                }
+
+                *replacement_binding_it = resource_binding;
+
+                new_material_descriptor_resources.emplace(
+                    createMaterialDescriptorResources(
+                        m_MaterialDescriptorPoolSizes));
+
+                writeMaterialDescriptorSets(
+                    new_material_descriptor_resources.value(),
+                    new_material_bindings);
+            }
         } catch (...) {
+            new_material_descriptor_resources.reset();
+            new_texture_binding.reset();
+
             static_cast<void>(m_TextureRegistry.remove(new_texture_handle));
+
             throw;
         }
 
@@ -402,12 +439,25 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         try {
-            m_GraphicsResourceRetirementQueue.retire(
-                m_GraphicsSubmissionState.lastSubmitted(),
-                *old_texture_resources, active_texture_resources);
+            const std::uint64_t submission_id =
+                m_GraphicsSubmissionState.lastSubmitted();
+
+            if (m_MaterialDescriptorResources.has_value()) {
+                m_GraphicsResourceRetirementQueue.retire(
+                    submission_id, *old_texture_resources,
+                    active_texture_resources,
+                    m_MaterialDescriptorResources.value());
+            } else {
+                m_GraphicsResourceRetirementQueue.retire(
+                    submission_id, *old_texture_resources,
+                    active_texture_resources);
+            }
         } catch (...) {
+            new_material_descriptor_resources.reset();
             new_texture_binding.reset();
+
             static_cast<void>(m_TextureRegistry.remove(new_texture_handle));
+
             throw;
         }
 
@@ -415,6 +465,11 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         m_TextureBindingResources.emplace(
             std::move(new_texture_binding.value()));
+
+        if (new_material_descriptor_resources.has_value()) {
+            m_MaterialDescriptorResources.emplace(
+                std::move(new_material_descriptor_resources.value()));
+        }
 
         *texture_binding_it = resource_binding;
     }

@@ -504,6 +504,14 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_MaterialDescriptorResources;
 
         /**
+         * @brief Stores descriptor counts required by the current material.
+         *
+         * Reuses the shader-derived descriptor counts when allocating
+         * replacement material descriptor pools.
+         */
+        std::vector<VkDescriptorPoolSize> m_MaterialDescriptorPoolSizes;
+
+        /**
          * @brief Stores the material resource bindings used for rendering.
          *
          * Owns backend-independent binding descriptions containing descriptor
@@ -995,6 +1003,35 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto createTextureBindingResources(
             const MaterialResourceBinding &resource_binding,
             const VulkanDescriptorSetLayout &layout) -> TextureBindingResources;
+
+        /**
+         * @brief Writes material resources into the supplied Vulkan descriptor
+         * sets.
+         *
+         * Resolves material resource handles through their respective
+         * registries and updates the destination descriptor sets according
+         * to the supplied material bindings.
+         *
+         * @param destination Descriptor pool and descriptor sets receiving
+         * the resource bindings.
+         * @param bindings Material resource bindings to write into the
+         * destination descriptor sets.
+         *
+         * @pre The destination descriptor sets must already be allocated.
+         * @pre The supplied bindings must reference registered resources
+         * compatible with the corresponding descriptor declarations.
+         * @pre Referenced GPU resources must remain alive while the descriptor
+         * sets may be used by GPU submissions.
+         * @pre The destination descriptor sets must not be in use by pending
+         * GPU submissions when updated without the required Vulkan
+         * update-after-bind support.
+         *
+         * @note This function does not allocate descriptor sets or transfer
+         * ownership of GPU resources.
+         */
+        auto writeMaterialDescriptorSets(
+            MaterialDescriptorResources &destination,
+            std::span<const MaterialResourceBinding> bindings) -> void;
 
         /**
          * @brief Writes registered material resources into Vulkan descriptor

@@ -18,10 +18,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <exception>
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <optional>
 #include <span>
+#include <string>
 #include <type_traits>
 #include <utility>
 
@@ -35,6 +37,7 @@ namespace {
     struct TestVertex {
         std::array<float, 3> position;
         std::array<float, 3> color;
+        std::array<float, 2> uv;
     };
 
     static_assert(std::is_standard_layout_v<TestVertex>);
@@ -48,14 +51,17 @@ namespace {
         TestVertex{
             .position = {-0.5F, -0.5F, 0.0F},
             .color = {1.0F, 0.0F, 0.0F},
+            .uv = {0.0F, 0.0F},
         },
         TestVertex{
             .position = {0.5F, -0.5F, 0.0F},
             .color = {0.0F, 1.0F, 0.0F},
+            .uv = {1.0F, 0.0F},
         },
         TestVertex{
             .position = {0.0F, 0.5F, 0.0F},
             .color = {0.0F, 0.0F, 1.0F},
+            .uv = {0.5F, 1.0F},
         },
     };
 
@@ -76,6 +82,11 @@ namespace {
             .location = 1U,
             .format = Renderer::VertexFormat::Float32x3,
             .offset = static_cast<std::uint32_t>(offsetof(TestVertex, color)),
+        },
+        Renderer::VertexAttributeDescription{
+            .location = 2U,
+            .format = Renderer::VertexFormat::Float32x2,
+            .offset = static_cast<std::uint32_t>(offsetof(TestVertex, uv)),
         },
     };
 
@@ -166,6 +177,34 @@ namespace {
         };
     }
 
+    [[nodiscard]] auto makeTexturedGraphicsShaders()
+        -> Shader::GraphicsShaderData {
+        return {
+            .vertex =
+                {
+                    .artifact = Vulkan::loadSpirv(
+                        std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                        "textured.vert.spv"),
+                    .selection =
+                        {
+                            .stage = Shader::ShaderStage::Vertex,
+                            .entry_point = "main",
+                        },
+                },
+            .fragment =
+                {
+                    .artifact = Vulkan::loadSpirv(
+                        std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                        "textured.frag.spv"),
+                    .selection =
+                        {
+                            .stage = Shader::ShaderStage::Fragment,
+                            .entry_point = "main",
+                        },
+                },
+        };
+    }
+
     constexpr std::array<std::uint8_t, 20U> kMipmappedPixels{
         255U, 0U,   0U,   255U, 0U,   255U, 0U,   255U, 0U,   0U,
         255U, 255U, 255U, 255U, 255U, 255U, 128U, 128U, 128U, 255U,
@@ -179,6 +218,27 @@ namespace {
             .format = Renderer::TextureFormat::Rgba8Srgb,
             .mip_levels = 2U,
         };
+    }
+
+    template <typename Operation>
+    [[nodiscard]] auto captureVulkanValidationOutput(Operation &&operation)
+        -> std::pair<std::string, std::string> {
+        testing::internal::CaptureStderr();
+
+        std::string operation_error;
+
+        try {
+            std::forward<Operation>(operation)();
+        } catch (const std::exception &exception) {
+            operation_error = exception.what();
+        } catch (...) {
+            operation_error = "Unknown exception";
+        }
+
+        const std::string validation_output =
+            testing::internal::GetCapturedStderr();
+
+        return {validation_output, operation_error};
     }
 
 } // namespace
@@ -265,6 +325,116 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
     for (std::size_t i{}; i < 2U; ++i) {
         ASSERT_NO_THROW(renderer.renderFrame());
     }
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       ReplacesShaderDrivenTextureAcrossRenderedFrames) {
+    const std::array model_matrices{
+        Math::identity(),
+    };
+
+    const Renderer::InitialMeshData initial_mesh =
+        makeInitialMesh(model_matrices);
+
+    if (!m_Window.has_value()) {
+        FAIL() << "Shader-driven texture replacement test requires an "
+                  "initialized window";
+    }
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Shader-Driven Texture Replacement Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        true,
+        initial_mesh,
+        makeInitialTexture(),
+        std::nullopt,
+        makeTexturedGraphicsShaders(),
+    };
+
+    for (std::size_t i{}; i < 2U; ++i) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            renderer.replaceTexture(makeReplacementTexture());
+
+            for (std::size_t i{}; i < 4U; ++i) {
+                renderer.renderFrame();
+            }
+
+            renderer.replaceTexture(makeThirdTexture());
+
+            for (std::size_t i{}; i < 4U; ++i) {
+                renderer.renderFrame();
+            }
+
+            renderer.replaceTexture(makeMipmappedTexture());
+
+            for (std::size_t i{}; i < 4U; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Texture replacement or rendering failed: " << operation_error;
+
+    EXPECT_EQ(validation_output.find("Vulkan validation:"), std::string::npos)
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       ReplacesShaderDrivenTextureRepeatedlyBeforeRendering) {
+    const std::array model_matrices{
+        Math::identity(),
+    };
+
+    const Renderer::InitialMeshData initial_mesh =
+        makeInitialMesh(model_matrices);
+
+    if (!m_Window.has_value()) {
+        FAIL() << "Repeated shader-driven texture replacement test requires "
+                  "an initialized window";
+    }
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Shader-Driven Texture Replacement Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        true,
+        initial_mesh,
+        makeInitialTexture(),
+        std::nullopt,
+        makeTexturedGraphicsShaders(),
+    };
+
+    constexpr std::size_t val = 5U;
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            constexpr std::size_t kReplacementCount = 12U;
+
+            for (std::size_t i{}; i < kReplacementCount; ++i) {
+                if ((i % 2U) == 0U) {
+                    renderer.replaceTexture(makeReplacementTexture());
+                } else {
+                    renderer.replaceTexture(makeThirdTexture());
+                }
+            }
+
+            for (std::size_t i{}; i < val; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Repeated texture replacement or rendering failed: "
+        << operation_error;
+
+    EXPECT_EQ(validation_output.find("Vulkan validation:"), std::string::npos)
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
 }
 
 TEST_F(VulkanRendererTextureReplacementIntegrationTests,
