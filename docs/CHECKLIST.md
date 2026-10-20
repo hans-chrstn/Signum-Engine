@@ -1046,8 +1046,8 @@
 - [x] Test descriptor-set limits and invalid set ordering
 - [x] Test descriptor-set layout ownership after moving
 - [ ] Test runtime material parameter updates without effect-specific assumptions
-- [ ] Test shader-driven texture replacement across rendered frames
-- [ ] Test descriptor resource replacement with GPU submissions in flight
+- [x] Test shader-driven texture replacement across rendered frames
+- [x] Test descriptor resource replacement with GPU submissions in flight
 - [x] Test partial creation failures
 - [x] Test swapchain recreation failures after `oldSwapchain` retirement
 - [x] Verify failed swapchain recreation does not reuse retired swapchain resources
@@ -1062,7 +1062,7 @@
 - [ ] Test missing, invalid, and incompatible shader artifacts without resource leaks
 - [x] Test shader/pipeline variant identity and compatible reuse
 - [ ] Test texture mip-level, view-range, format, and sRGB/linear interpretation cases
-- [ ] Test resource replacement and shutdown while previously submitted GPU work is still in flight
+- [x] Test resource replacement and shutdown while previously submitted GPU work is still in flight
 - [ ] Verify missing optional binding capabilities do not block the conventional rendering path
 
 ### Architecture

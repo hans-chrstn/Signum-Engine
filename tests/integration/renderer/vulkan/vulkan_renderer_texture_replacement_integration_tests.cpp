@@ -1,3 +1,4 @@
+
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
@@ -635,4 +636,83 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
         },
         "initial material bindings do not satisfy vertex shader "
         "descriptor requirements");
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RetiresShaderDrivenTextureAndDescriptorsBeforeShutdown) {
+    const std::array model_matrices{
+        Math::identity(),
+    };
+
+    const Renderer::InitialMeshData initial_mesh =
+        makeInitialMesh(model_matrices, kTexturedVertexAttributes);
+
+    if (!m_Window.has_value()) {
+        FAIL() << "Shader-driven texture retirement test requires an "
+                  "initialized window";
+    }
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Shader-Driven Texture Retirement Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                initial_mesh,
+                makeInitialTexture(),
+                std::nullopt,
+                makeTexturedGraphicsShaders(),
+            };
+
+            renderer.renderFrame();
+            renderer.replaceTexture(makeReplacementTexture());
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Shader-driven texture replacement or shutdown failed: "
+        << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RetiresTextureBindingBeforeShutdown) {
+    const std::array model_matrices{
+        Math::identity(),
+    };
+
+    const Renderer::InitialMeshData initial_mesh =
+        makeInitialMesh(model_matrices);
+
+    if (!m_Window.has_value()) {
+        FAIL() << "Texture binding retirement test requires an initialized "
+                  "window";
+    }
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Texture Binding Retirement Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                initial_mesh,
+                makeInitialTexture(),
+                std::nullopt,
+                makeGraphicsShaders(),
+            };
+
+            renderer.renderFrame();
+            renderer.replaceTexture(makeReplacementTexture());
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Texture replacement or shutdown failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
 }
