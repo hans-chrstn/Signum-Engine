@@ -1362,6 +1362,45 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto replaceTexture(const TextureUploadData &texture) -> void;
 
         /**
+         * @brief Updates the data of an existing material uniform buffer.
+         *
+         * Creates a replacement uniform buffer initialized with the supplied
+         * data and updates the material descriptor resources to reference it.
+         *
+         * The previous buffer and descriptor resources remain alive until
+         * graphics submissions referencing them have completed.
+         *
+         * The replacement buffer must have the same size as the existing
+         * buffer. This operation does not recreate the graphics pipeline.
+         *
+         * @param set Descriptor-set index containing the uniform buffer.
+         * @param binding Binding index within the descriptor set.
+         * @param array_element Element index within the descriptor array.
+         * @param data Borrowed CPU data used to initialize the replacement
+         * buffer.
+         *
+         * @pre Material descriptor resources must exist.
+         * @pre The specified binding must reference an existing uniform buffer.
+         * @pre data must not be empty and must match the existing buffer size.
+         * @pre The caller must serialize this operation with rendering and
+         * other resource replacement operations.
+         *
+         * @post On success, subsequent frames use the updated buffer data.
+         * @post If preparation or retirement fails, the existing material
+         * remains active.
+         *
+         * @throws Core::Error::EngineError if buffer or descriptor resource
+         * creation fails.
+         * @throws std::bad_alloc if resource allocation fails.
+         *
+         * @note The supplied CPU data must remain valid until this operation
+         * completes.
+         */
+        auto updateMaterialBuffer(std::uint32_t set, std::uint32_t binding,
+                                  std::uint32_t array_element,
+                                  std::span<const std::byte> data) -> void;
+
+        /**
          * @brief Processes one renderer frame.
          *
          * Coordinates synchronization, swapchain-image acquisition, command

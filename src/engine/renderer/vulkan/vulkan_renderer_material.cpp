@@ -9,6 +9,7 @@
 #include "vulkan_renderer.hpp"
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <span>
 #include <utility>
 #include <vector>
@@ -244,6 +245,133 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         writeMaterialDescriptorSets(m_MaterialDescriptorResources.value(),
                                     m_MaterialBindings.bindings);
+    }
+
+    auto VulkanRenderer::updateMaterialBuffer(std::uint32_t set,
+                                              std::uint32_t binding,
+                                              std::uint32_t array_element,
+                                              std::span<const std::byte> data)
+        -> void {
+
+        if (!m_MaterialDescriptorResources.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::updateMaterialBuffer requires allocated "
+                "material descriptor resources");
+        }
+
+        MaterialDescriptorResources &active_descriptor_resources =
+            m_MaterialDescriptorResources.value();
+
+        if (data.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::updateMaterialBuffer requires nonempty data");
+        }
+
+        const auto binding_it = std::ranges::find_if(
+            m_MaterialBindings.bindings,
+            [set, binding,
+             array_element](const MaterialResourceBinding &candidate) -> bool {
+                return candidate.set == set && candidate.binding == binding &&
+                       candidate.array_element == array_element;
+            });
+
+        if (binding_it == m_MaterialBindings.bindings.end()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::updateMaterialBuffer requires an existing "
+                "material binding");
+        }
+
+        if (binding_it->type != Shader::ShaderResourceType::UniformBuffer) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::updateMaterialBuffer requires a "
+                "uniform-buffer binding");
+        }
+
+        const std::size_t binding_index = static_cast<std::size_t>(
+            binding_it - m_MaterialBindings.bindings.begin());
+
+        const GpuResourceHandle old_buffer_handle = binding_it->resource_handle;
+
+        const VulkanBuffer *old_buffer =
+            m_BufferRegistry.find(old_buffer_handle);
+
+        if (old_buffer == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material uniform-buffer binding does not "
+                "resolve to a registered buffer");
+        }
+
+        if (data.size_bytes() != old_buffer->size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::updateMaterialBuffer requires data matching "
+                "the existing buffer size");
+        }
+
+        std::vector<MaterialResourceBinding> bindings =
+            m_MaterialBindings.bindings;
+
+        GpuResourceHandle buffer_handle = registerUniformBuffer(data);
+
+        bindings[binding_index].resource_handle = buffer_handle;
+
+        std::optional<MaterialDescriptorResources>
+            new_material_descriptor_resources;
+
+        try {
+            new_material_descriptor_resources.emplace(
+                createMaterialDescriptorResources(
+                    m_MaterialDescriptorPoolSizes));
+
+            writeMaterialDescriptorSets(
+                new_material_descriptor_resources.value(), bindings);
+        } catch (...) {
+            new_material_descriptor_resources.reset();
+            static_cast<void>(m_BufferRegistry.remove(buffer_handle));
+            throw;
+        }
+
+        VulkanBuffer *old_buffer_to_retire =
+            m_BufferRegistry.find(old_buffer_handle);
+
+        if (old_buffer_to_retire == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active material buffer handle does not resolve "
+                "to a registered buffer");
+        }
+
+        try {
+            const std::uint64_t submission_id =
+                m_GraphicsSubmissionState.lastSubmitted();
+
+            m_GraphicsResourceRetirementQueue.retire(
+                submission_id, *old_buffer_to_retire,
+                active_descriptor_resources);
+        } catch (...) {
+            new_material_descriptor_resources.reset();
+            static_cast<void>(m_BufferRegistry.remove(buffer_handle));
+            throw;
+        }
+
+        static_cast<void>(m_BufferRegistry.remove(old_buffer_handle));
+
+        m_MaterialDescriptorResources.emplace(
+            std::move(new_material_descriptor_resources.value()));
+
+        m_MaterialBindings.bindings[binding_index] = bindings[binding_index];
     }
 
     auto VulkanRenderer::registerUniformBuffer(std::span<const std::byte> data)

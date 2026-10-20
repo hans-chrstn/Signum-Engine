@@ -4,6 +4,7 @@ add_executable(
   renderer/vulkan/vulkan_renderer_mesh_replacement_integration_tests.cpp
   renderer/vulkan/vulkan_renderer_texture_replacement_integration_tests.cpp
   renderer/vulkan/vulkan_renderer_material_integration_tests.cpp
+  renderer/vulkan/vulkan_renderer_material_update_integration_tests.cpp
   renderer/vulkan/command/vulkan_immediate_submission_integration_tests.cpp
   renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
   renderer/vulkan/compute/vulkan_matrix_transform_integration_tests.cpp

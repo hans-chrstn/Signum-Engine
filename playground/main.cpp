@@ -318,9 +318,9 @@ auto main() -> int {
             .pixels = std::span{kCheckerboardPixels},
         };
 
-        auto vertex_data = Vulkan::loadSpirv("build/shaders/triangle.vert.spv");
+        auto vertex_data = Vulkan::loadSpirv("build/shaders/textured.vert.spv");
         auto fragment_data =
-            Vulkan::loadSpirv("build/shaders/triangle.frag.spv");
+            Vulkan::loadSpirv("build/shaders/textured.frag.spv");
 
         Shader::GraphicsShaderData graphics_data{
             .vertex =

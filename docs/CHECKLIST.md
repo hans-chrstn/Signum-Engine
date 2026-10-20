@@ -960,7 +960,6 @@
 - [ ] compute pipelines
 - [ ] GPU resource lifetime
 - [ ] GPU resource dependency tracking
-
 - [x] SPIR-V compilation, shader stages, entry points, and compiler diagnostics
 - [x] shader interface reflection and descriptor/push-constant compatibility
 - [ ] shader specialization constants and pipeline variant identity
@@ -1045,7 +1044,7 @@
 - [x] Test sparse descriptor-set indices and empty layouts
 - [x] Test descriptor-set limits and invalid set ordering
 - [x] Test descriptor-set layout ownership after moving
-- [ ] Test runtime material parameter updates without effect-specific assumptions
+- [x] Test runtime material parameter updates without effect-specific assumptions
 - [x] Test shader-driven texture replacement across rendered frames
 - [x] Test descriptor resource replacement with GPU submissions in flight
 - [x] Test partial creation failures
@@ -1057,7 +1056,6 @@
 - [ ] Increase reference object counts to expose resource, transform, synchronization, and rendering bugs
 - [x] Run Vulkan validation
 - [x] Run sanitizers
-
 - [x] Reject incompatible shader stages, bindings, and pipeline layouts with useful diagnostics
 - [ ] Test missing, invalid, and incompatible shader artifacts without resource leaks
 - [x] Test shader/pipeline variant identity and compatible reuse

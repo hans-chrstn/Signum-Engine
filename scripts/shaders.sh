@@ -13,6 +13,12 @@ slang_test_shader_source_dir="${project_root}/shaders/slang/tests"
 mkdir -p -- "${shader_output_dir}"
 
 glslc \
+    "${project_root}/shaders/glsl/tests/material_update.vert" \
+    -o "${shader_output_dir}/material_update.vert.spv"
+
+spirv-val "${shader_output_dir}/material_update.vert.spv"
+
+glslc \
     "${shader_source_dir}/blackhole.vert" \
     -o "${shader_output_dir}/blackhole.vert.spv"
 
