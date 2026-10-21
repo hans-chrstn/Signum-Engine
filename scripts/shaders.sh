@@ -19,6 +19,12 @@ glslc \
 spirv-val "${shader_output_dir}/material_update.vert.spv"
 
 glslc \
+    "${project_root}/shaders/glsl/tests/material_storage.vert" \
+    -o "${shader_output_dir}/material_storage.vert.spv"
+
+spirv-val "${shader_output_dir}/material_storage.vert.spv"
+
+glslc \
     "${shader_source_dir}/blackhole.vert" \
     -o "${shader_output_dir}/blackhole.vert.spv"
 

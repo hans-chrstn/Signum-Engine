@@ -125,6 +125,13 @@ namespace {
         };
     }
 
+    [[nodiscard]] auto initialStorageBinding()
+        -> Renderer::MaterialBufferBindingInput {
+        Renderer::MaterialBufferBindingInput input = initialBinding();
+        input.type = Shader::ShaderResourceType::StorageBuffer;
+        return input;
+    }
+
     [[nodiscard]] auto makeInitialMesh(std::span<const Math::Matrix4f> matrices)
         -> Renderer::InitialMeshData {
         return {
@@ -168,6 +175,17 @@ namespace {
                         },
                 },
         };
+    }
+
+    [[nodiscard]] auto makeStorageMaterialShaders()
+        -> Shader::GraphicsShaderData {
+        Shader::GraphicsShaderData shaders = makeMaterialShaders();
+
+        shaders.vertex.artifact =
+            Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                              "material_storage.vert.spv");
+
+        return shaders;
     }
 
     [[nodiscard]] auto makeTexturedShaders() -> Shader::GraphicsShaderData {
@@ -554,6 +572,74 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
         {
             renderer.updateMaterialBuffer(
                 0U, 0U, 0U, parameterBytes(kReplacementParameters));
+        },
+        "requires a uniform-buffer binding");
+}
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       RendersWithStorageBufferMaterial) {
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh = makeInitialMesh(matrices);
+    const std::array initial_bindings{initialStorageBinding()};
+
+    if (!m_Window.has_value()) {
+        FAIL() << "Missing-material test requires an initialized window";
+    }
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Storage Buffer Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                mesh,
+                std::nullopt,
+                std::nullopt,
+                makeStorageMaterialShaders(),
+                initial_bindings,
+            };
+
+            constexpr std::size_t kFrameCount{4U};
+
+            for (std::size_t i{}; i < kFrameCount; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Storage-buffer material rendering failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       RejectsUniformUpdateForStorageBufferBinding) {
+    const std::array initial_bindings{initialStorageBinding()};
+
+    if (!m_Window.has_value()) {
+        FAIL() << "Missing-material test requires an initialized window";
+    }
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Storage Buffer Validation Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        std::nullopt,
+        std::nullopt,
+        std::nullopt,
+        makeStorageMaterialShaders(),
+        initial_bindings,
+    };
+
+    ASSERT_DEATH(
+        {
+            renderer.updateMaterialBuffer(
+                kMaterialSet, kMaterialBinding, kArrayElement,
+                parameterBytes(kReplacementParameters));
         },
         "requires a uniform-buffer binding");
 }

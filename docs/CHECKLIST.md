@@ -995,7 +995,7 @@
 - [x] Integrate shader validation into Vulkan shader-module creation
 - [x] Integrate entry-point validation into Vulkan graphics-pipeline creation
 - [x] Add uniform-buffer creation, initialization, and registration
-- [ ] Add storage-buffer support
+- [x] Add storage-buffer support
 - [x] Add textures
 - [x] Add descriptor/binding infrastructure
 - [x] Reflect descriptor requirements from graphics shaders
