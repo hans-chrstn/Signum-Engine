@@ -955,31 +955,31 @@
 - [x] textures
 - [x] descriptors
 - [x] descriptor/binding models
-- [ ] materials
-- [ ] shader and pipeline variants
-- [ ] compute pipelines
-- [ ] GPU resource lifetime
-- [ ] GPU resource dependency tracking
+- [x] materials
+- [x] shader and pipeline variants
+- [x] compute pipelines
+- [x] GPU resource lifetime
+- [x] GPU resource dependency tracking
 - [x] SPIR-V compilation, shader stages, entry points, and compiler diagnostics
 - [x] shader interface reflection and descriptor/push-constant compatibility
-- [ ] shader specialization constants and pipeline variant identity
-- [ ] image formats, image views, mip levels, array layers, and color spaces
-- [ ] sRGB versus linear sampling and texture usage
-- [ ] descriptor indexing capabilities and hardware-dependent binding limits
-- [ ] shader toolchain tradeoffs: GLSL, HLSL, and Slang
+- [x] shader specialization constants and pipeline variant identity
+- [x] image formats, image views, mip levels, array layers, and color spaces
+- [x] sRGB versus linear sampling and texture usage
+- [x] descriptor indexing capabilities and hardware-dependent binding limits
+- [x] shader toolchain tradeoffs: GLSL, HLSL, and Slang
 
 ### Design
 
 - [x] Define a compiler-independent shader artifact contract with SPIR-V as the initial Vulkan backend input
-- [ ] Define shader-stage, entry-point, compilation error, and diagnostic ownership
+- [x] Define shader-stage, entry-point, compilation error, and diagnostic ownership
 - [x] Define shader-interface metadata for bindings, stages, push constants, and pipeline compatibility
 - [x] Define a minimal shader reflection/validation boundary without depending on gameplay C++ reflection
 - [x] Define pipeline/layout compatibility and variant-key responsibilities
 - [x] Define texture/resource descriptions that preserve format, extent, sample count, mip levels, array layers, and intended usage
-- [ ] Define resource initialization and readiness separately from eventual logical resource handles
+- [x] Define resource initialization and readiness separately from eventual logical resource handles
 - [x] Define GPU-completion-aware resource retention for submissions still in flight
 - [x] Keep optional device-feature requirements explicit rather than assuming all Vulkan hardware supports descriptor indexing or advanced shaders
-- [ ] Record criteria for evaluating Slang against the initial shader toolchain before committing to a compiler migration
+- [x] Record criteria for evaluating Slang against the initial shader toolchain before committing to a compiler migration
 - [x] Define shader-stage and entry-point selection contracts
 - [x] Define SPIR-V validation failure and diagnostic contracts
 

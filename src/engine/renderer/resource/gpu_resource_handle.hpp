@@ -10,6 +10,13 @@ namespace SNE::Engine::Renderer {
      *
      * This value does not own GPU resources or memory allocations.
      * Resource lookup and lifetime validation belong to the owning registry.
+     *
+     * A valid resource handle does not independently establish whether
+     * GPU-side initialization is complete or whether the required
+     * synchronization has been satisfied.
+     *
+     * Resource readiness belongs to initialization and submission
+     * mechanisms, not to the resource handle's identity.
      */
     struct GpuResourceHandle {
         /** @brief Slot index assigned by the owning resource registry. */

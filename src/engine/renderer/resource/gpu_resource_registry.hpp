@@ -162,6 +162,13 @@ namespace SNE::Engine::Renderer {
          *
          * @note Resource must be nothrow move-constructible.
          * This requirement is enforced at compile time.
+         * @note Successful insertion establishes registry ownership and
+         * resource identity, not GPU readiness.
+         *
+         * The registry does not initialize GPU resources, wait for GPU
+         * execution, or verify that a resource is ready for use.
+         * These responsibilities belong to the resource creation and
+         * submission mechanisms.
          */
         [[nodiscard]] auto insert(Resource &&resource) -> GpuResourceHandle {
             static_assert(

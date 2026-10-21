@@ -1612,6 +1612,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          * mesh.
          * @post The active mesh selection and draw instances remain unchanged.
          * @post On failure, no new mesh remains registered.
+         * @post On success, vertex and index uploads have completed before
+         * the mesh handle is returned.
+         *
+         * @note The current upload path uses synchronous immediate submission
+         * on the graphics queue. Future asynchronous uploads may require
+         * separate readiness tracking before registered resources can be used.
          *
          * @throws Core::Error::EngineError if GPU allocation or upload fails.
          * @throws std::bad_alloc if resource allocation or registration fails.
