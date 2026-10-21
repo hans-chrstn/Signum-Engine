@@ -1622,6 +1622,36 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> GpuResourceHandle;
 
         /**
+         * @brief Unregisters an independent GPU mesh.
+         *
+         * Removes a registered mesh that is no longer selected or referenced
+         * by draw instances.
+         *
+         * The mesh's GPU buffers remain retained until all relevant graphics
+         * submissions have completed.
+         *
+         * @param handle Handle identifying the mesh to unregister.
+         *
+         * @pre The handle must resolve to a mesh registered with this renderer.
+         * @pre The mesh must not be the currently active mesh.
+         * @pre No draw instances may reference the mesh.
+         * @pre Removal must be serialized with rendering and other resource
+         * operations.
+         *
+         * @post On success, the handle becomes stale and no longer resolves
+         * through the mesh registry.
+         * @post Previously submitted GPU work retains access to the retired
+         * resources until completion.
+         * @post On failure, the mesh remains registered and unchanged.
+         *
+         * @throws std::bad_alloc if retirement preparation fails.
+         *
+         * @note Invalid, stale, foreign, active, or referenced mesh handles
+         * trigger precondition assertions.
+         */
+        auto unregisterMesh(GpuResourceHandle handle) -> void;
+
+        /**
          * @brief Replaces the renderer's current mesh draw instances.
          *
          * Copies the supplied instances into renderer-owned storage.

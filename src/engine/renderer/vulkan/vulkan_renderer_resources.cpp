@@ -137,6 +137,44 @@ namespace SNE::Engine::Renderer::Vulkan {
         return handle;
     }
 
+    auto VulkanRenderer::unregisterMesh(GpuResourceHandle handle) -> void {
+        MeshBufferResources *resources = m_MeshRegistry.find(handle);
+
+        if (resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::unregisterMesh requires a registered mesh "
+                "handle");
+        }
+
+        if (m_ActiveMeshHandle.has_value() && *m_ActiveMeshHandle == handle) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::unregisterMesh cannot remove the active mesh");
+        }
+
+        const bool is_mesh_referenced = std::ranges::any_of(
+            m_DrawInstances,
+            [handle](const MeshDrawInstance &instance) -> bool {
+                return instance.mesh_handle == handle;
+            });
+
+        if (is_mesh_referenced) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::unregisterMesh cannot remove a referenced "
+                "mesh");
+        }
+
+        m_GraphicsResourceRetirementQueue.retire(
+            m_GraphicsSubmissionState.lastSubmitted(), *resources);
+
+        static_cast<void>(m_MeshRegistry.remove(handle));
+    }
+
     auto VulkanRenderer::setDrawInstances(
         std::span<const MeshDrawInstance> instances) -> void {
 

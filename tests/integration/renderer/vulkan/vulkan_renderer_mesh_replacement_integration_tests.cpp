@@ -374,3 +374,193 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         ASSERT_NO_THROW(renderer.renderFrame());
     }
 }
+
+TEST(VulkanRendererMeshReplacementIntegrationTests,
+     UnregistersIndependentMeshesAndRejectsReferencedOrStaleHandles) {
+    if (std::getenv("DISPLAY") == nullptr &&
+        std::getenv("WAYLAND_DISPLAY") == nullptr) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    Platform::GlfwContext glfw{};
+
+    const Platform::Window window{
+        kWindowSize,
+        "Signum Mesh Unregistration Test",
+    };
+
+    Vulkan::VulkanInstance instance{
+        "Signum Mesh Unregistration Test",
+        false,
+    };
+
+    Vulkan::VulkanSurface surface{
+        instance.nativeHandle(),
+        window.nativeHandle(),
+    };
+
+    const auto devices =
+        Vulkan::enumeratePhysicalDevices(instance.nativeHandle());
+
+    const auto discovered =
+        Vulkan::inspectPhysicalDevices(devices, surface.nativeHandle());
+
+    if (!Vulkan::selectPhysicalDevice(discovered).has_value()) {
+        GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+    }
+
+    const Renderer::MeshUploadData triangle_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kTriangleVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kTriangleIndices,
+    };
+
+    const Renderer::MeshUploadData quad_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kQuadVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kQuadIndices,
+    };
+
+    const std::array initial_model_matrices{
+        Math::identity(),
+    };
+
+    const Renderer::InitialMeshData initial_mesh{
+        .mesh = triangle_mesh,
+        .layout =
+            {
+                .attributes = kVertexAttributes,
+            },
+        .model_matrices = initial_model_matrices,
+    };
+
+    Shader::GraphicsShaderData graphics_data{
+        .vertex =
+            {
+                .artifact = Vulkan::loadSpirv(
+                    std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                    "triangle.vert.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Vertex,
+                        .entry_point = "main",
+                    },
+            },
+        .fragment =
+            {
+                .artifact = Vulkan::loadSpirv(
+                    std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                    "triangle.frag.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            },
+    };
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Mesh Unregistration Test",
+        window,
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        std::move(graphics_data),
+    };
+
+    const Renderer::GpuResourceHandle triangle_handle =
+        renderer.registerMesh(triangle_mesh);
+
+    const Renderer::GpuResourceHandle quad_handle =
+        renderer.registerMesh(quad_mesh);
+
+    const std::array initial_instances{
+        Renderer::MeshDrawInstance{
+            .mesh_handle = triangle_handle,
+            .model_matrix = Math::translate(-0.5F, 0.0F, 0.0F),
+        },
+        Renderer::MeshDrawInstance{
+            .mesh_handle = quad_handle,
+            .model_matrix = Math::translate(0.5F, 0.0F, 0.0F),
+        },
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(initial_instances));
+
+    for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+
+    ASSERT_DEATH(
+        { renderer.unregisterMesh(triangle_handle); },
+        "cannot remove a referenced mesh");
+
+    ASSERT_DEATH(
+        { renderer.unregisterMesh(quad_handle); },
+        "cannot remove a referenced mesh");
+
+    const std::array remaining_instances{
+        Renderer::MeshDrawInstance{
+            .mesh_handle = quad_handle,
+            .model_matrix = Math::identity(),
+        },
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(remaining_instances));
+
+    ASSERT_NO_THROW(renderer.unregisterMesh(triangle_handle));
+
+    ASSERT_DEATH(
+        { renderer.unregisterMesh(triangle_handle); },
+        "requires a registered mesh handle");
+
+    const std::array stale_instances{
+        Renderer::MeshDrawInstance{
+            .mesh_handle = triangle_handle,
+            .model_matrix = Math::identity(),
+        },
+    };
+
+    ASSERT_DEATH(
+        { renderer.setDrawInstances(stale_instances); },
+        "requires registered mesh handles");
+
+    const Renderer::GpuResourceHandle replacement_triangle_handle =
+        renderer.registerMesh(triangle_mesh);
+
+    EXPECT_EQ(replacement_triangle_handle.registry_id,
+              triangle_handle.registry_id);
+
+    EXPECT_EQ(replacement_triangle_handle.index, triangle_handle.index);
+
+    EXPECT_EQ(replacement_triangle_handle.generation,
+              triangle_handle.generation + 1U);
+
+    const std::array replacement_instances{
+        Renderer::MeshDrawInstance{
+            .mesh_handle = replacement_triangle_handle,
+            .model_matrix = Math::translate(-0.5F, 0.0F, 0.0F),
+        },
+        Renderer::MeshDrawInstance{
+            .mesh_handle = quad_handle,
+            .model_matrix = Math::translate(0.5F, 0.0F, 0.0F),
+        },
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(replacement_instances));
+
+    for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
+
+    ASSERT_NO_THROW(renderer.unregisterMesh(replacement_triangle_handle));
+    ASSERT_NO_THROW(renderer.unregisterMesh(quad_handle));
+
+    for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+}
