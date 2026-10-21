@@ -3,7 +3,9 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/math/matrix4.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
@@ -165,10 +167,26 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         m_MeshVertexStride = mesh.mesh.vertex_stride;
 
-        m_ModelMatrices.assign(mesh.model_matrices.begin(),
-                               mesh.model_matrices.end());
-
         uploadMesh(mesh.mesh);
+
+        if (!m_ActiveMeshHandle.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer initial mesh upload did not produce an active "
+                "mesh handle");
+        }
+
+        m_DrawInstances.reserve(mesh.model_matrices.size());
+
+        for (const Core::Math::Matrix4f &matrix : mesh.model_matrices) {
+            MeshDrawInstance instance{
+                .mesh_handle = *m_ActiveMeshHandle,
+                .model_matrix = matrix,
+            };
+
+            m_DrawInstances.push_back(instance);
+        }
     }
 
     auto

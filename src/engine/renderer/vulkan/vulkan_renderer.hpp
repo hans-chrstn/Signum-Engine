@@ -1,9 +1,9 @@
 #pragma once
 
-#include "engine/core/math/matrix4.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
@@ -596,16 +596,17 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<GpuResourceHandle> m_ActiveMeshHandle;
 
         /**
-         * @brief Owns the model transformations for the uploaded mesh.
+         * @brief Stores the mesh instances submitted for rendering.
          *
-         * Stores copies of application-provided model matrices so rendering
-         * does not depend on caller-managed CPU storage.
+         * Associates non-owning mesh resource handles with model
+         * transformations. Mesh GPU resources remain owned by m_MeshRegistry.
          *
-         * Each matrix represents one draw of the same uploaded mesh.
+         * Instance data is independent of Vulkan resource ownership and does
+         * not represent persistent scene or game-object identity.
          *
          * Empty when no mesh instances have been configured.
          */
-        std::vector<Core::Math::Matrix4f> m_ModelMatrices;
+        std::vector<MeshDrawInstance> m_DrawInstances;
 
         /**
          * @brief Owns the vertex attribute descriptions of the uploaded mesh.
@@ -848,6 +849,24 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto recreateSwapchainResources() -> bool;
 
         /**
+         * @brief Creates GPU buffers for supplied mesh geometry.
+         *
+         * Validates borrowed vertex and index data, creates device-local
+         * vertex and index buffers, and uploads the supplied contents.
+         *
+         * Does not register the mesh or modify the active mesh selection.
+         *
+         * @param mesh Borrowed mesh geometry to upload.
+         * @return Owned GPU mesh buffer resources.
+         *
+         * @throws Core::Error::EngineError if GPU allocation or upload fails.
+         *
+         * @note Invalid mesh data triggers precondition assertions.
+         */
+        [[nodiscard]] auto createMeshBufferResources(const MeshUploadData &mesh)
+            -> MeshBufferResources;
+
+        /**
          * @brief Creates, uploads, and registers GPU mesh buffers.
          *
          * Validates the supplied mesh data and uploads vertex and index buffers
@@ -878,6 +897,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * mesh containing the uploaded GPU buffers.
          * @post If replacement preparation or retirement fails, the previous
          * mesh remains registered and active.
+         * @post On successful replacement, draw instances referencing the
+         * previous mesh are updated to reference the replacement mesh.
          *
          * @throws Core::Error::EngineError if Vulkan resource creation,
          * allocation, or upload fails.
@@ -1569,6 +1590,67 @@ namespace SNE::Engine::Renderer::Vulkan {
         VulkanRenderer(const VulkanRenderer &) = delete;
 
         auto operator=(const VulkanRenderer &) -> VulkanRenderer & = delete;
+
+        /**
+         * @brief Uploads and registers an independent GPU mesh.
+         *
+         * Creates vertex and index buffers and registers them with the
+         * renderer's mesh resource registry.
+         *
+         * Registration does not replace the active mesh or modify draw
+         * instances. The registered mesh remains owned by the renderer.
+         *
+         * @param mesh Borrowed vertex and index data to upload.
+         * @return Handle identifying the registered GPU mesh.
+         *
+         * @pre A compatible vertex layout must already be configured.
+         * @pre The mesh vertex stride must match the configured vertex stride.
+         * @pre Registration must be serialized with rendering and other
+         * resource operations.
+         *
+         * @post On success, the returned handle resolves to the registered
+         * mesh.
+         * @post The active mesh selection and draw instances remain unchanged.
+         * @post On failure, no new mesh remains registered.
+         *
+         * @throws Core::Error::EngineError if GPU allocation or upload fails.
+         * @throws std::bad_alloc if resource allocation or registration fails.
+         *
+         * @note Invalid mesh descriptions trigger precondition assertions.
+         */
+        [[nodiscard]] auto registerMesh(const MeshUploadData &mesh)
+            -> GpuResourceHandle;
+
+        /**
+         * @brief Replaces the renderer's current mesh draw instances.
+         *
+         * Copies the supplied instances into renderer-owned storage.
+         * Each instance references an existing registered GPU mesh through
+         * a non-owning resource handle.
+         *
+         * The supplied instances remain active across frames until replaced.
+         * An empty collection clears all draw instances.
+         *
+         * @param instances Borrowed mesh draw instances to configure.
+         *
+         * @pre Every mesh handle must resolve to a resource registered with
+         * this renderer.
+         * @pre The caller must serialize this operation with rendering and
+         * other draw-instance modifications.
+         *
+         * @post On success, the renderer retains copies of the supplied
+         * instances.
+         * @post GPU mesh ownership and active mesh selection remain unchanged.
+         * @post On failure, the previous draw instances remain unchanged.
+         *
+         * @throws std::bad_alloc if instance storage allocation fails.
+         *
+         * @note Invalid or stale mesh handles trigger precondition assertions.
+         * @note The caller's storage only needs to remain valid until this
+         * operation completes.
+         */
+        auto setDrawInstances(std::span<const MeshDrawInstance> instances)
+            -> void;
 
         /**
          * @brief Replaces the currently active GPU mesh.

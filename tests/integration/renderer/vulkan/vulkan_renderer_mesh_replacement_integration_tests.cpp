@@ -2,6 +2,7 @@
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/presentation_preference.hpp"
@@ -186,6 +187,8 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
 
     const std::array model_matrices{
         Math::identity(),
+        Math::translate(-0.5F, -0.0F, 0.0F),
+        Math::translate(0.5F, 0.0F, 0.0F),
     };
 
     const Renderer::InitialMeshData initial_mesh{
@@ -246,6 +249,126 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
     }
 
     ASSERT_NO_THROW(renderer.replaceMesh(triangle_mesh));
+
+    for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+}
+
+TEST(VulkanRendererMeshReplacementIntegrationTests,
+     RendersIndependentlyRegisteredMeshesInSameFrame) {
+    if (std::getenv("DISPLAY") == nullptr &&
+        std::getenv("WAYLAND_DISPLAY") == nullptr) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    Platform::GlfwContext glfw{};
+
+    const Platform::Window window{
+        kWindowSize,
+        "Signum Independent Mesh Draw Test",
+    };
+
+    Vulkan::VulkanInstance instance{
+        "Signum Independent Mesh Draw Test",
+        false,
+    };
+
+    Vulkan::VulkanSurface surface{
+        instance.nativeHandle(),
+        window.nativeHandle(),
+    };
+
+    const auto devices =
+        Vulkan::enumeratePhysicalDevices(instance.nativeHandle());
+
+    const auto discovered =
+        Vulkan::inspectPhysicalDevices(devices, surface.nativeHandle());
+
+    if (!Vulkan::selectPhysicalDevice(discovered).has_value()) {
+        GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+    }
+
+    const Renderer::MeshUploadData triangle_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kTriangleVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kTriangleIndices,
+    };
+
+    const Renderer::MeshUploadData quad_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kQuadVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kQuadIndices,
+    };
+
+    const std::array initial_model_matrices{
+        Math::identity(),
+    };
+
+    const Renderer::InitialMeshData initial_mesh{
+        .mesh = triangle_mesh,
+        .layout =
+            {
+                .attributes = kVertexAttributes,
+            },
+        .model_matrices = initial_model_matrices,
+    };
+
+    Shader::GraphicsShaderData graphics_data{
+        .vertex =
+            {
+                .artifact = Vulkan::loadSpirv(
+                    std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                    "triangle.vert.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Vertex,
+                        .entry_point = "main",
+                    },
+            },
+        .fragment =
+            {
+                .artifact = Vulkan::loadSpirv(
+                    std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                    "triangle.frag.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            },
+    };
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Independent Mesh Draw Test",
+        window,
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        std::move(graphics_data),
+    };
+
+    const auto triangle_handle = renderer.registerMesh(triangle_mesh);
+    const auto quad_handle = renderer.registerMesh(quad_mesh);
+
+    const std::array<Renderer::MeshDrawInstance, 3U> instances{
+        Renderer::MeshDrawInstance{
+            .mesh_handle = triangle_handle,
+            .model_matrix = Math::translate(-0.5F, 0.0F, 0.0F),
+        },
+        Renderer::MeshDrawInstance{
+            .mesh_handle = quad_handle,
+            .model_matrix = Math::translate(0.5F, 0.0F, 0.0F),
+        },
+        Renderer::MeshDrawInstance{
+            .mesh_handle = triangle_handle,
+            .model_matrix = Math::translate(0.0F, 0.5F, 0.0F),
+        },
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(instances));
 
     for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
         ASSERT_NO_THROW(renderer.renderFrame());

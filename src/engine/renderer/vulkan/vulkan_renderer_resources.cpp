@@ -2,7 +2,9 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
@@ -16,9 +18,11 @@
 #include <optional>
 #include <span>
 #include <utility>
+#include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
-    auto VulkanRenderer::uploadMesh(const MeshUploadData &mesh) -> void {
+    auto VulkanRenderer::createMeshBufferResources(const MeshUploadData &mesh)
+        -> MeshBufferResources {
         const std::optional<std::uint32_t> mesh_indices_size =
             Core::Numeric::tryConvertToUint32(mesh.indices.size());
 
@@ -105,6 +109,62 @@ namespace SNE::Engine::Renderer::Vulkan {
             .m_IndexCount = mesh_indices_size.value(),
         };
 
+        return new_mesh_buffers;
+    }
+
+    auto VulkanRenderer::registerMesh(const MeshUploadData &mesh)
+        -> GpuResourceHandle {
+        if (m_MeshVertexStride == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::registerMesh requires a configured vertex "
+                "layout");
+        }
+
+        if (mesh.vertex_stride != m_MeshVertexStride) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::registerMesh requires a matching vertex "
+                "stride");
+        }
+
+        MeshBufferResources resources = createMeshBufferResources(mesh);
+
+        GpuResourceHandle handle = m_MeshRegistry.insert(std::move(resources));
+
+        return handle;
+    }
+
+    auto VulkanRenderer::setDrawInstances(
+        std::span<const MeshDrawInstance> instances) -> void {
+
+        std::vector<MeshDrawInstance> draw_instances;
+        draw_instances.reserve(instances.size());
+
+        for (const MeshDrawInstance &instance : instances) {
+            MeshBufferResources *resources =
+                m_MeshRegistry.find(instance.mesh_handle);
+
+            if (resources == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer::setDrawInstances requires registered mesh "
+                    "handles");
+            }
+
+            draw_instances.push_back(instance);
+        }
+
+        m_DrawInstances.swap(draw_instances);
+    }
+
+    auto VulkanRenderer::uploadMesh(const MeshUploadData &mesh) -> void {
+
+        MeshBufferResources new_mesh_buffers = createMeshBufferResources(mesh);
+
         if (!m_ActiveMeshHandle.has_value()) {
             m_ActiveMeshHandle =
                 m_MeshRegistry.insert(std::move(new_mesh_buffers));
@@ -135,6 +195,13 @@ namespace SNE::Engine::Renderer::Vulkan {
             static_cast<void>(m_MeshRegistry.remove(replacement_handle));
             throw;
         }
+
+        for (MeshDrawInstance &instance : m_DrawInstances) {
+            if (instance.mesh_handle == previous_handle) {
+                instance.mesh_handle = replacement_handle;
+            }
+        }
+
         static_cast<void>(m_MeshRegistry.remove(previous_handle));
 
         m_ActiveMeshHandle.emplace(replacement_handle);

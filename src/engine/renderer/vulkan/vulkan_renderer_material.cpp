@@ -348,6 +348,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "material descriptor resources");
         }
 
+        if (!m_ActiveMaterialDescriptorHandle.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active material descriptor handle is missing "
+                "during buffer replacement");
+        }
+
         const GpuResourceHandle previous_descriptor_handle =
             *m_ActiveMaterialDescriptorHandle;
 

@@ -47,27 +47,6 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanRenderer requires a graphics pipeline when drawing");
         }
 
-        if (!m_ActiveMeshHandle.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires an active mesh handle before "
-                "recording draw commands");
-        }
-
-        const MeshBufferResources *active_mesh =
-            m_MeshRegistry.find(m_ActiveMeshHandle.value());
-
-        if (active_mesh == nullptr) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer active mesh handle does not resolve to a "
-                "registered mesh");
-        }
-
-        const MeshBufferResources &mesh = *active_mesh;
-
         const VulkanGraphicsPipeline &graphics_pipeline =
             *swapchain_resources.m_VulkanGraphicsPipeline;
 
@@ -151,15 +130,6 @@ namespace SNE::Engine::Renderer::Vulkan {
                 &m_TextureBindingResources->m_DescriptorSet, 0U, nullptr);
         }
 
-        const VkDeviceSize vertex_offset = 0U;
-        const VkBuffer vertex_buffer = mesh.m_VertexBuffer.nativeHandle();
-        vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
-                               &vertex_offset);
-
-        const VkBuffer index_buffer = mesh.m_IndexBuffer.nativeHandle();
-        vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
-                             VK_INDEX_TYPE_UINT16);
-
         VkViewport viewport{};
         viewport.x = 0.0F;
         viewport.y = static_cast<float>(swapchain.extent().height);
@@ -196,14 +166,35 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Math::multiply(perspective, m_InitialCamera->view);
         }
 
-        for (const Math::Matrix4f &model : m_ModelMatrices) {
-            const Math::Matrix4f mvp = Math::multiply(view_projection, model);
+        for (const MeshDrawInstance &instance : m_DrawInstances) {
+            const MeshBufferResources *mesh =
+                m_MeshRegistry.find(instance.mesh_handle);
+
+            if (mesh == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer draw instance mesh handle does not resolve "
+                    "to a registered mesh");
+            }
+
+            const VkDeviceSize vertex_offset = 0U;
+            const VkBuffer vertex_buffer = mesh->m_VertexBuffer.nativeHandle();
+            vkCmdBindVertexBuffers(command_buffer, 0U, 1U, &vertex_buffer,
+                                   &vertex_offset);
+
+            const VkBuffer index_buffer = mesh->m_IndexBuffer.nativeHandle();
+            vkCmdBindIndexBuffer(command_buffer, index_buffer, 0U,
+                                 VK_INDEX_TYPE_UINT16);
+
+            const Math::Matrix4f mvp =
+                Math::multiply(view_projection, instance.model_matrix);
 
             vkCmdPushConstants(command_buffer, graphics_pipeline.layoutHandle(),
                                VK_SHADER_STAGE_VERTEX_BIT, 0U,
                                static_cast<std::uint32_t>(sizeof(mvp)), &mvp);
 
-            vkCmdDrawIndexed(command_buffer, mesh.m_IndexCount, 1U, 0U, 0, 0U);
+            vkCmdDrawIndexed(command_buffer, mesh->m_IndexCount, 1U, 0U, 0, 0U);
         }
     }
 
@@ -347,7 +338,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdBeginRendering(command_buffer, &render_info);
 
-        if (m_ActiveMeshHandle.has_value()) {
+        if (!m_DrawInstances.empty()) {
             recordMeshDraws(command_buffer, swapchain_resources);
         }
 
