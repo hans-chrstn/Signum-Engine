@@ -972,6 +972,11 @@
 
 - [x] Define a compiler-independent shader artifact contract with SPIR-V as the initial Vulkan backend input
 - [x] Define shader-stage, entry-point, compilation error, and diagnostic ownership
+  - Shader source compilation owns compiler diagnostics; SPIR-V loading,
+    validation, entry-point selection, pipeline compatibility, and Vulkan
+    creation report errors at their respective boundaries.
+  - Retain compiler diagnostics and source locations in structured errors.
+    Keep shader source compiler details out of renderer-facing contracts.
 - [x] Define shader-interface metadata for bindings, stages, push constants, and pipeline compatibility
 - [x] Define a minimal shader reflection/validation boundary without depending on gameplay C++ reflection
 - [x] Define pipeline/layout compatibility and variant-key responsibilities
@@ -980,6 +985,11 @@
 - [x] Define GPU-completion-aware resource retention for submissions still in flight
 - [x] Keep optional device-feature requirements explicit rather than assuming all Vulkan hardware supports descriptor indexing or advanced shaders
 - [x] Record criteria for evaluating Slang against the initial shader toolchain before committing to a compiler migration
+  - Prefer Slang if SPIR-V validity, shader interface compatibility,
+    matrix layout, diagnostics, reproducible builds, cross-vendor
+    behavior, and performance meet engine requirements.
+  - Keep GLSL and HLSL supported. Vulkan continues consuming SPIR-V
+    independently of shader source language.
 - [x] Define shader-stage and entry-point selection contracts
 - [x] Define SPIR-V validation failure and diagnostic contracts
 
