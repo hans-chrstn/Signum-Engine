@@ -83,6 +83,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         return m_LastSubmittedId;
     }
 
+    auto VulkanQueueSubmissionState::lastCompleted() const noexcept
+        -> std::uint64_t {
+        return m_LastCompletedId;
+    }
+
     auto VulkanQueueSubmissionState::isComplete(
         std::uint64_t submission_id) const noexcept -> bool {
         return submission_id <= m_LastCompletedId;

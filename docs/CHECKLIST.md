@@ -1020,7 +1020,7 @@
 - [x] Define GPU resource ownership
 - [x] Define GPU lifetime ordering
 - [x] Track GPU resource dependencies
-- [ ] Expose resource lifetime/dependency data needed by later frame scheduling
+- [x] Expose resource lifetime/dependency data needed by later frame scheduling
 - [ ] Connect the first shader compilation or validated SPIR-V loading path to explicit compiler diagnostics
 - [x] Validate descriptor and push-constant declarations against the shader/pipeline interface
 - [x] Represent texture format, color space, mip ranges, and resource usage explicitly in Vulkan resource setup

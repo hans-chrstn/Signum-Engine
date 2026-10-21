@@ -714,3 +714,69 @@ TEST(GpuResourceDependencyTrackerTests,
     EXPECT_TRUE(tracker.hasDependentsOtherThan(kRelationship));
     EXPECT_FALSE(tracker.hasDependentsOtherThan(other));
 }
+
+TEST(GpuResourceDependencyTrackerTests, RelationshipsViewStartsEmpty) {
+    const Renderer::GpuResourceDependencyTracker tracker;
+
+    const auto relationships = tracker.relationships();
+
+    EXPECT_TRUE(relationships.empty());
+    EXPECT_EQ(relationships.size(), 0U);
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     RelationshipsViewExposesRegisteredDependencies) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency second_relationship{
+        .dependent = kOtherDependentHandle,
+        .dependency = kSecondDependencyHandle,
+    };
+
+    tracker.addDependency(kRelationship);
+    tracker.addDependency(second_relationship);
+
+    const Renderer::GpuResourceDependencyTracker &const_tracker = tracker;
+
+    static_assert(
+        std::is_same_v<decltype(const_tracker.relationships()),
+                       std::span<const Renderer::GpuResourceDependency>>);
+
+    const auto relationships = const_tracker.relationships();
+
+    ASSERT_EQ(relationships.size(), 2U);
+
+    EXPECT_NE(std::ranges::find(relationships, kRelationship),
+              relationships.end());
+
+    EXPECT_NE(std::ranges::find(relationships, second_relationship),
+              relationships.end());
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     RelationshipsViewReflectsRelationshipRemoval) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency second_relationship{
+        .dependent = kOtherDependentHandle,
+        .dependency = kSecondDependencyHandle,
+    };
+
+    tracker.addDependency(kRelationship);
+    tracker.addDependency(second_relationship);
+
+    ASSERT_EQ(tracker.relationships().size(), 2U);
+
+    ASSERT_TRUE(tracker.removeDependency(kRelationship));
+
+    const auto remaining_relationships = tracker.relationships();
+
+    ASSERT_EQ(remaining_relationships.size(), 1U);
+
+    EXPECT_EQ(remaining_relationships.front(), second_relationship);
+
+    EXPECT_EQ(tracker.removeRelationshipsInvolving(kSecondDependencyHandle),
+              1U);
+
+    EXPECT_TRUE(tracker.relationships().empty());
+}

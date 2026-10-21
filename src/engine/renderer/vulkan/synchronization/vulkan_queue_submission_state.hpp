@@ -165,6 +165,26 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto lastSubmitted() const noexcept -> std::uint64_t;
 
         /**
+         * @brief Returns the highest confirmed completed submission identifier.
+         *
+         * Reports the latest submission whose completion has been confirmed
+         * through the associated GPU synchronization mechanism.
+         *
+         * Because submissions belong to the same queue, completion also
+         * establishes that earlier submission identifiers have completed.
+         *
+         * @return Highest confirmed completed submission identifier, or zero
+         * if no submission completion has been recorded.
+         *
+         * @note This function only reads CPU-side completion bookkeeping.
+         * It does not query Vulkan or wait for GPU execution.
+         *
+         * @note The caller must synchronize access with submission and
+         * completion updates.
+         */
+        [[nodiscard]] auto lastCompleted() const noexcept -> std::uint64_t;
+
+        /**
          * @brief Checks whether a submission is known to be complete.
          *
          * A submission is complete when its identifier is no greater

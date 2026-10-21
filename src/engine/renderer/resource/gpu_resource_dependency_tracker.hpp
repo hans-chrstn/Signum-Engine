@@ -2,6 +2,7 @@
 
 #include "engine/renderer/resource/gpu_resource_dependency.hpp"
 #include <cstddef>
+#include <span>
 #include <vector>
 
 namespace SNE::Engine::Renderer {
@@ -115,6 +116,32 @@ namespace SNE::Engine::Renderer {
         [[nodiscard]] auto
         removeRelationshipsInvolving(GpuResourceHandle resource_handle) noexcept
             -> std::size_t;
+
+        /**
+         * @brief Returns the registered GPU resource relationships.
+         *
+         * Provides a read-only view of the dependency relationships currently
+         * stored by the tracker.
+         *
+         * Each relationship identifies a dependent resource and the resource
+         * it requires.
+         *
+         * @return Borrowed view of the registered dependency relationships.
+         *
+         * @note The returned view does not own the relationships.
+         * Adding or removing relationships may invalidate the view.
+         *
+         * @note The order of relationships is not a scheduling or destruction
+         * order.
+         *
+         * @note The caller must synchronize access with relationship
+         * modifications.
+         *
+         * @note This operation does not validate resource existence or GPU
+         * completion.
+         */
+        [[nodiscard]] auto relationships() const noexcept
+            -> std::span<const GpuResourceDependency>;
 
         /**
          * @brief Checks whether a dependency relationship is registered.

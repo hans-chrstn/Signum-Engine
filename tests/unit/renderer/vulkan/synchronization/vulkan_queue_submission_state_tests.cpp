@@ -186,3 +186,64 @@ TEST(VulkanQueueSubmissionStateTests, AllowsValidationAfterRecordedCompletion) {
     EXPECT_TRUE(state.isComplete(first));
     EXPECT_FALSE(state.isComplete(second));
 }
+
+TEST(VulkanQueueSubmissionStateTests, LastCompletedStartsAtZero) {
+    const Vulkan::VulkanQueueSubmissionState state{2U};
+
+    EXPECT_EQ(state.lastSubmitted(), 0U);
+    EXPECT_EQ(state.lastCompleted(), 0U);
+}
+
+TEST(VulkanQueueSubmissionStateTests,
+     LastCompletedAdvancesOnlyAfterRecordedCompletion) {
+    Vulkan::VulkanQueueSubmissionState state{2U};
+
+    const std::uint64_t first = state.recordSubmission(0U);
+    const std::uint64_t second = state.recordSubmission(1U);
+
+    EXPECT_EQ(state.lastSubmitted(), second);
+    EXPECT_EQ(state.lastCompleted(), 0U);
+
+    state.recordCompletion(0U);
+
+    EXPECT_EQ(state.lastCompleted(), first);
+    EXPECT_EQ(state.lastSubmitted(), second);
+
+    state.recordCompletion(1U);
+
+    EXPECT_EQ(state.lastCompleted(), second);
+    EXPECT_EQ(state.lastSubmitted(), second);
+}
+
+TEST(VulkanQueueSubmissionStateTests,
+     LastCompletedNeverDecreasesOrAdvancesForEmptySlots) {
+    Vulkan::VulkanQueueSubmissionState state{3U};
+
+    const std::uint64_t first = state.recordSubmission(0U);
+    const std::uint64_t second = state.recordSubmission(1U);
+    const std::uint64_t third = state.recordSubmission(2U);
+
+    state.recordCompletion(2U);
+
+    EXPECT_EQ(state.lastCompleted(), third);
+
+    state.recordCompletion(0U);
+    state.recordCompletion(1U);
+
+    EXPECT_EQ(state.lastCompleted(), third);
+
+    state.recordCompletion(2U);
+
+    EXPECT_EQ(state.lastCompleted(), third);
+
+    const std::uint64_t fourth = state.recordSubmission(0U);
+
+    EXPECT_EQ(fourth, third + 1U);
+    EXPECT_EQ(state.lastSubmitted(), fourth);
+    EXPECT_EQ(state.lastCompleted(), third);
+
+    EXPECT_TRUE(state.isComplete(first));
+    EXPECT_TRUE(state.isComplete(second));
+    EXPECT_TRUE(state.isComplete(third));
+    EXPECT_FALSE(state.isComplete(fourth));
+}

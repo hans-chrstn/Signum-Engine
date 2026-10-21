@@ -118,6 +118,11 @@ namespace SNE::Engine::Renderer {
         return removed_count;
     }
 
+    auto GpuResourceDependencyTracker::relationships() const noexcept
+        -> std::span<const GpuResourceDependency> {
+        return m_Dependencies;
+    }
+
     auto GpuResourceDependencyTracker::contains(
         GpuResourceDependency relationship) const noexcept -> bool {
         const auto dependency_it =
