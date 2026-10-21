@@ -15,15 +15,19 @@
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <gtest/gtest.h>
+#include <limits>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace Math = SNE::Engine::Core::Math;
 namespace Platform = SNE::Engine::Platform;
@@ -137,6 +141,100 @@ namespace {
     constexpr std::array<std::uint16_t, 6> kQuadIndices{
         0U, 1U, 2U, 2U, 1U, 3U,
     };
+
+    constexpr std::size_t kSphereLatitudeSegments{10U};
+    constexpr std::size_t kSphereLongitudeSegments{16U};
+    constexpr std::size_t kSphereLongitudeVertexCount{
+        kSphereLongitudeSegments + 1U,
+    };
+
+    constexpr std::size_t kSphereVertexCount{
+        (kSphereLatitudeSegments + 1U) * kSphereLongitudeVertexCount,
+    };
+
+    constexpr float kTwo{2.0F};
+    constexpr float kPi{std::numbers::pi_v<float>};
+    constexpr float kFullRotation{kTwo * kPi};
+
+    static_assert(kSphereVertexCount <=
+                  std::numeric_limits<std::uint16_t>::max());
+
+    struct ReferenceSphereGeometry {
+        std::vector<TestVertex> vertices;
+        std::vector<std::uint16_t> indices;
+    };
+
+    [[nodiscard]] auto makeReferenceSphereGeometry()
+        -> ReferenceSphereGeometry {
+        ReferenceSphereGeometry geometry{};
+
+        geometry.vertices.reserve(kSphereVertexCount);
+
+        for (std::size_t latitude{}; latitude <= kSphereLatitudeSegments;
+             ++latitude) {
+            const float latitude_angle =
+                kPi * static_cast<float>(latitude) /
+                static_cast<float>(kSphereLatitudeSegments);
+
+            for (std::size_t longitude{}; longitude <= kSphereLongitudeSegments;
+                 ++longitude) {
+                const float longitude_angle =
+                    kFullRotation * static_cast<float>(longitude) /
+                    static_cast<float>(kSphereLongitudeSegments);
+
+                geometry.vertices.push_back(TestVertex{
+                    .position =
+                        {
+                            std::sin(latitude_angle) *
+                                std::cos(longitude_angle),
+                            std::cos(latitude_angle),
+                            std::sin(latitude_angle) *
+                                std::sin(longitude_angle),
+                        },
+                    .color = kGreen,
+                });
+            }
+        }
+
+        for (std::size_t latitude{}; latitude < kSphereLatitudeSegments;
+             ++latitude) {
+            for (std::size_t longitude{}; longitude < kSphereLongitudeSegments;
+                 ++longitude) {
+                const std::size_t upper_left_index =
+                    (latitude * kSphereLongitudeVertexCount) + longitude;
+
+                const std::size_t upper_right_index = upper_left_index + 1U;
+
+                const std::size_t lower_left_index =
+                    upper_left_index + kSphereLongitudeVertexCount;
+
+                const std::size_t lower_right_index = lower_left_index + 1U;
+
+                const auto upper_left =
+                    static_cast<std::uint16_t>(upper_left_index);
+
+                const auto upper_right =
+                    static_cast<std::uint16_t>(upper_right_index);
+
+                const auto lower_left =
+                    static_cast<std::uint16_t>(lower_left_index);
+
+                const auto lower_right =
+                    static_cast<std::uint16_t>(lower_right_index);
+
+                geometry.indices.insert(geometry.indices.end(), {
+                                                                    upper_left,
+                                                                    lower_left,
+                                                                    upper_right,
+                                                                    upper_right,
+                                                                    lower_left,
+                                                                    lower_right,
+                                                                });
+            }
+        }
+
+        return geometry;
+    }
 } // namespace
 
 TEST(VulkanRendererMeshReplacementIntegrationTests,
@@ -561,6 +659,197 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
     ASSERT_NO_THROW(renderer.unregisterMesh(quad_handle));
 
     for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+}
+
+TEST(VulkanRendererMeshReplacementIntegrationTests,
+     RendersSphereReferenceMeshAcrossIncreasingInstanceCounts) {
+    constexpr std::size_t kSmallGridSide{4U};
+    constexpr std::size_t kMediumGridSide{8U};
+    constexpr std::size_t kLargeGridSide{12U};
+    constexpr std::size_t kMeshAlternationPeriod{2U};
+    constexpr std::size_t kFramesPerStage{3U};
+
+    constexpr float kInstanceSpacing{0.14F};
+    constexpr float kInstanceScale{0.065F};
+
+    if (std::getenv("DISPLAY") == nullptr &&
+        std::getenv("WAYLAND_DISPLAY") == nullptr) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    Platform::GlfwContext glfw{};
+
+    const Platform::Window window{
+        kWindowSize,
+        "Signum Sphere Reference Stress Test",
+    };
+
+    Vulkan::VulkanInstance instance{
+        "Signum Sphere Reference Stress Test",
+        false,
+    };
+
+    Vulkan::VulkanSurface surface{
+        instance.nativeHandle(),
+        window.nativeHandle(),
+    };
+
+    const auto devices =
+        Vulkan::enumeratePhysicalDevices(instance.nativeHandle());
+
+    const auto discovered =
+        Vulkan::inspectPhysicalDevices(devices, surface.nativeHandle());
+
+    if (!Vulkan::selectPhysicalDevice(discovered).has_value()) {
+        GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+    }
+
+    const ReferenceSphereGeometry sphere = makeReferenceSphereGeometry();
+
+    ASSERT_EQ(sphere.vertices.size(), kSphereVertexCount);
+    ASSERT_FALSE(sphere.indices.empty());
+
+    const Renderer::MeshUploadData sphere_mesh{
+        .vertex_bytes = std::as_bytes(std::span{sphere.vertices}),
+        .vertex_stride = kVertexStride,
+        .indices = sphere.indices,
+    };
+
+    const Renderer::MeshUploadData quad_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kQuadVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kQuadIndices,
+    };
+
+    const Renderer::MeshUploadData initial_triangle_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kTriangleVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kTriangleIndices,
+    };
+
+    const std::array initial_model_matrices{
+        Math::identity(),
+    };
+
+    const Renderer::InitialMeshData initial_mesh{
+        .mesh = initial_triangle_mesh,
+        .layout =
+            {
+                .attributes = kVertexAttributes,
+            },
+        .model_matrices = initial_model_matrices,
+    };
+
+    const std::filesystem::path shader_directory{
+        SIGNUM_TEST_SHADER_DIR,
+    };
+
+    Shader::GraphicsShaderData graphics_data{
+        .vertex =
+            {
+                .artifact =
+                    Vulkan::loadSpirv(shader_directory / "triangle.vert.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Vertex,
+                        .entry_point = "main",
+                    },
+            },
+        .fragment =
+            {
+                .artifact =
+                    Vulkan::loadSpirv(shader_directory / "triangle.frag.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            },
+    };
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Sphere Reference Stress Test",
+        window,
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        std::move(graphics_data),
+    };
+
+    const Renderer::GpuResourceHandle sphere_handle =
+        renderer.registerMesh(sphere_mesh);
+
+    const Renderer::GpuResourceHandle quad_handle =
+        renderer.registerMesh(quad_mesh);
+
+    const auto make_grid =
+        [&](std::size_t grid_side) -> std::vector<Renderer::MeshDrawInstance> {
+        std::vector<Renderer::MeshDrawInstance> instances{};
+
+        instances.reserve(grid_side * grid_side);
+
+        for (std::size_t row{}; row < grid_side; ++row) {
+            for (std::size_t column{}; column < grid_side; ++column) {
+                const float x_position =
+                    (static_cast<float>(column) -
+                     (static_cast<float>(grid_side - 1U) * kHalfExtent)) *
+                    kInstanceSpacing;
+
+                const float y_position =
+                    (static_cast<float>(row) -
+                     (static_cast<float>(grid_side - 1U) * kHalfExtent)) *
+                    kInstanceSpacing;
+
+                const Renderer::GpuResourceHandle mesh_handle =
+                    ((row + column) % kMeshAlternationPeriod) == 0U
+                        ? sphere_handle
+                        : quad_handle;
+
+                const Math::Matrix4f model_matrix = Math::multiply(
+                    Math::translate(x_position, y_position, 0.0F),
+                    Math::scale(kInstanceScale, kInstanceScale,
+                                kInstanceScale));
+
+                instances.push_back(Renderer::MeshDrawInstance{
+                    .mesh_handle = mesh_handle,
+                    .model_matrix = model_matrix,
+                });
+            }
+        }
+
+        return instances;
+    };
+
+    const std::array grid_sizes{
+        kSmallGridSide,
+        kMediumGridSide,
+        kLargeGridSide,
+        kSmallGridSide,
+    };
+
+    for (const std::size_t grid_side : grid_sizes) {
+        const std::vector<Renderer::MeshDrawInstance> instances =
+            make_grid(grid_side);
+
+        ASSERT_EQ(instances.size(), grid_side * grid_side);
+
+        ASSERT_NO_THROW(renderer.setDrawInstances(instances));
+
+        for (std::size_t frame{}; frame < kFramesPerStage; ++frame) {
+            ASSERT_NO_THROW(renderer.renderFrame());
+        }
+    }
+
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
+
+    ASSERT_NO_THROW(renderer.unregisterMesh(sphere_handle));
+    ASSERT_NO_THROW(renderer.unregisterMesh(quad_handle));
+
+    for (std::size_t frame{}; frame < kFramesPerStage; ++frame) {
         ASSERT_NO_THROW(renderer.renderFrame());
     }
 }

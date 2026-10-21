@@ -4,6 +4,7 @@
 #include "engine/renderer/pipeline/cull_mode.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
+#include "engine/renderer/vulkan/descriptor/vulkan_descriptor_pool.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline_cache.hpp"
@@ -372,4 +373,200 @@ TEST_F(VulkanGraphicsPipelineCacheIntegrationTest,
 
     EXPECT_EQ(cache.find(makeKey(inputs, {}, first_layouts)), first);
     EXPECT_EQ(cache.find(makeKey(inputs, {}, second_layouts)), second);
+}
+
+TEST_F(VulkanGraphicsPipelineCacheIntegrationTest,
+       InvalidShaderBytecodeDoesNotPopulatePipelineCache) {
+    const PipelineInputs valid_inputs = makeInputs();
+
+    Vulkan::VulkanGraphicsPipelineCache cache;
+
+    const Vulkan::VulkanGraphicsPipeline *original =
+        requestPipeline(cache, valid_inputs);
+
+    ASSERT_NE(original, nullptr);
+
+    const VkPipeline original_pipeline_handle = original->nativeHandle();
+    const VkPipelineLayout original_layout_handle = original->layoutHandle();
+
+    PipelineInputs invalid_inputs = makeInputs();
+
+    invalid_inputs.shaders.fragment.artifact.words.front() = 0U;
+
+    const auto invalid_key = makeKey(invalid_inputs);
+
+    EXPECT_THROW(static_cast<void>(requestPipeline(cache, invalid_inputs)),
+                 Core::Error::EngineError);
+
+    EXPECT_EQ(cache.find(invalid_key), nullptr);
+
+    EXPECT_EQ(cache.find(makeKey(valid_inputs)), original);
+    EXPECT_EQ(original->nativeHandle(), original_pipeline_handle);
+    EXPECT_EQ(original->layoutHandle(), original_layout_handle);
+
+    const Vulkan::VulkanGraphicsPipeline *reused =
+        requestPipeline(cache, valid_inputs);
+
+    EXPECT_EQ(reused, original);
+}
+
+TEST_F(VulkanGraphicsPipelineCacheIntegrationTest,
+       IncompatibleShaderArtifactDoesNotPopulatePipelineCache) {
+    const PipelineInputs valid_inputs = makeInputs();
+
+    Vulkan::VulkanGraphicsPipelineCache cache;
+
+    const Vulkan::VulkanGraphicsPipeline *original =
+        requestPipeline(cache, valid_inputs);
+
+    ASSERT_NE(original, nullptr);
+
+    const VkPipeline original_pipeline_handle = original->nativeHandle();
+    const VkPipelineLayout original_layout_handle = original->layoutHandle();
+
+    PipelineInputs incompatible_inputs = makeInputs();
+
+    incompatible_inputs.shaders.fragment.artifact =
+        incompatible_inputs.shaders.vertex.artifact;
+
+    const auto incompatible_key = makeKey(incompatible_inputs);
+
+    EXPECT_THROW(static_cast<void>(requestPipeline(cache, incompatible_inputs)),
+                 Core::Error::EngineError);
+
+    EXPECT_EQ(cache.find(incompatible_key), nullptr);
+
+    EXPECT_EQ(cache.find(makeKey(valid_inputs)), original);
+    EXPECT_EQ(original->nativeHandle(), original_pipeline_handle);
+    EXPECT_EQ(original->layoutHandle(), original_layout_handle);
+
+    const Vulkan::VulkanGraphicsPipeline *reused =
+        requestPipeline(cache, valid_inputs);
+
+    EXPECT_EQ(reused, original);
+}
+
+TEST_F(VulkanGraphicsPipelineCacheIntegrationTest,
+       CreatesTexturedPipelineWithoutDescriptorIndexing) {
+    constexpr std::uint32_t kDescriptorSetCount{2U};
+    constexpr std::uint32_t kUvLocation{2U};
+    constexpr std::uint32_t kUvOffset{kVertexStride};
+    constexpr std::uint32_t kTexturedVertexStride{32U};
+
+    const VkDescriptorSetLayoutBinding texture_binding{
+        .binding = 0U,
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 1U,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = nullptr,
+    };
+
+    VkDescriptorSetLayoutCreateInfo layout_info{};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 1U;
+    layout_info.pBindings = &texture_binding;
+
+    const Vulkan::VulkanDescriptorSetLayout descriptor_layout{
+        m_Device,
+        layout_info,
+    };
+
+    ASSERT_NE(descriptor_layout.nativeHandle(), VK_NULL_HANDLE);
+
+    const VkDescriptorPoolSize pool_size{
+        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = kDescriptorSetCount,
+    };
+
+    VkDescriptorPoolCreateInfo pool_info{};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.maxSets = kDescriptorSetCount;
+    pool_info.poolSizeCount = 1U;
+    pool_info.pPoolSizes = &pool_size;
+
+    Vulkan::VulkanDescriptorPool descriptor_pool{m_Device, pool_info};
+
+    std::array<VkDescriptorSetLayout, kDescriptorSetCount>
+        descriptor_set_layouts{};
+
+    descriptor_set_layouts.fill(descriptor_layout.nativeHandle());
+
+    const auto descriptor_sets =
+        descriptor_pool.allocateDescriptorSets(descriptor_set_layouts);
+
+    ASSERT_EQ(descriptor_sets.size(), kDescriptorSetCount);
+    ASSERT_NE(descriptor_sets[0], VK_NULL_HANDLE);
+    ASSERT_NE(descriptor_sets[1], VK_NULL_HANDLE);
+
+    EXPECT_NE(descriptor_sets[0], descriptor_sets[1]);
+
+    PipelineInputs inputs = makeInputs();
+
+    const std::filesystem::path shader_directory{
+        SIGNUM_TEST_SHADER_DIR,
+    };
+
+    inputs.shaders.vertex.artifact =
+        Vulkan::loadSpirv(shader_directory / "textured.vert.spv");
+
+    inputs.shaders.fragment.artifact =
+        Vulkan::loadSpirv(shader_directory / "textured.frag.spv");
+
+    const std::array vertex_bindings{
+        VkVertexInputBindingDescription{
+            .binding = 0U,
+            .stride = kTexturedVertexStride,
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+        },
+    };
+
+    const std::array vertex_attributes{
+        VkVertexInputAttributeDescription{
+            .location = 0U,
+            .binding = 0U,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = 0U,
+        },
+        VkVertexInputAttributeDescription{
+            .location = 1U,
+            .binding = 0U,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = kColorOffset,
+        },
+        VkVertexInputAttributeDescription{
+            .location = kUvLocation,
+            .binding = 0U,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = kUvOffset,
+        },
+    };
+
+    const Vulkan::GraphicsVertexInputData vertex_input{
+        .bindings = vertex_bindings,
+        .attributes = vertex_attributes,
+    };
+
+    const std::array<const Vulkan::VulkanDescriptorSetLayout *, 1U>
+        pipeline_layouts{
+            &descriptor_layout,
+    };
+
+    const Vulkan::GraphicsPipelineLayoutData pipeline_layout =
+        inputs.layoutInput(pipeline_layouts);
+
+    Vulkan::VulkanGraphicsPipelineCache cache{};
+
+    const Vulkan::VulkanGraphicsPipeline *pipeline = cache.getOrCreate(
+        m_Device, attachmentFormats(), inputs.shaders, vertex_input,
+        pipeline_layout, m_MaxPushConstantsSize);
+
+    ASSERT_NE(pipeline, nullptr);
+    EXPECT_NE(pipeline->nativeHandle(), VK_NULL_HANDLE);
+    EXPECT_NE(pipeline->layoutHandle(), VK_NULL_HANDLE);
+
+    const Vulkan::VulkanGraphicsPipeline *reused = cache.getOrCreate(
+        m_Device, attachmentFormats(), inputs.shaders, vertex_input,
+        pipeline_layout, m_MaxPushConstantsSize);
+
+    EXPECT_EQ(reused, pipeline);
 }

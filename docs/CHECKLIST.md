@@ -1044,7 +1044,7 @@
 - [x] Test missing entry-point names and incompatible shader stages
 - [x] Test structured SPIR-V validation and entry-point error codes
 - [x] Test SPIR-V validation without GPU resources
-- [ ] Test pure resource descriptions
+- [x] Test pure resource descriptions
 - [x] Test shader/pipeline/binding descriptions without optional rendering modules
 - [x] Test material descriptions and resource-binding compatibility
 - [x] Test descriptor-pool sizing for empty requirements and multiple descriptor sets
@@ -1062,16 +1062,16 @@
 - [x] Verify failed swapchain recreation does not reuse retired swapchain resources
 - [ ] Verify dependency-safe resource destruction and clean fatal shutdown after failed recreation
 - [x] Verify destruction ordering
-- [ ] Use a simple sphere, star, or planet-like mesh as reference content without adding celestial concepts to renderer APIs
-- [ ] Increase reference object counts to expose resource, transform, synchronization, and rendering bugs
+- [x] Use a simple sphere, star, or planet-like mesh as reference content without adding celestial concepts to renderer APIs
+- [x] Increase reference object counts to expose resource, transform, synchronization, and rendering bugs
 - [x] Run Vulkan validation
 - [x] Run sanitizers
 - [x] Reject incompatible shader stages, bindings, and pipeline layouts with useful diagnostics
-- [ ] Test missing, invalid, and incompatible shader artifacts without resource leaks
+- [x] Test missing, invalid, and incompatible shader artifacts without resource leaks
 - [x] Test shader/pipeline variant identity and compatible reuse
-- [ ] Test texture mip-level, view-range, format, and sRGB/linear interpretation cases
+- [x] Test texture mip-level, view-range, format, and sRGB/linear interpretation cases
 - [x] Test resource replacement and shutdown while previously submitted GPU work is still in flight
-- [ ] Verify missing optional binding capabilities do not block the conventional rendering path
+- [x] Verify missing optional binding capabilities do not block the conventional rendering path
 
 ### Architecture
 
