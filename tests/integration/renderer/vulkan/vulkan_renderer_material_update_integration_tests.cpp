@@ -463,6 +463,41 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
 }
 
 TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       RetiresUpdatedStorageBufferBeforeShutdown) {
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh = makeInitialMesh(matrices);
+    const std::array initial_bindings{initialStorageBinding()};
+
+    const auto [validation_output,
+                operation_error] = captureVulkanValidationOutput([&] -> void {
+        Vulkan::VulkanRenderer renderer{
+            "Signum Storage Buffer Retirement Test",
+            m_Window.value(),
+            Renderer::PresentationPreference::VSync,
+            true,
+            mesh,
+            std::nullopt,
+            std::nullopt,
+            makeStorageMaterialShaders(),
+            initial_bindings,
+        };
+
+        renderer.renderFrame();
+
+        renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                      kArrayElement,
+                                      parameterBytes(kReplacementParameters));
+    });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Storage-buffer replacement or shutdown failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
        RejectsUpdateWithoutMaterialDescriptors) {
     if (!m_Window.has_value()) {
         FAIL() << "Missing-material test requires an initialized window";
@@ -552,7 +587,58 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
 }
 
 TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
-       RejectsNonUniformMaterialBinding) {
+       RejectsInvalidStorageBufferUpdates) {
+    const std::array initial_bindings{initialStorageBinding()};
+
+    if (!m_Window.has_value()) {
+        FAIL() << "Material validation test requires an initialized window";
+    }
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Storage Buffer Validation Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        std::nullopt,
+        std::nullopt,
+        std::nullopt,
+        makeStorageMaterialShaders(),
+        initial_bindings,
+    };
+
+    const std::span<const std::byte> empty_data{};
+
+    ASSERT_DEATH(
+        {
+            renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                          kArrayElement, empty_data);
+        },
+        "requires nonempty data");
+
+    ASSERT_DEATH(
+        {
+            renderer.updateMaterialBuffer(
+                0U, kMaterialBinding, kArrayElement,
+                parameterBytes(kReplacementParameters));
+        },
+        "requires an existing material binding");
+
+    constexpr std::array<float, 2> kWrongSizeParameters{
+        1.0F,
+        0.0F,
+    };
+
+    ASSERT_DEATH(
+        {
+            renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                          kArrayElement,
+                                          parameterBytes(kWrongSizeParameters));
+        },
+        "requires data matching the existing buffer size");
+}
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       RejectsNonBufferMaterialBinding) {
     if (!m_Window.has_value()) {
         FAIL() << "Nonuniform binding test requires an initialized window";
     }
@@ -573,7 +659,7 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
             renderer.updateMaterialBuffer(
                 0U, 0U, 0U, parameterBytes(kReplacementParameters));
         },
-        "requires a uniform-buffer binding");
+        "requires a uniform-buffer or storage-buffer binding");
 }
 
 TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
@@ -616,30 +702,57 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
 }
 
 TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
-       RejectsUniformUpdateForStorageBufferBinding) {
+       UpdatesStorageBufferAcrossRenderedFrames) {
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh = makeInitialMesh(matrices);
     const std::array initial_bindings{initialStorageBinding()};
 
     if (!m_Window.has_value()) {
         FAIL() << "Missing-material test requires an initialized window";
     }
 
-    Vulkan::VulkanRenderer renderer{
-        "Signum Storage Buffer Validation Test",
-        m_Window.value(),
-        Renderer::PresentationPreference::VSync,
-        false,
-        std::nullopt,
-        std::nullopt,
-        std::nullopt,
-        makeStorageMaterialShaders(),
-        initial_bindings,
-    };
+    const auto [validation_output,
+                operation_error] = captureVulkanValidationOutput([&] -> void {
+        Vulkan::VulkanRenderer renderer{
+            "Signum Storage Buffer Update Test",
+            m_Window.value(),
+            Renderer::PresentationPreference::VSync,
+            true,
+            mesh,
+            std::nullopt,
+            std::nullopt,
+            makeStorageMaterialShaders(),
+            initial_bindings,
+        };
 
-    ASSERT_DEATH(
-        {
-            renderer.updateMaterialBuffer(
-                kMaterialSet, kMaterialBinding, kArrayElement,
-                parameterBytes(kReplacementParameters));
-        },
-        "requires a uniform-buffer binding");
+        constexpr std::size_t kFramesBefore{2U};
+        constexpr std::size_t kFramesAfter{4U};
+
+        for (std::size_t i{}; i < kFramesBefore; ++i) {
+            renderer.renderFrame();
+        }
+
+        renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                      kArrayElement,
+                                      parameterBytes(kReplacementParameters));
+
+        for (std::size_t i{}; i < kFramesAfter; ++i) {
+            renderer.renderFrame();
+        }
+
+        renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                      kArrayElement,
+                                      parameterBytes(kThirdParameters));
+
+        for (std::size_t i{}; i < kFramesAfter; ++i) {
+            renderer.renderFrame();
+        }
+    });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Storage-buffer update or rendering failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
 }

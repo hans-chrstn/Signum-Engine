@@ -323,12 +323,13 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "material binding");
         }
 
-        if (binding_it->type != Shader::ShaderResourceType::UniformBuffer) {
+        if (binding_it->type != Shader::ShaderResourceType::UniformBuffer &&
+            binding_it->type != Shader::ShaderResourceType::StorageBuffer) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
                 "VulkanRenderer::updateMaterialBuffer requires a "
-                "uniform-buffer binding");
+                "uniform-buffer or storage-buffer binding");
         }
 
         const std::size_t binding_index = static_cast<std::size_t>(
@@ -343,7 +344,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer material uniform-buffer binding does not "
+                "VulkanRenderer material buffer binding does not "
                 "resolve to a registered buffer");
         }
 
@@ -358,8 +359,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::vector<MaterialResourceBinding> bindings =
             m_MaterialBindings.bindings;
 
-        GpuResourceHandle buffer_handle = registerMaterialBuffer(
-            data, Shader::ShaderResourceType::UniformBuffer);
+        GpuResourceHandle buffer_handle =
+            registerMaterialBuffer(data, binding_it->type);
 
         bindings[binding_index].resource_handle = buffer_handle;
 

@@ -1438,26 +1438,27 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto replaceTexture(const TextureUploadData &texture) -> void;
 
         /**
-         * @brief Updates the data of an existing material uniform buffer.
+         * @brief Updates an existing material uniform or storage buffer.
          *
-         * Creates a replacement uniform buffer initialized with the supplied
-         * data and updates the material descriptor resources to reference it.
+         * Creates a replacement buffer of the same resource type and size,
+         * initializes it with the supplied data, and updates the material
+         * descriptor resources to reference it.
          *
          * The previous buffer and descriptor resources remain alive until
          * graphics submissions referencing them have completed.
          *
-         * The replacement buffer must have the same size as the existing
-         * buffer. This operation does not recreate the graphics pipeline.
+         * The operation does not recreate the graphics pipeline.
          *
-         * @param set Descriptor-set index containing the uniform buffer.
+         * @param set Descriptor-set index containing the buffer.
          * @param binding Binding index within the descriptor set.
          * @param array_element Element index within the descriptor array.
          * @param data Borrowed CPU data used to initialize the replacement
          * buffer.
          *
          * @pre Material descriptor resources must exist.
-         * @pre The specified binding must reference an existing uniform buffer.
-         * @pre data must not be empty and must match the existing buffer size.
+         * @pre The specified binding must reference an existing uniform or
+         * storage buffer.
+         * @pre Data must not be empty and must match the existing buffer size.
          * @pre The caller must serialize this operation with rendering and
          * other resource replacement operations.
          *

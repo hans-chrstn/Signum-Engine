@@ -1010,7 +1010,7 @@
 - [x] Add reusable shader/pipeline variant infrastructure
 - [ ] Add compute-pipeline support when a real workload requires it
 - [x] Add initial material resource binding foundation
-- [ ] Complete runtime material parameter updates and resource replacement
+- [x] Complete runtime material parameter updates and resource replacement
 - [x] Add depth buffering
 - [x] Render first simple 3D reference object
 - [x] Render multiple objects
