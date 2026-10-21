@@ -24,6 +24,7 @@ add_library(
     engine/renderer/geometry/vertex_format.cpp
     engine/renderer/material/material_resource_binding_compatibility.cpp
     engine/renderer/resource/gpu_resource_registry_id.cpp
+    engine/renderer/resource/gpu_resource_dependency_tracker.cpp
     engine/renderer/vulkan/vulkan_instance.cpp
     engine/renderer/vulkan/vulkan_renderer.cpp
     engine/renderer/vulkan/vulkan_frame_resources.cpp

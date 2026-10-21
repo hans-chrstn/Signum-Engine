@@ -11,6 +11,7 @@
 #include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_set.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/resource/gpu_resource_dependency_tracker.hpp"
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_interface.hpp"
@@ -167,6 +168,8 @@ namespace SNE::Engine::Renderer::Vulkan {
              */
             std::vector<VkDescriptorSet> m_DescriptorSets;
         };
+        static_assert(
+            std::is_nothrow_move_constructible_v<MaterialDescriptorResources>);
 
         /**
          * @brief Owns a depth image and its corresponding image view.
@@ -477,6 +480,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         GpuResourceRegistry<TextureResources> m_TextureRegistry;
 
         /**
+         * @brief Tracks dependencies between renderer-managed GPU resources.
+         *
+         * Stores non-owning relationships between resource identities.
+         * The tracked relationships will be used to validate resource
+         * replacement and removal.
+         *
+         * Resource ownership remains with the corresponding registries.
+         * GPU submission completion and deferred destruction are handled
+         * separately by the resource retirement queue.
+         *
+         * @note The tracker does not validate resource existence or own
+         * referenced GPU resources.
+         */
+        GpuResourceDependencyTracker m_ResourceDependencies;
+
+        /**
          * @brief Owns the active sampled-texture descriptor binding.
          *
          * Stores the descriptor pool, allocated descriptor set, and handle
@@ -491,6 +510,40 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Empty when no texture binding has been initialized.
          */
         std::optional<TextureBindingResources> m_TextureBindingResources;
+
+        /**
+         * @brief Owns registered material descriptor resources.
+         *
+         * Stores descriptor pools and their allocated descriptor sets
+         * using generation-checked, registry-scoped handles.
+         *
+         * Descriptor resources may depend on registered textures and
+         * buffers without owning those resources.
+         *
+         * Referenced GPU resources must remain alive while descriptor
+         * resources or outstanding GPU submissions require them.
+         *
+         * @note Resource dependency tracking does not replace GPU
+         * completion-aware retirement.
+         */
+        GpuResourceRegistry<MaterialDescriptorResources>
+            m_MaterialDescriptorRegistry;
+
+        /**
+         * @brief Identifies the active material descriptor resources.
+         *
+         * References descriptor resources owned by
+         * m_MaterialDescriptorRegistry without taking ownership.
+         *
+         * Empty when no active material descriptor resources exist.
+         *
+         * The handle must resolve to registered descriptor resources
+         * before their descriptor sets are used for rendering.
+         *
+         * @note Replacing the active handle does not destroy the
+         * previously selected descriptor resources.
+         */
+        std::optional<GpuResourceHandle> m_ActiveMaterialDescriptorHandle;
 
         /**
          * @brief Owns the active material's Vulkan descriptor allocations.
@@ -1128,6 +1181,45 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto updateMaterialDescriptorSets() -> void;
 
         /**
+         * @brief Finds the currently active material descriptor resources.
+         *
+         * Resolves the active descriptor handle through the material
+         * descriptor registry when one is selected.
+         *
+         * During migration, falls back to the existing optional descriptor
+         * resources when no registry handle is active.
+         *
+         * @return Pointer to the active descriptor resources, or nullptr
+         * if no descriptor resources have been allocated.
+         *
+         * @note An active handle that fails to resolve is an invariant
+         * violation and must not trigger the legacy fallback.
+         *
+         * @note Does not transfer ownership or retire GPU resources.
+         */
+        [[nodiscard]] auto findActiveMaterialDescriptorResources() noexcept
+            -> MaterialDescriptorResources *;
+
+        /**
+         * @brief Finds the currently active material descriptor resources.
+         *
+         * Resolves the active descriptor handle through the registry.
+         * During migration, falls back to the legacy optional when no
+         * active registry handle exists.
+         *
+         * @return Const pointer to the active descriptor resources, or
+         * nullptr if no descriptor resources have been allocated.
+         *
+         * @note An active handle that fails to resolve triggers an
+         * invariant assertion.
+         *
+         * @note Does not modify or transfer ownership of resources.
+         */
+        [[nodiscard]] auto
+        findActiveMaterialDescriptorResources() const noexcept
+            -> const MaterialDescriptorResources *;
+
+        /**
          * @brief Creates and registers a material buffer.
          *
          * Allocates a Vulkan buffer with usage determined by the shader
@@ -1264,6 +1356,69 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto createMaterialDescriptorResources(
             std::span<const VkDescriptorPoolSize> pool_sizes)
             -> MaterialDescriptorResources;
+
+        /**
+         * @brief Creates and registers material descriptor resources.
+         *
+         * Allocates a descriptor pool and descriptor sets, writes the
+         * supplied material resource bindings, and transfers ownership
+         * of the completed descriptor resources to the registry.
+         *
+         * Does not change the currently active descriptor handle.
+         *
+         * @param bindings Material resource bindings to write.
+         *
+         * @return Handle identifying the registered descriptor resources.
+         *
+         * @pre Descriptor-set layouts and pool requirements must be
+         * initialized.
+         * @pre Material bindings must be compatible with the layouts and
+         * reference valid registered GPU resources.
+         *
+         * @post On success, the returned handle resolves to initialized
+         * descriptor resources in m_MaterialDescriptorRegistry.
+         * @post On failure, the active descriptor resources remain unchanged.
+         * @post On success, dependencies on referenced textures and buffers
+         * are registered in m_ResourceDependencies.
+         * @post If an exception occurs, no newly registered descriptor
+         * resources or dependency relationships remain.
+         *
+         * @throws Core::Error::EngineError if Vulkan descriptor allocation
+         * fails.
+         * @throws std::bad_alloc if host allocation fails.
+         *
+         * @note The caller must remove newly registered resources if a
+         * subsequent step in its replacement transaction fails.
+         * GPU resources referenced by the descriptors must remain alive.
+         */
+        [[nodiscard]] auto registerMaterialDescriptorResources(
+            std::span<const MaterialResourceBinding> bindings)
+            -> GpuResourceHandle;
+
+        /**
+         * @brief Rolls back a newly registered material descriptor resource.
+         *
+         * Removes tracked relationships involving the descriptor handle,
+         * then removes the descriptor resources from their registry.
+         *
+         * This operation is intended only for resources that have not
+         * been selected for rendering or referenced by GPU submissions.
+         *
+         * @param descriptor_handle Handle of the newly registered
+         * descriptor resources to discard.
+         *
+         * @pre The handle must identify registered material descriptor
+         * resources.
+         * @pre The descriptor resources must not be active or in GPU use.
+         *
+         * @post The descriptor handle no longer resolves in the registry.
+         * @post No tracked relationships reference the descriptor handle.
+         *
+         * @note This operation does not wait for GPU completion and must
+         * not replace deferred retirement of previously active resources.
+         */
+        auto rollbackRegisteredMaterialDescriptorResources(
+            GpuResourceHandle descriptor_handle) -> void;
 
         /**
          * @brief Validates initial material bindings against shader

@@ -2,7 +2,9 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_compatibility.hpp"
+#include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.hpp"
@@ -11,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <memory>
 #include <span>
 #include <utility>
 #include <vector>
@@ -271,7 +274,11 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::updateMaterialDescriptorSets() -> void {
-        if (!m_MaterialDescriptorResources.has_value()) {
+
+        MaterialDescriptorResources *active_resources =
+            findActiveMaterialDescriptorResources();
+
+        if (active_resources == nullptr) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
@@ -279,8 +286,58 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "descriptor sets");
         }
 
-        writeMaterialDescriptorSets(m_MaterialDescriptorResources.value(),
+        writeMaterialDescriptorSets(*active_resources,
                                     m_MaterialBindings.bindings);
+    }
+
+    auto VulkanRenderer::findActiveMaterialDescriptorResources() noexcept
+        -> MaterialDescriptorResources * {
+        if (!m_ActiveMaterialDescriptorHandle.has_value()) {
+            if (!m_MaterialDescriptorResources.has_value()) {
+                return nullptr;
+            }
+
+            return std::addressof(*m_MaterialDescriptorResources);
+        }
+
+        MaterialDescriptorResources *resources =
+            m_MaterialDescriptorRegistry.find(
+                *m_ActiveMaterialDescriptorHandle);
+
+        if (resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active material descriptor handle does not "
+                "resolve to registered resources");
+        }
+
+        return resources;
+    }
+
+    auto VulkanRenderer::findActiveMaterialDescriptorResources() const noexcept
+        -> const MaterialDescriptorResources * {
+        if (!m_ActiveMaterialDescriptorHandle.has_value()) {
+            if (!m_MaterialDescriptorResources.has_value()) {
+                return nullptr;
+            }
+
+            return std::addressof(*m_MaterialDescriptorResources);
+        }
+
+        const MaterialDescriptorResources *resources =
+            m_MaterialDescriptorRegistry.find(
+                *m_ActiveMaterialDescriptorHandle);
+
+        if (resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active material descriptor handle does not "
+                "resolve to registered resources");
+        }
+
+        return resources;
     }
 
     auto VulkanRenderer::updateMaterialBuffer(std::uint32_t set,
@@ -289,16 +346,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                                               std::span<const std::byte> data)
         -> void {
 
-        if (!m_MaterialDescriptorResources.has_value()) {
+        MaterialDescriptorResources *active_resources =
+            findActiveMaterialDescriptorResources();
+
+        if (active_resources == nullptr) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
                 "VulkanRenderer::updateMaterialBuffer requires allocated "
                 "material descriptor resources");
         }
-
-        MaterialDescriptorResources &active_descriptor_resources =
-            m_MaterialDescriptorResources.value();
 
         if (data.empty()) {
             Core::Assertion::failAssertion(
@@ -395,9 +452,20 @@ namespace SNE::Engine::Renderer::Vulkan {
             const std::uint64_t submission_id =
                 m_GraphicsSubmissionState.lastSubmitted();
 
+            MaterialDescriptorResources *descriptor_resources_to_retire =
+                findActiveMaterialDescriptorResources();
+
+            if (descriptor_resources_to_retire == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer active material descriptor resources "
+                    "became unavailable during buffer replacement");
+            }
+
             m_GraphicsResourceRetirementQueue.retire(
                 submission_id, *old_buffer_to_retire,
-                active_descriptor_resources);
+                *descriptor_resources_to_retire);
         } catch (...) {
             new_material_descriptor_resources.reset();
             static_cast<void>(m_BufferRegistry.remove(buffer_handle));
@@ -525,6 +593,65 @@ namespace SNE::Engine::Renderer::Vulkan {
             .m_DescriptorPool = std::move(descriptor_pool),
             .m_DescriptorSets = std::move(descriptor_sets),
         };
+    }
+
+    auto VulkanRenderer::registerMaterialDescriptorResources(
+        std::span<const MaterialResourceBinding> bindings)
+        -> GpuResourceHandle {
+
+        MaterialDescriptorResources resources =
+            createMaterialDescriptorResources(m_MaterialDescriptorPoolSizes);
+
+        writeMaterialDescriptorSets(resources, bindings);
+
+        const GpuResourceHandle descriptor_handle =
+            m_MaterialDescriptorRegistry.insert(std::move(resources));
+
+        try {
+            for (const MaterialResourceBinding &binding : bindings) {
+                const GpuResourceDependency relationship{
+                    .dependent = descriptor_handle,
+                    .dependency = binding.resource_handle,
+                };
+
+                const bool relationship_exists =
+                    m_ResourceDependencies.contains(relationship);
+
+                if (!relationship_exists) {
+                    m_ResourceDependencies.addDependency(relationship);
+                }
+            }
+        } catch (...) {
+            static_cast<void>(
+                m_ResourceDependencies.removeRelationshipsInvolving(
+                    descriptor_handle));
+
+            static_cast<void>(
+                m_MaterialDescriptorRegistry.remove(descriptor_handle));
+            throw;
+        }
+
+        return descriptor_handle;
+    }
+
+    auto VulkanRenderer::rollbackRegisteredMaterialDescriptorResources(
+        GpuResourceHandle descriptor_handle) -> void {
+        MaterialDescriptorResources *resources =
+            m_MaterialDescriptorRegistry.find(descriptor_handle);
+
+        if (resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer descriptor rollback requires a registered "
+                "material descriptor handle");
+        }
+
+        static_cast<void>(m_ResourceDependencies.removeRelationshipsInvolving(
+            descriptor_handle));
+
+        static_cast<void>(
+            m_MaterialDescriptorRegistry.remove(descriptor_handle));
     }
 
     auto VulkanRenderer::initializeInitialMaterial(

@@ -339,6 +339,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         TextureBindingResources &active_texture_resources =
             m_TextureBindingResources.value();
 
+        const bool has_active_material_descriptors =
+            findActiveMaterialDescriptorResources() != nullptr;
+
         auto texture_binding_it = std::ranges::find_if(
             m_MaterialBindings.bindings,
             [](const MaterialResourceBinding &binding) -> bool {
@@ -387,7 +390,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             new_texture_binding.emplace(createTextureBindingResources(
                 resource_binding, descriptor_layout));
 
-            if (m_MaterialDescriptorResources.has_value()) {
+            if (has_active_material_descriptors) {
                 std::vector<MaterialResourceBinding> new_material_bindings =
                     m_MaterialBindings.bindings;
 
@@ -442,11 +445,22 @@ namespace SNE::Engine::Renderer::Vulkan {
             const std::uint64_t submission_id =
                 m_GraphicsSubmissionState.lastSubmitted();
 
-            if (m_MaterialDescriptorResources.has_value()) {
+            if (has_active_material_descriptors) {
+                MaterialDescriptorResources *descriptor_resources_to_retire =
+                    findActiveMaterialDescriptorResources();
+
+                if (descriptor_resources_to_retire == nullptr) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Invariant,
+                        Core::Error::Subsystem::Vulkan,
+                        "VulkanRenderer active material descriptor resources "
+                        "became "
+                        "unavailable during texture replacement");
+                }
+
                 m_GraphicsResourceRetirementQueue.retire(
                     submission_id, *old_texture_resources,
-                    active_texture_resources,
-                    m_MaterialDescriptorResources.value());
+                    active_texture_resources, *descriptor_resources_to_retire);
             } else {
                 m_GraphicsResourceRetirementQueue.retire(
                     submission_id, *old_texture_resources,

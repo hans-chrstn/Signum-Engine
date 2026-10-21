@@ -73,9 +73,13 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           graphics_pipeline.nativeHandle());
-        if (m_MaterialDescriptorResources.has_value()) {
+
+        const MaterialDescriptorResources *active_material_descriptors =
+            findActiveMaterialDescriptorResources();
+
+        if (active_material_descriptors != nullptr) {
             const std::vector<VkDescriptorSet> &descriptor_sets =
-                m_MaterialDescriptorResources->m_DescriptorSets;
+                active_material_descriptors->m_DescriptorSets;
 
             if (descriptor_sets.empty()) {
                 Core::Assertion::failAssertion(
