@@ -1019,7 +1019,7 @@
 - [x] Define rendering-facing data contracts
 - [x] Define GPU resource ownership
 - [x] Define GPU lifetime ordering
-- [ ] Track GPU resource dependencies
+- [x] Track GPU resource dependencies
 - [ ] Expose resource lifetime/dependency data needed by later frame scheduling
 - [ ] Connect the first shader compilation or validated SPIR-V loading path to explicit compiler diagnostics
 - [x] Validate descriptor and push-constant declarations against the shader/pipeline interface
