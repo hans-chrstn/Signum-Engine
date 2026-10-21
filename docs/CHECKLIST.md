@@ -1015,7 +1015,7 @@
 - [x] Render first simple 3D reference object
 - [x] Render multiple objects
 - [x] Scale the reference rendering workload from one 3D object to multiple independently transformed objects
-- [ ] Separate scene data from GPU resources
+- [x] Separate scene data from GPU resources
 - [x] Define rendering-facing data contracts
 - [x] Define GPU resource ownership
 - [x] Define GPU lifetime ordering
