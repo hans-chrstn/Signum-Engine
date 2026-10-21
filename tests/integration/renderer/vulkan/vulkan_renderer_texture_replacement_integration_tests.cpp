@@ -1,12 +1,13 @@
-
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
+#include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
 #include "engine/renderer/vulkan/device/vulkan_device_discovery.hpp"
@@ -494,6 +495,110 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
     EXPECT_TRUE(operation_error.empty())
         << "Repeated texture replacement or rendering failed: "
         << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       PreservesMaterialResourcesAcrossAlternatingReplacements) {
+    const std::array model_matrices{Math::identity()};
+
+    const Renderer::InitialMeshData initial_mesh =
+        makeInitialMesh(model_matrices, kTexturedVertexAttributes);
+
+    constexpr std::array<float, 4> kInitialParameters{
+        0.0F,
+        0.0F,
+        0.0F,
+        0.0F,
+    };
+
+    constexpr std::array<float, 4> kReplacementParameters{
+        1.0F,
+        0.5F,
+        0.0F,
+        0.0F,
+    };
+
+    constexpr std::array<float, 4> kThirdParameters{
+        0.5F,
+        1.0F,
+        0.0F,
+        0.0F,
+    };
+
+    const std::array initial_bindings{
+        Renderer::MaterialBufferBindingInput{
+            .set = 1U,
+            .binding = 2U,
+            .array_element = 0U,
+            .type = Shader::ShaderResourceType::UniformBuffer,
+            .data = std::as_bytes(std::span{kInitialParameters}),
+        },
+    };
+
+    Shader::GraphicsShaderData shaders = makeTexturedGraphicsShaders();
+
+    shaders.vertex.artifact =
+        Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                          "material_textured.vert.spv");
+
+    if (!m_Window.has_value()) {
+        FAIL() << "Combined material replacement test requires an "
+                  "initialized window";
+    }
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Combined Material Replacement Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                initial_mesh,
+                makeInitialTexture(),
+                std::nullopt,
+                std::move(shaders),
+                initial_bindings,
+            };
+
+            constexpr std::size_t kFrameCount{2U};
+
+            for (std::size_t i{}; i < kFrameCount; ++i) {
+                renderer.renderFrame();
+            }
+
+            renderer.replaceTexture(makeReplacementTexture());
+
+            for (std::size_t i{}; i < kFrameCount; ++i) {
+                renderer.renderFrame();
+            }
+
+            renderer.updateMaterialBuffer(
+                1U, 2U, 0U, std::as_bytes(std::span{kReplacementParameters}));
+
+            for (std::size_t i{}; i < kFrameCount; ++i) {
+                renderer.renderFrame();
+            }
+
+            renderer.replaceTexture(makeThirdTexture());
+
+            for (std::size_t i{}; i < kFrameCount; ++i) {
+                renderer.renderFrame();
+            }
+
+            renderer.updateMaterialBuffer(
+                1U, 2U, 0U, std::as_bytes(std::span{kThirdParameters}));
+
+            for (std::size_t i{}; i < kFrameCount; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Combined material replacement failed: " << operation_error;
 
     EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
         << "Unexpected Vulkan validation output:\n"

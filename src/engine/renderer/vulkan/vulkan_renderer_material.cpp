@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <memory>
 #include <span>
 #include <utility>
 #include <vector>
@@ -293,11 +292,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     auto VulkanRenderer::findActiveMaterialDescriptorResources() noexcept
         -> MaterialDescriptorResources * {
         if (!m_ActiveMaterialDescriptorHandle.has_value()) {
-            if (!m_MaterialDescriptorResources.has_value()) {
-                return nullptr;
-            }
-
-            return std::addressof(*m_MaterialDescriptorResources);
+            return nullptr;
         }
 
         MaterialDescriptorResources *resources =
@@ -318,11 +313,7 @@ namespace SNE::Engine::Renderer::Vulkan {
     auto VulkanRenderer::findActiveMaterialDescriptorResources() const noexcept
         -> const MaterialDescriptorResources * {
         if (!m_ActiveMaterialDescriptorHandle.has_value()) {
-            if (!m_MaterialDescriptorResources.has_value()) {
-                return nullptr;
-            }
-
-            return std::addressof(*m_MaterialDescriptorResources);
+            return nullptr;
         }
 
         const MaterialDescriptorResources *resources =
@@ -356,6 +347,9 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "VulkanRenderer::updateMaterialBuffer requires allocated "
                 "material descriptor resources");
         }
+
+        const GpuResourceHandle previous_descriptor_handle =
+            *m_ActiveMaterialDescriptorHandle;
 
         if (data.empty()) {
             Core::Assertion::failAssertion(
@@ -421,21 +415,32 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         bindings[binding_index].resource_handle = buffer_handle;
 
-        std::optional<MaterialDescriptorResources>
-            new_material_descriptor_resources;
+        const bool old_buffer_still_referenced = std::ranges::any_of(
+            bindings,
+            [old_buffer_handle](
+                const MaterialResourceBinding &candidate) -> bool {
+                return old_buffer_handle == candidate.resource_handle;
+            });
+
+        std::optional<GpuResourceHandle> replacement_descriptor_handle;
 
         try {
-            new_material_descriptor_resources.emplace(
-                createMaterialDescriptorResources(
-                    m_MaterialDescriptorPoolSizes));
-
-            writeMaterialDescriptorSets(
-                new_material_descriptor_resources.value(), bindings);
+            replacement_descriptor_handle.emplace(
+                registerMaterialDescriptorResources(bindings));
         } catch (...) {
-            new_material_descriptor_resources.reset();
             static_cast<void>(m_BufferRegistry.remove(buffer_handle));
             throw;
         }
+
+        const GpuResourceDependency excluded_relationship{
+            .dependent = previous_descriptor_handle,
+            .dependency = old_buffer_handle,
+        };
+
+        const bool retire_old_buffer =
+            !old_buffer_still_referenced &&
+            !m_ResourceDependencies.hasDependentsOtherThan(
+                excluded_relationship);
 
         VulkanBuffer *old_buffer_to_retire =
             m_BufferRegistry.find(old_buffer_handle);
@@ -463,19 +468,33 @@ namespace SNE::Engine::Renderer::Vulkan {
                     "became unavailable during buffer replacement");
             }
 
-            m_GraphicsResourceRetirementQueue.retire(
-                submission_id, *old_buffer_to_retire,
-                *descriptor_resources_to_retire);
+            if (retire_old_buffer) {
+                m_GraphicsResourceRetirementQueue.retire(
+                    submission_id, *old_buffer_to_retire,
+                    *descriptor_resources_to_retire);
+            } else {
+                m_GraphicsResourceRetirementQueue.retire(
+                    submission_id, *descriptor_resources_to_retire);
+            }
         } catch (...) {
-            new_material_descriptor_resources.reset();
+            rollbackRegisteredMaterialDescriptorResources(
+                *replacement_descriptor_handle);
             static_cast<void>(m_BufferRegistry.remove(buffer_handle));
             throw;
         }
 
-        static_cast<void>(m_BufferRegistry.remove(old_buffer_handle));
+        static_cast<void>(m_ResourceDependencies.removeRelationshipsInvolving(
+            previous_descriptor_handle));
 
-        m_MaterialDescriptorResources.emplace(
-            std::move(new_material_descriptor_resources.value()));
+        static_cast<void>(
+            m_MaterialDescriptorRegistry.remove(previous_descriptor_handle));
+
+        if (retire_old_buffer) {
+            static_cast<void>(m_BufferRegistry.remove(old_buffer_handle));
+        }
+
+        m_ActiveMaterialDescriptorHandle.emplace(
+            *replacement_descriptor_handle);
 
         m_MaterialBindings.bindings[binding_index] = bindings[binding_index];
     }
@@ -687,12 +706,6 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         m_MaterialDescriptorPoolSizes =
             calculateVkDescriptorPoolSizes(requirements);
-
-        if (!m_DescriptorSetLayouts.empty()) {
-            m_MaterialDescriptorResources.emplace(
-                createMaterialDescriptorResources(
-                    m_MaterialDescriptorPoolSizes));
-        }
 
         return reflected_interfaces;
     }

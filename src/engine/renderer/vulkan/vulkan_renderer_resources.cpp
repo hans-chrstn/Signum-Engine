@@ -342,6 +342,18 @@ namespace SNE::Engine::Renderer::Vulkan {
         const bool has_active_material_descriptors =
             findActiveMaterialDescriptorResources() != nullptr;
 
+        if (has_active_material_descriptors &&
+            !m_ActiveMaterialDescriptorHandle.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active material descriptor handle is missing "
+                "during texture replacement");
+        }
+
+        const std::optional<GpuResourceHandle> previous_descriptor_handle =
+            m_ActiveMaterialDescriptorHandle;
+
         auto texture_binding_it = std::ranges::find_if(
             m_MaterialBindings.bindings,
             [](const MaterialResourceBinding &binding) -> bool {
@@ -369,6 +381,25 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "descriptor binding");
         }
 
+        const bool old_texture_still_referenced =
+            std::ranges::count_if(
+                m_MaterialBindings.bindings,
+                [old_texture_handle](
+                    const MaterialResourceBinding &candidate) -> bool {
+                    return candidate.resource_handle == old_texture_handle;
+                }) > 1;
+
+        const bool old_texture_has_other_dependents =
+            previous_descriptor_handle.has_value()
+                ? m_ResourceDependencies.hasDependentsOtherThan({
+                      .dependent = *previous_descriptor_handle,
+                      .dependency = old_texture_handle,
+                  })
+                : m_ResourceDependencies.hasDependents(old_texture_handle);
+
+        const bool retire_old_texture =
+            !old_texture_still_referenced && !old_texture_has_other_dependents;
+
         TextureResources new_texture_resources = uploadTexture(texture);
 
         GpuResourceHandle new_texture_handle =
@@ -383,8 +414,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
 
         std::optional<TextureBindingResources> new_texture_binding;
-        std::optional<MaterialDescriptorResources>
-            new_material_descriptor_resources;
+        std::optional<GpuResourceHandle> replacement_descriptor_handle;
 
         try {
             new_texture_binding.emplace(createTextureBindingResources(
@@ -413,16 +443,10 @@ namespace SNE::Engine::Renderer::Vulkan {
 
                 *replacement_binding_it = resource_binding;
 
-                new_material_descriptor_resources.emplace(
-                    createMaterialDescriptorResources(
-                        m_MaterialDescriptorPoolSizes));
-
-                writeMaterialDescriptorSets(
-                    new_material_descriptor_resources.value(),
-                    new_material_bindings);
+                replacement_descriptor_handle.emplace(
+                    registerMaterialDescriptorResources(new_material_bindings));
             }
         } catch (...) {
-            new_material_descriptor_resources.reset();
             new_texture_binding.reset();
 
             static_cast<void>(m_TextureRegistry.remove(new_texture_handle));
@@ -442,32 +466,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         try {
-            const std::uint64_t submission_id =
-                m_GraphicsSubmissionState.lastSubmitted();
-
-            if (has_active_material_descriptors) {
-                MaterialDescriptorResources *descriptor_resources_to_retire =
-                    findActiveMaterialDescriptorResources();
-
-                if (descriptor_resources_to_retire == nullptr) {
-                    Core::Assertion::failAssertion(
-                        Core::Assertion::AssertionType::Invariant,
-                        Core::Error::Subsystem::Vulkan,
-                        "VulkanRenderer active material descriptor resources "
-                        "became "
-                        "unavailable during texture replacement");
-                }
-
-                m_GraphicsResourceRetirementQueue.retire(
-                    submission_id, *old_texture_resources,
-                    active_texture_resources, *descriptor_resources_to_retire);
-            } else {
-                m_GraphicsResourceRetirementQueue.retire(
-                    submission_id, *old_texture_resources,
-                    active_texture_resources);
-            }
+            retireTextureReplacementResources(*old_texture_resources,
+                                              active_texture_resources,
+                                              retire_old_texture);
         } catch (...) {
-            new_material_descriptor_resources.reset();
+            if (replacement_descriptor_handle.has_value()) {
+                rollbackRegisteredMaterialDescriptorResources(
+                    *replacement_descriptor_handle);
+            }
+
             new_texture_binding.reset();
 
             static_cast<void>(m_TextureRegistry.remove(new_texture_handle));
@@ -475,16 +482,86 @@ namespace SNE::Engine::Renderer::Vulkan {
             throw;
         }
 
-        static_cast<void>(m_TextureRegistry.remove(old_texture_handle));
+        if (previous_descriptor_handle.has_value()) {
+            static_cast<void>(
+                m_ResourceDependencies.removeRelationshipsInvolving(
+                    *previous_descriptor_handle));
 
-        m_TextureBindingResources.emplace(
-            std::move(new_texture_binding.value()));
+            static_cast<void>(m_MaterialDescriptorRegistry.remove(
+                *previous_descriptor_handle));
+        }
 
-        if (new_material_descriptor_resources.has_value()) {
-            m_MaterialDescriptorResources.emplace(
-                std::move(new_material_descriptor_resources.value()));
+        if (retire_old_texture) {
+            static_cast<void>(m_TextureRegistry.remove(old_texture_handle));
+        }
+
+        m_TextureBindingResources.emplace(std::move(*new_texture_binding));
+
+        if (replacement_descriptor_handle.has_value()) {
+            m_ActiveMaterialDescriptorHandle.emplace(
+                *replacement_descriptor_handle);
         }
 
         *texture_binding_it = resource_binding;
+    }
+
+    auto VulkanRenderer::registerTextureReplacementMaterialDescriptors(
+        const MaterialResourceBinding &replacement_binding,
+        bool has_active_material_descriptors)
+        -> std::optional<GpuResourceHandle> {
+
+        if (!has_active_material_descriptors) {
+            return std::nullopt;
+        }
+
+        std::vector<MaterialResourceBinding> bindings =
+            m_MaterialBindings.bindings;
+
+        const auto binding_it = std::ranges::find_if(
+            bindings, [](const MaterialResourceBinding &candidate) -> bool {
+                return candidate.set == 0U && candidate.binding == 0U &&
+                       candidate.array_element == 0U &&
+                       candidate.type ==
+                           Shader::ShaderResourceType::CombinedImageSampler;
+            });
+
+        if (binding_it == bindings.end()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer replacement material texture binding "
+                "was not found");
+        }
+
+        *binding_it = replacement_binding;
+
+        return registerMaterialDescriptorResources(bindings);
+    }
+
+    auto VulkanRenderer::retireTextureReplacementResources(
+        TextureResources &previous_texture,
+        TextureBindingResources &previous_binding, bool retire_texture)
+        -> void {
+
+        const std::uint64_t submission_id =
+            m_GraphicsSubmissionState.lastSubmitted();
+
+        MaterialDescriptorResources *previous_descriptors =
+            findActiveMaterialDescriptorResources();
+
+        if (retire_texture && previous_descriptors != nullptr) {
+            m_GraphicsResourceRetirementQueue.retire(
+                submission_id, previous_texture, previous_binding,
+                *previous_descriptors);
+        } else if (retire_texture) {
+            m_GraphicsResourceRetirementQueue.retire(
+                submission_id, previous_texture, previous_binding);
+        } else if (previous_descriptors != nullptr) {
+            m_GraphicsResourceRetirementQueue.retire(
+                submission_id, previous_binding, *previous_descriptors);
+        } else {
+            m_GraphicsResourceRetirementQueue.retire(submission_id,
+                                                     previous_binding);
+        }
     }
 } // namespace SNE::Engine::Renderer::Vulkan

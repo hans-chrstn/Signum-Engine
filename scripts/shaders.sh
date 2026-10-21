@@ -25,6 +25,12 @@ glslc \
 spirv-val "${shader_output_dir}/material_storage.vert.spv"
 
 glslc \
+    "${project_root}/shaders/glsl/tests/material_textured.vert" \
+    -o "${shader_output_dir}/material_textured.vert.spv"
+
+spirv-val "${shader_output_dir}/material_textured.vert.spv"
+
+glslc \
     "${shader_source_dir}/blackhole.vert" \
     -o "${shader_output_dir}/blackhole.vert.spv"
 

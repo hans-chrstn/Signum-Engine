@@ -135,4 +135,19 @@ namespace SNE::Engine::Renderer {
 
         return has_dependents;
     }
+
+    auto GpuResourceDependencyTracker::hasDependentsOtherThan(
+        GpuResourceDependency excluded_relationship) const noexcept -> bool {
+        const bool has_other_dependents = std::ranges::any_of(
+            m_Dependencies,
+            [excluded_relationship](
+                const GpuResourceDependency &relationship) -> bool {
+                return relationship.dependency ==
+                           excluded_relationship.dependency &&
+                       relationship.dependent !=
+                           excluded_relationship.dependent;
+            });
+
+        return has_other_dependents;
+    }
 } // namespace SNE::Engine::Renderer

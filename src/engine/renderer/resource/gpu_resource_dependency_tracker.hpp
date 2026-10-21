@@ -149,5 +149,24 @@ namespace SNE::Engine::Renderer {
          */
         [[nodiscard]] auto
         hasDependents(GpuResourceHandle resource_handle) const noexcept -> bool;
+
+        /**
+         * @brief Checks whether a resource has dependents other than one
+         * excluded dependent.
+         *
+         * Searches for relationships referencing the supplied dependency,
+         * excluding those whose dependent matches the supplied dependent.
+         *
+         * @param excluded_relationship Relationship identifying the resource
+         * to examine and the dependent to exclude.
+         *
+         * @return true if another dependent references the resource;
+         * otherwise false.
+         *
+         * @note The excluded relationship does not need to be registered.
+         * @note This query does not validate resource lifetime.
+         */
+        [[nodiscard]] auto hasDependentsOtherThan(
+            GpuResourceDependency excluded_relationship) const noexcept -> bool;
     };
 } // namespace SNE::Engine::Renderer

@@ -115,8 +115,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (shader_interfaces.has_value()) {
             validateInitialMaterialBindings(shader_interfaces.value());
 
-            if (findActiveMaterialDescriptorResources() != nullptr) {
-                updateMaterialDescriptorSets();
+            if (!m_DescriptorSetLayouts.empty()) {
+                m_ActiveMaterialDescriptorHandle.emplace(
+                    registerMaterialDescriptorResources(
+                        m_MaterialBindings.bindings));
             }
         }
 

@@ -546,18 +546,6 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<GpuResourceHandle> m_ActiveMaterialDescriptorHandle;
 
         /**
-         * @brief Owns the active material's Vulkan descriptor allocations.
-         *
-         * Empty until the shader-driven material descriptor sets have been
-         * allocated. The descriptor pool owns the allocated sets.
-         *
-         * Must release descriptor allocations before their referenced GPU
-         * resources are destroyed.
-         */
-        std::optional<MaterialDescriptorResources>
-            m_MaterialDescriptorResources;
-
-        /**
          * @brief Stores descriptor counts required by the current material.
          *
          * Reuses the shader-derived descriptor counts when allocating
@@ -1059,6 +1047,57 @@ namespace SNE::Engine::Renderer::Vulkan {
             const VulkanDescriptorSetLayout &layout) -> TextureBindingResources;
 
         /**
+         * @brief Registers replacement material descriptors for a texture.
+         *
+         * Copies the current material bindings, substitutes the replacement
+         * texture binding, and registers descriptor resources when
+         * shader-driven material descriptors are active.
+         *
+         * @param replacement_binding Binding referencing the replacement
+         * texture.
+         * @param has_active_material_descriptors Whether material descriptors
+         * are currently active.
+         *
+         * @return Handle of the registered replacement descriptors, or
+         * std::nullopt when no material descriptors are active.
+         *
+         * @post Does not change the active material descriptor handle.
+         * @post On failure, newly registered descriptor resources and
+         * dependency relationships are rolled back.
+         */
+        [[nodiscard]] auto registerTextureReplacementMaterialDescriptors(
+            const MaterialResourceBinding &replacement_binding,
+            bool has_active_material_descriptors)
+            -> std::optional<GpuResourceHandle>;
+
+        /**
+         * @brief Retires resources replaced by a texture update.
+         *
+         * Retires the previous texture only when it has no remaining
+         * dependents. Always retires the previous standalone texture
+         * binding and any active material descriptor resources.
+         *
+         * @param previous_texture Previously registered texture resources.
+         * @param previous_binding Previous standalone texture binding.
+         * @param retire_texture Whether the previous texture can be retired.
+         *
+         * @post On success, ownership of selected resources is transferred
+         * to the graphics retirement queue.
+         * @post If retirement preparation throws, resource ownership
+         * remains unchanged.
+         *
+         * @throws std::bad_alloc if retirement preparation fails.
+         *
+         * @note Call only after replacement resources have been prepared.
+         * @note Does not update registries, dependency relationships,
+         * active handles, or material bindings.
+         */
+        auto retireTextureReplacementResources(
+            TextureResources &previous_texture,
+            TextureBindingResources &previous_binding, bool retire_texture)
+            -> void;
+
+        /**
          * @brief Validates a material binding against its descriptor layout.
          *
          * Checks that the descriptor-set index is valid, the binding exists
@@ -1166,8 +1205,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * registries and updates the corresponding shader-defined descriptor
          * locations.
          *
-         * Descriptor sets are owned by m_MaterialDescriptorResources.
-         * Referenced GPU resources remain owned by their respective registries.
+         * Descriptor sets are owned by material descriptor resources stored in
+         * m_MaterialDescriptorRegistry. Referenced textures and buffers remain
+         * owned by their respective resource registries.
          *
          * @pre Material descriptor sets must already be allocated.
          * @pre Material bindings must reference registered, compatible

@@ -634,3 +634,83 @@ TEST(GpuResourceDependencyTrackerTests, CycleDetectionRespectsGenerations) {
     EXPECT_TRUE(tracker.contains(new_generation_relationship));
     EXPECT_TRUE(tracker.contains(new_relationship));
 }
+
+TEST(GpuResourceDependencyTrackerTests, EmptyTrackerHasNoOtherDependents) {
+    const Renderer::GpuResourceDependencyTracker tracker;
+
+    EXPECT_FALSE(tracker.hasDependentsOtherThan(kRelationship));
+}
+
+TEST(GpuResourceDependencyTrackerTests, ExcludedDependentIsNotCounted) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    tracker.addDependency(kRelationship);
+
+    EXPECT_FALSE(tracker.hasDependentsOtherThan(kRelationship));
+}
+
+TEST(GpuResourceDependencyTrackerTests, FindsOtherDependentOfSameResource) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency other{
+        .dependent = kOtherDependentHandle,
+        .dependency = kFirstDependencyHandle,
+    };
+
+    tracker.addDependency(kRelationship);
+    tracker.addDependency(other);
+
+    const Renderer::GpuResourceDependencyTracker &const_tracker = tracker;
+
+    EXPECT_TRUE(const_tracker.hasDependentsOtherThan(kRelationship));
+    EXPECT_TRUE(const_tracker.hasDependentsOtherThan(other));
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     OtherDependentLookupRespectsResourceGeneration) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency other_generation{
+        .dependent = kOtherDependentHandle,
+        .dependency = kReusedDependencyHandle,
+    };
+
+    tracker.addDependency(kRelationship);
+    tracker.addDependency(other_generation);
+
+    EXPECT_FALSE(tracker.hasDependentsOtherThan(kRelationship));
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     RemovingOtherDependentClearsOtherDependentQuery) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency other{
+        .dependent = kOtherDependentHandle,
+        .dependency = kFirstDependencyHandle,
+    };
+
+    tracker.addDependency(kRelationship);
+    tracker.addDependency(other);
+
+    EXPECT_TRUE(tracker.hasDependentsOtherThan(kRelationship));
+
+    EXPECT_TRUE(tracker.removeDependency(other));
+
+    EXPECT_FALSE(tracker.hasDependentsOtherThan(kRelationship));
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     ExcludedRelationshipDoesNotNeedToBeRegistered) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency other{
+        .dependent = kOtherDependentHandle,
+        .dependency = kFirstDependencyHandle,
+    };
+
+    tracker.addDependency(other);
+
+    EXPECT_TRUE(tracker.hasDependentsOtherThan(kRelationship));
+    EXPECT_FALSE(tracker.hasDependentsOtherThan(other));
+}
