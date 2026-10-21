@@ -14,6 +14,7 @@
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_interface.hpp"
+#include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
 #include "engine/renderer/vulkan/command/vulkan_immediate_submission.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_pool.hpp"
@@ -523,8 +524,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * An empty collection indicates that no material resource bindings
          * have been configured.
          *
-         * The current rendering path supports one combined image sampler
-         * at descriptor set zero, binding zero.
+         * The renderer supports combined image samplers, uniform buffers,
+         * and storage buffers at shader-declared descriptor locations.
          */
         MaterialResourceBindingSet m_MaterialBindings;
 
@@ -1005,6 +1006,77 @@ namespace SNE::Engine::Renderer::Vulkan {
             const VulkanDescriptorSetLayout &layout) -> TextureBindingResources;
 
         /**
+         * @brief Validates a material binding against its descriptor layout.
+         *
+         * Checks that the descriptor-set index is valid, the binding exists
+         * in the corresponding layout, and its descriptor type and array
+         * element match the layout declaration.
+         *
+         * @param binding Material resource binding to validate.
+         * @param descriptor_set_count Number of descriptor sets allocated
+         * for the destination resources.
+         *
+         * @pre descriptor_set_count describes the destination descriptor sets.
+         *
+         * @note Invalid binding metadata triggers a Vulkan precondition
+         * assertion.
+         */
+        auto validateMaterialDescriptorBinding(
+            const MaterialResourceBinding &binding,
+            std::size_t descriptor_set_count) const -> void;
+
+        /**
+         * @brief Prepares a descriptor write for a sampled texture.
+         *
+         * Resolves the texture handle through the texture registry and
+         * appends its sampler and image view information to the supplied
+         * storage.
+         *
+         * @param binding Material binding identifying the sampled texture.
+         * @param write Descriptor write being prepared.
+         * @param image_infos Storage retaining descriptor image information.
+         *
+         * @pre binding must identify a registered sampled texture.
+         * @pre image_infos must have sufficient reserved capacity to keep
+         * its elements stable until descriptor updates are issued.
+         *
+         * @post write.pImageInfo points to the appended image information.
+         *
+         * @note This function does not issue descriptor updates.
+         */
+        auto writeMaterialTextureDescriptor(
+            const MaterialResourceBinding &binding, VkWriteDescriptorSet &write,
+            std::vector<VkDescriptorImageInfo> &image_infos) const -> void;
+
+        /**
+         * @brief Prepares a descriptor write for a registered buffer.
+         *
+         * Resolves the buffer handle through m_BufferRegistry and validates
+         * the buffer size against the device limit for the requested
+         * descriptor type.
+         *
+         * Appends the buffer information to the supplied storage and assigns
+         * it to the descriptor write.
+         *
+         * @param binding Material binding identifying the registered buffer
+         * and its descriptor type.
+         * @param write Descriptor write being prepared.
+         * @param buffer_infos Storage retaining descriptor buffer information.
+         *
+         * @pre binding.type must be UniformBuffer or StorageBuffer.
+         * @pre binding.resource_handle must resolve to a registered buffer.
+         * @pre buffer_infos must have sufficient reserved capacity to keep
+         * its elements stable until descriptor updates are issued.
+         *
+         * @post write.pBufferInfo points to the appended buffer information.
+         *
+         * @note This function does not issue descriptor updates.
+         */
+        auto writeMaterialBufferDescriptor(
+            const MaterialResourceBinding &binding, VkWriteDescriptorSet &write,
+            std::vector<VkDescriptorBufferInfo> &buffer_infos) const -> void;
+
+        /**
          * @brief Writes material resources into the supplied Vulkan descriptor
          * sets.
          *
@@ -1056,16 +1128,19 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto updateMaterialDescriptorSets() -> void;
 
         /**
-         * @brief Creates and registers a CPU-writable uniform buffer.
+         * @brief Creates and registers a material buffer.
          *
-         * Allocates a Vulkan uniform buffer, copies the supplied initial data,
-         * and transfers ownership to m_BufferRegistry.
+         * Allocates a Vulkan buffer with usage determined by the shader
+         * resource type, copies the supplied initial data, and transfers
+         * ownership to m_BufferRegistry.
          *
          * @param data Initial buffer contents borrowed from the caller.
+         * @param type Shader resource type determining the Vulkan buffer usage.
          *
-         * @return Handle identifying the registered uniform buffer.
+         * @return Handle identifying the registered material buffer.
          *
          * @pre data must not be empty.
+         * @pre type must identify a uniform buffer or storage buffer.
          *
          * @post The returned handle resolves to an initialized buffer owned
          * by m_BufferRegistry.
@@ -1075,11 +1150,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @throws std::bad_alloc if registry insertion fails.
          */
         [[nodiscard]] auto
-        registerUniformBuffer(std::span<const std::byte> data)
+        registerMaterialBuffer(std::span<const std::byte> data,
+                               Shader::ShaderResourceType type)
             -> GpuResourceHandle;
 
         /**
-         * @brief Creates a material binding for a registered uniform buffer.
+         * @brief Creates a material binding for a registered buffer.
          *
          * Registers a uniform buffer initialized with the supplied CPU data
          * and associates its resource handle with the requested shader
@@ -1089,7 +1165,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @param input Initial buffer data and shader binding information.
          *
-         * @pre input.type must identify a uniform buffer.
+         * @pre input.type must identify a uniform buffer or storage buffer.
          * @pre input.data must not be empty.
          *
          * @return Material binding referencing the registered uniform buffer.

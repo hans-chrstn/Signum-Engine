@@ -3,6 +3,7 @@
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/material/material_resource_binding_compatibility.hpp"
+#include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.hpp"
@@ -95,6 +96,129 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
     }
 
+    auto VulkanRenderer::validateMaterialDescriptorBinding(
+        const MaterialResourceBinding &binding,
+        std::size_t descriptor_set_count) const -> void {
+        if (std::cmp_greater_equal(binding.set, descriptor_set_count) ||
+            std::cmp_greater_equal(binding.set,
+                                   m_DescriptorSetLayouts.size())) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material binding references an invalid "
+                "descriptor-set index");
+        }
+
+        const std::span<const VulkanDescriptorBindingDescription>
+            layout_bindings =
+                m_DescriptorSetLayouts[binding.set].bindingDescriptions();
+
+        const auto binding_it = std::ranges::find_if(
+            layout_bindings,
+            [&binding](const VulkanDescriptorBindingDescription &description)
+                -> bool { return description.binding == binding.binding; });
+
+        if (binding_it == layout_bindings.end()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material binding is not declared in "
+                "the descriptor-set layout");
+        }
+
+        if (binding_it->descriptor_type != toVkDescriptorType(binding.type) ||
+            binding.array_element >= binding_it->descriptor_count) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material binding has an incompatible "
+                "descriptor type or array element");
+        }
+    }
+
+    auto VulkanRenderer::writeMaterialTextureDescriptor(
+        const MaterialResourceBinding &binding, VkWriteDescriptorSet &write,
+        std::vector<VkDescriptorImageInfo> &image_infos) const -> void {
+
+        const TextureResources *texture_resources =
+            m_TextureRegistry.find(binding.resource_handle);
+
+        if (texture_resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material descriptor update requires a "
+                "registered texture handle");
+        }
+
+        VkDescriptorImageInfo image_info{};
+        image_info.sampler = texture_resources->m_Sampler.nativeHandle();
+        image_info.imageView = texture_resources->m_ImageView.nativeHandle();
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        image_infos.push_back(image_info);
+
+        write.pImageInfo = &image_infos.back();
+    }
+
+    auto VulkanRenderer::writeMaterialBufferDescriptor(
+        const MaterialResourceBinding &binding, VkWriteDescriptorSet &write,
+        std::vector<VkDescriptorBufferInfo> &buffer_infos) const -> void {
+
+        const VulkanBuffer *buffer =
+            m_BufferRegistry.find(binding.resource_handle);
+
+        if (buffer == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material buffer descriptor update requires a "
+                "registered buffer handle");
+        }
+
+        switch (binding.type) {
+        case Shader::ShaderResourceType::StorageBuffer: {
+            if (buffer->size() > m_PhysicalDevice.capabilities.properties.limits
+                                     .maxStorageBufferRange) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer material storage-buffer descriptor range "
+                    "exceeds the device's maximum storage-buffer range");
+            }
+
+            break;
+        }
+        case Shader::ShaderResourceType::UniformBuffer: {
+            if (buffer->size() > m_PhysicalDevice.capabilities.properties.limits
+                                     .maxUniformBufferRange) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer material uniform-buffer descriptor range "
+                    "exceeds the device's maximum uniform-buffer range");
+            }
+
+            break;
+        }
+        default:
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material buffer descriptor update does not "
+                "support the requested resource type");
+        }
+
+        VkDescriptorBufferInfo buffer_info{};
+        buffer_info.buffer = buffer->nativeHandle();
+        buffer_info.offset = 0U;
+        buffer_info.range = buffer->size();
+
+        buffer_infos.push_back(buffer_info);
+
+        write.pBufferInfo = &buffer_infos.back();
+    }
+
     auto VulkanRenderer::writeMaterialDescriptorSets(
         MaterialDescriptorResources &destination,
         std::span<const MaterialResourceBinding> bindings) -> void {
@@ -112,45 +236,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         writes.reserve(bindings.size());
 
         for (const MaterialResourceBinding &binding : bindings) {
-
-            if (std::cmp_greater_equal(binding.set, descriptor_sets.size()) ||
-                std::cmp_greater_equal(binding.set,
-                                       m_DescriptorSetLayouts.size())) {
-                Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Precondition,
-                    Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer material binding references an invalid "
-                    "descriptor-set index");
-            }
-
-            const std::span<const VulkanDescriptorBindingDescription>
-                layout_bindings =
-                    m_DescriptorSetLayouts[binding.set].bindingDescriptions();
-
-            const auto binding_it = std::ranges::find_if(
-                layout_bindings,
-                [&binding](
-                    const VulkanDescriptorBindingDescription &description)
-                    -> bool { return description.binding == binding.binding; });
-
-            if (binding_it == layout_bindings.end()) {
-                Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Precondition,
-                    Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer material binding is not declared in "
-                    "the descriptor-set layout");
-            }
-
-            if (binding_it->descriptor_type !=
-                    toVkDescriptorType(binding.type) ||
-                binding.array_element >= binding_it->descriptor_count) {
-                Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Precondition,
-                    Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer material binding has an incompatible "
-                    "descriptor type or array element");
-            }
-
+            validateMaterialDescriptorBinding(binding, descriptor_sets.size());
             VkWriteDescriptorSet write{};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = descriptor_sets[binding.set];
@@ -161,62 +247,12 @@ namespace SNE::Engine::Renderer::Vulkan {
 
             switch (binding.type) {
             case Shader::ShaderResourceType::CombinedImageSampler: {
-                const TextureResources *texture_resources =
-                    m_TextureRegistry.find(binding.resource_handle);
-
-                if (texture_resources == nullptr) {
-                    Core::Assertion::failAssertion(
-                        Core::Assertion::AssertionType::Precondition,
-                        Core::Error::Subsystem::Vulkan,
-                        "VulkanRenderer material descriptor update requires a "
-                        "registered texture handle");
-                }
-
-                VkDescriptorImageInfo image_info{};
-                image_info.sampler =
-                    texture_resources->m_Sampler.nativeHandle();
-                image_info.imageView =
-                    texture_resources->m_ImageView.nativeHandle();
-                image_info.imageLayout =
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-                image_infos.push_back(image_info);
-
-                write.pImageInfo = &image_infos.back();
-
+                writeMaterialTextureDescriptor(binding, write, image_infos);
                 break;
             }
+            case Shader::ShaderResourceType::StorageBuffer:
             case Shader::ShaderResourceType::UniformBuffer: {
-                const VulkanBuffer *buffer =
-                    m_BufferRegistry.find(binding.resource_handle);
-
-                if (buffer == nullptr) {
-                    Core::Assertion::failAssertion(
-                        Core::Assertion::AssertionType::Precondition,
-                        Core::Error::Subsystem::Vulkan,
-                        "VulkanRenderer material descriptor update requires a "
-                        "registered buffer handle");
-                }
-
-                if (buffer->size() > m_PhysicalDevice.capabilities.properties
-                                         .limits.maxUniformBufferRange) {
-                    Core::Assertion::failAssertion(
-                        Core::Assertion::AssertionType::Precondition,
-                        Core::Error::Subsystem::Vulkan,
-                        "VulkanRenderer material uniform-buffer descriptor "
-                        "range exceeds "
-                        "the device's maximum uniform-buffer range");
-                }
-
-                VkDescriptorBufferInfo buffer_info{};
-                buffer_info.buffer = buffer->nativeHandle();
-                buffer_info.offset = 0U;
-                buffer_info.range = buffer->size();
-
-                buffer_infos.push_back(buffer_info);
-
-                write.pBufferInfo = &buffer_infos.back();
-
+                writeMaterialBufferDescriptor(binding, write, buffer_infos);
                 break;
             }
             default:
@@ -322,7 +358,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::vector<MaterialResourceBinding> bindings =
             m_MaterialBindings.bindings;
 
-        GpuResourceHandle buffer_handle = registerUniformBuffer(data);
+        GpuResourceHandle buffer_handle = registerMaterialBuffer(
+            data, Shader::ShaderResourceType::UniformBuffer);
 
         bindings[binding_index].resource_handle = buffer_handle;
 
@@ -374,21 +411,36 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_MaterialBindings.bindings[binding_index] = bindings[binding_index];
     }
 
-    auto VulkanRenderer::registerUniformBuffer(std::span<const std::byte> data)
+    auto VulkanRenderer::registerMaterialBuffer(std::span<const std::byte> data,
+                                                Shader::ShaderResourceType type)
         -> GpuResourceHandle {
         if (data.empty()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer uniform buffer registration requires nonempty "
+                "VulkanRenderer material buffer registration requires nonempty "
                 "data");
         }
 
         VulkanBufferCreateInfo buffer_create_info{
             .size = data.size_bytes(),
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             .memory_usage = GpuMemoryUsage::Upload,
         };
+
+        switch (type) {
+        case Shader::ShaderResourceType::UniformBuffer:
+            buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+            break;
+        case Shader::ShaderResourceType::StorageBuffer:
+            buffer_create_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            break;
+        default:
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material buffer registration requires a "
+                "uniform or storage buffer resource type");
+        }
 
         VulkanBuffer buffer{m_MemoryAllocator, buffer_create_info};
 
@@ -402,15 +454,17 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto VulkanRenderer::registerMaterialBufferBinding(
         const MaterialBufferBindingInput &input) -> MaterialResourceBinding {
-        if (input.type != Shader::ShaderResourceType::UniformBuffer) {
+        if (input.type != Shader::ShaderResourceType::UniformBuffer &&
+            input.type != Shader::ShaderResourceType::StorageBuffer) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Precondition,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer material buffer binding requires a uniform "
-                "buffer resource type");
+                "VulkanRenderer material buffer binding requires a "
+                "uniform or storage buffer resource type");
         }
 
-        GpuResourceHandle buffer_handle = registerUniformBuffer(input.data);
+        GpuResourceHandle buffer_handle =
+            registerMaterialBuffer(input.data, input.type);
 
         return MaterialResourceBinding{
             .set = input.set,
