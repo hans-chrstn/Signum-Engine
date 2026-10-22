@@ -1075,24 +1075,50 @@
 
 ### Architecture
 
-- [ ] Keep runtime object identity separate from GPU resource identity
+- [x] Keep runtime object identity separate from GPU resource identity
 - [x] Keep GPU allocation details behind Phase 6.5 memory mechanisms
-- [ ] Avoid raw Vulkan ownership in game entities
-- [ ] Keep resource, shader, pipeline, binding, and material mechanisms independent from optional rendering features
-- [ ] Keep core GPU resource APIs usable by built-in and developer-defined render features
+- [x] Avoid raw Vulkan ownership in game entities
+  - Game and scene objects reference rendering resources through engine-managed handles or asset references. They do not directly own Vulkan handles or Vulkan resource wrappers.
+  - GPU allocation, synchronization, resource replacement, and destruction remain the responsibility of renderer and resource systems.
+  - Define the game-facing resource contracts in Phases 12–14. Keep game-object identity, asset identity, and GPU resource identity separate.
+- [x] Keep resource, shader, pipeline, binding, and material mechanisms independent from optional rendering features
+- [x] Keep core GPU resource APIs usable by built-in and developer-defined render features
+  - Built-in and developer-defined render features must use the same core resource ownership, identity, dependency, and GPU lifetime mechanisms.
+  - Keep resource mechanisms independent of individual rendering features. Do not give built-in features private resource-management paths unavailable to custom features.
+  - Define public resource access and render-feature registration contracts in Phase 12. Do not introduce the extension API before it is needed.
 - [x] Avoid baking PBR, shadow, terrain, water, ray-tracing-effect, or other optional-feature semantics into renderer-core resource types
-- [ ] Do not make vertex/index-buffer meshes the only renderable representation
+- [x] Do not make vertex/index-buffer meshes the only renderable representation
+  - Treat indexed meshes as the initial rendering path, not a requirement for every renderable resource.
+  - Keep GPU resource ownership, shaders, pipelines, and synchronization independent of any single geometry representation.
+  - Allow future non-indexed, procedural, indirect, compute-generated, and mesh-shader rendering paths without replacing the core resource mechanisms.
+  - Define additional geometry and drawing contracts when required. Do not introduce unused abstractions or select a universal geometry format now.
 - [x] Define safe recovery behavior before treating swapchain recreation failures as recoverable
-- [ ] Keep renderer resource mechanisms usable by mesh, procedural, indirect, compute-generated, and future GPU-driven workloads
+- [x] Keep renderer resource mechanisms usable by mesh, procedural, indirect, compute-generated, and future GPU-driven workloads
+  - Keep GPU resource ownership, identity, dependency tracking, and synchronization independent of how rendering work is generated.
+  - Allow different rendering paths to reuse core resource mechanisms without requiring vertex/index-buffer meshes.
+  - Introduce workload-specific commands and execution mechanisms when needed. Evaluate indirect, compute-generated, and GPU-driven rendering in later phases.
 - [ ] Support geometry formats other than vertex/index meshes. Do not pick a format yet.
+  - The current renderer supports indexed meshes. Additional geometry representations and draw paths are not implemented.
+  - Define new representations when a concrete workload requires them. Avoid selecting a universal geometry format prematurely.
+  - Keep the current resource foundation independent of future geometry formats.
 - [ ] Track resource readiness separately from page residency.
+  - Resource identity, initialization readiness, GPU residency, and pending destruction represent different states.
+  - A valid resource handle does not guarantee that the resource is ready for GPU use or resident in the required memory.
+  - Define readiness contracts in Phase 13. Introduce page residency and streaming policies in their respective later phases.
 - [x] Keep reference-scene concepts such as stars, planets, systems, and galaxies outside renderer-core types
-- [ ] Treat renderer-facing floating-point transforms as local or camera-relative representations, not authoritative global coordinates
-- [ ] Keep high-precision world-to-renderer conversion outside Vulkan resource ownership
-- [ ] Keep the shader source language and compiler choice replaceable without changing material or render-feature APIs
+- [x] Treat renderer-facing floating-point transforms as local or camera-relative representations, not authoritative global coordinates
+  - Renderer transforms use `Matrix4f` and represent positions relative to a rendering origin or camera. The renderer does not own authoritative world positions.
+  - Scene and spatial systems are responsible for producing renderer-facing transforms. Define the full conversion contract in Phases 14 and 34.5.
+- [x] Keep high-precision world-to-renderer conversion outside Vulkan resource ownership
+  - Perform high-precision position and reference-frame calculations before converting to renderer-facing floating-point transforms.
+  - Vulkan resource classes consume the converted data. They do not manage world coordinates, origin shifting, or spatial precision policies.
+- [x] Keep the shader source language and compiler choice replaceable without changing material or render-feature APIs
 - [x] Keep shader reflection separate from engine/gameplay C++ reflection
 - [x] Keep bindless and mesh-shader-specific mechanisms optional instead of hard requirements of the basic renderer
-- [ ] Do not expose raw in-flight Vulkan lifetime rules to game-facing callers
+- [x] Do not expose raw in-flight Vulkan lifetime rules to game-facing callers
+  - Game-facing code must not manage Vulkan fences, queue submission completion, or deferred GPU resource destruction directly.
+  - Renderer and resource systems are responsible for retaining resources until submitted GPU work has finished using them.
+  - Define the public lifetime and resource-release contracts in Phase 12. Keep synchronization details inside the backend.
 
 ---
 
