@@ -8,6 +8,7 @@
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
+#include "engine/renderer/vulkan/texture/vulkan_texture_address_mode.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_filter.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_format.hpp"
 #include "vulkan_renderer.hpp"
@@ -404,9 +405,12 @@ namespace SNE::Engine::Renderer::Vulkan {
             toVkFilter(texture.sampler.magnification_filter);
         sampler_create_info.minFilter =
             toVkFilter(texture.sampler.minification_filter);
-        sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_create_info.addressModeU =
+            toVkSamplerAddressMode(texture.sampler.address_mode_u);
+        sampler_create_info.addressModeV =
+            toVkSamplerAddressMode(texture.sampler.address_mode_v);
+        sampler_create_info.addressModeW =
+            toVkSamplerAddressMode(texture.sampler.address_mode_w);
         sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
         sampler_create_info.minLod = 0.0F;
         sampler_create_info.maxLod =

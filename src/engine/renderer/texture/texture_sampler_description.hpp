@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/renderer/texture/texture_address_mode.hpp"
 #include "engine/renderer/texture/texture_filter.hpp"
 
 namespace SNE::Engine::Renderer {
@@ -7,13 +8,15 @@ namespace SNE::Engine::Renderer {
      * @brief Describes texture sampling behavior independently of the graphics
      * API.
      *
-     * Specifies the filtering methods used when sampling a texture at
-     * different levels of magnification or minification.
+     * Specifies the filtering methods used during texture magnification
+     * and minification, together with the addressing modes applied to
+     * texture coordinates along the U, V, and W axes.
      *
      * Rendering backends translate these settings into their corresponding
      * native sampler configuration.
      *
-     * The default filtering mode is linear for both operations.
+     * By default, magnification and minification use linear filtering,
+     * while all texture coordinate axes use repeat addressing.
      *
      * This structure describes sampler configuration only. It does not
      * own texture data, GPU resources, or native sampler handles.
@@ -38,5 +41,35 @@ namespace SNE::Engine::Renderer {
          * Defaults to linear filtering.
          */
         TextureFilter minification_filter{TextureFilter::Linear};
+
+        /**
+         * @brief Texture addressing mode along the U coordinate axis.
+         *
+         * Determines how horizontal texture coordinates outside the
+         * normalized range are handled.
+         *
+         * Defaults to repeating the texture.
+         */
+        TextureAddressMode address_mode_u{TextureAddressMode::Repeat};
+
+        /**
+         * @brief Texture addressing mode along the V coordinate axis.
+         *
+         * Determines how vertical texture coordinates outside the
+         * normalized range are handled.
+         *
+         * Defaults to repeating the texture.
+         */
+        TextureAddressMode address_mode_v{TextureAddressMode::Repeat};
+
+        /**
+         * @brief Texture addressing mode along the W coordinate axis.
+         *
+         * Determines how coordinates along the third texture axis
+         * outside the normalized range are handled.
+         *
+         * Defaults to repeating the texture.
+         */
+        TextureAddressMode address_mode_w{TextureAddressMode::Repeat};
     };
 } // namespace SNE::Engine::Renderer

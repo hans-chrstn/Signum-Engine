@@ -85,6 +85,7 @@ add_library(
     engine/renderer/vulkan/synchronization/vulkan_resource_retirement_queue.cpp
     engine/renderer/vulkan/texture/vulkan_texture_format.cpp
     engine/renderer/vulkan/texture/vulkan_texture_filter.cpp
+    engine/renderer/vulkan/texture/vulkan_texture_address_mode.cpp
 )
 
 target_include_directories(

@@ -66,6 +66,7 @@ add_executable(
   renderer/vulkan/synchronization/vulkan_resource_retirement_queue_tests.cpp
   renderer/vulkan/texture/vulkan_texture_format_tests.cpp
   renderer/vulkan/texture/vulkan_texture_filter_tests.cpp
+  renderer/vulkan/texture/vulkan_texture_address_mode_tests.cpp
 )
 
 target_link_libraries(
