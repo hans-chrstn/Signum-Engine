@@ -7,6 +7,7 @@
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_pool.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_set_layout.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_draw_push_constants.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline_cache.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline_variant_key.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
@@ -453,18 +454,28 @@ TEST_F(VulkanGraphicsPipelineCacheIntegrationTest,
     constexpr std::uint32_t kUvOffset{kVertexStride};
     constexpr std::uint32_t kTexturedVertexStride{32U};
 
-    const VkDescriptorSetLayoutBinding texture_binding{
-        .binding = 0U,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1U,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .pImmutableSamplers = nullptr,
+    const std::array layout_bindings{
+        VkDescriptorSetLayoutBinding{
+            .binding = 0U,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1U,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = nullptr,
+        },
+        VkDescriptorSetLayoutBinding{
+            .binding = 1U,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1U,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = nullptr,
+        },
     };
 
     VkDescriptorSetLayoutCreateInfo layout_info{};
     layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_info.bindingCount = 1U;
-    layout_info.pBindings = &texture_binding;
+    layout_info.bindingCount =
+        static_cast<std::uint32_t>(layout_bindings.size());
+    layout_info.pBindings = layout_bindings.data();
 
     const Vulkan::VulkanDescriptorSetLayout descriptor_layout{
         m_Device,
@@ -473,16 +484,22 @@ TEST_F(VulkanGraphicsPipelineCacheIntegrationTest,
 
     ASSERT_NE(descriptor_layout.nativeHandle(), VK_NULL_HANDLE);
 
-    const VkDescriptorPoolSize pool_size{
-        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = kDescriptorSetCount,
+    const std::array pool_sizes{
+        VkDescriptorPoolSize{
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = kDescriptorSetCount,
+        },
+        VkDescriptorPoolSize{
+            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = kDescriptorSetCount,
+        },
     };
 
     VkDescriptorPoolCreateInfo pool_info{};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info.maxSets = kDescriptorSetCount;
-    pool_info.poolSizeCount = 1U;
-    pool_info.pPoolSizes = &pool_size;
+    pool_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
+    pool_info.pPoolSizes = pool_sizes.data();
 
     Vulkan::VulkanDescriptorPool descriptor_pool{m_Device, pool_info};
 
@@ -501,6 +518,9 @@ TEST_F(VulkanGraphicsPipelineCacheIntegrationTest,
     EXPECT_NE(descriptor_sets[0], descriptor_sets[1]);
 
     PipelineInputs inputs = makeInputs();
+
+    inputs.push_constant_ranges.front().size =
+        static_cast<std::uint32_t>(sizeof(Vulkan::VulkanDrawPushConstants));
 
     const std::filesystem::path shader_directory{
         SIGNUM_TEST_SHADER_DIR,

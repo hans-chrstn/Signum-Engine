@@ -204,7 +204,7 @@ namespace {
             .fragment =
                 {
                     .artifact = Vulkan::loadSpirv(
-                        std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                        std::filesystem::path{SIGNUM_TEST_FIXTURE_DIR} /
                         "textured.frag.spv"),
                     .selection =
                         {

@@ -4,6 +4,7 @@
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
+#include "engine/renderer/lighting/directional_light_uniform_data.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
@@ -94,6 +95,11 @@ namespace {
             .format = Renderer::VertexFormat::Float32x3,
             .offset =
                 static_cast<std::uint32_t>(offsetof(TestVertex, position)),
+        },
+        Renderer::VertexAttributeDescription{
+            .location = 1U,
+            .format = Renderer::VertexFormat::Float32x3,
+            .offset = static_cast<std::uint32_t>(offsetof(TestVertex, color)),
         },
         Renderer::VertexAttributeDescription{
             .location = 2U,
@@ -304,6 +310,34 @@ namespace {
         return false;
     }
 
+    constexpr Renderer::DirectionalLightUniformData kTestLight{
+        .direction =
+            {
+                .x = 0.0F,
+                .y = 0.0F,
+                .z = 1.0F,
+                .w = 0.0F,
+            },
+        .color_intensity =
+            {
+                .x = 1.0F,
+                .y = 1.0F,
+                .z = 1.0F,
+                .w = 1.0F,
+            },
+    };
+
+    [[nodiscard]] auto makeLightBinding()
+        -> Renderer::MaterialBufferBindingInput {
+        return {
+            .set = 0U,
+            .binding = 1U,
+            .array_element = 0U,
+            .type = Shader::ShaderResourceType::UniformBuffer,
+            .data = std::as_bytes(std::span{&kTestLight, 1}),
+        };
+    }
+
 } // namespace
 
 class VulkanRendererTextureReplacementIntegrationTests
@@ -404,6 +438,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
                   "initialized window";
     }
 
+    const std::array initial_bindings{makeLightBinding()};
     const auto [validation_output, operation_error] =
         captureVulkanValidationOutput([&] -> void {
             Vulkan::VulkanRenderer renderer{
@@ -415,6 +450,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
                 makeInitialTexture(),
                 std::nullopt,
                 makeTexturedGraphicsShaders(),
+                initial_bindings,
             };
 
             for (std::size_t i{}; i < 2U; ++i) {
@@ -464,6 +500,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
 
     constexpr std::size_t kFramesAfterReplacement = 5U;
 
+    const std::array initial_bindings{makeLightBinding()};
     const auto [validation_output, operation_error] =
         captureVulkanValidationOutput([&] -> void {
             Vulkan::VulkanRenderer renderer{
@@ -475,6 +512,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
                 makeInitialTexture(),
                 std::nullopt,
                 makeTexturedGraphicsShaders(),
+                initial_bindings,
             };
 
             constexpr std::size_t kReplacementCount = 12U;
@@ -537,6 +575,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
             .type = Shader::ShaderResourceType::UniformBuffer,
             .data = std::as_bytes(std::span{kInitialParameters}),
         },
+        makeLightBinding(),
     };
 
     Shader::GraphicsShaderData shaders = makeTexturedGraphicsShaders();
@@ -757,6 +796,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
                   "initialized window";
     }
 
+    const std::array initial_bindings{makeLightBinding()};
     const auto [validation_output, operation_error] =
         captureVulkanValidationOutput([&] -> void {
             Vulkan::VulkanRenderer renderer{
@@ -768,6 +808,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
                 makeInitialTexture(),
                 std::nullopt,
                 makeTexturedGraphicsShaders(),
+                initial_bindings,
             };
 
             renderer.renderFrame();
