@@ -23,6 +23,8 @@ add_executable(
   core/math/quaternion_tests.cpp
   renderer/geometry/uv_sphere_mesh_tests.cpp
   renderer/geometry/vertex_format_tests.cpp
+  renderer/lighting/directional_light_tests.cpp
+  renderer/lighting/directional_light_uniform_data_tests.cpp
   renderer/material/material_description_tests.cpp
   renderer/material/material_resource_binding_tests.cpp
   renderer/material/material_resource_binding_compatibility_tests.cpp

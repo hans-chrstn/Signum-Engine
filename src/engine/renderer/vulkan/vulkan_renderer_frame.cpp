@@ -10,6 +10,7 @@
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_draw_push_constants.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
 #include "vulkan_renderer.hpp"
 #include <algorithm>
@@ -191,9 +192,27 @@ namespace SNE::Engine::Renderer::Vulkan {
             const Math::Matrix4f mvp =
                 Math::multiply(view_projection, instance.model_matrix);
 
-            vkCmdPushConstants(command_buffer, graphics_pipeline.layoutHandle(),
-                               VK_SHADER_STAGE_VERTEX_BIT, 0U,
-                               static_cast<std::uint32_t>(sizeof(mvp)), &mvp);
+            const std::optional<Math::Matrix4f> inverse_matrix =
+                Math::tryInverse(instance.model_matrix);
+
+            if (!inverse_matrix.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer requires an invertible model matrix "
+                    "for normal transformation");
+            }
+
+            VulkanDrawPushConstants draw_push_constants{
+                .mvp = mvp,
+                .normal_matrix = Math::transpose(inverse_matrix.value()),
+            };
+
+            vkCmdPushConstants(
+                command_buffer, graphics_pipeline.layoutHandle(),
+                VK_SHADER_STAGE_VERTEX_BIT, 0U,
+                static_cast<std::uint32_t>(sizeof(draw_push_constants)),
+                &draw_push_constants);
 
             vkCmdDrawIndexed(command_buffer, mesh->m_IndexCount, 1U, 0U, 0, 0U);
         }

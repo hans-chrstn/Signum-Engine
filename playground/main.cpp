@@ -51,7 +51,7 @@ auto main() -> int {
         const Renderer::UvSphereMesh sphere =
             Renderer::generateUvSphereMesh(sphere_param);
 
-        constexpr std::array<Renderer::VertexAttributeDescription, 2>
+        constexpr std::array<Renderer::VertexAttributeDescription, 3>
             kSphereVertexAttributes{
                 {
                     {
@@ -59,6 +59,12 @@ auto main() -> int {
                         .format = Renderer::VertexFormat::Float32x3,
                         .offset = static_cast<std::uint32_t>(
                             offsetof(Renderer::UvSphereVertex, position)),
+                    },
+                    {
+                        .location = 1U,
+                        .format = Renderer::VertexFormat::Float32x3,
+                        .offset = static_cast<std::uint32_t>(
+                            offsetof(Renderer::UvSphereVertex, normal)),
                     },
                     {
                         .location = 2U,

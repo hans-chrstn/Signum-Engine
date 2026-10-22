@@ -7,6 +7,7 @@
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/geometry/vulkan_vertex_input.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_draw_push_constants.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/presentation/fail_closed_replacement.hpp"
 #include "vulkan_renderer.hpp"
@@ -127,8 +128,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                     {
                         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
                         .offset = 0U,
-                        .size =
-                            static_cast<std::uint32_t>(sizeof(Math::Matrix4f)),
+                        .size = static_cast<std::uint32_t>(
+                            sizeof(VulkanDrawPushConstants)),
                     },
                 },
             };
