@@ -13,6 +13,8 @@
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
+#include "engine/renderer/texture/image_loader.hpp"
+#include "engine/renderer/texture/texture_format.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include <array>
@@ -21,7 +23,6 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
-#include <limits>
 #include <numbers>
 #include <span>
 #include <utility>
@@ -121,51 +122,15 @@ auto main() -> int {
             .far_plane = kCameraFarPlane,
         };
 
-        constexpr std::size_t kCheckerboardWidth = 8U;
-        constexpr std::size_t kCheckerboardHeight = 8U;
-        constexpr std::size_t kRgba8BytesPerPixel = 4U;
-
-        constexpr std::size_t kCheckerboardByteCount =
-            kCheckerboardWidth * kCheckerboardHeight * kRgba8BytesPerPixel;
-
-        constexpr auto kCheckerboardPixels =
-            []() -> std::array<std::byte, kCheckerboardByteCount> {
-            constexpr std::byte kMaximumChannelValue{
-                std::numeric_limits<std::uint8_t>::max(),
-            };
-
-            constexpr std::byte kDarkChannelValue{64U};
-
-            std::array<std::byte, kCheckerboardByteCount> pixels{};
-
-            for (std::size_t row_index{}; row_index < kCheckerboardHeight;
-                 ++row_index) {
-                for (std::size_t column_index{};
-                     column_index < kCheckerboardWidth; ++column_index) {
-                    const bool is_white =
-                        ((row_index + column_index) % 2U) == 0U;
-
-                    const std::byte color_channel =
-                        is_white ? kMaximumChannelValue : kDarkChannelValue;
-
-                    const std::size_t pixel_byte_offset =
-                        ((row_index * kCheckerboardWidth) + column_index) *
-                        kRgba8BytesPerPixel;
-
-                    pixels[pixel_byte_offset + 0U] = color_channel;
-                    pixels[pixel_byte_offset + 1U] = color_channel;
-                    pixels[pixel_byte_offset + 2U] = color_channel;
-                    pixels[pixel_byte_offset + 3U] = kMaximumChannelValue;
-                }
-            }
-
-            return pixels;
-        }();
+        const Renderer::Rgba8Image earth_image =
+            Renderer::loadRgba8Image("playground/assets/earth_surface.jpg");
 
         const Renderer::TextureUploadData initial_texture{
-            .width = static_cast<std::uint32_t>(kCheckerboardWidth),
-            .height = static_cast<std::uint32_t>(kCheckerboardHeight),
-            .pixels = std::span{kCheckerboardPixels},
+            .width = earth_image.width,
+            .height = earth_image.height,
+            .pixels = std::span<const std::byte>{earth_image.pixels},
+            .format = Renderer::TextureFormat::Rgba8Srgb,
+            .mip_levels = 1U,
         };
 
         auto vertex_data = Vulkan::loadSpirv("build/shaders/textured.vert.spv");

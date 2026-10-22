@@ -293,6 +293,11 @@ namespace SNE::Engine::Core::Error {
                     .name = "VulkanDescriptorLayoutIncompatible",
                     .subsystem = Subsystem::Vulkan,
                 },
+                ErrorMetadata{
+                    .code = Code::ImageLoadFailed,
+                    .name = "ImageLoadFailed",
+                    .subsystem = Subsystem::Renderer,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {

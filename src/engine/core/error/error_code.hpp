@@ -133,6 +133,8 @@ namespace SNE::Engine::Core::Error {
         /** Shader descriptor requirements are incompatible with the pipeline
            layout. */
         VulkanDescriptorLayoutIncompatible,
+        /** Loading or decoding an image file failed. */
+        ImageLoadFailed,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *

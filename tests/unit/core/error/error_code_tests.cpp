@@ -326,6 +326,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::VulkanDescriptorLayoutIncompatible,
             "VulkanDescriptorLayoutIncompatible",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::ImageLoadFailed,
+            "ImageLoadFailed",
+            Error::Subsystem::Renderer,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

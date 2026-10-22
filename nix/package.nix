@@ -11,6 +11,7 @@
   spirv-reflect,
   spirv-tools,
   spirv-headers,
+  stb,
 }:
 stdenv.mkDerivation {
   pname = "signum-engine";
@@ -31,6 +32,7 @@ stdenv.mkDerivation {
     vulkan-memory-allocator
     spirv-tools
     spirv-headers
+    stb
   ];
 
   cmakeFlags = [

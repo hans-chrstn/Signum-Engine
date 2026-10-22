@@ -8,6 +8,7 @@
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
+#include "engine/renderer/vulkan/texture/vulkan_texture_filter.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_format.hpp"
 #include "vulkan_renderer.hpp"
 #include <algorithm>
@@ -399,8 +400,10 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         VkSamplerCreateInfo sampler_create_info{};
         sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sampler_create_info.magFilter = VK_FILTER_NEAREST;
-        sampler_create_info.minFilter = VK_FILTER_NEAREST;
+        sampler_create_info.magFilter =
+            toVkFilter(texture.sampler.magnification_filter);
+        sampler_create_info.minFilter =
+            toVkFilter(texture.sampler.minification_filter);
         sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;

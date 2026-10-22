@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/renderer/texture/texture_format.hpp"
+#include "engine/renderer/texture/texture_sampler_description.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -9,8 +10,9 @@ namespace SNE::Engine::Renderer {
     /**
      * @brief Describes CPU-side pixel data for a texture upload.
      *
-     * Contains the dimensions, pixel format, mip-level count, and
-     * tightly packed RGBA8 pixel data required to initialize a texture.
+     * Contains the dimensions, pixel format, mip-level count, sampler
+     * configuration, and tightly packed RGBA8 pixel data required
+     * to initialize a texture.
      *
      * Each texel occupies four bytes in red, green, blue, and alpha
      * order. Each mip level is stored consecutively, beginning with
@@ -68,5 +70,22 @@ namespace SNE::Engine::Renderer {
          * maximum mip-level count supported by the texture dimensions.
          */
         std::uint32_t mip_levels{1U};
+
+        /**
+         * @brief Sampler configuration used when uploading the texture.
+         *
+         * Specifies the magnification and minification filtering methods
+         * used when sampling the uploaded texture.
+         *
+         * Defaults to linear filtering for both operations.
+         *
+         * The configuration is independent of the rendering backend.
+         * The renderer translates these settings into its native
+         * sampler representation.
+         *
+         * This member describes sampling behavior and does not
+         * own GPU sampler resources.
+         */
+        TextureSamplerDescription sampler{};
     };
 } // namespace SNE::Engine::Renderer

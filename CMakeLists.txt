@@ -26,6 +26,13 @@ find_package(glfw3 3.4 REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(PkgConfig REQUIRED)
 
+find_path(
+  SIGNUM_STB_INCLUDE_DIR
+  NAMES stb_image.h
+  PATH_SUFFIXES stb
+  REQUIRED
+)
+
 pkg_check_modules(
   SPIRVTools
   REQUIRED

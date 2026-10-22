@@ -136,3 +136,30 @@ TEST(VulkanTextureFormatTests, RejectsUnsupportedTextureFormat) {
                  "Vulkan texture-format conversion requires a supported "
                  "TextureFormat value");
 }
+
+TEST(TextureUploadDataTests, DefaultsToLinearSamplerFiltering) {
+    const Renderer::TextureUploadData upload{};
+
+    EXPECT_EQ(upload.sampler.magnification_filter,
+              Renderer::TextureFilter::Linear);
+
+    EXPECT_EQ(upload.sampler.minification_filter,
+              Renderer::TextureFilter::Linear);
+}
+
+TEST(TextureUploadDataTests, PreservesExplicitSamplerFiltering) {
+    const Renderer::TextureUploadData upload{
+        .pixels = {},
+        .sampler =
+            {
+                .magnification_filter = Renderer::TextureFilter::Nearest,
+                .minification_filter = Renderer::TextureFilter::Linear,
+            },
+    };
+
+    EXPECT_EQ(upload.sampler.magnification_filter,
+              Renderer::TextureFilter::Nearest);
+
+    EXPECT_EQ(upload.sampler.minification_filter,
+              Renderer::TextureFilter::Linear);
+}

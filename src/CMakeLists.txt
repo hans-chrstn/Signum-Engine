@@ -26,6 +26,7 @@ add_library(
     engine/renderer/material/material_resource_binding_compatibility.cpp
     engine/renderer/resource/gpu_resource_registry_id.cpp
     engine/renderer/resource/gpu_resource_dependency_tracker.cpp
+    engine/renderer/texture/image_loader.cpp
     engine/renderer/vulkan/vulkan_instance.cpp
     engine/renderer/vulkan/vulkan_renderer.cpp
     engine/renderer/vulkan/vulkan_frame_resources.cpp
@@ -83,12 +84,19 @@ add_library(
     engine/renderer/vulkan/synchronization/vulkan_queue_submission_state.cpp
     engine/renderer/vulkan/synchronization/vulkan_resource_retirement_queue.cpp
     engine/renderer/vulkan/texture/vulkan_texture_format.cpp
+    engine/renderer/vulkan/texture/vulkan_texture_filter.cpp
 )
 
 target_include_directories(
   signum_engine
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_include_directories(
+  signum_engine
+  SYSTEM PRIVATE
+    ${SIGNUM_STB_INCLUDE_DIR}
 )
 
 target_link_libraries(
