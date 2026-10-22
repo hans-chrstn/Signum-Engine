@@ -1,5 +1,10 @@
 #include "window.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/subsystem.hpp"
+#include "engine/platform/input/cursor_position.hpp"
+#include "engine/platform/input/mouse_button.hpp"
 #include "error/glfw_error.hpp"
 #include <GLFW/glfw3.h>
 #include <utility>
@@ -54,5 +59,36 @@ namespace SNE::Engine::Platform {
 
     auto Window::pollEvents() -> void {
         glfwPollEvents();
+    }
+
+    auto Window::cursorPosition() const -> CursorPosition {
+        double x_pos{};
+        double y_pos{};
+        glfwGetCursorPos(m_Window, &x_pos, &y_pos);
+
+        return CursorPosition{
+            .x = x_pos,
+            .y = y_pos,
+        };
+    }
+
+    auto Window::isMouseButtonPressed(MouseButton button) const -> bool {
+        switch (button) {
+        case MouseButton::Left:
+            return glfwGetMouseButton(m_Window, GLFW_MOUSE_BUTTON_LEFT) ==
+                   GLFW_PRESS;
+        case MouseButton::Right:
+            return glfwGetMouseButton(m_Window, GLFW_MOUSE_BUTTON_RIGHT) ==
+                   GLFW_PRESS;
+        case MouseButton::Middle:
+            return glfwGetMouseButton(m_Window, GLFW_MOUSE_BUTTON_MIDDLE) ==
+                   GLFW_PRESS;
+        }
+
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Precondition,
+            Core::Error::Subsystem::Platform,
+            "Window mouse-button query requires a supported MouseButton "
+            "value");
     }
 } // namespace SNE::Engine::Platform

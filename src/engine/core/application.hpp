@@ -1,9 +1,12 @@
 #pragma once
 
 #include "application_configuration.hpp"
+#include "engine/core/math/matrix4.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
+#include <cstddef>
+#include <functional>
 
 namespace SNE::Engine::Core {
     /**
@@ -45,9 +48,56 @@ namespace SNE::Engine::Core {
         /**
          * @brief Runs the application's primary event and rendering loop.
          *
-         * Processes platform events and requests one renderer frame repeatedly
-         * until the primary application window receives a close request.
+         * Processes pending platform events, invokes the optional
+         * application update callback, and renders each frame until
+         * the primary window receives a close request.
+         *
+         * The update callback runs after event polling and before
+         * rendering, allowing application state to change before
+         * the current frame is recorded.
+         *
+         * @param on_update Optional callback invoked once per frame.
+         * Receives a reference to the running application.
+         *
+         * @note An empty callback skips application-specific updates.
          */
-        auto run() -> void;
+        auto run(const std::function<void(Application &)> &on_update = {})
+            -> void;
+
+        /**
+         * @brief Provides read-only access to the application's primary window.
+         *
+         * Allows callers to query window state and input through the
+         * platform window interface without taking ownership.
+         *
+         * @return Reference to the application-owned primary window.
+         *
+         * @note The returned reference remains valid only while the
+         * Application object is alive.
+         */
+        [[nodiscard]] auto window() const noexcept -> const Platform::Window &;
+
+        /**
+         * @brief Updates the model transformation of a renderer draw instance.
+         *
+         * Forwards the supplied model matrix to the application's renderer
+         * without exposing rendering backend details to the caller.
+         *
+         * The updated transformation is used when recording subsequent
+         * rendering commands.
+         *
+         * @param instance_index Zero-based index of the draw instance.
+         * @param model_matrix Replacement model transformation.
+         *
+         * @pre instance_index must identify an existing draw instance.
+         * @pre Updates must be serialized with rendering operations.
+         *
+         * @post The selected draw instance uses the supplied model matrix.
+         *
+         * @note This operation does not recreate or upload mesh resources.
+         */
+        auto setDrawInstanceModelMatrix(std::size_t instance_index,
+                                        const Math::Matrix4f &model_matrix)
+            -> void;
     };
 } // namespace SNE::Engine::Core

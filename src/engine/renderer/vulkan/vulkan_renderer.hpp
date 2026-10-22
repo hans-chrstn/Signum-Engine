@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/core/math/matrix4.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
@@ -1809,5 +1810,31 @@ namespace SNE::Engine::Renderer::Vulkan {
          * on potentially unsignaled synchronization objects.
          */
         auto renderFrame() -> void;
+
+        /**
+         * @brief Updates the model transformation of an existing draw instance.
+         *
+         * Replaces the model matrix of the specified renderer-managed
+         * draw instance without modifying its mesh resource handle.
+         *
+         * The updated transformation is used when recording
+         * subsequent graphics commands.
+         *
+         * @param instance_index Zero-based index of the draw instance.
+         * @param model_matrix Replacement model transformation.
+         *
+         * @pre instance_index must identify an existing draw instance.
+         * @pre Updates must be serialized with frame command recording.
+         *
+         * @post The selected instance uses the supplied model matrix.
+         * @post All other draw instances remain unchanged.
+         *
+         * @note This operation does not upload mesh data or recreate
+         * GPU resources.
+         */
+        auto
+        setDrawInstanceModelMatrix(std::size_t instance_index,
+                                   const Core::Math::Matrix4f &model_matrix)
+            -> void;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

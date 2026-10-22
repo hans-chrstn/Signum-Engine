@@ -853,3 +853,133 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         ASSERT_NO_THROW(renderer.renderFrame());
     }
 }
+
+TEST(VulkanRendererMeshReplacementIntegrationTests,
+     UpdatesDrawInstanceModelMatricesAndRejectsInvalidIndices) {
+    if (std::getenv("DISPLAY") == nullptr &&
+        std::getenv("WAYLAND_DISPLAY") == nullptr) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    Platform::GlfwContext glfw{};
+
+    const Platform::Window window{
+        kWindowSize,
+        "Signum Draw Instance Transform Test",
+    };
+
+    Vulkan::VulkanInstance instance{
+        "Signum Draw Instance Transform Test",
+        false,
+    };
+
+    Vulkan::VulkanSurface surface{
+        instance.nativeHandle(),
+        window.nativeHandle(),
+    };
+
+    const auto devices =
+        Vulkan::enumeratePhysicalDevices(instance.nativeHandle());
+
+    const auto discovered =
+        Vulkan::inspectPhysicalDevices(devices, surface.nativeHandle());
+
+    if (!Vulkan::selectPhysicalDevice(discovered).has_value()) {
+        GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+    }
+
+    const Renderer::MeshUploadData triangle_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kTriangleVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kTriangleIndices,
+    };
+
+    const std::array initial_model_matrices{
+        Math::identity(),
+        Math::translate(0.5F, 0.0F, 0.0F),
+    };
+
+    const Renderer::InitialMeshData initial_mesh{
+        .mesh = triangle_mesh,
+        .layout =
+            {
+                .attributes = kVertexAttributes,
+            },
+        .model_matrices = initial_model_matrices,
+    };
+
+    const std::filesystem::path shader_directory{
+        SIGNUM_TEST_SHADER_DIR,
+    };
+
+    Shader::GraphicsShaderData graphics_data{
+        .vertex =
+            {
+                .artifact =
+                    Vulkan::loadSpirv(shader_directory / "triangle.vert.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Vertex,
+                        .entry_point = "main",
+                    },
+            },
+        .fragment =
+            {
+                .artifact =
+                    Vulkan::loadSpirv(shader_directory / "triangle.frag.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            },
+    };
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Draw Instance Transform Test",
+        window,
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        std::move(graphics_data),
+    };
+
+    ASSERT_NO_THROW(renderer.renderFrame());
+
+    const Math::Matrix4f first_transform = Math::multiply(
+        Math::translate(-0.25F, 0.0F, 0.0F), Math::rotateY(0.5F));
+
+    const Math::Matrix4f second_transform = Math::multiply(
+        Math::translate(0.25F, 0.0F, 0.0F), Math::rotateX(0.75F));
+
+    ASSERT_NO_THROW(renderer.setDrawInstanceModelMatrix(0U, first_transform));
+
+    ASSERT_NO_THROW(renderer.setDrawInstanceModelMatrix(1U, second_transform));
+
+    for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+
+    ASSERT_NO_THROW(renderer.setDrawInstanceModelMatrix(0U, Math::identity()));
+
+    ASSERT_NO_THROW(renderer.renderFrame());
+
+    constexpr std::size_t kInvalidInstanceIndex{2U};
+
+    ASSERT_DEATH(
+        {
+            renderer.setDrawInstanceModelMatrix(kInvalidInstanceIndex,
+                                                Math::identity());
+        },
+        "requires a valid draw instance index");
+
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
+
+    ASSERT_DEATH(
+        { renderer.setDrawInstanceModelMatrix(0U, Math::identity()); },
+        "requires a valid draw instance index");
+
+    ASSERT_NO_THROW(renderer.renderFrame());
+}

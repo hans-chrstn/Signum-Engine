@@ -1,4 +1,6 @@
 #pragma once
+#include "engine/platform/input/cursor_position.hpp"
+#include "engine/platform/input/mouse_button.hpp"
 #include <GLFW/glfw3.h>
 #include <string>
 
@@ -100,5 +102,33 @@ namespace SNE::Engine::Platform {
          * @brief Processes pending platform events without blocking.
          */
         static void pollEvents();
+
+        /**
+         * @brief Retrieves the current cursor position relative to the window.
+         *
+         * Returns the cursor's horizontal and vertical coordinates
+         * in logical window units, with the origin at the upper-left
+         * corner of the window's content area.
+         *
+         * The cursor position may fall outside the window's bounds.
+         *
+         * @return Current cursor position in window-relative coordinates.
+         */
+        [[nodiscard]] auto cursorPosition() const -> CursorPosition;
+
+        /**
+         * @brief Checks whether a mouse button is currently pressed.
+         *
+         * Queries the current input state of the specified mouse button.
+         *
+         * @param button Backend-independent mouse button to query.
+         *
+         * @return true if the button is pressed; otherwise false.
+         *
+         * @note This function queries button state rather than reporting
+         * individual press or release events.
+         */
+        [[nodiscard]] auto isMouseButtonPressed(MouseButton button) const
+            -> bool;
     };
 } // namespace SNE::Engine::Platform

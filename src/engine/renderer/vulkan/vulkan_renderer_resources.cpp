@@ -676,4 +676,18 @@ namespace SNE::Engine::Renderer::Vulkan {
                                                      previous_binding);
         }
     }
+
+    auto VulkanRenderer::setDrawInstanceModelMatrix(
+        std::size_t instance_index, const Core::Math::Matrix4f &model_matrix)
+        -> void {
+        if (instance_index >= m_DrawInstances.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::setDrawInstanceModelMatrix requires a valid "
+                "draw instance index");
+        }
+
+        m_DrawInstances[instance_index].model_matrix = model_matrix;
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

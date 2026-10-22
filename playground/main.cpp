@@ -4,6 +4,8 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/vector3.hpp"
+#include "engine/platform/input/cursor_position.hpp"
+#include "engine/platform/input/mouse_button.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
@@ -32,6 +34,7 @@ namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Core = SNE::Engine::Core;
 namespace Math = SNE::Engine::Core::Math;
 namespace Shader = SNE::Engine::Renderer::Shader;
+namespace Platform = SNE::Engine::Platform;
 
 auto main() -> int {
     try {
@@ -83,6 +86,9 @@ auto main() -> int {
         constexpr float kCameraFarPlane = 100.0F;
 
         constexpr float kDegreesToRadians = std::numbers::pi_v<float> / 180.0F;
+        const float kRotateX = 20.0F;
+        const float kRotateY = -30.0F;
+        const float kRotateZ = 0.0F;
 
         const Math::Vector3f translation{
             .x = 0.0F,
@@ -90,10 +96,10 @@ auto main() -> int {
             .z = 0.0F,
         };
 
-        const Math::Vector3f rotation{
-            .x = 20.0F * kDegreesToRadians,
-            .y = -30.0F * kDegreesToRadians,
-            .z = 0.0F,
+        Math::Vector3f rotation{
+            .x = kRotateX * kDegreesToRadians,
+            .y = kRotateY * kDegreesToRadians,
+            .z = kRotateZ * kDegreesToRadians,
         };
 
         const Math::Vector3f scale{
@@ -165,7 +171,45 @@ auto main() -> int {
         configuration.initial_graphics_shaders = std::move(graphics_data);
 
         Core::Application application{std::move(configuration)};
-        application.run();
+
+        Platform::CursorPosition previous_cursor{};
+        bool was_dragging{};
+
+        constexpr float kRotationSensitivity{0.005F};
+
+        application.run([&](Core::Application &app) -> void {
+            const Platform::CursorPosition current_cursor =
+                app.window().cursorPosition();
+
+            const bool is_dragging =
+                app.window().isMouseButtonPressed(Platform::MouseButton::Left);
+
+            if (is_dragging && !was_dragging) {
+                previous_cursor = current_cursor;
+            }
+
+            if (is_dragging && was_dragging) {
+                const double delta_x = current_cursor.x - previous_cursor.x;
+                const double delta_y = current_cursor.y - previous_cursor.y;
+
+                rotation.y +=
+                    static_cast<float>(delta_x) * kRotationSensitivity;
+
+                rotation.x +=
+                    static_cast<float>(delta_y) * kRotationSensitivity;
+
+                const Math::Matrix4f updated_model_matrix =
+                    Math::composeTRS(translation, rotation, scale);
+
+                app.setDrawInstanceModelMatrix(0U, updated_model_matrix);
+            }
+
+            if (is_dragging) {
+                previous_cursor = current_cursor;
+            }
+
+            was_dragging = is_dragging;
+        });
     } catch (const Core::Error::EngineError &engine_error) {
         Core::Error::writeDiagnostic(std::cerr, engine_error);
         return EXIT_FAILURE;

@@ -1,4 +1,5 @@
 #include "application.hpp"
+#include "engine/platform/window.hpp"
 #include <utility>
 
 namespace SNE::Engine::Core {
@@ -14,10 +15,27 @@ namespace SNE::Engine::Core {
                      m_Configuration.initial_camera,
                      std::move(m_Configuration.initial_graphics_shaders)) {}
 
-    void Application::run() {
+    auto Application::run(const std::function<void(Application &)> &on_update)
+        -> void {
         while (!m_Window.shouldClose()) {
             Platform::Window::pollEvents();
+
+            if (on_update) {
+                on_update(*this);
+            }
+
             m_Renderer.renderFrame();
         }
+    }
+
+    auto Application::window() const noexcept -> const Platform::Window & {
+        return m_Window;
+    }
+
+    auto
+    Application::setDrawInstanceModelMatrix(std::size_t instance_index,
+                                            const Math::Matrix4f &model_matrix)
+        -> void {
+        m_Renderer.setDrawInstanceModelMatrix(instance_index, model_matrix);
     }
 } // namespace SNE::Engine::Core
