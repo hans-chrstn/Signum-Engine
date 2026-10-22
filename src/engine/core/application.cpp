@@ -39,4 +39,11 @@ namespace SNE::Engine::Core {
         -> void {
         m_Renderer.setDrawInstanceModelMatrix(instance_index, model_matrix);
     }
+
+    auto
+    Application::updateMaterialBuffer(Renderer::MaterialBufferUpdateInput input)
+        -> void {
+        m_Renderer.updateMaterialBuffer(input.set, input.binding,
+                                        input.array_element, input.data);
+    }
 } // namespace SNE::Engine::Core

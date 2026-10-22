@@ -4,6 +4,7 @@
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/material/material_buffer_update_input.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <cstddef>
 #include <functional>
@@ -98,6 +99,40 @@ namespace SNE::Engine::Core {
          */
         auto setDrawInstanceModelMatrix(std::size_t instance_index,
                                         const Math::Matrix4f &model_matrix)
+            -> void;
+
+        /**
+         * @brief Updates an existing material uniform or storage buffer.
+         *
+         * Forwards the supplied descriptor location and CPU data to the
+         * renderer, which creates a replacement GPU buffer and updates the
+         * associated material descriptor resources.
+         *
+         * Previously submitted GPU work retains access to the old resources
+         * until they are safe to retire.
+         *
+         * The operation does not recreate the graphics pipeline.
+         *
+         * @param input Descriptor location and borrowed replacement buffer
+         * data.
+         *
+         * @pre The specified material binding must exist.
+         * @pre The binding must reference a uniform or storage buffer.
+         * @pre The supplied data must be nonempty and match the existing buffer
+         * size.
+         * @pre Updates must be serialized with rendering and resource
+         * replacement.
+         *
+         * @post On success, subsequent frames use the updated buffer data.
+         * @post On failure, the previously active material remains unchanged.
+         *
+         * @throws Error::EngineError if GPU resource creation fails.
+         * @throws std::bad_alloc if resource allocation fails.
+         *
+         * @note The supplied CPU data must remain valid until this call
+         * completes.
+         */
+        auto updateMaterialBuffer(Renderer::MaterialBufferUpdateInput input)
             -> void;
     };
 } // namespace SNE::Engine::Core

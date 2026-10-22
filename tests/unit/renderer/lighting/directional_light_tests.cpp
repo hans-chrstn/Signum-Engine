@@ -5,10 +5,25 @@
 namespace Renderer = SNE::Engine::Renderer;
 
 namespace {
+    constexpr float kValidDirectionY{2.0F};
+    constexpr float kValidDirectionZ{3.0F};
+
+    constexpr float kHdrColorRed{2.0F};
+    constexpr float kHdrColorGreen{4.0F};
+    constexpr float kHdrColorBlue{8.0F};
+    constexpr float kHdrIntensity{10.0F};
+
+    constexpr float kNegativeColorComponent{-0.1F};
+
     [[nodiscard]] auto makeValidDirectionalLight()
         -> Renderer::DirectionalLight {
         return Renderer::DirectionalLight{
-            .direction_to_light = {.x = 1.0F, .y = 2.0F, .z = 3.0F},
+            .direction_to_light =
+                {
+                    .x = 1.0F,
+                    .y = kValidDirectionY,
+                    .z = kValidDirectionZ,
+                },
             .color = {.x = 1.0F, .y = 1.0F, .z = 1.0F},
             .intensity = 1.0F,
         };
@@ -33,8 +48,12 @@ TEST(DirectionalLightTests, AcceptsZeroIntensityAndBlackColor) {
 TEST(DirectionalLightTests, AcceptsHdrColorAndIntensity) {
     Renderer::DirectionalLight light = makeValidDirectionalLight();
 
-    light.color = {.x = 2.0F, .y = 4.0F, .z = 8.0F};
-    light.intensity = 10.0F;
+    light.color = {
+        .x = kHdrColorRed,
+        .y = kHdrColorGreen,
+        .z = kHdrColorBlue,
+    };
+    light.intensity = kHdrIntensity;
 
     Renderer::validateDirectionalLight(light);
 }
@@ -85,19 +104,19 @@ TEST(DirectionalLightTests, RejectsNonFiniteDirectionComponents) {
 TEST(DirectionalLightTests, RejectsNegativeColorComponents) {
     Renderer::DirectionalLight light = makeValidDirectionalLight();
 
-    light.color.x = -0.1F;
+    light.color.x = kNegativeColorComponent;
     ASSERT_DEATH(
         Renderer::validateDirectionalLight(light),
         "DirectionalLight requires finite, nonnegative color components");
 
     light = makeValidDirectionalLight();
-    light.color.y = -0.1F;
+    light.color.y = kNegativeColorComponent;
     ASSERT_DEATH(
         Renderer::validateDirectionalLight(light),
         "DirectionalLight requires finite, nonnegative color components");
 
     light = makeValidDirectionalLight();
-    light.color.z = -0.1F;
+    light.color.z = kNegativeColorComponent;
     ASSERT_DEATH(
         Renderer::validateDirectionalLight(light),
         "DirectionalLight requires finite, nonnegative color components");

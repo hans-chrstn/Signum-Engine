@@ -174,12 +174,16 @@ auto main() -> int {
                 },
         };
 
-        const Renderer::DirectionalLight directional_light{
+        constexpr float kLightDirectionX = 3.0F;
+        constexpr float kLightDirectionY = 1.5F;
+        constexpr float kLightDirectionZ = 1.0F;
+
+        Renderer::DirectionalLight directional_light{
             .direction_to_light =
                 {
-                    .x = 0.0F,
-                    .y = 0.0F,
-                    .z = 1.0F,
+                    .x = kLightDirectionX,
+                    .y = kLightDirectionY,
+                    .z = kLightDirectionZ,
                 },
             .color =
                 {
@@ -219,12 +223,34 @@ auto main() -> int {
 
         constexpr float kRotationSensitivity{0.005F};
 
+        bool was_right_pressed{};
+        bool light_enabled{true};
+
         application.run([&](Core::Application &app) -> void {
             const Platform::CursorPosition current_cursor =
                 app.window().cursorPosition();
 
             const bool is_dragging =
                 app.window().isMouseButtonPressed(Platform::MouseButton::Left);
+
+            const bool is_right_pressed =
+                app.window().isMouseButtonPressed(Platform::MouseButton::Right);
+
+            if (is_right_pressed && !was_right_pressed) {
+                light_enabled = !light_enabled;
+
+                directional_light.intensity = light_enabled ? 1.0F : 0.0F;
+
+                uniform_data = Renderer::makeDirectionalLightUniformData(
+                    directional_light);
+
+                app.updateMaterialBuffer({
+                    .set = 0U,
+                    .binding = 1U,
+                    .array_element = 0U,
+                    .data = std::as_bytes(std::span{&uniform_data, 1}),
+                });
+            }
 
             if (is_dragging && !was_dragging) {
                 previous_cursor = current_cursor;
@@ -251,6 +277,7 @@ auto main() -> int {
             }
 
             was_dragging = is_dragging;
+            was_right_pressed = is_right_pressed;
         });
     } catch (const Core::Error::EngineError &engine_error) {
         Core::Error::writeDiagnostic(std::cerr, engine_error);
