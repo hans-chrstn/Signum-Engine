@@ -13,7 +13,8 @@ namespace SNE::Engine::Core {
                      m_Configuration.initial_mesh,
                      m_Configuration.initial_texture,
                      m_Configuration.initial_camera,
-                     std::move(m_Configuration.initial_graphics_shaders)) {}
+                     std::move(m_Configuration.initial_graphics_shaders),
+                     m_Configuration.initial_buffer_bindings) {}
 
     auto Application::run(const std::function<void(Application &)> &on_update)
         -> void {

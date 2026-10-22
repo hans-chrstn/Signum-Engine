@@ -13,7 +13,11 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
+#include "engine/renderer/lighting/directional_light.hpp"
+#include "engine/renderer/lighting/directional_light_uniform_data.hpp"
+#include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/texture/image_loader.hpp"
 #include "engine/renderer/texture/texture_format.hpp"
@@ -170,11 +174,43 @@ auto main() -> int {
                 },
         };
 
+        const Renderer::DirectionalLight directional_light{
+            .direction_to_light =
+                {
+                    .x = 0.0F,
+                    .y = 0.0F,
+                    .z = 1.0F,
+                },
+            .color =
+                {
+                    .x = 1.0F,
+                    .y = 1.0F,
+                    .z = 1.0F,
+                },
+            .intensity = 1.0F,
+        };
+
+        Renderer::DirectionalLightUniformData uniform_data =
+            Renderer::makeDirectionalLightUniformData(directional_light);
+
+        std::array<Renderer::MaterialBufferBindingInput, 1>
+            initial_buffer_bindings{
+                Renderer::MaterialBufferBindingInput{
+                    .set = 0U,
+                    .binding = 1U,
+                    .array_element = 0U,
+                    .type = SNE::Engine::Renderer::Shader::ShaderResourceType::
+                        UniformBuffer,
+                    .data = std::as_bytes(std::span{&uniform_data, 1}),
+                },
+        };
+
         Core::ApplicationConfiguration configuration{};
         configuration.initial_mesh = initial_mesh;
         configuration.initial_texture = initial_texture;
         configuration.initial_camera = initial_camera;
         configuration.initial_graphics_shaders = std::move(graphics_data);
+        configuration.initial_buffer_bindings = initial_buffer_bindings;
 
         Core::Application application{std::move(configuration)};
 

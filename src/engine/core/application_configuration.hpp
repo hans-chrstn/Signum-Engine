@@ -3,10 +3,12 @@
 #include "engine/platform/window.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
+#include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
 #include <optional>
+#include <span>
 #include <string>
 
 namespace SNE::Engine::Core {
@@ -119,5 +121,23 @@ namespace SNE::Engine::Core {
          */
         std::optional<Renderer::Shader::GraphicsShaderData>
             initial_graphics_shaders;
+
+        /**
+         * @brief Initial material buffer bindings supplied to the renderer.
+         *
+         * Describes the shader descriptor locations, resource types, and CPU
+         * data used to initialize material uniform and storage buffers.
+         *
+         * The binding descriptions and their CPU data are borrowed and must
+         * remain valid until renderer initialization completes.
+         *
+         * The renderer creates and owns the corresponding GPU buffers and
+         * descriptor resources.
+         *
+         * An empty span indicates that no initial material buffers are
+         * supplied.
+         */
+        std::span<const Renderer::MaterialBufferBindingInput>
+            initial_buffer_bindings;
     };
 } // namespace SNE::Engine::Core
