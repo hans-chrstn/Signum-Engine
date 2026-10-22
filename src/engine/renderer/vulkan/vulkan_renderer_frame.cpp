@@ -19,6 +19,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace Math = SNE::Engine::Core::Math;
@@ -455,6 +456,26 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::Subsystem::Vulkan,
                 "VulkanRenderer requires swapchain resources after successful "
                 "creation");
+        }
+
+        const Platform::FramebufferSize framebuffer_size =
+            m_Window->framebufferSize();
+
+        if (framebuffer_size.width <= 0 || framebuffer_size.height <= 0) {
+            static_cast<void>(recreateSwapchainResources());
+            return;
+        }
+
+        const VkExtent2D swapchain_extent =
+            m_SwapchainResources->m_VulkanSwapchain.extent();
+
+        if (std::cmp_not_equal(framebuffer_size.width,
+                               swapchain_extent.width) ||
+            std::cmp_not_equal(framebuffer_size.height,
+                               swapchain_extent.height)) {
+
+            static_cast<void>(recreateSwapchainResources());
+            return;
         }
 
         SwapchainResources &swapchain_resources = m_SwapchainResources.value();

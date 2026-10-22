@@ -7,6 +7,7 @@
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
+#include "engine/renderer/geometry/uv_sphere_mesh.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
@@ -33,197 +34,46 @@ namespace Shader = SNE::Engine::Renderer::Shader;
 
 auto main() -> int {
     try {
-        struct CubeVertex {
-            std::array<float, 3> position;
-            std::array<float, 3> color;
-            std::array<float, 2> uv;
+        constexpr float kSphereRadius{0.75F};
+        constexpr std::uint32_t kSphereLongitudeSegments{64U};
+        constexpr std::uint32_t kSphereLatitudeSegments{32U};
+
+        constexpr Renderer::UvSphereParameters sphere_param{
+            .radius = kSphereRadius,
+            .longitude_segments = kSphereLongitudeSegments,
+            .latitude_segments = kSphereLatitudeSegments,
         };
 
-        constexpr std::array<float, 3> kWhiteColor{
-            1.0F,
-            1.0F,
-            1.0F,
-        };
+        const Renderer::UvSphereMesh sphere =
+            Renderer::generateUvSphereMesh(sphere_param);
 
-        constexpr std::array<CubeVertex, 24> kCubeVertices{
-            {
-                // Front (+Z)
-                {
-                    .position = {-0.5F, -0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 0.0F},
-                },
-                {
-                    .position = {0.5F, -0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 0.0F},
-                },
-                {
-                    .position = {-0.5F, 0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 1.0F},
-                },
-                {
-                    .position = {0.5F, 0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 1.0F},
-                },
-
-                // Back (-Z)
-                {
-                    .position = {0.5F, -0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 0.0F},
-                },
-                {
-                    .position = {-0.5F, -0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 0.0F},
-                },
-                {
-                    .position = {0.5F, 0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 1.0F},
-                },
-                {
-                    .position = {-0.5F, 0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 1.0F},
-                },
-
-                // Right (+X)
-                {
-                    .position = {0.5F, -0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 0.0F},
-                },
-                {
-                    .position = {0.5F, -0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 0.0F},
-                },
-                {
-                    .position = {0.5F, 0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 1.0F},
-                },
-                {
-                    .position = {0.5F, 0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 1.0F},
-                },
-
-                // Left (-X)
-                {
-                    .position = {-0.5F, -0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 0.0F},
-                },
-                {
-                    .position = {-0.5F, -0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 0.0F},
-                },
-                {
-                    .position = {-0.5F, 0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 1.0F},
-                },
-                {
-                    .position = {-0.5F, 0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 1.0F},
-                },
-
-                // Top (+Y)
-                {
-                    .position = {-0.5F, 0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 0.0F},
-                },
-                {
-                    .position = {0.5F, 0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 0.0F},
-                },
-                {
-                    .position = {-0.5F, 0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 1.0F},
-                },
-                {
-                    .position = {0.5F, 0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 1.0F},
-                },
-
-                // Bottom (-Y)
-                {
-                    .position = {-0.5F, -0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 0.0F},
-                },
-                {
-                    .position = {0.5F, -0.5F, -0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 0.0F},
-                },
-                {
-                    .position = {-0.5F, -0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {0.0F, 1.0F},
-                },
-                {
-                    .position = {0.5F, -0.5F, 0.5F},
-                    .color = kWhiteColor,
-                    .uv = {1.0F, 1.0F},
-                },
-            },
-        };
-
-        constexpr std::array<Renderer::VertexAttributeDescription, 3>
-            kCubeVertexAttributes{
+        constexpr std::array<Renderer::VertexAttributeDescription, 2>
+            kSphereVertexAttributes{
                 {
                     {
                         .location = 0U,
                         .format = Renderer::VertexFormat::Float32x3,
                         .offset = static_cast<std::uint32_t>(
-                            offsetof(CubeVertex, position)),
-                    },
-                    {
-                        .location = 1U,
-                        .format = Renderer::VertexFormat::Float32x3,
-                        .offset = static_cast<std::uint32_t>(
-                            offsetof(CubeVertex, color)),
+                            offsetof(Renderer::UvSphereVertex, position)),
                     },
                     {
                         .location = 2U,
                         .format = Renderer::VertexFormat::Float32x2,
                         .offset = static_cast<std::uint32_t>(
-                            offsetof(CubeVertex, uv)),
+                            offsetof(Renderer::UvSphereVertex, uv)),
                     },
                 },
         };
 
-        // clang-format off
-        constexpr std::array<std::uint16_t, 36> kCubeIndices{
-            0,  1,  2,   2,  1,  3, // Front
-            4,  5,  6,   6,  5,  7, // Back
-            8,  9, 10,  10,  9, 11, // Right
-            12, 13, 14,  14, 13, 15, // Left
-            16, 17, 18,  18, 17, 19, // Top
-            20, 21, 22,  22, 21, 23, // Bottom
-        };
-        // clang-format on
-
         const Renderer::MeshUploadData mesh{
-            .vertex_bytes = std::as_bytes(std::span{kCubeVertices}),
-            .vertex_stride = static_cast<std::uint32_t>(sizeof(CubeVertex)),
-            .indices = std::span{kCubeIndices},
+            .vertex_bytes = std::as_bytes(std::span{sphere.vertices}),
+            .vertex_stride =
+                static_cast<std::uint32_t>(sizeof(Renderer::UvSphereVertex)),
+            .indices = sphere.indices,
         };
 
         const Renderer::VertexLayoutDescription layout{
-            .attributes = kCubeVertexAttributes,
+            .attributes = kSphereVertexAttributes,
         };
 
         constexpr float kCameraDistance = 3.0F;
@@ -284,7 +134,7 @@ auto main() -> int {
                 std::numeric_limits<std::uint8_t>::max(),
             };
 
-            constexpr std::byte kMinimumChannelValue{};
+            constexpr std::byte kDarkChannelValue{64U};
 
             std::array<std::byte, kCheckerboardByteCount> pixels{};
 
@@ -296,7 +146,7 @@ auto main() -> int {
                         ((row_index + column_index) % 2U) == 0U;
 
                     const std::byte color_channel =
-                        is_white ? kMaximumChannelValue : kMinimumChannelValue;
+                        is_white ? kMaximumChannelValue : kDarkChannelValue;
 
                     const std::size_t pixel_byte_offset =
                         ((row_index * kCheckerboardWidth) + column_index) *

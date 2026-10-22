@@ -21,6 +21,7 @@ add_executable(
   core/math/vector4_tests.cpp
   core/math/vector4d_tests.cpp
   core/math/quaternion_tests.cpp
+  renderer/geometry/uv_sphere_mesh_tests.cpp
   renderer/geometry/vertex_format_tests.cpp
   renderer/material/material_description_tests.cpp
   renderer/material/material_resource_binding_tests.cpp

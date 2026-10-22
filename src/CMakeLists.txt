@@ -21,6 +21,7 @@ add_library(
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp
+    engine/renderer/geometry/uv_sphere_mesh.cpp
     engine/renderer/geometry/vertex_format.cpp
     engine/renderer/material/material_resource_binding_compatibility.cpp
     engine/renderer/resource/gpu_resource_registry_id.cpp
