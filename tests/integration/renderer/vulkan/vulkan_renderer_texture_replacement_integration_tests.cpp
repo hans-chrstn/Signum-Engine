@@ -6,6 +6,8 @@
 #include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/lighting/directional_light_uniform_data.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
+#include "engine/renderer/material/material_buffer_update_frequency.hpp"
+#include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
@@ -228,6 +230,18 @@ namespace {
                         },
                 },
         };
+    }
+
+    [[nodiscard]] auto makeTwoTextureGraphicsShaders()
+        -> Shader::GraphicsShaderData {
+
+        Shader::GraphicsShaderData shaders = makeTexturedGraphicsShaders();
+
+        shaders.fragment.artifact =
+            Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                              "material_two_textures.frag.spv");
+
+        return shaders;
     }
 
     constexpr std::array<std::uint8_t, 20U> kMipmappedPixels{
@@ -715,6 +729,182 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
 }
 
 TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RendersTwoGenericMaterialTexturesAcrossFrames) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Multi-texture test requires an initialized window";
+    }
+
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh =
+        makeInitialMesh(matrices, kTexturedVertexAttributes);
+
+    const std::array buffer_bindings{makeLightBinding()};
+
+    const std::array texture_bindings{
+        Renderer::MaterialTextureBindingInput{
+            .set = 0U,
+            .binding = 0U,
+            .array_element = 0U,
+            .texture = makeInitialTexture(),
+        },
+        Renderer::MaterialTextureBindingInput{
+            .set = 0U,
+            .binding = 2U,
+            .array_element = 0U,
+            .texture = makeThirdTexture(),
+        },
+    };
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Multi-Texture Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                mesh,
+                std::nullopt,
+                std::nullopt,
+                makeTwoTextureGraphicsShaders(),
+                buffer_bindings,
+                texture_bindings,
+            };
+
+            for (std::size_t i{}; i < 4U; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Multi-texture rendering failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RendersLegacyAndGenericMaterialTexturesAcrossFrames) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Mixed texture test requires an initialized window";
+    }
+
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh =
+        makeInitialMesh(matrices, kTexturedVertexAttributes);
+
+    const std::array buffer_bindings{makeLightBinding()};
+
+    const std::array texture_bindings{
+        Renderer::MaterialTextureBindingInput{
+            .set = 0U,
+            .binding = 2U,
+            .array_element = 0U,
+            .texture = makeThirdTexture(),
+        },
+    };
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Mixed Texture Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                mesh,
+                makeInitialTexture(),
+                std::nullopt,
+                makeTwoTextureGraphicsShaders(),
+                buffer_bindings,
+                texture_bindings,
+            };
+
+            for (std::size_t i{}; i < 4U; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Mixed texture rendering failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RendersTwoMaterialTexturesWithFrequentBufferUpdates) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Frequent multi-texture test requires an "
+                  "initialized window";
+    }
+
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh =
+        makeInitialMesh(matrices, kTexturedVertexAttributes);
+
+    Renderer::MaterialBufferBindingInput light_binding = makeLightBinding();
+
+    light_binding.update_frequency =
+        Renderer::MaterialBufferUpdateFrequency::Frequent;
+
+    const std::array buffer_bindings{light_binding};
+
+    const std::array texture_bindings{
+        Renderer::MaterialTextureBindingInput{
+            .set = 0U,
+            .binding = 0U,
+            .array_element = 0U,
+            .texture = makeInitialTexture(),
+        },
+        Renderer::MaterialTextureBindingInput{
+            .set = 0U,
+            .binding = 2U,
+            .array_element = 0U,
+            .texture = makeThirdTexture(),
+        },
+    };
+
+    Renderer::DirectionalLightUniformData updated_light = kTestLight;
+    constexpr float intensity = 0.5F;
+    updated_light.color_intensity.w = intensity;
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Frequent Multi-Texture Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                mesh,
+                std::nullopt,
+                std::nullopt,
+                makeTwoTextureGraphicsShaders(),
+                buffer_bindings,
+                texture_bindings,
+            };
+
+            for (std::size_t i{}; i < 3U; ++i) {
+                renderer.renderFrame();
+            }
+
+            renderer.updateMaterialBuffer(
+                0U, 1U, 0U, std::as_bytes(std::span{&updated_light, 1}));
+
+            for (std::size_t i{}; i < 4U; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Frequent multi-texture rendering failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
        RejectsMissingFragmentShaderMaterialBinding) {
     if (!m_Window.has_value()) {
         FAIL() << "Material binding validation test requires an "
@@ -735,6 +925,137 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
         },
         "initial material bindings do not satisfy fragment shader "
         "descriptor requirements");
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RejectsDuplicateInitialTextureBindings) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Duplicate texture binding test requires an "
+                  "initialized window";
+    }
+
+    const Renderer::MaterialTextureBindingInput binding{
+        .set = 1U,
+        .binding = 2U,
+        .array_element = 0U,
+        .texture = makeInitialTexture(),
+    };
+
+    const std::array bindings{binding, binding};
+
+    ASSERT_DEATH(
+        {
+            Vulkan::VulkanRenderer renderer(
+                "Signum Duplicate Texture Binding Test", m_Window.value(),
+                Renderer::PresentationPreference::VSync, false, std::nullopt,
+                std::nullopt, std::nullopt, std::nullopt, {}, bindings);
+        },
+        "initial material bindings contain duplicate descriptor locations");
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RejectsOverlappingInitialTextureAndBufferBindings) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Overlapping material binding test requires an "
+                  "initialized window";
+    }
+
+    const std::array buffer_bindings{makeLightBinding()};
+
+    const std::array texture_bindings{
+        Renderer::MaterialTextureBindingInput{
+            .set = 0U,
+            .binding = 1U,
+            .array_element = 0U,
+            .texture = makeInitialTexture(),
+        },
+    };
+
+    ASSERT_DEATH(
+        {
+            Vulkan::VulkanRenderer renderer(
+                "Signum Overlapping Material Binding Test", m_Window.value(),
+                Renderer::PresentationPreference::VSync, false, std::nullopt,
+                std::nullopt, std::nullopt, std::nullopt, buffer_bindings,
+                texture_bindings);
+        },
+        "initial material bindings contain duplicate descriptor locations");
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RejectsDuplicateInitialBufferBindings) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Duplicate buffer binding test requires an "
+                  "initialized window";
+    }
+
+    const std::array bindings{
+        makeLightBinding(),
+        makeLightBinding(),
+    };
+
+    ASSERT_DEATH(
+        {
+            Vulkan::VulkanRenderer renderer(
+                "Signum Duplicate Buffer Binding Test", m_Window.value(),
+                Renderer::PresentationPreference::VSync, false, std::nullopt,
+                std::nullopt, std::nullopt, std::nullopt, bindings);
+        },
+        "initial material bindings contain duplicate descriptor locations");
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RejectsInitialTextureBindingConflictingWithLegacyTexture) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Legacy texture collision test requires an "
+                  "initialized window";
+    }
+
+    const std::array texture_bindings{
+        Renderer::MaterialTextureBindingInput{
+            .set = 0U,
+            .binding = 0U,
+            .array_element = 0U,
+            .texture = makeInitialTexture(),
+        },
+    };
+
+    ASSERT_DEATH(
+        {
+            Vulkan::VulkanRenderer renderer(
+                "Signum Legacy Texture Collision Test", m_Window.value(),
+                Renderer::PresentationPreference::VSync, false, std::nullopt,
+                makeInitialTexture(), std::nullopt, std::nullopt, {},
+                texture_bindings);
+        },
+        "initial material bindings contain duplicate descriptor locations");
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       RejectsInitialBufferBindingConflictingWithLegacyTexture) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Legacy texture and buffer collision test requires an "
+                  "initialized window";
+    }
+
+    Renderer::MaterialBufferBindingInput conflicting_binding =
+        makeLightBinding();
+
+    conflicting_binding.binding = 0U;
+
+    const std::array buffer_bindings{
+        conflicting_binding,
+    };
+
+    ASSERT_DEATH(
+        {
+            Vulkan::VulkanRenderer renderer(
+                "Signum Legacy Texture Buffer Collision Test", m_Window.value(),
+                Renderer::PresentationPreference::VSync, false, std::nullopt,
+                makeInitialTexture(), std::nullopt, std::nullopt,
+                buffer_bindings);
+        },
+        "initial material bindings contain duplicate descriptor locations");
 }
 
 TEST_F(VulkanRendererTextureReplacementIntegrationTests,

@@ -978,3 +978,50 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
         << "Unexpected Vulkan validation output:\n"
         << validation_output;
 }
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       RejectsInvalidFrequentUniformBufferUpdates) {
+    if (!m_Window.has_value()) {
+        FAIL()
+            << "Frequent buffer validation test requires an initialized window";
+    }
+
+    Renderer::MaterialBufferBindingInput input = initialBinding();
+    input.update_frequency = Renderer::MaterialBufferUpdateFrequency::Frequent;
+
+    const std::array initial_bindings{input};
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Frequent Buffer Validation Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        std::nullopt,
+        std::nullopt,
+        std::nullopt,
+        makeMaterialShaders(),
+        initial_bindings,
+    };
+
+    const std::span<const std::byte> empty_data{};
+
+    ASSERT_DEATH(
+        {
+            renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                          kArrayElement, empty_data);
+        },
+        "frequent material buffer update requires nonempty data");
+
+    constexpr std::array<float, 2> kWrongSizeParameters{
+        1.0F,
+        0.0F,
+    };
+
+    ASSERT_DEATH(
+        {
+            renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                          kArrayElement,
+                                          parameterBytes(kWrongSizeParameters));
+        },
+        "frequent material buffer update requires matching data size");
+}

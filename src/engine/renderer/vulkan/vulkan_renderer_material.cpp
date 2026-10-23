@@ -20,6 +20,21 @@
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    auto VulkanRenderer::registerMaterialTextureBinding(
+        const MaterialTextureBindingInput &input) -> MaterialResourceBinding {
+        TextureResources texture = uploadTexture(input.texture);
+
+        GpuResourceHandle handle = m_TextureRegistry.insert(std::move(texture));
+
+        return MaterialResourceBinding{
+            .set = input.set,
+            .binding = input.binding,
+            .array_element = input.array_element,
+            .type = Shader::ShaderResourceType::CombinedImageSampler,
+            .resource_handle = handle,
+        };
+    }
+
     auto VulkanRenderer::createTextureBindingResources(
         const MaterialResourceBinding &resource_binding,
         const VulkanDescriptorSetLayout &layout) -> TextureBindingResources {

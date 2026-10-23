@@ -9,6 +9,7 @@
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
+#include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
@@ -28,8 +29,10 @@
 #include <utility>
 #include <vector>
 
-namespace Vulkan = SNE::Engine::Renderer::Vulkan;
-namespace Error = SNE::Engine::Core::Error;
+namespace Renderer = SNE::Engine::Renderer;
+namespace Vulkan = Renderer::Vulkan;
+namespace Core = SNE::Engine::Core;
+namespace Error = Core::Error;
 
 namespace {
     [[nodiscard]] auto selectRequiredPhysicalDevice(VkInstance instance,
@@ -54,6 +57,74 @@ namespace {
         return selected_device.value();
     }
 
+    template <typename Binding>
+    [[nodiscard]] auto
+    hasDuplicateLocations(std::span<const Binding> bindings) noexcept -> bool {
+        for (std::size_t i{}; i < bindings.size(); ++i) {
+            for (std::size_t j{i + 1U}; j < bindings.size(); ++j) {
+                if (bindings[i].set == bindings[j].set &&
+                    bindings[i].binding == bindings[j].binding &&
+                    bindings[i].array_element == bindings[j].array_element) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    template <typename FirstBinding, typename SecondBinding>
+    [[nodiscard]] auto hasOverlappingLocations(
+        std::span<const FirstBinding> first_bindings,
+        std::span<const SecondBinding> second_bindings) noexcept -> bool {
+        for (std::size_t i{}; i < first_bindings.size(); ++i) {
+            for (std::size_t j{}; j < second_bindings.size(); ++j) {
+                if (first_bindings[i].set == second_bindings[j].set &&
+                    first_bindings[i].binding == second_bindings[j].binding &&
+                    first_bindings[i].array_element ==
+                        second_bindings[j].array_element) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    template <typename Binding>
+    [[nodiscard]] auto
+    hasLegacyLocation(std::span<const Binding> bindings) noexcept -> bool {
+        for (std::size_t i{}; i < bindings.size(); ++i) {
+            if (bindings[i].set == 0U && bindings[i].binding == 0U &&
+                bindings[i].array_element == 0U) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    auto validateInitialMaterialBindingLocations(
+        bool has_legacy_texture,
+        std::span<const Renderer::MaterialTextureBindingInput> texture_bindings,
+        std::span<const Renderer::MaterialBufferBindingInput> buffer_bindings)
+        -> void {
+        const bool has_conflict =
+            hasDuplicateLocations(texture_bindings) ||
+            hasDuplicateLocations(buffer_bindings) ||
+            hasOverlappingLocations(texture_bindings, buffer_bindings) ||
+            (has_legacy_texture && (hasLegacyLocation(texture_bindings) ||
+                                    hasLegacyLocation(buffer_bindings)));
+
+        if (has_conflict) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer initial material bindings contain "
+                "duplicate descriptor locations");
+        }
+    }
+
     constexpr std::size_t kFramesInFlight = 2;
 } // namespace
 
@@ -66,7 +137,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<TextureUploadData> initial_texture,
         std::optional<InitialCameraData> initial_camera,
         std::optional<Shader::GraphicsShaderData> initial_graphics_shaders,
-        std::span<const MaterialBufferBindingInput> initial_buffer_bindings)
+        std::span<const MaterialBufferBindingInput> initial_buffer_bindings,
+        std::span<const MaterialTextureBindingInput> initial_texture_bindings)
         : m_Window(&window),
           m_Instance(application_name, development_diagnostics_enabled),
           m_Surface(m_Instance.nativeHandle(), window.nativeHandle()),
@@ -91,6 +163,11 @@ namespace SNE::Engine::Renderer::Vulkan {
                                 .memory_budget_extension_supported),
           m_InitialCamera(initial_camera),
           m_GraphicsSubmissionState(kFramesInFlight) {
+
+        validateInitialMaterialBindingLocations(initial_texture.has_value(),
+                                                initial_texture_bindings,
+                                                initial_buffer_bindings);
+
         initializeFrameResources();
 
         if (initial_mesh.has_value()) {
@@ -106,6 +183,12 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         if (initial_texture.has_value()) {
             initializeInitialTexture(initial_texture.value());
+        }
+
+        for (const MaterialTextureBindingInput &binding :
+             initial_texture_bindings) {
+            m_MaterialBindings.bindings.push_back(
+                registerMaterialTextureBinding(binding));
         }
 
         for (const MaterialBufferBindingInput &input :

@@ -11,6 +11,7 @@
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_set.hpp"
+#include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_dependency_tracker.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
@@ -1129,6 +1130,33 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> TextureResources;
 
         /**
+         * @brief Uploads and registers a sampled material texture.
+         *
+         * Creates GPU texture resources from the supplied upload description
+         * and transfers ownership to the texture registry.
+         *
+         * Returns a material binding associating the registered texture with
+         * the requested shader descriptor location.
+         *
+         * @param input Texture upload data and descriptor location.
+         *
+         * @return Non-owning material binding referencing the registered
+         * texture.
+         *
+         * @post On success, the returned handle resolves to a texture owned
+         * by m_TextureRegistry.
+         *
+         * @throws Core::Error::EngineError if GPU allocation or upload fails.
+         * @throws std::bad_alloc if resource registration fails.
+         *
+         * @note The input's pixel storage is borrowed until upload completes.
+         * @note Descriptor allocation and material selection are not performed.
+         */
+        [[nodiscard]] auto
+        registerMaterialTextureBinding(const MaterialTextureBindingInput &input)
+            -> MaterialResourceBinding;
+
+        /**
          * @brief Creates a descriptor binding for a registered texture.
          *
          * Validates the material resource binding against the supported
@@ -2101,6 +2129,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param initial_buffer_bindings Optional material buffer bindings
          * initialized during renderer construction. The supplied data is
          * borrowed only until construction completes.
+         * @param initial_texture_bindings Initial sampled-texture bindings.
+         * Each input specifies a shader descriptor location and borrowed
+         * texture upload data. Pixel storage must remain valid until
+         * renderer construction completes.
          *
          * @throws Core::Error::EngineError if a required Vulkan resource or
          * capability cannot be initialized.
@@ -2115,7 +2147,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             std::optional<Shader::GraphicsShaderData> initial_graphics_shaders =
                 std::nullopt,
             std::span<const MaterialBufferBindingInput>
-                initial_buffer_bindings = {});
+                initial_buffer_bindings = {},
+            std::span<const MaterialTextureBindingInput>
+                initial_texture_bindings = {});
 
         /**
          * @brief Releases the Vulkan renderer runtime.

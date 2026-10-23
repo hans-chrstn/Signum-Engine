@@ -4,6 +4,7 @@
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
+#include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
@@ -139,5 +140,23 @@ namespace SNE::Engine::Core {
          */
         std::span<const Renderer::MaterialBufferBindingInput>
             initial_buffer_bindings;
+
+        /**
+         * @brief Initial sampled-texture bindings supplied to the renderer.
+         *
+         * Describes the descriptor locations and texture upload data used
+         * to initialize material textures.
+         *
+         * The binding descriptions and their pixel data are borrowed and
+         * must remain valid until renderer initialization completes.
+         *
+         * The renderer creates and owns the GPU texture resources and
+         * associated descriptor resources.
+         *
+         * An empty span indicates that no additional material textures
+         * are supplied.
+         */
+        std::span<const Renderer::MaterialTextureBindingInput>
+            initial_texture_bindings;
     };
 } // namespace SNE::Engine::Core
