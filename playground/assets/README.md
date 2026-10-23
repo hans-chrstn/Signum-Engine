@@ -15,3 +15,11 @@ NASA does not endorse or sponsor Signum Engine.
 
 Usage guidelines:
 https://www.nasa.gov/nasa-brand-center/images-and-media/
+
+## earth_day.jpg and earth_night.jpg
+
+- Creator: Solar System Scope
+- Source: https://www.solarsystemscope.com/textures/
+- License: Creative Commons Attribution 4.0 International
+- License URL: https://creativecommons.org/licenses/by/4.0/
+- Modifications: Renamed downloaded files; image content unchanged.

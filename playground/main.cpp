@@ -16,12 +16,12 @@
 #include "engine/renderer/lighting/directional_light.hpp"
 #include "engine/renderer/lighting/directional_light_uniform_data.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
+#include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/texture/image_loader.hpp"
 #include "engine/renderer/texture/texture_format.hpp"
-#include "engine/renderer/texture/texture_upload_data.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include <array>
 #include <cstddef>
@@ -138,20 +138,44 @@ auto main() -> int {
             .far_plane = kCameraFarPlane,
         };
 
-        const Renderer::Rgba8Image earth_image =
-            Renderer::loadRgba8Image("playground/assets/earth_surface.jpg");
+        const Renderer::Rgba8Image day_image =
+            Renderer::loadRgba8Image("playground/assets/earth_day.jpg");
 
-        const Renderer::TextureUploadData initial_texture{
-            .width = earth_image.width,
-            .height = earth_image.height,
-            .pixels = std::span<const std::byte>{earth_image.pixels},
-            .format = Renderer::TextureFormat::Rgba8Srgb,
-            .mip_levels = 1U,
+        const Renderer::Rgba8Image night_image =
+            Renderer::loadRgba8Image("playground/assets/earth_night.jpg");
+
+        std::array<Renderer::MaterialTextureBindingInput, 2>
+            initial_texture_bindings{
+                Renderer::MaterialTextureBindingInput{
+                    .set = 0U,
+                    .binding = 0U,
+                    .array_element = 0U,
+                    .texture =
+                        {
+                            .width = day_image.width,
+                            .height = day_image.height,
+                            .pixels = day_image.pixels,
+                            .format = Renderer::TextureFormat::Rgba8Srgb,
+                            .mip_levels = 1U,
+                        },
+                },
+                Renderer::MaterialTextureBindingInput{
+                    .set = 0U,
+                    .binding = 2U,
+                    .array_element = 0U,
+                    .texture =
+                        {
+                            .width = night_image.width,
+                            .height = night_image.height,
+                            .pixels = night_image.pixels,
+                            .format = Renderer::TextureFormat::Rgba8Srgb,
+                            .mip_levels = 1U,
+                        },
+                },
         };
 
         auto vertex_data = Vulkan::loadSpirv("build/shaders/textured.vert.spv");
-        auto fragment_data =
-            Vulkan::loadSpirv("build/shaders/textured.frag.spv");
+        auto fragment_data = Vulkan::loadSpirv("build/shaders/earth.frag.spv");
 
         Shader::GraphicsShaderData graphics_data{
             .vertex =
@@ -211,10 +235,10 @@ auto main() -> int {
 
         Core::ApplicationConfiguration configuration{};
         configuration.initial_mesh = initial_mesh;
-        configuration.initial_texture = initial_texture;
         configuration.initial_camera = initial_camera;
         configuration.initial_graphics_shaders = std::move(graphics_data);
         configuration.initial_buffer_bindings = initial_buffer_bindings;
+        configuration.initial_texture_bindings = initial_texture_bindings;
 
         Core::Application application{std::move(configuration)};
 

@@ -105,6 +105,15 @@ slangc "${slang_shader_source_dir}/textured.slang" \
 
 spirv-val "${shader_output_dir}/textured.frag.spv"
 
+slangc "${slang_shader_source_dir}/earth.slang" \
+    -target spirv \
+    -entry fragmentMain \
+    -stage fragment \
+    -matrix-layout-column-major \
+    -o "${shader_output_dir}/earth.frag.spv"
+
+spirv-val "${shader_output_dir}/earth.frag.spv"
+
 slangc "${slang_test_shader_source_dir}/material_two_textures.slang" \
     -target spirv \
     -entry fragmentMain \
