@@ -372,46 +372,53 @@ namespace SNE::Engine::Renderer::Vulkan {
         return resources;
     }
 
-    auto VulkanRenderer::updateMaterialBuffer(std::uint32_t set,
-                                              std::uint32_t binding,
-                                              std::uint32_t array_element,
-                                              std::span<const std::byte> data)
-        -> void {
+    auto VulkanRenderer::collectActiveMaterialDescriptorHandles() const
+        -> std::vector<GpuResourceHandle> {
 
-        const auto buffers_it = std::ranges::find_if(
-            m_FrequentMaterialBuffers,
-            [set, binding,
-             array_element](const FrequentMaterialBufferState &state) -> bool {
-                return state.m_Set == set && state.m_Binding == binding &&
-                       state.m_ArrayElement == array_element;
-            });
+        std::vector<GpuResourceHandle> handles;
 
-        if (buffers_it != m_FrequentMaterialBuffers.end()) {
-            stageFrequentMaterialBufferUpdate(*buffers_it, data);
-            return;
+        if (!m_FrameMaterialDescriptorHandles.empty()) {
+            if (m_FrameMaterialDescriptorHandles.size() !=
+                m_FrameResources.size()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer requires one material descriptor handle "
+                    "per frame slot");
+            }
+
+            handles = m_FrameMaterialDescriptorHandles;
+        } else {
+            if (!m_ActiveMaterialDescriptorHandle.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer::updateMaterialBuffer requires allocated "
+                    "material descriptor resources");
+            }
+
+            handles.push_back(m_ActiveMaterialDescriptorHandle.value());
         }
 
-        MaterialDescriptorResources *active_resources =
-            findActiveMaterialDescriptorResources();
+        for (const GpuResourceHandle &handle : handles) {
+            const MaterialDescriptorResources *resources =
+                m_MaterialDescriptorRegistry.find(handle);
 
-        if (active_resources == nullptr) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer::updateMaterialBuffer requires allocated "
-                "material descriptor resources");
+            if (resources == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer previous material descriptor handle does "
+                    "not resolve to registered resources");
+            }
         }
 
-        if (!m_ActiveMaterialDescriptorHandle.has_value()) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer active material descriptor handle is missing "
-                "during buffer replacement");
-        }
+        return handles;
+    }
 
-        const GpuResourceHandle previous_descriptor_handle =
-            *m_ActiveMaterialDescriptorHandle;
+    auto VulkanRenderer::validateMaterialBufferReplacement(
+        std::uint32_t set, std::uint32_t binding, std::uint32_t array_element,
+        std::span<const std::byte> data) const -> std::size_t {
 
         if (data.empty()) {
             Core::Assertion::failAssertion(
@@ -469,41 +476,13 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "the existing buffer size");
         }
 
-        std::vector<MaterialResourceBinding> bindings =
-            m_MaterialBindings.bindings;
+        return binding_index;
+    }
 
-        GpuResourceHandle buffer_handle =
-            registerMaterialBuffer(data, binding_it->type);
-
-        bindings[binding_index].resource_handle = buffer_handle;
-
-        const bool old_buffer_still_referenced = std::ranges::any_of(
-            bindings,
-            [old_buffer_handle](
-                const MaterialResourceBinding &candidate) -> bool {
-                return old_buffer_handle == candidate.resource_handle;
-            });
-
-        std::optional<GpuResourceHandle> replacement_descriptor_handle;
-
-        try {
-            replacement_descriptor_handle.emplace(
-                registerMaterialDescriptorResources(bindings));
-        } catch (...) {
-            static_cast<void>(m_BufferRegistry.remove(buffer_handle));
-            throw;
-        }
-
-        const GpuResourceDependency excluded_relationship{
-            .dependent = previous_descriptor_handle,
-            .dependency = old_buffer_handle,
-        };
-
-        const bool retire_old_buffer =
-            !old_buffer_still_referenced &&
-            !m_ResourceDependencies.hasDependentsOtherThan(
-                excluded_relationship);
-
+    auto VulkanRenderer::retirePreviousMaterialResources(
+        GpuResourceHandle old_buffer_handle,
+        std::span<const GpuResourceHandle> previous_descriptor_handles,
+        bool retire_old_buffer) -> void {
         VulkanBuffer *old_buffer_to_retire =
             m_BufferRegistry.find(old_buffer_handle);
 
@@ -515,48 +494,145 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "to a registered buffer");
         }
 
-        try {
-            const std::uint64_t submission_id =
-                m_GraphicsSubmissionState.lastSubmitted();
+        const std::uint64_t submission_id =
+            m_GraphicsSubmissionState.lastSubmitted();
 
-            MaterialDescriptorResources *descriptor_resources_to_retire =
-                findActiveMaterialDescriptorResources();
+        std::vector<MaterialDescriptorResources *>
+            descriptor_resources_to_retire;
 
-            if (descriptor_resources_to_retire == nullptr) {
+        descriptor_resources_to_retire.reserve(
+            previous_descriptor_handles.size());
+
+        for (const GpuResourceHandle &handle : previous_descriptor_handles) {
+            MaterialDescriptorResources *resources =
+                m_MaterialDescriptorRegistry.find(handle);
+
+            if (resources == nullptr) {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer active material descriptor resources "
-                    "became unavailable during buffer replacement");
+                    "VulkanRenderer previous material descriptor handle "
+                    "does not resolve to registered resources during "
+                    "retirement");
             }
 
-            if (retire_old_buffer) {
-                m_GraphicsResourceRetirementQueue.retire(
+            descriptor_resources_to_retire.push_back(resources);
+        }
+
+        if (retire_old_buffer) {
+            m_GraphicsResourceRetirementQueue
+                .retireMany<VulkanBuffer, MaterialDescriptorResources>(
                     submission_id, *old_buffer_to_retire,
-                    *descriptor_resources_to_retire);
+                    std::span<MaterialDescriptorResources *const>{
+                        descriptor_resources_to_retire});
+        } else {
+            m_GraphicsResourceRetirementQueue
+                .retireMany<MaterialDescriptorResources>(
+                    submission_id,
+                    std::span<MaterialDescriptorResources *const>{
+                        descriptor_resources_to_retire});
+        }
+    }
+
+    auto VulkanRenderer::updateMaterialBuffer(std::uint32_t set,
+                                              std::uint32_t binding,
+                                              std::uint32_t array_element,
+                                              std::span<const std::byte> data)
+        -> void {
+
+        const auto buffers_it = std::ranges::find_if(
+            m_FrequentMaterialBuffers,
+            [set, binding,
+             array_element](const FrequentMaterialBufferState &state) -> bool {
+                return state.m_Set == set && state.m_Binding == binding &&
+                       state.m_ArrayElement == array_element;
+            });
+
+        if (buffers_it != m_FrequentMaterialBuffers.end()) {
+            stageFrequentMaterialBufferUpdate(*buffers_it, data);
+            return;
+        }
+
+        const std::vector<GpuResourceHandle> previous_descriptor_handles =
+            collectActiveMaterialDescriptorHandles();
+
+        const std::size_t binding_index = validateMaterialBufferReplacement(
+            set, binding, array_element, data);
+
+        const MaterialResourceBinding &existing_binding =
+            m_MaterialBindings.bindings[binding_index];
+
+        const GpuResourceHandle old_buffer_handle =
+            existing_binding.resource_handle;
+
+        std::vector<MaterialResourceBinding> bindings =
+            m_MaterialBindings.bindings;
+
+        GpuResourceHandle buffer_handle =
+            registerMaterialBuffer(data, existing_binding.type);
+
+        bindings[binding_index].resource_handle = buffer_handle;
+
+        const bool old_buffer_still_referenced = std::ranges::any_of(
+            bindings,
+            [old_buffer_handle](
+                const MaterialResourceBinding &candidate) -> bool {
+                return old_buffer_handle == candidate.resource_handle;
+            });
+
+        std::vector<GpuResourceHandle> replacement_descriptor_handles;
+
+        try {
+            replacement_descriptor_handles.reserve(
+                previous_descriptor_handles.size());
+
+            if (m_FrameMaterialDescriptorHandles.empty()) {
+                replacement_descriptor_handles.push_back(
+                    registerMaterialDescriptorResources(bindings));
             } else {
-                m_GraphicsResourceRetirementQueue.retire(
-                    submission_id, *descriptor_resources_to_retire);
+                replacement_descriptor_handles =
+                    registerFrameMaterialDescriptorResources(bindings);
             }
         } catch (...) {
-            rollbackRegisteredMaterialDescriptorResources(
-                *replacement_descriptor_handle);
             static_cast<void>(m_BufferRegistry.remove(buffer_handle));
             throw;
         }
 
-        static_cast<void>(m_ResourceDependencies.removeRelationshipsInvolving(
-            previous_descriptor_handle));
+        const bool retire_old_buffer =
+            !old_buffer_still_referenced &&
+            !m_ResourceDependencies.hasDependentsOutside(
+                old_buffer_handle, previous_descriptor_handles);
 
-        static_cast<void>(
-            m_MaterialDescriptorRegistry.remove(previous_descriptor_handle));
+        try {
+            retirePreviousMaterialResources(old_buffer_handle,
+                                            previous_descriptor_handles,
+                                            retire_old_buffer);
+        } catch (...) {
+            rollbackRegisteredFrameMaterialDescriptorResources(
+                replacement_descriptor_handles);
+
+            static_cast<void>(m_BufferRegistry.remove(buffer_handle));
+            throw;
+        }
+
+        for (const GpuResourceHandle &handle : previous_descriptor_handles) {
+            static_cast<void>(
+                m_ResourceDependencies.removeRelationshipsInvolving(handle));
+
+            static_cast<void>(m_MaterialDescriptorRegistry.remove(handle));
+        }
 
         if (retire_old_buffer) {
             static_cast<void>(m_BufferRegistry.remove(old_buffer_handle));
         }
 
-        m_ActiveMaterialDescriptorHandle.emplace(
-            *replacement_descriptor_handle);
+        if (m_FrameMaterialDescriptorHandles.empty()) {
+            m_ActiveMaterialDescriptorHandle.emplace(
+                replacement_descriptor_handles.front());
+        } else {
+            m_FrameMaterialDescriptorHandles =
+                std::move(replacement_descriptor_handles);
+        }
 
         m_MaterialBindings.bindings[binding_index] = bindings[binding_index];
     }
@@ -986,9 +1062,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             }
 
         } catch (...) {
-            for (const GpuResourceHandle &handle : handles) {
-                rollbackRegisteredMaterialDescriptorResources(handle);
-            }
+            rollbackRegisteredFrameMaterialDescriptorResources(handles);
             throw;
         }
 
@@ -1013,6 +1087,13 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         static_cast<void>(
             m_MaterialDescriptorRegistry.remove(descriptor_handle));
+    }
+
+    auto VulkanRenderer::rollbackRegisteredFrameMaterialDescriptorResources(
+        std::span<const GpuResourceHandle> descriptor_handles) -> void {
+        for (const GpuResourceHandle &handle : descriptor_handles) {
+            rollbackRegisteredMaterialDescriptorResources(handle);
+        }
     }
 
     auto VulkanRenderer::initializeInitialMaterial(

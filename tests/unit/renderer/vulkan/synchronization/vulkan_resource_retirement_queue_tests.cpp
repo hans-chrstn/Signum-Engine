@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <optional>
+#include <span>
 #include <utility>
 
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
@@ -508,4 +509,258 @@ TEST(VulkanResourceRetirementQueueTests, RejectsRetiringTheSameResourceTwice) {
             queue.retire(0U, resource, resource);
         },
         "requires distinct resource objects");
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyAcceptsEmptyResourceCollection) {
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    queue.retireMany<TrackedResource>(0U, {});
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyRetainsResourcesUntilSubmissionCompletes) {
+    int destruction_count{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto first = makeTrackedResource(destruction_count);
+    auto second = makeTrackedResource(destruction_count);
+
+    std::array resources{&first, &second};
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retireMany<TrackedResource>(submission_id, resources);
+
+    EXPECT_EQ(first.get(), nullptr);
+    EXPECT_EQ(second.get(), nullptr);
+    EXPECT_EQ(destruction_count, 0);
+
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(destruction_count, 0);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(destruction_count, 2);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyPreservesResourcesUntilTheirSubmissionCompletes) {
+    int destruction_count{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{2U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto first = makeTrackedResource(destruction_count);
+    auto second = makeTrackedResource(destruction_count);
+
+    std::array resources{&first, &second};
+
+    static_cast<void>(submissions.recordSubmission(0U));
+    const auto submission_id = submissions.recordSubmission(1U);
+
+    queue.retireMany<TrackedResource>(submission_id, resources);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(destruction_count, 0);
+
+    submissions.recordCompletion(1U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(destruction_count, 2);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyDoesNotDestroyResourcesTwice) {
+    int destruction_count{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto resource = makeTrackedResource(destruction_count);
+
+    std::array resources{&resource};
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retireMany<TrackedResource>(submission_id, resources);
+
+    submissions.recordCompletion(0U);
+
+    queue.collectCompleted(submissions);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(destruction_count, 1);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyRejectsNullResourcePointers) {
+    int destruction_count{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto resource = makeTrackedResource(destruction_count);
+
+    std::array<TrackedResource *, 2> resources{
+        &resource,
+        nullptr,
+    };
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    ASSERT_DEATH(
+        { queue.retireMany<TrackedResource>(submission_id, resources); },
+        "requires non-null resource pointers");
+
+    EXPECT_NE(resource.get(), nullptr);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyRejectsDuplicateResourcePointers) {
+    int destruction_count{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto resource = makeTrackedResource(destruction_count);
+
+    std::array resources{&resource, &resource};
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    ASSERT_DEATH(
+        { queue.retireMany<TrackedResource>(submission_id, resources); },
+        "requires distinct resource objects");
+
+    EXPECT_NE(resource.get(), nullptr);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyWithFirstResourceRetainsAllUntilCompletion) {
+    int first_destructions{};
+    int dependent_destructions{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto first = makeTrackedResource(first_destructions);
+    auto dependent_a = makeTrackedResource(dependent_destructions);
+    auto dependent_b = makeTrackedResource(dependent_destructions);
+
+    std::array resources{&dependent_a, &dependent_b};
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retireMany<TrackedResource, TrackedResource>(submission_id, first,
+                                                       resources);
+
+    EXPECT_EQ(first.get(), nullptr);
+    EXPECT_EQ(dependent_a.get(), nullptr);
+    EXPECT_EQ(dependent_b.get(), nullptr);
+
+    EXPECT_EQ(first_destructions, 0);
+    EXPECT_EQ(dependent_destructions, 0);
+
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(first_destructions, 0);
+    EXPECT_EQ(dependent_destructions, 0);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(first_destructions, 1);
+    EXPECT_EQ(dependent_destructions, 2);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyDestroysDependentsBeforeFirstResource) {
+    std::array<int, 2> destruction_order{};
+    std::size_t next_index{};
+
+    using OrderedResource = std::unique_ptr<int, OrderRecordingDeleter>;
+
+    OrderedResource first{
+        new int{1},
+        OrderRecordingDeleter{
+            .destruction_order = &destruction_order,
+            .next_index = &next_index,
+            .resource_id = 1,
+        },
+    };
+
+    OrderedResource dependent{
+        new int{2},
+        OrderRecordingDeleter{
+            .destruction_order = &destruction_order,
+            .next_index = &next_index,
+            .resource_id = 2,
+        },
+    };
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    std::array resources{&dependent};
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retireMany<OrderedResource, OrderedResource>(submission_id, first,
+                                                       resources);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(next_index, 2U);
+    EXPECT_EQ(destruction_order[0], 2);
+    EXPECT_EQ(destruction_order[1], 1);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyWithEmptyDependentsRetiresFirstResource) {
+    int destruction_count{};
+
+    Vulkan::VulkanQueueSubmissionState submissions{1U};
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto first = makeTrackedResource(destruction_count);
+
+    const auto submission_id = submissions.recordSubmission(0U);
+
+    queue.retireMany<TrackedResource, TrackedResource>(submission_id, first,
+                                                       {});
+
+    EXPECT_EQ(first.get(), nullptr);
+    EXPECT_EQ(destruction_count, 0);
+
+    submissions.recordCompletion(0U);
+    queue.collectCompleted(submissions);
+
+    EXPECT_EQ(destruction_count, 1);
+}
+
+TEST(VulkanResourceRetirementQueueTests,
+     RetireManyRejectsFirstResourceAliasingDependent) {
+    int destruction_count{};
+
+    Vulkan::VulkanResourceRetirementQueue queue;
+
+    auto first = makeTrackedResource(destruction_count);
+    auto dependent = makeTrackedResource(destruction_count);
+
+    std::array resources{&dependent, &first};
+
+    ASSERT_DEATH((queue.retireMany<TrackedResource, TrackedResource>(
+                     0U, first, resources)),
+                 "requires distinct resource objects");
+
+    EXPECT_NE(first.get(), nullptr);
+    EXPECT_NE(dependent.get(), nullptr);
 }

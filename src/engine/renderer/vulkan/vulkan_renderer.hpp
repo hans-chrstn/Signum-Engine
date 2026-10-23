@@ -1909,6 +1909,123 @@ namespace SNE::Engine::Renderer::Vulkan {
             GpuResourceHandle descriptor_handle) -> void;
 
         /**
+         * @brief Rolls back multiple newly registered material descriptor
+         * resources.
+         *
+         * Removes the descriptor resources identified by the supplied handles,
+         * including their tracked resource dependency relationships.
+         *
+         * @param descriptor_handles Handles identifying descriptor resources
+         * to discard.
+         *
+         * @pre Every handle must identify registered descriptor resources.
+         * @pre None of the descriptor resources may be active or referenced
+         * by outstanding GPU submissions.
+         *
+         * @post The supplied descriptor handles no longer resolve in the
+         * registry, and their dependency relationships have been removed.
+         *
+         * @note This operation does not wait for GPU completion.
+         * It must not be used to retire previously active descriptors.
+         */
+        auto rollbackRegisteredFrameMaterialDescriptorResources(
+            std::span<const GpuResourceHandle> descriptor_handles) -> void;
+
+        /**
+         * @brief Collects the material descriptor handles currently used for
+         * rendering.
+         *
+         * Returns frame-specific descriptor handles when configured, otherwise
+         * returns the single shared material descriptor handle.
+         *
+         * Validates that frame-specific descriptors match the number of frame
+         * resources and that every collected handle resolves to a registered
+         * material descriptor resource.
+         *
+         * @return Handles identifying the current material descriptor
+         * resources.
+         *
+         * @pre The renderer must have initialized material descriptor
+         * resources.
+         *
+         * @post The renderer's resource ownership and active selections are
+         * unchanged.
+         *
+         * @throws std::bad_alloc if allocating the returned handle collection
+         * fails.
+         */
+        [[nodiscard]] auto collectActiveMaterialDescriptorHandles() const
+            -> std::vector<GpuResourceHandle>;
+
+        /**
+         * @brief Validates an occasional material-buffer replacement.
+         *
+         * Finds the requested material binding and verifies that it references
+         * a registered uniform or storage buffer.
+         *
+         * The replacement data must be nonempty and match the existing
+         * buffer's size.
+         *
+         * @param set Descriptor-set index.
+         * @param binding Binding index within the descriptor set.
+         * @param array_element Descriptor array-element index.
+         * @param data Replacement buffer contents.
+         *
+         * @return Index of the matching entry in m_MaterialBindings.bindings.
+         *
+         * @pre The requested binding must exist and reference a valid buffer.
+         * @pre Replacement data must be nonempty and match the buffer size.
+         *
+         * @post Material bindings and GPU resources remain unchanged.
+         *
+         * @note Invalid input triggers a precondition assertion.
+         * Invalid registered resource state triggers an invariant assertion.
+         */
+        [[nodiscard]] auto validateMaterialBufferReplacement(
+            std::uint32_t set, std::uint32_t binding,
+            std::uint32_t array_element, std::span<const std::byte> data) const
+            -> std::size_t;
+
+        /**
+         * @brief Retires previous material resources after buffer replacement.
+         *
+         * Resolves the previous material descriptor handles and transfers their
+         * resources to the graphics retirement queue.
+         *
+         * When requested, also retires the previous material buffer in the
+         * same retirement record, ensuring dependent descriptor resources are
+         * destroyed before the buffer.
+         *
+         * All resources remain alive until their final GPU submission
+         * completes.
+         *
+         * @param old_buffer_handle Handle identifying the previous material
+         * buffer.
+         * @param previous_descriptor_handles Handles identifying the previous
+         * material descriptor resources.
+         * @param retire_old_buffer Whether to retire the previous buffer along
+         * with the descriptor resources.
+         *
+         * @pre All supplied handles must resolve to registered resources.
+         * @pre Previous descriptor handles must identify distinct resources.
+         * @pre The graphics submission state must track all outstanding GPU
+         * uses.
+         *
+         * @post On success, ownership of the selected resources is transferred
+         * to the retirement queue.
+         * @post If preparation fails, the original resources remain unchanged.
+         *
+         * @throws std::bad_alloc if retirement preparation fails.
+         *
+         * @note Does not remove registry entries or dependency relationships.
+         * @note Does not wait for GPU completion.
+         */
+        auto retirePreviousMaterialResources(
+            GpuResourceHandle old_buffer_handle,
+            std::span<const GpuResourceHandle> previous_descriptor_handles,
+            bool retire_old_buffer) -> void;
+
+        /**
          * @brief Validates initial material bindings against shader
          * requirements.
          *

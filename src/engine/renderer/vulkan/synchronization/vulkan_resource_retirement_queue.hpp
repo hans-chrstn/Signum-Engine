@@ -3,10 +3,12 @@
 #include "engine/core/assert/assertion_handler.hpp"
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <span>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -399,6 +401,210 @@ namespace SNE::Engine::Renderer::Vulkan {
                                  std::move(second_resource),
                                  std::move(third_resource),
                              });
+        }
+
+        /**
+         * @brief Retains multiple resources until a GPU submission completes.
+         *
+         * Transfers ownership of the supplied resources into one retirement
+         * record, releasing them only after the specified submission completes.
+         *
+         * All potentially throwing preparation must finish before any resource
+         * ownership is transferred.
+         *
+         * @tparam Resource Move-only resource type being retired.
+         *
+         * @param submission_id Final submission referencing these resources.
+         * @param resources Pointers to the resources whose ownership is
+         * transferred.
+         *
+         * @pre Resource must be nothrow move-constructible and destructible.
+         * @pre Resource pointers must be non-null and identify distinct
+         * objects.
+         * @pre The submission ID must cover all outstanding GPU uses.
+         *
+         * @post On success, the retirement queue owns the resources.
+         * @post If preparation fails, all supplied resources remain unchanged.
+         *
+         * @throws std::bad_alloc if retirement preparation fails.
+         *
+         * @note This function does not wait for GPU completion.
+         */
+        template <typename Resource>
+        auto retireMany(std::uint64_t submission_id,
+                        std::span<Resource *const> resources) -> void {
+            static_assert(
+                std::is_nothrow_move_constructible_v<Resource>,
+                "Retired resources must be nothrow move-constructible");
+
+            static_assert(std::is_nothrow_destructible_v<Resource>,
+                          "Retired resources must be nothrow destructible");
+
+            if (resources.empty()) {
+                return;
+            }
+
+            for (Resource *resource : resources) {
+                if (resource == nullptr) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "Vulkan resource retirement requires non-null resource "
+                        "pointers");
+                }
+            }
+
+            for (std::size_t i{}; i < resources.size(); ++i) {
+                for (std::size_t j{i + 1}; j < resources.size(); ++j) {
+                    if (resources[i] == resources[j]) {
+                        Core::Assertion::failAssertion(
+                            Core::Assertion::AssertionType::Precondition,
+                            Core::Error::Subsystem::Vulkan,
+                            "Vulkan resource retirement requires distinct "
+                            "resource objects");
+                    }
+                }
+            }
+
+            auto holder = std::make_unique<std::vector<Resource>>();
+
+            holder->reserve(resources.size());
+
+            auto *storage = holder.get();
+
+            std::move_only_function<void() noexcept> release =
+                [owner = std::move(holder)] noexcept -> void {
+                (*owner).clear();
+            };
+
+            m_PendingResources.emplace_back(RetiredResource{
+                .submission_id = submission_id,
+                .release = std::move(release),
+            });
+
+            for (Resource *resource : resources) {
+                storage->emplace_back(std::move(*resource));
+            }
+        }
+
+        /**
+         * @brief Retains one resource and multiple dependent resources until
+         * a GPU submission completes.
+         *
+         * Transfers ownership of the first resource and the supplied dependent
+         * resources into a single retirement record.
+         *
+         * All potentially throwing preparation must complete before ownership
+         * transfer begins.
+         *
+         * Dependent resources must be destroyed before the first resource.
+         *
+         * @tparam FirstResource Type of the resource destroyed last.
+         * @tparam Resource Type of the dependent resources destroyed first.
+         *
+         * @param submission_id Final submission referencing these resources.
+         * @param first_resource Resource to retain until its dependents are
+         * destroyed.
+         * @param resources Pointers to dependent resources being retired.
+         *
+         * @pre Resource types must be nothrow move-constructible and
+         * destructible.
+         * @pre Resource pointers must be non-null and identify distinct
+         * objects.
+         * @pre All resources must be safe to release after submission_id
+         * completes.
+         *
+         * @post On success, the retirement queue owns all supplied resources.
+         * @post If preparation fails, the original resources remain unchanged.
+         *
+         * @throws std::bad_alloc if retirement preparation fails.
+         *
+         * @note Does not wait for GPU completion.
+         */
+        template <typename FirstResource, typename Resource>
+        auto retireMany(std::uint64_t submission_id,
+                        FirstResource &first_resource,
+                        std::span<Resource *const> resources) -> void {
+            static_assert(
+                std::is_nothrow_move_constructible_v<FirstResource>,
+                "Retired first resource must be nothrow move-constructible");
+
+            static_assert(
+                std::is_nothrow_destructible_v<FirstResource>,
+                "Retired first resource must be nothrow destructible");
+
+            static_assert(
+                std::is_nothrow_move_constructible_v<Resource>,
+                "Retired resources must be nothrow move-constructible");
+
+            static_assert(std::is_nothrow_destructible_v<Resource>,
+                          "Retired resources must be nothrow destructible");
+
+            if (resources.empty()) {
+                retire(submission_id, first_resource);
+                return;
+            }
+
+            for (Resource *resource : resources) {
+                if (resource == nullptr) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "Vulkan resource retirement requires non-null resource "
+                        "pointers");
+                }
+            }
+
+            for (std::size_t i{}; i < resources.size(); ++i) {
+                for (std::size_t j{i + 1}; j < resources.size(); ++j) {
+                    if (resources[i] == resources[j]) {
+                        Core::Assertion::failAssertion(
+                            Core::Assertion::AssertionType::Precondition,
+                            Core::Error::Subsystem::Vulkan,
+                            "Vulkan resource retirement requires distinct "
+                            "resource objects");
+                    }
+                }
+            }
+
+            const void *first_address =
+                static_cast<const void *>(std::addressof(first_resource));
+
+            for (Resource *resource : resources) {
+                if (static_cast<const void *>(resource) == first_address) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "Vulkan resource retirement requires distinct "
+                        "resource objects");
+                }
+            }
+
+            using RetiredResources =
+                std::pair<std::optional<FirstResource>, std::vector<Resource>>;
+
+            auto holder = std::make_unique<RetiredResources>();
+
+            holder->second.reserve(resources.size());
+
+            auto *storage = holder.get();
+
+            std::move_only_function<void() noexcept> release =
+                [owner = std::move(holder)] noexcept -> void {
+                (*owner).second.clear();
+                (*owner).first.reset();
+            };
+
+            m_PendingResources.emplace_back(RetiredResource{
+                .submission_id = submission_id,
+                .release = std::move(release),
+            });
+
+            storage->first.emplace(std::move(first_resource));
+
+            for (Resource *resource : resources) {
+                storage->second.emplace_back(std::move(*resource));
+            }
         }
 
         /**

@@ -195,5 +195,29 @@ namespace SNE::Engine::Renderer {
          */
         [[nodiscard]] auto hasDependentsOtherThan(
             GpuResourceDependency excluded_relationship) const noexcept -> bool;
+
+        /**
+         * @brief Checks whether a resource has dependents outside an excluded
+         * set.
+         *
+         * Searches registered dependency relationships for a resource that
+         * depends on the specified resource but is not included among the
+         * excluded dependent handles.
+         *
+         * @param resource_handle Resource whose dependents are examined.
+         * @param excluded_dependents Dependent handles to ignore when
+         * searching.
+         *
+         * @return true if at least one non-excluded dependent exists;
+         * otherwise false.
+         *
+         * @note An empty exclusion list checks for any dependent.
+         * @note This function does not modify dependency relationships,
+         * validate resource existence, or synchronize GPU execution.
+         */
+        [[nodiscard]] auto
+        hasDependentsOutside(GpuResourceHandle resource_handle,
+                             std::span<const GpuResourceHandle>
+                                 excluded_dependents) const noexcept -> bool;
     };
 } // namespace SNE::Engine::Renderer

@@ -1,4 +1,5 @@
 #include "engine/renderer/resource/gpu_resource_dependency_tracker.hpp"
+#include <array>
 #include <cstdint>
 #include <gtest/gtest.h>
 
@@ -713,6 +714,110 @@ TEST(GpuResourceDependencyTrackerTests,
 
     EXPECT_TRUE(tracker.hasDependentsOtherThan(kRelationship));
     EXPECT_FALSE(tracker.hasDependentsOtherThan(other));
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     EmptyTrackerHasNoDependentsOutsideExclusions) {
+    const Renderer::GpuResourceDependencyTracker tracker;
+
+    const std::array excluded{kDependentHandle};
+
+    EXPECT_FALSE(tracker.hasDependentsOutside(kFirstDependencyHandle, {}));
+    EXPECT_FALSE(
+        tracker.hasDependentsOutside(kFirstDependencyHandle, excluded));
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     EmptyExclusionListFindsExistingDependent) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    tracker.addDependency(kRelationship);
+
+    EXPECT_TRUE(tracker.hasDependentsOutside(kFirstDependencyHandle, {}));
+}
+
+TEST(GpuResourceDependencyTrackerTests, ExcludingOnlyDependentReturnsFalse) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    tracker.addDependency(kRelationship);
+
+    const std::array excluded{kDependentHandle};
+
+    EXPECT_FALSE(
+        tracker.hasDependentsOutside(kFirstDependencyHandle, excluded));
+}
+
+TEST(GpuResourceDependencyTrackerTests, FindsDependentOutsideExcludedSet) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency second{
+        .dependent = kOtherDependentHandle,
+        .dependency = kFirstDependencyHandle,
+    };
+
+    tracker.addDependency(kRelationship);
+    tracker.addDependency(second);
+
+    const std::array excluded{kDependentHandle};
+
+    EXPECT_TRUE(tracker.hasDependentsOutside(kFirstDependencyHandle, excluded));
+}
+
+TEST(GpuResourceDependencyTrackerTests, ExcludingAllDependentsReturnsFalse) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency second{
+        .dependent = kOtherDependentHandle,
+        .dependency = kFirstDependencyHandle,
+    };
+
+    tracker.addDependency(kRelationship);
+    tracker.addDependency(second);
+
+    const std::array excluded{kDependentHandle, kOtherDependentHandle};
+
+    EXPECT_FALSE(
+        tracker.hasDependentsOutside(kFirstDependencyHandle, excluded));
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     DependentsOutsideExclusionsRespectResourceIdentity) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    tracker.addDependency(kRelationship);
+
+    const Renderer::GpuResourceHandle different_generation{
+        .index = kDependentHandle.index,
+        .generation = kReplacementGeneration,
+        .registry_id = kDependentRegistryId,
+    };
+
+    const std::array excluded{different_generation};
+
+    EXPECT_TRUE(tracker.hasDependentsOutside(kFirstDependencyHandle, excluded));
+
+    EXPECT_FALSE(tracker.hasDependentsOutside(kReusedDependencyHandle, {}));
+}
+
+TEST(GpuResourceDependencyTrackerTests,
+     DependentsOutsideExclusionsIgnoreUnrelatedResources) {
+    Renderer::GpuResourceDependencyTracker tracker;
+
+    const Renderer::GpuResourceDependency unrelated{
+        .dependent = kOtherDependentHandle,
+        .dependency = kSecondDependencyHandle,
+    };
+
+    tracker.addDependency(kRelationship);
+    tracker.addDependency(unrelated);
+
+    const std::array excluded{kDependentHandle};
+
+    EXPECT_FALSE(
+        tracker.hasDependentsOutside(kFirstDependencyHandle, excluded));
+
+    EXPECT_TRUE(
+        tracker.hasDependentsOutside(kSecondDependencyHandle, excluded));
 }
 
 TEST(GpuResourceDependencyTrackerTests, RelationshipsViewStartsEmpty) {
