@@ -520,7 +520,7 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
 }
 
 TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
-       RejectsUnsupportedFrequentMaterialBuffer) {
+       AcceptsFrequentMaterialBufferDuringInitialization) {
     if (!m_Window.has_value()) {
         FAIL()
             << "Frequent material buffer test requires an initialized window";
@@ -531,17 +531,30 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
 
     const std::array initial_bindings{input};
 
-    ASSERT_DEATH(
-        {
-            Vulkan::VulkanRenderer renderer(
-                "Signum Frequent Material Buffer Test", m_Window.value(),
-                Renderer::PresentationPreference::VSync, false, std::nullopt,
-                std::nullopt, std::nullopt, makeMaterialShaders(),
-                initial_bindings);
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Frequent Material Buffer Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                std::nullopt,
+                std::nullopt,
+                std::nullopt,
+                makeMaterialShaders(),
+                initial_bindings,
+            };
 
             static_cast<void>(renderer);
-        },
-        "does not yet support frequently updated material buffers");
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Frequent material buffer initialization failed: "
+        << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
 }
 
 TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
@@ -776,6 +789,190 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
 
     EXPECT_TRUE(operation_error.empty())
         << "Storage-buffer update or rendering failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       UpdatesFrequentUniformBufferAcrossRenderedFrames) {
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh = makeInitialMesh(matrices);
+
+    Renderer::MaterialBufferBindingInput input = initialBinding();
+    input.update_frequency = Renderer::MaterialBufferUpdateFrequency::Frequent;
+
+    const std::array initial_bindings{input};
+
+    const auto [validation_output,
+                operation_error] = captureVulkanValidationOutput([&] -> void {
+        Vulkan::VulkanRenderer renderer{
+            "Signum Frequent Material Update Test",
+            m_Window.value(),
+            Renderer::PresentationPreference::VSync,
+            true,
+            mesh,
+            std::nullopt,
+            std::nullopt,
+            makeMaterialShaders(),
+            initial_bindings,
+        };
+
+        constexpr std::size_t kFramesBefore{2U};
+        constexpr std::size_t kFramesAfter{4U};
+
+        for (std::size_t i{}; i < kFramesBefore; ++i) {
+            renderer.renderFrame();
+        }
+
+        renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                      kArrayElement,
+                                      parameterBytes(kReplacementParameters));
+
+        for (std::size_t i{}; i < kFramesAfter; ++i) {
+            renderer.renderFrame();
+        }
+
+        renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                      kArrayElement,
+                                      parameterBytes(kThirdParameters));
+
+        for (std::size_t i{}; i < kFramesAfter; ++i) {
+            renderer.renderFrame();
+        }
+    });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Frequent uniform-buffer update or rendering failed: "
+        << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       UpdatesFrequentUniformBufferRepeatedlyBeforeRendering) {
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh = makeInitialMesh(matrices);
+
+    Renderer::MaterialBufferBindingInput input = initialBinding();
+    input.update_frequency = Renderer::MaterialBufferUpdateFrequency::Frequent;
+
+    const std::array initial_bindings{input};
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Repeated Frequent Material Update Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                mesh,
+                std::nullopt,
+                std::nullopt,
+                makeMaterialShaders(),
+                initial_bindings,
+            };
+
+            constexpr std::size_t kUpdateCount{12U};
+
+            for (std::size_t i{}; i < kUpdateCount; ++i) {
+                const auto parameters =
+                    (i % 2U) == 0U ? parameterBytes(kReplacementParameters)
+                                   : parameterBytes(kThirdParameters);
+
+                renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                              kArrayElement, parameters);
+            }
+
+            constexpr std::size_t kFrameCount{4U};
+
+            for (std::size_t i{}; i < kFrameCount; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Repeated frequent material updates or rendering failed: "
+        << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       UpdatesFrequentAndOccasionalUniformBuffersAcrossFrames) {
+    const std::array matrices{Math::identity()};
+    const Renderer::InitialMeshData mesh = makeInitialMesh(matrices);
+
+    constexpr std::uint32_t kOccasionalBinding{3U};
+
+    Renderer::MaterialBufferBindingInput frequent = initialBinding();
+    frequent.update_frequency =
+        Renderer::MaterialBufferUpdateFrequency::Frequent;
+
+    Renderer::MaterialBufferBindingInput occasional = initialBinding();
+    occasional.binding = kOccasionalBinding;
+
+    const std::array initial_bindings{frequent, occasional};
+
+    const auto [validation_output,
+                operation_error] = captureVulkanValidationOutput([&] -> void {
+        Shader::GraphicsShaderData shaders = makeMaterialShaders();
+
+        shaders.fragment.artifact =
+            Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                              "material_mixed.frag.spv");
+
+        Vulkan::VulkanRenderer renderer{
+            "Signum Mixed Material Buffer Test",
+            m_Window.value(),
+            Renderer::PresentationPreference::VSync,
+            true,
+            mesh,
+            std::nullopt,
+            std::nullopt,
+            std::move(shaders),
+            initial_bindings,
+        };
+
+        constexpr std::size_t kFrameCount{4U};
+
+        for (std::size_t i{}; i < kFrameCount; ++i) {
+            renderer.renderFrame();
+        }
+
+        renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                      kArrayElement,
+                                      parameterBytes(kReplacementParameters));
+
+        renderer.updateMaterialBuffer(kMaterialSet, kOccasionalBinding,
+                                      kArrayElement,
+                                      parameterBytes(kThirdParameters));
+
+        for (std::size_t i{}; i < kFrameCount; ++i) {
+            renderer.renderFrame();
+        }
+
+        renderer.updateMaterialBuffer(kMaterialSet, kOccasionalBinding,
+                                      kArrayElement,
+                                      parameterBytes(kReplacementParameters));
+
+        renderer.updateMaterialBuffer(kMaterialSet, kMaterialBinding,
+                                      kArrayElement,
+                                      parameterBytes(kThirdParameters));
+
+        for (std::size_t i{}; i < kFrameCount; ++i) {
+            renderer.renderFrame();
+        }
+    });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Mixed material buffer updates or rendering failed: "
+        << operation_error;
 
     EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
         << "Unexpected Vulkan validation output:\n"

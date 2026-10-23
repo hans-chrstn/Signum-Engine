@@ -843,11 +843,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         if (input.update_frequency == MaterialBufferUpdateFrequency::Frequent) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Precondition,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer does not yet support frequently updated "
-                "material buffers");
+            return registerFrequentMaterialBufferBinding(input);
         }
 
         GpuResourceHandle buffer_handle =
