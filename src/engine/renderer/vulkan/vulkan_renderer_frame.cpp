@@ -56,7 +56,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                           graphics_pipeline.nativeHandle());
 
         const MaterialDescriptorResources *active_material_descriptors =
-            findActiveMaterialDescriptorResources();
+            findMaterialDescriptorResourcesForFrame(m_CurrentFrameIndex);
 
         if (active_material_descriptors != nullptr) {
             const std::vector<VkDescriptorSet> &descriptor_sets =

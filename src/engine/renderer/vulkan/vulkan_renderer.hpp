@@ -1384,6 +1384,30 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> const MaterialDescriptorResources *;
 
         /**
+         * @brief Finds the material descriptor resources used by a frame slot.
+         *
+         * Selects frame-specific material descriptors when configured.
+         * Otherwise, uses the existing active material descriptor resources.
+         *
+         * Descriptor resources remain owned by m_MaterialDescriptorRegistry.
+         *
+         * @param frame_index Index of the frame-in-flight slot.
+         *
+         * @return Pointer to the selected descriptor resources, or nullptr
+         * when no material descriptor resources are configured.
+         *
+         * @pre frame_index must identify a valid frame slot.
+         *
+         * @note Invalid frame-specific descriptor state triggers an
+         * invariant assertion.
+         *
+         * @note Does not allocate, modify, or transfer GPU resources.
+         */
+        [[nodiscard]] auto findMaterialDescriptorResourcesForFrame(
+            std::size_t frame_index) const noexcept
+            -> const MaterialDescriptorResources *;
+
+        /**
          * @brief Creates and registers a material buffer.
          *
          * Allocates a Vulkan buffer with usage determined by the shader
@@ -1609,6 +1633,34 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> MaterialResourceBinding;
 
         /**
+         * @brief Registers a frequently updated material-buffer binding.
+         *
+         * Creates initialized GPU buffers for each frame-in-flight slot and
+         * stores their tracking state in m_FrequentMaterialBuffers.
+         *
+         * Returns a material binding referencing the first frame's buffer.
+         * Frame-specific descriptor creation later substitutes the appropriate
+         * buffer handle for each frame slot.
+         *
+         * @param input Initial material-buffer binding configuration.
+         *
+         * @return Material binding referencing the first frame's GPU buffer.
+         *
+         * @pre input must describe a valid frequently updated material buffer.
+         * @pre Frame resources must already be initialized.
+         *
+         * @post On success, one frequent material-buffer state is registered.
+         * @post On failure, buffers created by this operation are rolled back.
+         *
+         * @throws Core::Error::EngineError if GPU resource creation fails.
+         * @throws std::bad_alloc if resource allocation fails.
+         *
+         * @note Does not create descriptor sets or submit GPU work.
+         */
+        [[nodiscard]] auto registerFrequentMaterialBufferBinding(
+            const MaterialBufferBindingInput &input) -> MaterialResourceBinding;
+
+        /**
          * @brief Initializes the renderer's frame-in-flight resources.
          *
          * Creates one VulkanFrameResources instance for each frame-in-flight
@@ -1709,6 +1761,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @param frame_index Index of the frame-in-flight slot whose material
          * bindings are being prepared.
+         * @param base_bindings Material bindings to use as the starting point.
+         * The supplied bindings are copied before frame-specific buffer handles
+         * are substituted.
          *
          * @return Material resource bindings referencing the GPU resources
          * required by the specified frame slot.
@@ -1730,8 +1785,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @note Frame-specific buffer substitution is not yet implemented.
          */
-        [[nodiscard]] auto
-        buildFrameMaterialBindings(std::size_t frame_index) const
+        [[nodiscard]] auto buildFrameMaterialBindings(
+            std::size_t frame_index,
+            std::span<const MaterialResourceBinding> base_bindings) const
             -> std::vector<MaterialResourceBinding>;
 
         /**
@@ -1787,6 +1843,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The returned handles reference those resources without taking
          * ownership.
          *
+         * @param base_bindings Material bindings used to initialize each
+         * frame's descriptor resources. Frequent-buffer handles are substituted
+         * with the corresponding frame-specific handles.
+         *
          * @return Registered material descriptor handles ordered by frame slot.
          *
          * @pre Frame resources must already be initialized.
@@ -1819,7 +1879,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * GPU submissions reference them. Rollback is safe because newly
          * registered descriptors have not been submitted to the GPU.
          */
-        [[nodiscard]] auto registerFrameMaterialDescriptorResources()
+        [[nodiscard]] auto registerFrameMaterialDescriptorResources(
+            std::span<const MaterialResourceBinding> base_bindings)
             -> std::vector<GpuResourceHandle>;
 
         /**

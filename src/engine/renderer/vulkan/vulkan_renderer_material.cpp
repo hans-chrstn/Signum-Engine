@@ -333,11 +333,63 @@ namespace SNE::Engine::Renderer::Vulkan {
         return resources;
     }
 
+    auto VulkanRenderer::findMaterialDescriptorResourcesForFrame(
+        std::size_t frame_index) const noexcept
+        -> const MaterialDescriptorResources * {
+        if (frame_index >= m_FrameResources.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material descriptor selection requires a valid "
+                "frame index");
+        }
+
+        if (m_FrameMaterialDescriptorHandles.empty()) {
+            return findActiveMaterialDescriptorResources();
+        }
+
+        if (m_FrameMaterialDescriptorHandles.size() !=
+            m_FrameResources.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires one material descriptor handle per "
+                "frame slot");
+        }
+
+        const MaterialDescriptorResources *resources =
+            m_MaterialDescriptorRegistry.find(
+                m_FrameMaterialDescriptorHandles[frame_index]);
+
+        if (resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frame material descriptor handle does not "
+                "resolve to registered resources");
+        }
+
+        return resources;
+    }
+
     auto VulkanRenderer::updateMaterialBuffer(std::uint32_t set,
                                               std::uint32_t binding,
                                               std::uint32_t array_element,
                                               std::span<const std::byte> data)
         -> void {
+
+        const auto buffers_it = std::ranges::find_if(
+            m_FrequentMaterialBuffers,
+            [set, binding,
+             array_element](const FrequentMaterialBufferState &state) -> bool {
+                return state.m_Set == set && state.m_Binding == binding &&
+                       state.m_ArrayElement == array_element;
+            });
+
+        if (buffers_it != m_FrequentMaterialBuffers.end()) {
+            stageFrequentMaterialBufferUpdate(*buffers_it, data);
+            return;
+        }
 
         MaterialDescriptorResources *active_resources =
             findActiveMaterialDescriptorResources();
@@ -734,6 +786,29 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
     }
 
+    auto VulkanRenderer::registerFrequentMaterialBufferBinding(
+        const MaterialBufferBindingInput &input) -> MaterialResourceBinding {
+        FrequentMaterialBufferState state =
+            createFrequentMaterialBufferState(input);
+
+        MaterialResourceBinding binding{
+            .set = input.set,
+            .binding = input.binding,
+            .array_element = input.array_element,
+            .type = input.type,
+            .resource_handle = state.m_Frames.front().m_BufferHandle,
+        };
+
+        try {
+            m_FrequentMaterialBuffers.push_back(std::move(state));
+        } catch (...) {
+            rollbackFrequentMaterialBufferState(state);
+            throw;
+        }
+
+        return binding;
+    }
+
     auto VulkanRenderer::createMaterialDescriptorResources(
         std::span<const VkDescriptorPoolSize> pool_sizes)
         -> MaterialDescriptorResources {
@@ -785,8 +860,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
     }
 
-    auto
-    VulkanRenderer::buildFrameMaterialBindings(std::size_t frame_index) const
+    auto VulkanRenderer::buildFrameMaterialBindings(
+        std::size_t frame_index,
+        std::span<const MaterialResourceBinding> base_bindings) const
         -> std::vector<MaterialResourceBinding> {
         if (frame_index >= m_FrameResources.size()) {
             Core::Assertion::failAssertion(
@@ -796,8 +872,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "index");
         }
 
-        std::vector<MaterialResourceBinding> bindings =
-            m_MaterialBindings.bindings;
+        std::vector<MaterialResourceBinding> bindings{base_bindings.begin(),
+                                                      base_bindings.end()};
 
         for (const FrequentMaterialBufferState &state :
              m_FrequentMaterialBuffers) {
@@ -883,7 +959,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         return descriptor_handle;
     }
 
-    auto VulkanRenderer::registerFrameMaterialDescriptorResources()
+    auto VulkanRenderer::registerFrameMaterialDescriptorResources(
+        std::span<const MaterialResourceBinding> base_bindings)
         -> std::vector<GpuResourceHandle> {
         if (m_FrameResources.empty()) {
             Core::Assertion::failAssertion(
@@ -900,7 +977,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         try {
             for (std::size_t i{}; i < m_FrameResources.size(); ++i) {
                 const std::vector<MaterialResourceBinding> bindings =
-                    buildFrameMaterialBindings(i);
+                    buildFrameMaterialBindings(i, base_bindings);
 
                 GpuResourceHandle handle =
                     registerMaterialDescriptorResources(bindings);
