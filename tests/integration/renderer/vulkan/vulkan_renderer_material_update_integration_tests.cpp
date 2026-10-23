@@ -520,6 +520,31 @@ TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
 }
 
 TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
+       RejectsUnsupportedFrequentMaterialBuffer) {
+    if (!m_Window.has_value()) {
+        FAIL()
+            << "Frequent material buffer test requires an initialized window";
+    }
+
+    Renderer::MaterialBufferBindingInput input = initialBinding();
+    input.update_frequency = Renderer::MaterialBufferUpdateFrequency::Frequent;
+
+    const std::array initial_bindings{input};
+
+    ASSERT_DEATH(
+        {
+            Vulkan::VulkanRenderer renderer(
+                "Signum Frequent Material Buffer Test", m_Window.value(),
+                Renderer::PresentationPreference::VSync, false, std::nullopt,
+                std::nullopt, std::nullopt, makeMaterialShaders(),
+                initial_bindings);
+
+            static_cast<void>(renderer);
+        },
+        "does not yet support frequently updated material buffers");
+}
+
+TEST_F(VulkanRendererMaterialUpdateIntegrationTests,
        RejectsInvalidUniformBufferUpdates) {
     const std::array initial_bindings{initialBinding()};
 

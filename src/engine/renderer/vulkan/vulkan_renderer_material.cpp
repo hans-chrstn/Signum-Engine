@@ -2,12 +2,14 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/material/material_buffer_update_frequency.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_compatibility.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.hpp"
 #include "vulkan_renderer.hpp"
 #include <algorithm>
@@ -548,6 +550,159 @@ namespace SNE::Engine::Renderer::Vulkan {
         return buffer_handle;
     }
 
+    auto VulkanRenderer::createFrequentMaterialBufferState(
+        const MaterialBufferBindingInput &input)
+        -> FrequentMaterialBufferState {
+        if (input.update_frequency != MaterialBufferUpdateFrequency::Frequent) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frequent material buffer creation requires "
+                "Frequent update frequency");
+        }
+
+        if (input.type != Shader::ShaderResourceType::UniformBuffer &&
+            input.type != Shader::ShaderResourceType::StorageBuffer) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frequent material buffer creation requires a "
+                "uniform or storage buffer");
+        }
+
+        if (input.data.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frequent material buffer creation requires "
+                "nonempty data");
+        }
+
+        if (m_FrameResources.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frequent material buffer creation requires "
+                "initialized frame resources");
+        }
+
+        FrequentMaterialBufferState state{};
+        state.m_Set = input.set;
+        state.m_Binding = input.binding;
+        state.m_ArrayElement = input.array_element;
+        state.m_Type = input.type;
+        state.m_LatestData.assign(input.data.begin(), input.data.end());
+        state.m_Frames.resize(m_FrameResources.size());
+
+        std::size_t registered_count{};
+        try {
+            for (FrequentMaterialBufferState::FrameState &frame :
+                 state.m_Frames) {
+                frame.m_BufferHandle =
+                    registerMaterialBuffer(state.m_LatestData, state.m_Type);
+
+                ++registered_count;
+            }
+        } catch (...) {
+            for (std::size_t i{}; i < registered_count; ++i) {
+                static_cast<void>(
+                    m_BufferRegistry.remove(state.m_Frames[i].m_BufferHandle));
+            }
+            throw;
+        }
+        return state;
+    }
+
+    auto VulkanRenderer::rollbackFrequentMaterialBufferState(
+        const FrequentMaterialBufferState &state) -> void {
+        for (const FrequentMaterialBufferState::FrameState &frame_state :
+             state.m_Frames) {
+            static_cast<void>(
+                m_BufferRegistry.remove(frame_state.m_BufferHandle));
+        }
+    }
+
+    auto VulkanRenderer::stageFrequentMaterialBufferUpdate(
+        FrequentMaterialBufferState &state, std::span<const std::byte> data)
+        -> void {
+        if (data.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frequent material buffer update requires "
+                "nonempty data");
+        }
+
+        if (data.size_bytes() != state.m_LatestData.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frequent material buffer update requires "
+                "matching data size");
+        }
+
+        std::vector<std::byte> replacement_data;
+        replacement_data.assign(data.begin(), data.end());
+
+        state.m_LatestData.swap(replacement_data);
+
+        for (FrequentMaterialBufferState::FrameState &frame_state :
+             state.m_Frames) {
+            frame_state.m_NeedsUpload = true;
+        }
+    }
+
+    auto VulkanRenderer::uploadFrequentMaterialBuffersForFrame(
+        std::size_t frame_index) -> void {
+        if (frame_index >= m_FrameResources.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frequent material buffer upload requires a "
+                "valid frame index");
+        }
+
+        for (FrequentMaterialBufferState &state : m_FrequentMaterialBuffers) {
+            if (frame_index >= state.m_Frames.size()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer frequent material buffer state has an "
+                    "invalid frame index");
+            }
+
+            FrequentMaterialBufferState::FrameState &frame_state =
+                state.m_Frames[frame_index];
+
+            if (!frame_state.m_NeedsUpload) {
+                continue;
+            }
+
+            VulkanBuffer *buffer =
+                m_BufferRegistry.find(frame_state.m_BufferHandle);
+
+            if (buffer == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer frequent material buffer handle does not "
+                    "resolve to a registered buffer");
+            }
+
+            if (buffer->size() != state.m_LatestData.size()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer frequent material buffer upload requires "
+                    "matching buffer size");
+            }
+
+            buffer->write(std::span<const std::byte>{state.m_LatestData});
+
+            frame_state.m_NeedsUpload = false;
+        }
+    }
+
     auto VulkanRenderer::registerMaterialBufferBinding(
         const MaterialBufferBindingInput &input) -> MaterialResourceBinding {
         if (input.type != Shader::ShaderResourceType::UniformBuffer &&
@@ -557,6 +712,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::Subsystem::Vulkan,
                 "VulkanRenderer material buffer binding requires a "
                 "uniform or storage buffer resource type");
+        }
+
+        if (input.update_frequency == MaterialBufferUpdateFrequency::Frequent) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer does not yet support frequently updated "
+                "material buffers");
         }
 
         GpuResourceHandle buffer_handle =
@@ -622,6 +785,65 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
     }
 
+    auto
+    VulkanRenderer::buildFrameMaterialBindings(std::size_t frame_index) const
+        -> std::vector<MaterialResourceBinding> {
+        if (frame_index >= m_FrameResources.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frame material bindings require a valid frame "
+                "index");
+        }
+
+        std::vector<MaterialResourceBinding> bindings =
+            m_MaterialBindings.bindings;
+
+        for (const FrequentMaterialBufferState &state :
+             m_FrequentMaterialBuffers) {
+            if (frame_index >= state.m_Frames.size()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer frequent material buffer state has an "
+                    "invalid frame index");
+            }
+
+            const auto binding_it = std::ranges::find_if(
+                bindings,
+                [&state](const MaterialResourceBinding &binding) -> bool {
+                    return binding.set == state.m_Set &&
+                           binding.binding == state.m_Binding &&
+                           binding.array_element == state.m_ArrayElement;
+                });
+
+            if (binding_it == bindings.end()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer frequent material buffer binding was not "
+                    "found");
+            }
+
+            const GpuResourceHandle &buffer_handle =
+                state.m_Frames[frame_index].m_BufferHandle;
+
+            const VulkanBuffer *buffer = m_BufferRegistry.find(buffer_handle);
+
+            if (buffer == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer frequent material buffer handle does not "
+                    "resolve to a registered buffer");
+            }
+
+            binding_it->resource_handle = buffer_handle;
+        }
+
+        return bindings;
+    }
+
     auto VulkanRenderer::registerMaterialDescriptorResources(
         std::span<const MaterialResourceBinding> bindings)
         -> GpuResourceHandle {
@@ -659,6 +881,41 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         return descriptor_handle;
+    }
+
+    auto VulkanRenderer::registerFrameMaterialDescriptorResources()
+        -> std::vector<GpuResourceHandle> {
+        if (m_FrameResources.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer frame material descriptor registration "
+                "requires initialized frame resources");
+        }
+
+        std::vector<GpuResourceHandle> handles;
+
+        handles.reserve(m_FrameResources.size());
+
+        try {
+            for (std::size_t i{}; i < m_FrameResources.size(); ++i) {
+                const std::vector<MaterialResourceBinding> bindings =
+                    buildFrameMaterialBindings(i);
+
+                GpuResourceHandle handle =
+                    registerMaterialDescriptorResources(bindings);
+
+                handles.push_back(handle);
+            }
+
+        } catch (...) {
+            for (const GpuResourceHandle &handle : handles) {
+                rollbackRegisteredMaterialDescriptorResources(handle);
+            }
+            throw;
+        }
+
+        return handles;
     }
 
     auto VulkanRenderer::rollbackRegisteredMaterialDescriptorResources(

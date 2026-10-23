@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/renderer/material/material_buffer_update_frequency.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -35,6 +36,11 @@ namespace SNE::Engine::Renderer {
          */
         Shader::ShaderResourceType type{
             Shader::ShaderResourceType::UniformBuffer,
+        };
+
+        /** @brief Intended update frequency of the material buffer. */
+        MaterialBufferUpdateFrequency update_frequency{
+            MaterialBufferUpdateFrequency::Occasional,
         };
 
         /**

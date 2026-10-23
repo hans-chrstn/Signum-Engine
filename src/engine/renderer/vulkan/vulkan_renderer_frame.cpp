@@ -509,6 +509,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_GraphicsResourceRetirementQueue.collectCompleted(
             m_GraphicsSubmissionState);
 
+        uploadFrequentMaterialBuffersForFrame(m_CurrentFrameIndex);
+
         if (swapchain_resources.m_DepthAttachments.size() !=
             m_FrameResources.size()) {
             Core::Assertion::failAssertion(

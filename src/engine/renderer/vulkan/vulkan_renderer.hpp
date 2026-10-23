@@ -13,6 +13,7 @@
 #include "engine/renderer/material/material_resource_binding_set.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/resource/gpu_resource_dependency_tracker.hpp"
+#include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_interface.hpp"
@@ -171,6 +172,74 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
         static_assert(
             std::is_nothrow_move_constructible_v<MaterialDescriptorResources>);
+
+        /**
+         * @brief Tracks a frequently updated material buffer.
+         *
+         * Stores the material descriptor location, resource type, latest
+         * CPU-side data, and registered GPU buffer handles for each frame slot.
+         *
+         * The CPU data is owned by this structure so that updates do not
+         * depend on the lifetime of caller-provided memory.
+         *
+         * GPU buffers remain owned by m_BufferRegistry. Frame buffer handles
+         * reference those resources without taking ownership.
+         *
+         * @note Frame-specific buffer allocation, descriptor binding, and
+         * synchronization are not yet implemented.
+         */
+        struct FrequentMaterialBufferState {
+            /**
+             * @brief Tracks the GPU buffer and pending upload for one frame
+             * slot.
+             *
+             * The buffer is owned by m_BufferRegistry and identified through
+             * a non-owning resource handle.
+             *
+             * The upload flag indicates whether the buffer needs to receive
+             * the latest CPU-side data before its next GPU submission.
+             *
+             * The buffer must only be modified after GPU work previously
+             * submitted through the corresponding frame slot has completed.
+             */
+            struct FrameState {
+                /** @brief Registered GPU buffer belonging to this frame slot.
+                 */
+                GpuResourceHandle m_BufferHandle{};
+
+                /** @brief Whether the frame slot requires the latest CPU data.
+                 */
+                bool m_NeedsUpload{};
+            };
+
+            /** @brief Descriptor-set index containing the material buffer. */
+            std::uint32_t m_Set{};
+
+            /** @brief Binding index within the descriptor set. */
+            std::uint32_t m_Binding{};
+
+            /** @brief Element index within the descriptor binding array. */
+            std::uint32_t m_ArrayElement{};
+
+            /** @brief Shader resource type of the material buffer. */
+            Shader::ShaderResourceType m_Type{
+                Shader::ShaderResourceType::UniformBuffer,
+            };
+
+            /** @brief Owns the latest CPU-side data requested for the buffer.
+             */
+            std::vector<std::byte> m_LatestData;
+
+            /**
+             * @brief Per-frame buffer handles and pending upload states.
+             *
+             * Entries are indexed by frame-in-flight slot.
+             *
+             * Once initialized, the number of entries must match
+             * m_FrameResources.size().
+             */
+            std::vector<FrameState> m_Frames;
+        };
 
         /**
          * @brief Owns a depth image and its corresponding image view.
@@ -547,6 +616,24 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<GpuResourceHandle> m_ActiveMaterialDescriptorHandle;
 
         /**
+         * @brief Identifies material descriptor resources for individual frame
+         * slots.
+         *
+         * Each handle references descriptor resources owned by
+         * m_MaterialDescriptorRegistry.
+         *
+         * Entries are ordered by frame-in-flight slot. Each frame's descriptor
+         * sets will reference the corresponding frequently updated GPU buffers,
+         * along with any shared material resources.
+         *
+         * Empty when frame-specific material descriptors are not configured.
+         *
+         * @note Descriptor creation, selection, and GPU lifetime management
+         * for frequent material updates are not yet implemented.
+         */
+        std::vector<GpuResourceHandle> m_FrameMaterialDescriptorHandles;
+
+        /**
          * @brief Stores descriptor counts required by the current material.
          *
          * Reuses the shader-derived descriptor counts when allocating
@@ -570,6 +657,21 @@ namespace SNE::Engine::Renderer::Vulkan {
          * and storage buffers at shader-declared descriptor locations.
          */
         MaterialResourceBindingSet m_MaterialBindings;
+
+        /**
+         * @brief Stores frequently updated material-buffer states.
+         *
+         * Each entry tracks one material descriptor location, the latest
+         * CPU-side data, and GPU buffer handles associated with frame slots.
+         *
+         * GPU buffer ownership remains with m_BufferRegistry.
+         *
+         * Empty when no frequently updated material buffers are configured.
+         *
+         * @note Frequent material-buffer initialization and updates are not
+         * yet implemented.
+         */
+        std::vector<FrequentMaterialBufferState> m_FrequentMaterialBuffers;
 
         /**
          * @brief Owns the renderer's registered GPU mesh resources.
@@ -1309,6 +1411,178 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> GpuResourceHandle;
 
         /**
+         * @brief Creates registered GPU buffers for a frequently updated
+         * material binding.
+         *
+         * Copies the supplied initial data into renderer-owned CPU storage and
+         * creates one initialized GPU buffer for each frame-in-flight slot.
+         *
+         * GPU buffers are registered with m_BufferRegistry. The returned state
+         * stores non-owning resource handles and tracks pending uploads for
+         * individual frame slots.
+         *
+         * All frame buffers are initialized with the same CPU data, so their
+         * pending-upload flags are initially false.
+         *
+         * @param input Material buffer description containing its descriptor
+         * location, resource type, update frequency, and initial CPU data.
+         *
+         * @return Frequent material-buffer state containing owned CPU data and
+         * registered buffer handles ordered by frame slot.
+         *
+         * @pre input.update_frequency must be Frequent.
+         * @pre input.type must be UniformBuffer or StorageBuffer.
+         * @pre input.data must not be empty.
+         * @pre Frame resources must already be initialized.
+         *
+         * @post On success, the number of frame states matches
+         * m_FrameResources.size().
+         * @post Every frame state references an initialized GPU buffer owned
+         * by m_BufferRegistry.
+         * @post All pending-upload flags are false.
+         * @post On failure, all buffers registered during this operation
+         * are removed, leaving no partially registered resources.
+         *
+         * @throws Core::Error::EngineError if GPU buffer creation, mapping,
+         * or memory flushing fails.
+         * @throws std::bad_alloc if CPU storage allocation or resource
+         * registration fails.
+         *
+         * @note Newly registered buffers are not referenced by descriptor sets
+         * or outstanding GPU submissions during this operation. Failed
+         * initialization can therefore release them immediately.
+         *
+         * @note This function does not create descriptor resources, select
+         * active material bindings, or submit GPU work.
+         */
+        [[nodiscard]] auto createFrequentMaterialBufferState(
+            const MaterialBufferBindingInput &input)
+            -> FrequentMaterialBufferState;
+
+        /**
+         * @brief Removes GPU buffers registered for a frequent material buffer.
+         *
+         * Rolls back the GPU buffer registrations associated with the supplied
+         * frequent material-buffer state during initialization.
+         *
+         * Each frame-specific buffer is removed from m_BufferRegistry,
+         * releasing its owned Vulkan buffer and VMA allocation.
+         *
+         * The supplied state owns CPU-side data and stores non-owning GPU
+         * resource handles. This function does not modify the state itself.
+         *
+         * @param state Frequent material-buffer state whose registered GPU
+         * buffers are being rolled back.
+         *
+         * @pre Every frame buffer handle must identify a resource registered
+         * with m_BufferRegistry.
+         * @pre No descriptor resources or outstanding GPU submissions may
+         * reference the buffers being removed.
+         *
+         * @post All registered GPU buffers referenced by the supplied frame
+         * states have been removed from m_BufferRegistry.
+         * @post The corresponding resource handles no longer resolve.
+         * @post The supplied CPU-side state remains unchanged.
+         *
+         * @note This function is intended only for initialization rollback.
+         * Active GPU resources must instead use completion-aware retirement.
+         *
+         * @note This function does not remove descriptor resources, modify
+         * material bindings, or synchronize GPU execution.
+         */
+        auto rollbackFrequentMaterialBufferState(
+            const FrequentMaterialBufferState &state) -> void;
+
+        /**
+         * @brief Stages updated CPU data for a frequently updated material
+         * buffer.
+         *
+         * Validates and copies the supplied data into the buffer state's owned
+         * CPU storage, then marks every frame slot as requiring an upload.
+         *
+         * GPU buffer contents are not modified immediately. Pending uploads
+         * are processed when the corresponding frame slot is safe to reuse
+         * after its previous GPU work has completed.
+         *
+         * Multiple updates before a frame slot is processed are combined,
+         * so that only the latest CPU data needs to be uploaded.
+         *
+         * @param state Frequent material-buffer state to update.
+         * @param data Borrowed CPU data containing the replacement contents.
+         *
+         * @pre data must not be empty.
+         * @pre data.size_bytes() must equal state.m_LatestData.size().
+         * @pre The operation must be serialized with rendering and other
+         * modifications to the material-buffer state.
+         *
+         * @post On success, state.m_LatestData contains a copy of data.
+         * @post Every frame state's m_NeedsUpload flag is true.
+         * @post On failure, the previous CPU data and pending-upload flags
+         * remain unchanged.
+         *
+         * @throws std::bad_alloc if copying the replacement data requires
+         * an allocation that fails.
+         *
+         * @note This function does not allocate, replace, or write GPU buffers.
+         * It does not modify descriptor resources or submit GPU work.
+         *
+         * @note The caller's data only needs to remain valid until this
+         * operation completes.
+         */
+        static auto
+        stageFrequentMaterialBufferUpdate(FrequentMaterialBufferState &state,
+                                          std::span<const std::byte> data)
+            -> void;
+
+        /**
+         * @brief Uploads pending material-buffer updates for a frame slot.
+         *
+         * Iterates over frequently updated material buffers and writes the
+         * latest CPU-side data into the registered GPU buffer belonging to the
+         * specified frame slot.
+         *
+         * Buffers without pending updates are skipped. Each frame's
+         * pending-upload flag is cleared only after its buffer write completes
+         * successfully.
+         *
+         * @param frame_index Index of the frame-in-flight slot to update.
+         *
+         * @pre frame_index must be less than m_FrameResources.size().
+         * @pre Every frequent material-buffer state must contain a frame entry
+         * for the requested index.
+         * @pre Every pending frame buffer handle must resolve to a registered
+         * upload buffer in m_BufferRegistry.
+         * @pre The latest CPU data must match the corresponding GPU buffer
+         * size.
+         * @pre Previous GPU work using the specified frame slot must have
+         * completed before this function is called.
+         * @pre The operation must be serialized with rendering and other
+         * modifications to material-buffer state.
+         *
+         * @post On success, all pending updates for the specified frame slot
+         * have been uploaded and their pending-upload flags are false.
+         * @post Other frame slots and their pending-upload flags remain
+         * unchanged.
+         * @post If an upload fails, its pending-upload flag remains true.
+         *
+         * @throws Core::Error::EngineError if GPU memory mapping or flushing
+         * fails.
+         *
+         * @note This function reuses existing GPU buffers and does not allocate
+         * replacement buffers, modify descriptor sets, or submit GPU work.
+         *
+         * @note The caller is responsible for GPU synchronization. This
+         * function does not wait for fences or establish synchronization
+         * itself.
+         *
+         * @note If an upload fails after earlier buffers were updated, those
+         * successful uploads remain committed. The operation is not atomic
+         * across multiple material buffers.
+         */
+        auto uploadFrequentMaterialBuffersForFrame(std::size_t frame_index)
+            -> void;
+
+        /**
          * @brief Creates a material binding for a registered buffer.
          *
          * Registers a uniform buffer initialized with the supplied CPU data
@@ -1420,6 +1694,47 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> MaterialDescriptorResources;
 
         /**
+         * @brief Builds material resource bindings for a specific frame slot.
+         *
+         * Copies the renderer's current material bindings and substitutes
+         * frame-specific GPU buffer handles for frequently updated material
+         * buffers.
+         *
+         * Shared material resources, such as textures and occasionally updated
+         * buffers, retain their existing resource handles.
+         *
+         * The returned bindings are independent of m_MaterialBindings and
+         * reference resources owned by their respective GPU resource
+         * registries.
+         *
+         * @param frame_index Index of the frame-in-flight slot whose material
+         * bindings are being prepared.
+         *
+         * @return Material resource bindings referencing the GPU resources
+         * required by the specified frame slot.
+         *
+         * @pre frame_index must be less than m_FrameResources.size().
+         * @pre Every frequently updated material buffer must have a valid
+         * registered buffer handle for the requested frame slot once
+         * frequent-buffer initialization is enabled.
+         *
+         * @post The original m_MaterialBindings remains unchanged.
+         * @post Shared resource handles are preserved.
+         * @post Frequently updated buffer bindings reference the corresponding
+         * frame-specific GPU buffers once substitution is implemented.
+         *
+         * @throws std::bad_alloc if copying the material bindings fails.
+         *
+         * @note This function does not allocate GPU resources, create
+         * descriptor sets, modify registered resources, or submit GPU work.
+         *
+         * @note Frame-specific buffer substitution is not yet implemented.
+         */
+        [[nodiscard]] auto
+        buildFrameMaterialBindings(std::size_t frame_index) const
+            -> std::vector<MaterialResourceBinding>;
+
+        /**
          * @brief Creates and registers material descriptor resources.
          *
          * Allocates a descriptor pool and descriptor sets, writes the
@@ -1456,6 +1771,56 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto registerMaterialDescriptorResources(
             std::span<const MaterialResourceBinding> bindings)
             -> GpuResourceHandle;
+
+        /**
+         * @brief Creates and registers material descriptor resources for each
+         * frame slot.
+         *
+         * Builds frame-specific material bindings and allocates descriptor
+         * resources for every frame-in-flight slot.
+         *
+         * Each frame's descriptor sets reference its corresponding frequently
+         * updated GPU buffers while preserving shared material resources, such
+         * as textures and occasionally updated buffers.
+         *
+         * Descriptor resources are owned by m_MaterialDescriptorRegistry.
+         * The returned handles reference those resources without taking
+         * ownership.
+         *
+         * @return Registered material descriptor handles ordered by frame slot.
+         *
+         * @pre Frame resources must already be initialized.
+         * @pre Descriptor-set layouts and pool requirements must be
+         * initialized.
+         * @pre All material bindings must reference valid, compatible GPU
+         * resources.
+         * @pre Frequently updated material buffers must have initialized GPU
+         * buffers for every frame slot.
+         *
+         * @post On success, the returned vector contains one registered
+         * descriptor handle per frame-in-flight slot.
+         * @post Each descriptor resource references the appropriate
+         * frame-specific and shared GPU resources.
+         * @post Resource dependency relationships are registered for each
+         * descriptor.
+         * @post On failure, all descriptor resources registered during this
+         * operation and their dependency relationships are rolled back.
+         * @post The active material descriptor selection remains unchanged.
+         *
+         * @throws Core::Error::EngineError if Vulkan descriptor allocation
+         * or initialization fails.
+         * @throws std::bad_alloc if CPU storage, descriptor registration,
+         * or dependency tracking allocation fails.
+         *
+         * @note This function does not select active descriptor resources,
+         * modify m_FrameMaterialDescriptorHandles, or submit GPU work.
+         *
+         * @note Registered descriptors must remain alive while outstanding
+         * GPU submissions reference them. Rollback is safe because newly
+         * registered descriptors have not been submitted to the GPU.
+         */
+        [[nodiscard]] auto registerFrameMaterialDescriptorResources()
+            -> std::vector<GpuResourceHandle>;
 
         /**
          * @brief Rolls back a newly registered material descriptor resource.
