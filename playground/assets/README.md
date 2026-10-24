@@ -16,7 +16,7 @@ NASA does not endorse or sponsor Signum Engine.
 Usage guidelines:
 https://www.nasa.gov/nasa-brand-center/images-and-media/
 
-## earth_day.jpg and earth_night.jpg
+## earth_day.jpg, earth_night.jpg, earth_clouds.jpg, earth_normal_map.tif, and earth_specular_map.tif
 
 - Creator: Solar System Scope
 - Source: https://www.solarsystemscope.com/textures/

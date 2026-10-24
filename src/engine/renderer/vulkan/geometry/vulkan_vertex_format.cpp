@@ -10,6 +10,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             return VK_FORMAT_R32G32_SFLOAT;
         case VertexFormat::Float32x3:
             return VK_FORMAT_R32G32B32_SFLOAT;
+        case VertexFormat::Float32x4:
+            return VK_FORMAT_R32G32B32A32_SFLOAT;
         }
 
         Core::Assertion::failAssertion(

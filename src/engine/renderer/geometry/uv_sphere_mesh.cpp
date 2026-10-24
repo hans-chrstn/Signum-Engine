@@ -126,6 +126,11 @@ namespace SNE::Engine::Renderer {
                 const float normal_y = cos_theta;
                 const float normal_z = sin_theta * sin_phi;
 
+                const float tangent_x = -sin_phi;
+                const float tangent_y = 0.0F;
+                const float tangent_z = cos_phi;
+                const float tangent_handedness = 1.0F;
+
                 const float position_x = parameters.radius * normal_x;
                 const float position_y = parameters.radius * normal_y;
                 const float position_z = parameters.radius * normal_z;
@@ -148,6 +153,13 @@ namespace SNE::Engine::Renderer {
                 mesh.vertices[vertex_index].uv = {
                     normalized_longitude,
                     normalized_latitude,
+                };
+
+                mesh.vertices[vertex_index].tangent = {
+                    tangent_x,
+                    tangent_y,
+                    tangent_z,
+                    tangent_handedness,
                 };
             }
         }

@@ -30,6 +30,13 @@ namespace SNE::Engine::Renderer {
          * Occupies 12 bytes per attribute.
          */
         Float32x3,
+
+        /**
+         * @brief Four 32-bit floating-point components.
+         *
+         * Occupies 16 bytes per attribute.
+         */
+        Float32x4,
     };
 
     /**

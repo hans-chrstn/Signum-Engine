@@ -21,12 +21,14 @@ struct VertexInput {
     [[vk::location(0)]] float3 position : POSITION0;
     [[vk::location(1)]] float3 normal : NORMAL0;
     [[vk::location(2)]] float2 uv : TEXCOORD0;
+    [[vk::location(3)]] float4 tangent : TANGENT0;
 };
 
 struct VertexOutput {
     float4 position : SV_Position;
     float3 normal : TEXCOORD1;
     float2 uv : TEXCOORD0;
+    float4 tangent : TEXCOORD2;
 };
 
 [shader("vertex")]
@@ -36,6 +38,10 @@ VertexOutput vertexMain(VertexInput input) {
     output.position = mul(push_constants.mvp, float4(input.position, 1.0));
     output.normal = mul(push_constants.normal_matrix, float4(input.normal, 0.0)).xyz;
     output.uv = input.uv;
+    output.tangent = float4(
+        mul(push_constants.normal_matrix, float4(input.tangent.xyz, 0.0)).xyz,
+        input.tangent.w
+    );
 
     return output;
 }

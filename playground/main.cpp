@@ -4,6 +4,7 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/vector3.hpp"
+#include "engine/core/math/vector4.hpp"
 #include "engine/platform/input/cursor_position.hpp"
 #include "engine/platform/input/mouse_button.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
@@ -16,6 +17,7 @@
 #include "engine/renderer/lighting/directional_light.hpp"
 #include "engine/renderer/lighting/directional_light_uniform_data.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
+#include "engine/renderer/material/material_buffer_update_frequency.hpp"
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
@@ -24,6 +26,8 @@
 #include "engine/renderer/texture/texture_format.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include <array>
+#include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -55,7 +59,7 @@ auto main() -> int {
         const Renderer::UvSphereMesh sphere =
             Renderer::generateUvSphereMesh(sphere_param);
 
-        constexpr std::array<Renderer::VertexAttributeDescription, 3>
+        constexpr std::array<Renderer::VertexAttributeDescription, 4>
             kSphereVertexAttributes{
                 {
                     {
@@ -75,6 +79,12 @@ auto main() -> int {
                         .format = Renderer::VertexFormat::Float32x2,
                         .offset = static_cast<std::uint32_t>(
                             offsetof(Renderer::UvSphereVertex, uv)),
+                    },
+                    {
+                        .location = 3U,
+                        .format = Renderer::VertexFormat::Float32x4,
+                        .offset = static_cast<std::uint32_t>(
+                            offsetof(Renderer::UvSphereVertex, tangent)),
                     },
                 },
         };
@@ -144,12 +154,30 @@ auto main() -> int {
         const Renderer::Rgba8Image night_image =
             Renderer::loadRgba8Image("playground/assets/earth_night.jpg");
 
-        std::array<Renderer::MaterialTextureBindingInput, 2>
+        const Renderer::Rgba8Image cloud_image =
+            Renderer::loadRgba8Image("playground/assets/earth_clouds.jpg");
+
+        const Renderer::Rgba8Image specular_image = Renderer::loadRgba8Image(
+            "playground/assets/earth_specular_map.png");
+
+        const Renderer::Rgba8Image normal_image =
+            Renderer::loadRgba8Image("playground/assets/earth_normal_map.png");
+
+        constexpr std::size_t kInitialTextureBindingsSize{5U};
+        constexpr std::uint32_t kMaterialDescriptorSet{0U};
+        constexpr std::uint32_t kDayTextureBinding{0U};
+        constexpr std::uint32_t kMaterialArrayElement{0U};
+        constexpr std::uint32_t kNightTextureBinding{2U};
+        constexpr std::uint32_t kCloudTextureBinding{3U};
+        constexpr std::uint32_t kSpecularTextureBinding{5U};
+        constexpr std::uint32_t kNormalTextureBinding{7U};
+        std::array<Renderer::MaterialTextureBindingInput,
+                   kInitialTextureBindingsSize>
             initial_texture_bindings{
                 Renderer::MaterialTextureBindingInput{
-                    .set = 0U,
-                    .binding = 0U,
-                    .array_element = 0U,
+                    .set = kMaterialDescriptorSet,
+                    .binding = kDayTextureBinding,
+                    .array_element = kMaterialArrayElement,
                     .texture =
                         {
                             .width = day_image.width,
@@ -160,15 +188,56 @@ auto main() -> int {
                         },
                 },
                 Renderer::MaterialTextureBindingInput{
-                    .set = 0U,
-                    .binding = 2U,
-                    .array_element = 0U,
+                    .set = kMaterialDescriptorSet,
+                    .binding = kNightTextureBinding,
+                    .array_element = kMaterialArrayElement,
                     .texture =
                         {
                             .width = night_image.width,
                             .height = night_image.height,
                             .pixels = night_image.pixels,
                             .format = Renderer::TextureFormat::Rgba8Srgb,
+                            .mip_levels = 1U,
+                        },
+                },
+                Renderer::MaterialTextureBindingInput{
+                    .set = kMaterialDescriptorSet,
+                    .binding = kCloudTextureBinding,
+                    .array_element = kMaterialArrayElement,
+                    .texture =
+                        {
+                            .width = cloud_image.width,
+                            .height = cloud_image.height,
+                            .pixels = cloud_image.pixels,
+                            .format = Renderer::TextureFormat::Rgba8Unorm,
+                            .mip_levels = 1U,
+                        },
+                },
+
+                Renderer::MaterialTextureBindingInput{
+                    .set = kMaterialDescriptorSet,
+                    .binding = kSpecularTextureBinding,
+                    .array_element = kMaterialArrayElement,
+                    .texture =
+                        {
+                            .width = specular_image.width,
+                            .height = specular_image.height,
+                            .pixels = specular_image.pixels,
+                            .format = Renderer::TextureFormat::Rgba8Unorm,
+                            .mip_levels = 1U,
+                        },
+                },
+
+                Renderer::MaterialTextureBindingInput{
+                    .set = kMaterialDescriptorSet,
+                    .binding = kNormalTextureBinding,
+                    .array_element = kMaterialArrayElement,
+                    .texture =
+                        {
+                            .width = normal_image.width,
+                            .height = normal_image.height,
+                            .pixels = normal_image.pixels,
+                            .format = Renderer::TextureFormat::Rgba8Unorm,
                             .mip_levels = 1U,
                         },
                 },
@@ -221,15 +290,35 @@ auto main() -> int {
         Renderer::DirectionalLightUniformData uniform_data =
             Renderer::makeDirectionalLightUniformData(directional_light);
 
-        std::array<Renderer::MaterialBufferBindingInput, 1>
+        struct CloudUniformData {
+            Math::Vector4f uv_offset{};
+        };
+
+        constexpr std::size_t kCloudUniformDataSize = 16U;
+
+        static_assert(sizeof(CloudUniformData) == kCloudUniformDataSize);
+
+        CloudUniformData cloud_data{};
+
+        constexpr std::uint32_t kDirectionalLightUniformBinding{1U};
+        constexpr std::uint32_t kCloudUniformBinding{4U};
+        std::array<Renderer::MaterialBufferBindingInput, 2>
             initial_buffer_bindings{
                 Renderer::MaterialBufferBindingInput{
-                    .set = 0U,
-                    .binding = 1U,
-                    .array_element = 0U,
-                    .type = SNE::Engine::Renderer::Shader::ShaderResourceType::
-                        UniformBuffer,
+                    .set = kMaterialDescriptorSet,
+                    .binding = kDirectionalLightUniformBinding,
+                    .array_element = kMaterialArrayElement,
+                    .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
                     .data = std::as_bytes(std::span{&uniform_data, 1}),
+                },
+                Renderer::MaterialBufferBindingInput{
+                    .set = kMaterialDescriptorSet,
+                    .binding = kCloudUniformBinding,
+                    .array_element = kMaterialArrayElement,
+                    .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
+                    .update_frequency =
+                        Renderer::MaterialBufferUpdateFrequency::Frequent,
+                    .data = std::as_bytes(std::span{&cloud_data, 1}),
                 },
         };
 
@@ -250,7 +339,30 @@ auto main() -> int {
         bool was_right_pressed{};
         bool light_enabled{true};
 
+        constexpr double kCloudScrollSpeed{0.005};
+
+        const auto cloud_animation_start = std::chrono::steady_clock::now();
+
         application.run([&](Core::Application &app) -> void {
+            const auto now = std::chrono::steady_clock::now();
+
+            const auto duration = now - cloud_animation_start;
+
+            const double elapsed_seconds =
+                std::chrono::duration<double>{duration}.count();
+
+            const double cloud_offset =
+                std::fmod(elapsed_seconds * kCloudScrollSpeed, 1.0);
+
+            cloud_data.uv_offset.x = static_cast<float>(cloud_offset);
+
+            app.updateMaterialBuffer({
+                .set = kMaterialDescriptorSet,
+                .binding = kCloudUniformBinding,
+                .array_element = kMaterialArrayElement,
+                .data = std::as_bytes(std::span{&cloud_data, 1}),
+            });
+
             const Platform::CursorPosition current_cursor =
                 app.window().cursorPosition();
 
@@ -269,9 +381,9 @@ auto main() -> int {
                     directional_light);
 
                 app.updateMaterialBuffer({
-                    .set = 0U,
-                    .binding = 1U,
-                    .array_element = 0U,
+                    .set = kMaterialDescriptorSet,
+                    .binding = kDirectionalLightUniformBinding,
+                    .array_element = kMaterialArrayElement,
                     .data = std::as_bytes(std::span{&uniform_data, 1}),
                 });
             }

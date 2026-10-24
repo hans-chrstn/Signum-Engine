@@ -16,6 +16,7 @@ namespace Renderer = SNE::Engine::Renderer;
 namespace {
     constexpr std::uint32_t kFloat32x2Size = 8U;
     constexpr std::uint32_t kFloat32x3Size = 12U;
+    constexpr std::uint32_t kFloat32x4Size = 16U;
 } // namespace
 
 TEST(VertexFormatTests, Float32x2OccupiesEightBytes) {
@@ -28,6 +29,12 @@ TEST(VertexFormatTests, Float32x3OccupiesTwelveBytes) {
     EXPECT_EQ(
         Renderer::vertexFormatSizeInBytes(Renderer::VertexFormat::Float32x3),
         kFloat32x3Size);
+}
+
+TEST(VertexFormatTests, Float32x4OccupiesSixteenBytes) {
+    EXPECT_EQ(
+        Renderer::vertexFormatSizeInBytes(Renderer::VertexFormat::Float32x4),
+        kFloat32x4Size);
 }
 
 TEST(MeshUploadDataTests, BorrowsVertexAndIndexStorage) {

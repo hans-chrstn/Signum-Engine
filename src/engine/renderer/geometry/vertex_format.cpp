@@ -7,11 +7,14 @@ namespace SNE::Engine::Renderer {
     auto vertexFormatSizeInBytes(VertexFormat vertex_format) -> std::uint32_t {
         constexpr std::uint32_t float32x2_byte_size = 8U;
         constexpr std::uint32_t float32x3_byte_size = 12U;
+        constexpr std::uint32_t float32x4_byte_size = 16U;
         switch (vertex_format) {
         case VertexFormat::Float32x2:
             return float32x2_byte_size;
         case VertexFormat::Float32x3:
             return float32x3_byte_size;
+        case VertexFormat::Float32x4:
+            return float32x4_byte_size;
         }
 
         Core::Assertion::failAssertion(

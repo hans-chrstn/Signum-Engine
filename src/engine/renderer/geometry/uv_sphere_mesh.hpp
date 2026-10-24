@@ -41,8 +41,8 @@ namespace SNE::Engine::Renderer {
     /**
      * @brief Stores the attributes of one generated UV sphere vertex.
      *
-     * Contains the vertex position, outward-facing unit normal, and
-     * normalized texture coordinates.
+     * Contains the vertex position, outward-facing unit normal,
+     * normalized texture coordinates, and tangent-space information.
      *
      * The position is relative to the sphere center. Vertex attributes
      * are stored independently of rendering backend types.
@@ -53,6 +53,9 @@ namespace SNE::Engine::Renderer {
 
         /** @brief Number of floating-point components in a UV coordinate. */
         static constexpr std::size_t kUvComponentCount{2U};
+
+        /** @brief Number of tangent-direction and handedness components. */
+        static constexpr std::size_t kTangentComponentCount{4U};
 
         /** @brief Position relative to the sphere center. */
         std::array<float, kSpatialComponentCount> position{};
@@ -68,6 +71,24 @@ namespace SNE::Engine::Renderer {
          * the south pole.
          */
         std::array<float, kUvComponentCount> uv{};
+
+        /**
+         * @brief Tangent-space direction and handedness of the vertex.
+         *
+         * The first three components store a unit tangent vector pointing
+         * along increasing horizontal texture coordinates (U).
+         *
+         * The fourth component stores the tangent-space handedness,
+         * allowing the bitangent to be reconstructed from the surface
+         * normal and tangent.
+         *
+         * The generated UV sphere uses a handedness of +1.
+         * Tangents remain consistent across the duplicated texture seam.
+         *
+         * At the poles, the tangent follows the longitude convention
+         * because the tangent direction is geometrically ambiguous.
+         */
+        std::array<float, kTangentComponentCount> tangent{};
     };
 
     /**
@@ -92,13 +113,21 @@ namespace SNE::Engine::Renderer {
     };
 
     /**
-     * @brief Generates an indexed UV sphere on the CPU.
+     * @brief Generates an indexed UV sphere with positions, normals, UVs,
+     * and tangent-space information.
      *
-     * Creates positions, outward-facing unit normals, and normalized UV
-     * coordinates for a sphere centered at the origin.
+     * Creates positions, outward-facing unit normals, normalized texture
+     * coordinates, and tangent vectors for a sphere centered at the origin.
+     *
+     * Tangents follow increasing horizontal texture coordinates and store
+     * their handedness in the fourth component, allowing shaders to
+     * reconstruct the bitangent for tangent-space normal mapping.
+     *
+     * At the poles, tangents follow the longitude convention because the
+     * tangent direction is geometrically ambiguous.
      *
      * Duplicates vertices along the texture seam to preserve correct
-     * horizontal texture-coordinate interpolation.
+     * horizontal texture-coordinate interpolation and consistent tangents.
      *
      * The returned mesh owns its vertex and index storage. No GPU
      * resources are created or registered.
