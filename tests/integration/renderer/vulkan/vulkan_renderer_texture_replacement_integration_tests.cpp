@@ -43,7 +43,9 @@ namespace {
     struct TestVertex {
         std::array<float, 3> position;
         std::array<float, 3> color;
+        std::array<float, 3> normal;
         std::array<float, 2> uv;
+        std::array<float, 4> tangent;
     };
 
     static_assert(std::is_standard_layout_v<TestVertex>);
@@ -57,17 +59,23 @@ namespace {
         TestVertex{
             .position = {-0.5F, -0.5F, 0.0F},
             .color = {1.0F, 0.0F, 0.0F},
+            .normal = {0.0F, 0.0F, 1.0F},
             .uv = {0.0F, 0.0F},
+            .tangent = {1.0F, 0.0F, 0.0F, 1.0F},
         },
         TestVertex{
             .position = {0.5F, -0.5F, 0.0F},
             .color = {0.0F, 1.0F, 0.0F},
+            .normal = {0.0F, 0.0F, 1.0F},
             .uv = {1.0F, 0.0F},
+            .tangent = {1.0F, 0.0F, 0.0F, 1.0F},
         },
         TestVertex{
             .position = {0.0F, 0.5F, 0.0F},
             .color = {0.0F, 0.0F, 1.0F},
+            .normal = {0.0F, 0.0F, 1.0F},
             .uv = {0.5F, 1.0F},
+            .tangent = {1.0F, 0.0F, 0.0F, 1.0F},
         },
     };
 
@@ -101,7 +109,31 @@ namespace {
         Renderer::VertexAttributeDescription{
             .location = 1U,
             .format = Renderer::VertexFormat::Float32x3,
-            .offset = static_cast<std::uint32_t>(offsetof(TestVertex, color)),
+            .offset = static_cast<std::uint32_t>(offsetof(TestVertex, normal)),
+        },
+        Renderer::VertexAttributeDescription{
+            .location = 2U,
+            .format = Renderer::VertexFormat::Float32x2,
+            .offset = static_cast<std::uint32_t>(offsetof(TestVertex, uv)),
+        },
+        Renderer::VertexAttributeDescription{
+            .location = 3U,
+            .format = Renderer::VertexFormat::Float32x4,
+            .offset = static_cast<std::uint32_t>(offsetof(TestVertex, tangent)),
+        },
+    };
+
+    constexpr std::array kMaterialTexturedVertexAttributes{
+        Renderer::VertexAttributeDescription{
+            .location = 0U,
+            .format = Renderer::VertexFormat::Float32x3,
+            .offset =
+                static_cast<std::uint32_t>(offsetof(TestVertex, position)),
+        },
+        Renderer::VertexAttributeDescription{
+            .location = 1U,
+            .format = Renderer::VertexFormat::Float32x3,
+            .offset = static_cast<std::uint32_t>(offsetof(TestVertex, normal)),
         },
         Renderer::VertexAttributeDescription{
             .location = 2U,
@@ -558,7 +590,7 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
     const std::array model_matrices{Math::identity()};
 
     const Renderer::InitialMeshData initial_mesh =
-        makeInitialMesh(model_matrices, kTexturedVertexAttributes);
+        makeInitialMesh(model_matrices, kMaterialTexturedVertexAttributes);
 
     constexpr std::array<float, 4> kInitialParameters{
         0.0F,

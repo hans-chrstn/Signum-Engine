@@ -72,6 +72,12 @@ option(
   OFF
 )
 
+option(
+  SIGNUM_BUILD_SHADERS
+  "Build the shaders"
+  OFF
+)
+
 if(SIGNUM_ENABLE_REFLECTION OR SIGNUM_ENABLE_CONTRACTS)
   if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(
@@ -190,6 +196,13 @@ add_subdirectory(src)
 
 if(SIGNUM_BUILD_PLAYGROUND)
   add_subdirectory(playground)
+endif()
+
+if(SIGNUM_BUILD_SHADERS)
+  add_subdirectory(
+    shaders
+    "${CMAKE_BINARY_DIR}/cmake/shaders"
+  )
 endif()
 
 include(CTest)

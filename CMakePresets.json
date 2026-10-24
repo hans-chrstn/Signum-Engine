@@ -13,7 +13,8 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
-        "BUILD_TESTING": true
+        "BUILD_TESTING": true,
+        "SIGNUM_BUILD_SHADERS": true
       }
     },
     {
