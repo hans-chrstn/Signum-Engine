@@ -47,4 +47,9 @@ namespace SNE::Engine::Core {
         m_Renderer.updateMaterialBuffer(input.set, input.binding,
                                         input.array_element, input.data);
     }
+
+    auto Application::replaceFragmentShader(
+        Renderer::Shader::ShaderStageInput fragment_shader) -> void {
+        m_Renderer.replaceFragmentShader(std::move(fragment_shader));
+    }
 } // namespace SNE::Engine::Core

@@ -5,6 +5,7 @@
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/material/material_buffer_update_input.hpp"
+#include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <cstddef>
 #include <functional>
@@ -134,5 +135,28 @@ namespace SNE::Engine::Core {
          */
         auto updateMaterialBuffer(Renderer::MaterialBufferUpdateInput input)
             -> void;
+
+        /**
+         * @brief Replaces the active material's fragment shader.
+         *
+         * Forwards the compiled shader to the renderer, which validates
+         * its interface and creates a compatible graphics pipeline
+         * before activating the replacement.
+         *
+         * @param fragment_shader Compiled shader bytecode and entry point.
+         *
+         * @pre An active material, mesh, and graphics pipeline must exist.
+         * @pre The shader must select the fragment stage.
+         * @pre The caller must serialize replacement with rendering and
+         * other resource replacement operations.
+         *
+         * @post On success, subsequent frames use the replacement shader.
+         *
+         * @throws Error::EngineError if shader validation, compatibility
+         * checks, or pipeline creation fails.
+         * @throws std::bad_alloc if host resource allocation fails.
+         */
+        auto replaceFragmentShader(
+            Renderer::Shader::ShaderStageInput fragment_shader) -> void;
     };
 } // namespace SNE::Engine::Core
