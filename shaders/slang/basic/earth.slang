@@ -7,6 +7,11 @@ struct CloudUniformData {
     float4 uv_offset;
 };
 
+struct EarthViewUniformData {
+  float4 camera_world_position;
+  float4 sphere_center_radius;
+};
+
 static const float specular_shininess = 48.0;
 static const float specular_strength = 0.35;
 
@@ -27,6 +32,9 @@ ConstantBuffer<CloudUniformData> cloud_uniform;
 
 [[vk::binding(5, 0)]]
 Sampler2D specular_texture;
+
+[[vk::binding(6, 0)]]
+ConstantBuffer<EarthViewUniformData> earth_uniform;
 
 [[vk::binding(7, 0)]]
 Sampler2D normal_texture;
@@ -81,7 +89,12 @@ float4 fragmentMain(
 
     float specular_mask = specular_texture.Sample(uv).r;
 
-    float3 view_direction = float3(0.0, 0.0, 1.0);
+    float3 surface_position =
+        earth_uniform.sphere_center_radius.xyz +
+        surface_normal * earth_uniform.sphere_center_radius.w;
+
+    float3 view_direction = normalize(
+        earth_uniform.camera_world_position.xyz - surface_position);
 
     float3 half_direction =
         normalize(light_direction + view_direction);

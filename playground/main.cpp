@@ -106,9 +106,9 @@ auto main() -> int {
         constexpr float kCameraFarPlane = 100.0F;
 
         constexpr float kDegreesToRadians = std::numbers::pi_v<float> / 180.0F;
-        const float kRotateX = 20.0F;
-        const float kRotateY = -30.0F;
-        const float kRotateZ = 0.0F;
+        constexpr float kRotateX = 20.0F;
+        constexpr float kRotateY = -30.0F;
+        constexpr float kRotateZ = 0.0F;
 
         const Math::Vector3f translation{
             .x = 0.0F,
@@ -300,9 +300,40 @@ auto main() -> int {
 
         CloudUniformData cloud_data{};
 
+        struct alignas(sizeof(Math::Vector4f)) EarthViewUniformData {
+            Math::Vector4f camera_world_position{};
+            Math::Vector4f sphere_center_radius{};
+        };
+
+        constexpr std::size_t kEarthViewUniformDataSize = 32U;
+
+        static_assert(sizeof(EarthViewUniformData) ==
+                      kEarthViewUniformDataSize);
+        static_assert(alignof(EarthViewUniformData) == sizeof(Math::Vector4f));
+        static_assert(offsetof(EarthViewUniformData, sphere_center_radius) ==
+                      sizeof(Math::Vector4f));
+
+        const EarthViewUniformData earth_data{
+            .camera_world_position =
+                {
+                    .x = 0.0F,
+                    .y = 0.0F,
+                    .z = kCameraDistance,
+                    .w = 0.0F,
+                },
+            .sphere_center_radius =
+                {
+                    .x = translation.x,
+                    .y = translation.y,
+                    .z = translation.z,
+                    .w = kSphereRadius,
+                },
+        };
+
         constexpr std::uint32_t kDirectionalLightUniformBinding{1U};
         constexpr std::uint32_t kCloudUniformBinding{4U};
-        std::array<Renderer::MaterialBufferBindingInput, 2>
+        constexpr std::uint32_t kEarthViewUniformBinding{6U};
+        std::array<Renderer::MaterialBufferBindingInput, 3>
             initial_buffer_bindings{
                 Renderer::MaterialBufferBindingInput{
                     .set = kMaterialDescriptorSet,
@@ -319,6 +350,13 @@ auto main() -> int {
                     .update_frequency =
                         Renderer::MaterialBufferUpdateFrequency::Frequent,
                     .data = std::as_bytes(std::span{&cloud_data, 1}),
+                },
+                Renderer::MaterialBufferBindingInput{
+                    .set = kMaterialDescriptorSet,
+                    .binding = kEarthViewUniformBinding,
+                    .array_element = kMaterialArrayElement,
+                    .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
+                    .data = std::as_bytes(std::span{&earth_data, 1}),
                 },
         };
 
