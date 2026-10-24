@@ -1,3 +1,5 @@
+#include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/error_code.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
@@ -33,11 +35,12 @@
 #include <type_traits>
 #include <utility>
 
-namespace Math = SNE::Engine::Core::Math;
+namespace Core = SNE::Engine::Core;
+namespace Math = Core::Math;
 namespace Platform = SNE::Engine::Platform;
 namespace Renderer = SNE::Engine::Renderer;
-namespace Shader = SNE::Engine::Renderer::Shader;
-namespace Vulkan = SNE::Engine::Renderer::Vulkan;
+namespace Shader = Renderer::Shader;
+namespace Vulkan = Renderer::Vulkan;
 
 namespace {
     struct TestVertex {
@@ -1108,6 +1111,193 @@ TEST_F(VulkanRendererTextureReplacementIntegrationTests,
             Renderer::PresentationPreference::VSync, false, std::nullopt,
             makeInitialTexture(), std::nullopt, std::move(graphics_shaders));
     });
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       ReplacesFragmentShaderAcrossRenderedFrames) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Fragment shader replacement test requires an "
+                  "initialized window";
+    }
+
+    const std::array model_matrices{Math::identity()};
+
+    const Renderer::InitialMeshData initial_mesh =
+        makeInitialMesh(model_matrices, kMaterialTexturedVertexAttributes);
+
+    constexpr std::array<float, 4> kMaterialParameters{
+        1.0F,
+        1.0F,
+        1.0F,
+        1.0F,
+    };
+
+    const std::array material_bindings{
+        Renderer::MaterialBufferBindingInput{
+            .set = 1U,
+            .binding = 2U,
+            .array_element = 0U,
+            .type = Shader::ShaderResourceType::UniformBuffer,
+            .data = std::as_bytes(std::span{kMaterialParameters}),
+        },
+        Renderer::MaterialBufferBindingInput{
+            .set = 1U,
+            .binding = 3U,
+            .array_element = 0U,
+            .type = Shader::ShaderResourceType::UniformBuffer,
+            .data = std::as_bytes(std::span{kMaterialParameters}),
+        },
+    };
+
+    Shader::GraphicsShaderData shaders = makeGraphicsShaders();
+
+    shaders.vertex.artifact =
+        Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                          "material_textured.vert.spv");
+
+    shaders.fragment.artifact =
+        Vulkan::loadSpirv(std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                          "material_mixed.frag.spv");
+
+    const auto [validation_output, operation_error] =
+        captureVulkanValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Fragment Shader Replacement Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                initial_mesh,
+                std::nullopt,
+                std::nullopt,
+                std::move(shaders),
+                material_bindings,
+            };
+
+            for (std::size_t i{}; i < 2U; ++i) {
+                renderer.renderFrame();
+            }
+
+            Shader::ShaderStageInput replacement_fragment{
+                .artifact = Vulkan::loadSpirv(
+                    std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                    "triangle.frag.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            };
+
+            renderer.replaceFragmentShader(std::move(replacement_fragment));
+
+            for (std::size_t i{}; i < 2U; ++i) {
+                renderer.renderFrame();
+            }
+
+            Shader::ShaderStageInput restored_fragment{
+                .artifact = Vulkan::loadSpirv(
+                    std::filesystem::path{SIGNUM_TEST_SHADER_DIR} /
+                    "material_mixed.frag.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            };
+
+            renderer.replaceFragmentShader(std::move(restored_fragment));
+
+            for (std::size_t i{}; i < 2U; ++i) {
+                renderer.renderFrame();
+            }
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Fragment shader replacement failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererTextureReplacementIntegrationTests,
+       PreservesActiveShaderWhenReplacementBindingsAreIncompatible) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Fragment shader compatibility test requires an "
+                  "initialized window";
+    }
+
+    const std::array model_matrices{Math::identity()};
+    const Renderer::InitialMeshData initial_mesh =
+        makeInitialMesh(model_matrices);
+
+    std::optional<Core::Error::Code> replacement_error_code;
+    std::string replacement_error_message;
+    std::string replacement_operation;
+
+    const auto [validation_output,
+                operation_error] = captureVulkanValidationOutput([&] -> void {
+        Vulkan::VulkanRenderer renderer{
+            "Signum Rejected Fragment Shader Replacement Test",
+            m_Window.value(),
+            Renderer::PresentationPreference::VSync,
+            true,
+            initial_mesh,
+            std::nullopt,
+            std::nullopt,
+            makeGraphicsShaders(),
+        };
+
+        for (std::size_t i{}; i < 2U; ++i) {
+            renderer.renderFrame();
+        }
+
+        Shader::ShaderStageInput incompatible_fragment{
+            .artifact = Vulkan::loadSpirv(
+                std::filesystem::path{SIGNUM_TEST_FIXTURE_DIR} /
+                "textured.frag.spv"),
+            .selection =
+                {
+                    .stage = Shader::ShaderStage::Fragment,
+                    .entry_point = "main",
+                },
+        };
+
+        try {
+            renderer.replaceFragmentShader(std::move(incompatible_fragment));
+        } catch (const Core::Error::EngineError &error) {
+            replacement_error_code = error.getCode();
+            replacement_error_message = error.what();
+            replacement_operation = error.getOperation();
+        }
+
+        for (std::size_t i{}; i < 3U; ++i) {
+            renderer.renderFrame();
+        }
+    });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Rendering after rejected shader replacement failed: "
+        << operation_error;
+
+    ASSERT_TRUE(replacement_error_code.has_value());
+
+    if (replacement_error_code.has_value()) {
+        EXPECT_EQ(*replacement_error_code,
+                  Core::Error::Code::VulkanMaterialBindingsIncompatible);
+    } else {
+        FAIL() << "Expected the replacement operation to provide an error code";
+    }
+
+    EXPECT_EQ(replacement_error_message,
+              "Replacement fragment shader requires material resource bindings "
+              "that are not configured");
+
+    EXPECT_EQ(replacement_operation, "Replace Vulkan Fragment Shader");
+
+    EXPECT_FALSE(hasUnexpectedVulkanValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
 }
 
 TEST_F(VulkanRendererTextureReplacementIntegrationTests,

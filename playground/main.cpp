@@ -381,10 +381,25 @@ auto main() -> int {
 
         const auto cloud_animation_start = std::chrono::steady_clock::now();
 
-        application.run([&](Core::Application &app) -> void {
-            const auto now = std::chrono::steady_clock::now();
+        double planet_spin_radians{};
 
-            const auto duration = now - cloud_animation_start;
+        constexpr double kAutoRotationRadiansPerSecond{0.05};
+
+        auto previous_frame_time = std::chrono::steady_clock::now();
+
+        application.run([&](Core::Application &app) -> void {
+            const auto frame_time = std::chrono::steady_clock::now();
+
+            const double frame_delta_seconds =
+                std::chrono::duration<double>{frame_time - previous_frame_time}
+                    .count();
+
+            previous_frame_time = frame_time;
+
+            const double clamped_delta_seconds =
+                frame_delta_seconds > 0.1 ? 0.1 : frame_delta_seconds;
+
+            const auto duration = frame_time - cloud_animation_start;
 
             const double elapsed_seconds =
                 std::chrono::duration<double>{duration}.count();
@@ -400,6 +415,12 @@ auto main() -> int {
                 .array_element = kMaterialArrayElement,
                 .data = std::as_bytes(std::span{&cloud_data, 1}),
             });
+
+            constexpr double kFullRotationRadians = 2.0;
+            planet_spin_radians =
+                std::fmod(planet_spin_radians + (clamped_delta_seconds *
+                                                 kAutoRotationRadiansPerSecond),
+                          kFullRotationRadians * std::numbers::pi);
 
             const Platform::CursorPosition current_cursor =
                 app.window().cursorPosition();
@@ -428,9 +449,7 @@ auto main() -> int {
 
             if (is_dragging && !was_dragging) {
                 previous_cursor = current_cursor;
-            }
-
-            if (is_dragging && was_dragging) {
+            } else if (is_dragging) {
                 const double delta_x = current_cursor.x - previous_cursor.x;
                 const double delta_y = current_cursor.y - previous_cursor.y;
 
@@ -440,15 +459,26 @@ auto main() -> int {
                 rotation.x +=
                     static_cast<float>(delta_y) * kRotationSensitivity;
 
-                const Math::Matrix4f updated_model_matrix =
-                    Math::composeTRS(translation, rotation, scale);
-
-                app.setDrawInstanceModelMatrix(0U, updated_model_matrix);
-            }
-
-            if (is_dragging) {
                 previous_cursor = current_cursor;
             }
+
+            const Math::Matrix4f orientation_matrix = Math::composeTRS(
+                translation, rotation,
+                Math::Vector3f{.x = 1.0F, .y = 1.0F, .z = 1.0F});
+
+            const Math::Matrix4f spin_matrix =
+                Math::rotateY(static_cast<float>(planet_spin_radians));
+
+            const Math::Matrix4f scale_matrix =
+                Math::scale(scale.x, scale.y, scale.z);
+
+            const Math::Matrix4f oriented_spin_matrix =
+                Math::multiply(orientation_matrix, spin_matrix);
+
+            const Math::Matrix4f updated_model_matrix =
+                Math::multiply(oriented_spin_matrix, scale_matrix);
+
+            app.setDrawInstanceModelMatrix(0U, updated_model_matrix);
 
             was_dragging = is_dragging;
             was_right_pressed = is_right_pressed;

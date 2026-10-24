@@ -3,7 +3,6 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
-#include "engine/core/math/matrix4.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/geometry/vulkan_vertex_input.hpp"
@@ -81,6 +80,79 @@ namespace SNE::Engine::Renderer::Vulkan {
         return new_depth_attachments;
     }
 
+    auto VulkanRenderer::getOrCreateGraphicsPipeline(
+        const MaterialDescription &material, const VulkanSwapchain &swapchain,
+        VkFormat depth_format) -> const VulkanGraphicsPipeline * {
+        const Shader::GraphicsShaderData &graphics_data = material.shaders;
+
+        const VertexLayoutDescription vertex_layout{
+            .attributes = m_MeshVertexAttributes,
+        };
+
+        const VulkanVertexInputDescriptions vertex_input_descriptions =
+            makeVulkanVertexInputDescriptions(vertex_layout,
+                                              m_MeshVertexStride);
+
+        const std::array<VkVertexInputBindingDescription, 1> vertex_bindings{
+            vertex_input_descriptions.binding,
+        };
+
+        const GraphicsVertexInputData vertex_input_data{
+            .bindings = vertex_bindings,
+            .attributes = vertex_input_descriptions.attributes,
+        };
+
+        const std::array<VkPushConstantRange, 1> push_constant_ranges{
+            {
+                {
+                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+                    .offset = 0U,
+                    .size = static_cast<std::uint32_t>(
+                        sizeof(VulkanDrawPushConstants)),
+                },
+            },
+        };
+
+        std::array<const VulkanDescriptorSetLayout *, 1> texture_layouts{};
+
+        std::span<const VulkanDescriptorSetLayout *const>
+            descriptor_set_layouts{};
+
+        std::vector<const VulkanDescriptorSetLayout *> layout_references;
+        layout_references.reserve(m_DescriptorSetLayouts.size());
+
+        for (const VulkanDescriptorSetLayout &layout : m_DescriptorSetLayouts) {
+            layout_references.push_back(&layout);
+        }
+
+        if (!layout_references.empty()) {
+            descriptor_set_layouts = layout_references;
+        } else if (m_TextureDescriptorSetLayout.has_value()) {
+            const VulkanDescriptorSetLayout &owned_layout =
+                m_TextureDescriptorSetLayout.value();
+
+            texture_layouts[0] = &owned_layout;
+            descriptor_set_layouts = texture_layouts;
+        }
+
+        const GraphicsPipelineLayoutData graphics_pipeline_layout_data{
+            .push_constant_ranges = push_constant_ranges,
+            .descriptor_set_layouts = descriptor_set_layouts,
+        };
+
+        const GraphicsAttachmentFormats attachment_formats{
+            .color = swapchain.surfaceFormat().format,
+            .depth = depth_format,
+        };
+
+        return m_GraphicsPipelineCache.getOrCreate(
+            m_Device.nativeHandle(), attachment_formats, graphics_data,
+            vertex_input_data, graphics_pipeline_layout_data,
+            m_PhysicalDevice.capabilities.properties.limits
+                .maxPushConstantsSize,
+            material.pipeline_state);
+    }
+
     auto
     VulkanRenderer::selectGraphicsPipeline(const VulkanSwapchain &swapchain,
                                            VkFormat depth_format)
@@ -102,77 +174,16 @@ namespace SNE::Engine::Renderer::Vulkan {
                     "when rendering a mesh");
             }
 
-            const Shader::GraphicsShaderData &graphics_data =
-                m_Material->shaders;
+            new_graphics_pipeline = getOrCreateGraphicsPipeline(
+                *m_Material, swapchain, depth_format);
 
-            const VertexLayoutDescription vertex_layout{
-                .attributes = m_MeshVertexAttributes,
-            };
-
-            const VulkanVertexInputDescriptions vertex_input_descriptions =
-                makeVulkanVertexInputDescriptions(vertex_layout,
-                                                  m_MeshVertexStride);
-
-            const std::array<VkVertexInputBindingDescription, 1>
-                vertex_bindings{
-                    vertex_input_descriptions.binding,
-            };
-
-            const GraphicsVertexInputData vertex_input_data{
-                .bindings = vertex_bindings,
-                .attributes = vertex_input_descriptions.attributes,
-            };
-
-            const std::array<VkPushConstantRange, 1> push_constant_ranges{
-                {
-                    {
-                        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                        .offset = 0U,
-                        .size = static_cast<std::uint32_t>(
-                            sizeof(VulkanDrawPushConstants)),
-                    },
-                },
-            };
-
-            std::array<const VulkanDescriptorSetLayout *, 1> texture_layouts{};
-
-            std::span<const VulkanDescriptorSetLayout *const>
-                descriptor_set_layouts{};
-
-            std::vector<const VulkanDescriptorSetLayout *> layout_references;
-            layout_references.reserve(m_DescriptorSetLayouts.size());
-
-            for (const VulkanDescriptorSetLayout &layout :
-                 m_DescriptorSetLayouts) {
-                layout_references.push_back(&layout);
+            if (new_graphics_pipeline == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer failed to select a graphics pipeline "
+                    "for an active mesh");
             }
-
-            if (!layout_references.empty()) {
-                descriptor_set_layouts = layout_references;
-            } else if (m_TextureDescriptorSetLayout.has_value()) {
-                const VulkanDescriptorSetLayout &owned_layout =
-                    m_TextureDescriptorSetLayout.value();
-
-                texture_layouts[0] = &owned_layout;
-                descriptor_set_layouts = texture_layouts;
-            }
-
-            const GraphicsPipelineLayoutData graphics_pipeline_layout_data{
-                .push_constant_ranges = push_constant_ranges,
-                .descriptor_set_layouts = descriptor_set_layouts,
-            };
-
-            const GraphicsAttachmentFormats attachment_formats{
-                .color = swapchain.surfaceFormat().format,
-                .depth = depth_format,
-            };
-
-            new_graphics_pipeline = m_GraphicsPipelineCache.getOrCreate(
-                m_Device.nativeHandle(), attachment_formats, graphics_data,
-                vertex_input_data, graphics_pipeline_layout_data,
-                m_PhysicalDevice.capabilities.properties.limits
-                    .maxPushConstantsSize,
-                m_Material->pipeline_state);
         }
 
         if (new_graphics_pipeline == nullptr &&

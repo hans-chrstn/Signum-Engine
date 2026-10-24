@@ -1,5 +1,7 @@
 #include "engine/core/assert/assertion_handler.hpp"
 #include "engine/core/assert/assertion_type.hpp"
+#include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/material/material_buffer_update_frequency.hpp"
@@ -10,6 +12,7 @@
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_buffer.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_reflection.hpp"
 #include "vulkan_renderer.hpp"
 #include <algorithm>
@@ -547,6 +550,94 @@ namespace SNE::Engine::Renderer::Vulkan {
                     std::span<MaterialDescriptorResources *const>{
                         descriptor_resources_to_retire});
         }
+    }
+
+    auto VulkanRenderer::replaceFragmentShader(
+        Shader::ShaderStageInput fragment_shader) -> void {
+        if (!m_Material.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires an active material configuration "
+                "before replacing its fragment shader");
+        }
+
+        if (!m_ActiveMeshHandle.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires an active mesh before replacing "
+                "its fragment shader");
+        }
+
+        if (!m_SwapchainResources.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires swapchain resources before "
+                "replacing its fragment shader");
+        }
+
+        if (m_SwapchainResources->m_VulkanGraphicsPipeline == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires an active graphics pipeline "
+                "before replacing its fragment shader");
+        }
+
+        if (fragment_shader.selection.stage != Shader::ShaderStage::Fragment) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer fragment shader replacement requires "
+                "a fragment-stage shader");
+        }
+
+        MaterialDescription replacement_material = *m_Material;
+
+        replacement_material.shaders.fragment = std::move(fragment_shader);
+
+        const Shader::ShaderInterface replacement_fragment_interface =
+            reflectSpirvInterface(
+                replacement_material.shaders.fragment.artifact.words,
+                replacement_material.shaders.fragment.selection);
+
+        if (!areMaterialResourceBindingsCompatible(
+                m_MaterialBindings.bindings,
+                replacement_fragment_interface.descriptor_bindings)) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanMaterialBindingsIncompatible,
+                "Replacement fragment shader requires material resource "
+                "bindings "
+                "that are not configured",
+                "Replace Vulkan Fragment Shader");
+        }
+
+        const VulkanGraphicsPipeline *pipeline = getOrCreateGraphicsPipeline(
+            replacement_material, m_SwapchainResources->m_VulkanSwapchain,
+            m_SwapchainResources->m_DepthFormat);
+
+        if (pipeline == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer failed to obtain a graphics pipeline for the "
+                "replacement fragment shader");
+        }
+
+        if (!m_SwapchainResources.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires swapchain resources to commit a "
+                "fragment shader replacement");
+        }
+
+        auto &swapchain_resources = m_SwapchainResources.value();
+
+        m_Material = std::move(replacement_material);
+        swapchain_resources.m_VulkanGraphicsPipeline = pipeline;
     }
 
     auto VulkanRenderer::updateMaterialBuffer(std::uint32_t set,

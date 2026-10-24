@@ -294,6 +294,11 @@ namespace SNE::Engine::Core::Error {
                     .subsystem = Subsystem::Vulkan,
                 },
                 ErrorMetadata{
+                    .code = Code::VulkanMaterialBindingsIncompatible,
+                    .name = "VulkanMaterialBindingsIncompatible",
+                    .subsystem = Subsystem::Vulkan,
+                },
+                ErrorMetadata{
                     .code = Code::ImageLoadFailed,
                     .name = "ImageLoadFailed",
                     .subsystem = Subsystem::Renderer,

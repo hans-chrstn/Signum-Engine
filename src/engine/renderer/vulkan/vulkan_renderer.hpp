@@ -899,6 +899,31 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> std::vector<DepthAttachmentResources>;
 
         /**
+         * @brief Finds or creates a graphics pipeline for a material.
+         *
+         * Uses the supplied material configuration and current mesh,
+         * descriptor-set layouts, and attachment formats.
+         *
+         * @param material Material configuration used to select the pipeline.
+         * @param swapchain Swapchain providing the color attachment format.
+         * @param depth_format Depth attachment format.
+         *
+         * @pre An active mesh must exist and its vertex layout must be
+         * initialized.
+         *
+         * @return Non-owning pointer to the selected graphics pipeline, owned
+         * by m_GraphicsPipelineCache.
+         *
+         * @throws Core::Error::EngineError if pipeline creation fails.
+         * @throws std::bad_alloc if host resource allocation fails.
+         */
+        [[nodiscard]] auto
+        getOrCreateGraphicsPipeline(const MaterialDescription &material,
+                                    const VulkanSwapchain &swapchain,
+                                    VkFormat depth_format)
+            -> const VulkanGraphicsPipeline *;
+
+        /**
          * @brief Selects the graphics pipeline for a replacement swapchain.
          *
          * Creates or retrieves a compatible graphics pipeline when the
@@ -2327,6 +2352,43 @@ namespace SNE::Engine::Renderer::Vulkan {
          * operation completes.
          */
         auto replaceTexture(const TextureUploadData &texture) -> void;
+
+        /**
+         * @brief Replaces the active material's fragment shader.
+         *
+         * Validates and reflects the replacement shader, checks its
+         * resource requirements against the existing material
+         * configuration, and creates a replacement graphics pipeline
+         * before modifying the active material.
+         *
+         * The operation does not recreate descriptor-set layouts or
+         * material descriptor resources.
+         *
+         * @param fragment_shader Compiled fragment shader and selected
+         * entry point.
+         *
+         * @pre An active material, mesh, and graphics pipeline must exist.
+         * @pre The replacement must specify a valid fragment-stage entry
+         * point and nonempty SPIR-V bytecode.
+         * @pre The replacement's resource requirements must be compatible
+         * with the existing descriptor-set layouts and material resources.
+         * @pre The caller must serialize replacement with rendering and
+         * other resource replacement operations.
+         *
+         * @post On success, subsequent frames use the replacement
+         * fragment shader.
+         *
+         * @throws Core::Error::EngineError if shader validation, reflection,
+         * resource compatibility checks, or pipeline creation fails.
+         * @throws std::bad_alloc if host resource allocation fails.
+         *
+         * @note If preparation fails, the previously active shader and
+         * graphics pipeline remain unchanged.
+         * @note The previous pipeline must remain alive until all GPU
+         * submissions referencing it have completed.
+         */
+        auto replaceFragmentShader(Shader::ShaderStageInput fragment_shader)
+            -> void;
 
         /**
          * @brief Updates an existing material uniform or storage buffer.

@@ -331,6 +331,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::ImageLoadFailed,
             "ImageLoadFailed",
             Error::Subsystem::Renderer,
+        },
+        ErrorCodeTestCase{
+            Error::Code::VulkanMaterialBindingsIncompatible,
+            "VulkanMaterialBindingsIncompatible",
+            Error::Subsystem::Vulkan,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

@@ -133,6 +133,8 @@ namespace SNE::Engine::Core::Error {
         /** Shader descriptor requirements are incompatible with the pipeline
            layout. */
         VulkanDescriptorLayoutIncompatible,
+        /** Replacement shader material bindings are incompatible. */
+        VulkanMaterialBindingsIncompatible,
         /** Loading or decoding an image file failed. */
         ImageLoadFailed,
         /**
