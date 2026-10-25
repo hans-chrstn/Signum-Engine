@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/platform/input/cursor_position.hpp"
+#include "engine/platform/input/key.hpp"
 #include "engine/platform/input/mouse_button.hpp"
 #include <GLFW/glfw3.h>
 #include <string>
@@ -130,5 +131,35 @@ namespace SNE::Engine::Platform {
          */
         [[nodiscard]] auto isMouseButtonPressed(MouseButton button) const
             -> bool;
+
+        /**
+         * @brief Checks whether a keyboard key is currently pressed.
+         *
+         * Queries the current input state of the specified keyboard key.
+         *
+         * @param key Backend-independent keyboard key to query.
+         *
+         * @return true if the key is pressed; otherwise false.
+         *
+         * @note This function queries key state rather than reporting
+         * individual press or release events.
+         */
+        [[nodiscard]] auto isKeyPressed(Key key) const -> bool;
+
+        /**
+         * @brief Captures or releases the cursor within the window.
+         *
+         * When captured, the cursor is hidden and provides virtual cursor
+         * coordinates suitable for unrestricted camera rotation.
+         *
+         * When released, the cursor returns to normal visibility and
+         * movement, allowing interaction with window UI elements.
+         *
+         * @param captured true to capture the cursor; false to release it.
+         *
+         * @note Capturing the cursor does not automatically process mouse
+         * movement or update the camera orientation.
+         */
+        auto setCursorCaptured(bool captured) -> void;
     };
 } // namespace SNE::Engine::Platform

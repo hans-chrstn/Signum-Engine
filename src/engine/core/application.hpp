@@ -176,5 +176,14 @@ namespace SNE::Engine::Core {
          */
         auto replaceFragmentShader(
             Renderer::Shader::ShaderStageInput fragment_shader) -> void;
+
+        /**
+         * @brief Captures or releases the application window's cursor.
+         *
+         * Forwards the requested cursor mode to the application-owned window.
+         *
+         * @param captured true to capture the cursor; false to release it.
+         */
+        auto setCursorCaptured(bool captured) -> void;
     };
 } // namespace SNE::Engine::Core

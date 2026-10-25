@@ -4,9 +4,12 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/vector3.hpp"
+#include "engine/core/math/vector3d.hpp"
 #include "engine/core/math/vector4.hpp"
 #include "engine/platform/input/cursor_position.hpp"
+#include "engine/platform/input/key.hpp"
 #include "engine/platform/input/mouse_button.hpp"
+#include "engine/renderer/camera/camera_relative_position.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
@@ -30,6 +33,7 @@
 #include "engine/renderer/texture/image_loader.hpp"
 #include "engine/renderer/texture/texture_format.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -41,6 +45,7 @@
 #include <iostream>
 #include <numbers>
 #include <span>
+#include <stdexcept>
 #include <system_error>
 #include <utility>
 
@@ -116,10 +121,13 @@ namespace {
         Renderer::DirectionalLight directional_light;
         Renderer::DirectionalLightUniformData uniform_data;
         CloudUniformData cloud_data;
+        EarthViewUniformData earth_data;
         Platform::CursorPosition previous_cursor{};
-        bool was_dragging{};
-        bool was_right_pressed{};
-        bool was_middle_pressed{};
+        bool was_dragging{false};
+        bool was_right_pressed{false};
+        bool was_middle_pressed{false};
+        bool cursor_captured{false};
+        bool was_tab_pressed{false};
         bool light_enabled{true};
         bool is_earth_shader_active{true};
         double planet_spin_radians{};
@@ -128,12 +136,15 @@ namespace {
         std::chrono::steady_clock::time_point last_shader_poll_time;
         std::filesystem::file_time_type observed_shader_write_time;
         std::filesystem::path earth_shader_path;
+        Math::Vector3d earth_world_position{};
+        Math::Vector3d camera_world_position{};
+        double camera_yaw_radians{};
+        double camera_pitch_radians{};
     };
 
     constexpr float kSphereRadius{0.75F};
     constexpr std::uint32_t kSphereLongitudeSegments{64U};
     constexpr std::uint32_t kSphereLatitudeSegments{32U};
-    constexpr float kCameraDistance = 3.0F;
     constexpr float kCameraFovRadians = std::numbers::pi_v<float> / 3.0F;
     constexpr float kCameraNearPlane = 0.1F;
     constexpr float kCameraFarPlane = 100.0F;
@@ -159,6 +170,17 @@ namespace {
     constexpr std::uint32_t kEarthViewUniformBinding{6U};
     constexpr std::size_t kCloudUniformDataSize = 16U;
     constexpr std::size_t kEarthViewUniformDataSize = 32U;
+    constexpr double kEarthOrbitDistanceMeters = 149'597'870'700.0;
+    constexpr double kEarthMeanRadiusMeters = 6'371'000.0;
+    [[maybe_unused]] constexpr double kSunMeanRadiusMeters = 695'700'000.0;
+    constexpr double kMetersPerRenderUnit =
+        kEarthMeanRadiusMeters / static_cast<double>(kSphereRadius);
+
+    constexpr double kCameraMovementMetersPerSecond = kEarthMeanRadiusMeters;
+    constexpr double kCameraSprintMultiplier = 10.0;
+    constexpr double kCameraLookSensitivity = 0.003;
+    constexpr double kMaxCameraPitchRadians =
+        89.0 * std::numbers::pi_v<double> / 180.0;
 
     static_assert(sizeof(CloudUniformData) == kCloudUniformDataSize);
     static_assert(sizeof(EarthViewUniformData) == kEarthViewUniformDataSize);
@@ -210,6 +232,20 @@ namespace {
             static_cast<void>(tryReplaceFragmentShaderSource(
                 state.app, state.earth_shader_path));
         }
+    }
+
+    auto handleCursorCaptureToggle(FrameState &state, bool is_tab_pressed)
+        -> void {
+        if (!is_tab_pressed || state.was_tab_pressed) {
+            return;
+        }
+
+        state.cursor_captured = !state.cursor_captured;
+
+        state.app.setCursorCaptured(state.cursor_captured);
+
+        state.previous_cursor = state.app.window().cursorPosition();
+        state.was_dragging = false;
     }
 
     auto handleLightToggle(FrameState &state, bool is_right_pressed) -> void {
@@ -268,12 +304,142 @@ namespace {
         state.previous_cursor = current_cursor;
     }
 
-    auto updateModelMatrix(FrameState &state) -> void {
-        const Math::Vector3f translation{
-            .x = 0.0F,
-            .y = 0.0F,
-            .z = 0.0F,
+    auto updateCameraLook(FrameState &state,
+                          const Platform::CursorPosition &current_cursor)
+        -> void {
+        if (!state.cursor_captured) {
+            return;
+        }
+
+        const double delta_x = current_cursor.x - state.previous_cursor.x;
+        const double delta_y = current_cursor.y - state.previous_cursor.y;
+
+        state.camera_yaw_radians += delta_x * kCameraLookSensitivity;
+        state.camera_pitch_radians -= delta_y * kCameraLookSensitivity;
+
+        state.camera_pitch_radians =
+            std::clamp(state.camera_pitch_radians, -kMaxCameraPitchRadians,
+                       kMaxCameraPitchRadians);
+
+        state.previous_cursor = current_cursor;
+    }
+
+    auto updateCameraView(FrameState &state) -> void {
+        const auto yaw_radians = static_cast<float>(state.camera_yaw_radians);
+
+        const Math::Matrix4f inverse_yaw = Math::rotateY(yaw_radians);
+
+        const auto pitch_radians =
+            static_cast<float>(state.camera_pitch_radians);
+
+        const Math::Matrix4f inverse_pitch = Math::rotateX(-pitch_radians);
+
+        const Math::Matrix4f view_matrix =
+            Math::multiply(inverse_pitch, inverse_yaw);
+
+        state.app.setCameraViewMatrix(view_matrix);
+    }
+
+    auto updateCameraMovement(FrameState &state, double clamped_delta_seconds)
+        -> void {
+        if (!state.cursor_captured) {
+            return;
+        }
+
+        const double cos_yaw = std::cos(state.camera_yaw_radians);
+        const double sin_yaw = std::sin(state.camera_yaw_radians);
+        const double cos_pitch = std::cos(state.camera_pitch_radians);
+        const double sin_pitch = std::sin(state.camera_pitch_radians);
+
+        const Math::Vector3d forward{
+            .x = sin_yaw * cos_pitch,
+            .y = sin_pitch,
+            .z = -cos_yaw * cos_pitch,
         };
+
+        const Math::Vector3d right{
+            .x = cos_yaw,
+            .y = 0.0,
+            .z = sin_yaw,
+        };
+
+        const Math::Vector3d upward = Math::cross(right, forward);
+
+        const bool is_fast =
+            state.app.window().isKeyPressed(Platform::Key::LeftShift);
+
+        const double multiplier = is_fast ? kCameraSprintMultiplier : 1.0;
+
+        const double distance =
+            kCameraMovementMetersPerSecond * multiplier * clamped_delta_seconds;
+
+        Math::Vector3d movement_direction{};
+
+        if (state.app.window().isKeyPressed(Platform::Key::W)) {
+            movement_direction = Math::add(movement_direction, forward);
+        }
+
+        if (state.app.window().isKeyPressed(Platform::Key::S)) {
+            movement_direction = Math::subtract(movement_direction, forward);
+        }
+
+        if (state.app.window().isKeyPressed(Platform::Key::A)) {
+            movement_direction = Math::subtract(movement_direction, right);
+        }
+
+        if (state.app.window().isKeyPressed(Platform::Key::D)) {
+            movement_direction = Math::add(movement_direction, right);
+        }
+
+        if (state.app.window().isKeyPressed(Platform::Key::Q)) {
+            movement_direction = Math::subtract(movement_direction, upward);
+        }
+
+        if (state.app.window().isKeyPressed(Platform::Key::E)) {
+            movement_direction = Math::add(movement_direction, upward);
+        }
+
+        if (Math::lengthSquared(movement_direction) > 0.0) {
+            const Math::Vector3d normalized_direction =
+                Math::normalize(movement_direction);
+
+            const Math::Vector3d displacement =
+                Math::scale(normalized_direction, distance);
+
+            state.camera_world_position =
+                Math::add(state.camera_world_position, displacement);
+        }
+    }
+
+    auto updateModelMatrix(FrameState &state) -> void {
+
+        constexpr double kRenderUnitsPerMeter = 1.0 / kMetersPerRenderUnit;
+
+        const Math::Vector3d earth_relative_meters = Math::subtract(
+            state.earth_world_position, state.camera_world_position);
+
+        const auto relative_position = Renderer::tryMakeCameraRelativePosition({
+            .world_position =
+                Math::scale(earth_relative_meters, kRenderUnitsPerMeter),
+        });
+
+        if (!relative_position.has_value()) {
+            throw std::runtime_error("Camera relative conversion failed");
+        }
+
+        const Math::Vector3f translation = relative_position.value();
+
+        state.earth_data.sphere_center_radius.x = translation.x;
+        state.earth_data.sphere_center_radius.y = translation.y;
+        state.earth_data.sphere_center_radius.z = translation.z;
+
+        state.app.updateMaterialBuffer({
+            .set = kMaterialDescriptorSet,
+            .binding = kEarthViewUniformBinding,
+            .array_element = kMaterialArrayElement,
+            .data = std::as_bytes(std::span{&state.earth_data, 1}),
+        });
+
         const Math::Vector3f scale{
             .x = 1.0F,
             .y = 1.0F,
@@ -308,10 +474,16 @@ namespace {
         updatePlanetSpin(state, clamped_delta_seconds);
         pollShaderHotReload(state, frame_time);
 
+        const bool is_tab_pressed =
+            state.app.window().isKeyPressed(Platform::Key::Tab);
+
+        handleCursorCaptureToggle(state, is_tab_pressed);
+
         const Platform::CursorPosition current_cursor =
             state.app.window().cursorPosition();
-        const bool is_dragging = state.app.window().isMouseButtonPressed(
-            Platform::MouseButton::Left);
+        const bool is_dragging =
+            !state.cursor_captured && state.app.window().isMouseButtonPressed(
+                                          Platform::MouseButton::Left);
         const bool is_right_pressed = state.app.window().isMouseButtonPressed(
             Platform::MouseButton::Right);
         const bool is_middle_pressed = state.app.window().isMouseButtonPressed(
@@ -320,11 +492,16 @@ namespace {
         handleLightToggle(state, is_right_pressed);
         handleShaderToggle(state, is_middle_pressed);
         handleDragRotation(state, is_dragging, current_cursor);
+
+        updateCameraLook(state, current_cursor);
+        updateCameraMovement(state, clamped_delta_seconds);
+        updateCameraView(state);
         updateModelMatrix(state);
 
         state.was_dragging = is_dragging;
         state.was_right_pressed = is_right_pressed;
         state.was_middle_pressed = is_middle_pressed;
+        state.was_tab_pressed = is_tab_pressed;
     }
 
     auto createInitialMesh(const Renderer::UvSphereMesh &sphere,
@@ -380,7 +557,7 @@ namespace {
 
     auto createInitialCamera() -> Renderer::InitialCameraData {
         return Renderer::InitialCameraData{
-            .view = Math::translate(0.0F, 0.0F, -kCameraDistance),
+            .view = Math::identity(),
             .fov_y_radians = kCameraFovRadians,
             .near_plane = kCameraNearPlane,
             .far_plane = kCameraFarPlane,
@@ -535,6 +712,8 @@ namespace {
                 .binding = kEarthViewUniformBinding,
                 .array_element = kMaterialArrayElement,
                 .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
+                .update_frequency =
+                    Renderer::MaterialBufferUpdateFrequency::Frequent,
                 .data = std::as_bytes(std::span{&earth_data, 1}),
             },
         };
@@ -585,7 +764,7 @@ auto main() -> int {
                 {
                     .x = 0.0F,
                     .y = 0.0F,
-                    .z = kCameraDistance,
+                    .z = 0.0F,
                     .w = 0.0F,
                 },
             .sphere_center_radius =
@@ -642,12 +821,15 @@ auto main() -> int {
         const std::filesystem::path earth_shader_path =
             "shaders/slang/basic/earth.slang";
 
+        constexpr double kCameraDistanceInEarthRadii = 3.0;
+
         FrameState state{
             .app = application,
             .rotation = rotation,
             .directional_light = directional_light,
             .uniform_data = uniform_data,
             .cloud_data = cloud_data,
+            .earth_data = earth_data,
             .previous_cursor = {},
             .was_dragging = false,
             .was_right_pressed = false,
@@ -661,6 +843,18 @@ auto main() -> int {
             .observed_shader_write_time =
                 std::filesystem::last_write_time(earth_shader_path),
             .earth_shader_path = earth_shader_path,
+            .earth_world_position =
+                {
+                    .x = kEarthOrbitDistanceMeters,
+                    .y = 0.0,
+                    .z = 0.0,
+                },
+            .camera_world_position =
+                {
+                    .x = kEarthOrbitDistanceMeters,
+                    .y = 0.0,
+                    .z = kCameraDistanceInEarthRadii * kEarthMeanRadiusMeters,
+                },
         };
 
         application.run(

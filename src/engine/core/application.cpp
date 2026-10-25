@@ -57,4 +57,8 @@ namespace SNE::Engine::Core {
         Renderer::Shader::ShaderStageInput fragment_shader) -> void {
         m_Renderer.replaceFragmentShader(std::move(fragment_shader));
     }
+
+    auto Application::setCursorCaptured(bool captured) -> void {
+        m_Window.setCursorCaptured(captured);
+    }
 } // namespace SNE::Engine::Core

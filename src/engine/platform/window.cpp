@@ -4,6 +4,7 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/platform/input/cursor_position.hpp"
+#include "engine/platform/input/key.hpp"
 #include "engine/platform/input/mouse_button.hpp"
 #include "error/glfw_error.hpp"
 #include <GLFW/glfw3.h>
@@ -90,5 +91,37 @@ namespace SNE::Engine::Platform {
             Core::Error::Subsystem::Platform,
             "Window mouse-button query requires a supported MouseButton "
             "value");
+    }
+
+    auto Window::isKeyPressed(Key key) const -> bool {
+        switch (key) {
+        case Key::W:
+            return glfwGetKey(m_Window, GLFW_KEY_W) == GLFW_PRESS;
+        case Key::S:
+            return glfwGetKey(m_Window, GLFW_KEY_S) == GLFW_PRESS;
+        case Key::A:
+            return glfwGetKey(m_Window, GLFW_KEY_A) == GLFW_PRESS;
+        case Key::D:
+            return glfwGetKey(m_Window, GLFW_KEY_D) == GLFW_PRESS;
+        case Key::Q:
+            return glfwGetKey(m_Window, GLFW_KEY_Q) == GLFW_PRESS;
+        case Key::E:
+            return glfwGetKey(m_Window, GLFW_KEY_E) == GLFW_PRESS;
+        case Key::LeftShift:
+            return glfwGetKey(m_Window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+        case Key::Tab:
+            return glfwGetKey(m_Window, GLFW_KEY_TAB) == GLFW_PRESS;
+        }
+
+        Core::Assertion::failAssertion(
+            Core::Assertion::AssertionType::Precondition,
+            Core::Error::Subsystem::Platform,
+            "Window key query requires a supported Key "
+            "value");
+    }
+
+    auto Window::setCursorCaptured(bool captured) -> void {
+        glfwSetInputMode(m_Window, GLFW_CURSOR,
+                         captured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     }
 } // namespace SNE::Engine::Platform
