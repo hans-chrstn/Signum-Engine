@@ -292,4 +292,113 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         vkCmdCopyBufferToImage2(command_buffer, &copy_info);
     }
+
+    auto recordImageToBufferCopy(VkCommandBuffer command_buffer,
+                                 const ImageToBufferCopyRequest &request)
+        -> void {
+        if (command_buffer == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "recordImageToBufferCopy requires a valid command buffer");
+        }
+
+        if (request.source == VK_NULL_HANDLE) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "recordImageToBufferCopy requires a valid source image");
+        }
+
+        if ((request.destination.usage() & VK_BUFFER_USAGE_TRANSFER_DST_BIT) ==
+            0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "recordImageToBufferCopy requires the destination buffer to "
+                "support transfer-destination usage");
+        }
+
+        if (request.regions.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "recordImageToBufferCopy requires at least one copy region");
+        }
+
+        const std::optional<std::uint32_t> region_count =
+            Core::Numeric::tryConvertToUint32(request.regions.size());
+
+        if (!region_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "recordImageToBufferCopy region count exceeds uint32_t");
+        }
+
+        for (const VkBufferImageCopy2 &image_copy : request.regions) {
+            if (image_copy.sType != VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "recordImageToBufferCopy requires a valid copy region "
+                    "structure type");
+            }
+
+            if (image_copy.imageExtent.width == 0U ||
+                image_copy.imageExtent.height == 0U ||
+                image_copy.imageExtent.depth == 0U) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "recordImageToBufferCopy requires a non-zero image copy "
+                    "extent");
+            }
+
+            if (image_copy.imageSubresource.layerCount == 0U) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "recordImageToBufferCopy requires at least one image array "
+                    "layer");
+            }
+
+            if (image_copy.bufferRowLength != 0U &&
+                image_copy.bufferRowLength < image_copy.imageExtent.width) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "recordImageToBufferCopy buffer row length is smaller than "
+                    "the copy width");
+            }
+
+            if (image_copy.bufferImageHeight != 0U &&
+                image_copy.bufferImageHeight < image_copy.imageExtent.height) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "recordImageToBufferCopy buffer image height is smaller "
+                    "than the copy height");
+            }
+
+            if (!std::has_single_bit(image_copy.imageSubresource.aspectMask)) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "recordImageToBufferCopy requires exactly one image aspect "
+                    "per region");
+            }
+        }
+
+        VkCopyImageToBufferInfo2 image_to_buffer_info{};
+        image_to_buffer_info.sType =
+            VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2;
+        image_to_buffer_info.srcImage = request.source;
+        image_to_buffer_info.srcImageLayout = request.source_layout;
+        image_to_buffer_info.dstBuffer = request.destination.nativeHandle();
+        image_to_buffer_info.regionCount = region_count.value();
+        image_to_buffer_info.pRegions = request.regions.data();
+
+        vkCmdCopyImageToBuffer2(command_buffer, &image_to_buffer_info);
+    }
 } // namespace SNE::Engine::Renderer::Vulkan

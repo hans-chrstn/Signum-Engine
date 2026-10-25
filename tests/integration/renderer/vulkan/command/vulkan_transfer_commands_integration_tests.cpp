@@ -1,4 +1,3 @@
-
 #include "../vulkan_integration_test_fixture.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
@@ -790,4 +789,290 @@ TEST_F(VulkanIntegrationTest, RejectsIncompleteMipChainData) {
                                          immediateSubmission(), destination,
                                          pixels),
                  "pixel data size does not match image dimensions");
+}
+
+TEST_F(VulkanIntegrationTest, CopiesImagePixelsToReadbackBuffer) {
+    constexpr std::uint32_t kWidth{2U};
+    constexpr std::uint32_t kHeight{2U};
+
+    constexpr std::array<std::byte, 16U> kPixels{
+        std::byte{255}, std::byte{0},   std::byte{0},   std::byte{255},
+        std::byte{0},   std::byte{255}, std::byte{0},   std::byte{255},
+        std::byte{0},   std::byte{0},   std::byte{255}, std::byte{255},
+        std::byte{255}, std::byte{255}, std::byte{0},   std::byte{255},
+    };
+
+    const Vulkan::VulkanImageCreateInfo image_info{
+        .extent =
+            {
+                .width = kWidth,
+                .height = kHeight,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage =
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    };
+
+    const Vulkan::VulkanBufferCreateInfo buffer_info{
+        .size = static_cast<VkDeviceSize>(kPixels.size()),
+        .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        .memory_usage = Renderer::GpuMemoryUsage::Readback,
+    };
+
+    const Vulkan::VulkanImage source{memoryAllocator(), image_info};
+    Vulkan::VulkanBuffer destination{memoryAllocator(), buffer_info};
+
+    ASSERT_NO_THROW(Vulkan::uploadImageData(
+        memoryAllocator(), immediateSubmission(), source, kPixels));
+
+    VkBufferImageCopy2 region{};
+    region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
+    region.imageSubresource = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .mipLevel = 0U,
+        .baseArrayLayer = 0U,
+        .layerCount = 1U,
+    };
+    region.imageExtent = {
+        .width = kWidth,
+        .height = kHeight,
+        .depth = 1U,
+    };
+
+    const std::array regions{region};
+
+    const Vulkan::ImageToBufferCopyRequest request{
+        .source = source.nativeHandle(),
+        .destination = destination,
+        .regions = regions,
+    };
+
+    VkImageMemoryBarrier2 barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = source.nativeHandle();
+    barrier.subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0U,
+        .levelCount = 1U,
+        .baseArrayLayer = 0U,
+        .layerCount = 1U,
+    };
+
+    ASSERT_NO_THROW(immediateSubmission().execute(
+        [&](VkCommandBuffer command_buffer) -> void {
+            Vulkan::recordImageBarrier(command_buffer, barrier);
+            Vulkan::recordImageToBufferCopy(command_buffer, request);
+        }));
+
+    std::array<std::byte, kPixels.size()> readback{};
+
+    ASSERT_NO_THROW(destination.read(readback));
+
+    EXPECT_EQ(readback, kPixels);
+}
+
+TEST_F(VulkanIntegrationTest, RejectsInvalidImageToBufferCopyRequests) {
+    const Vulkan::VulkanBufferCreateInfo valid_buffer_info{
+        .size = 16U,
+        .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        .memory_usage = Renderer::GpuMemoryUsage::Device,
+    };
+
+    const Vulkan::VulkanBufferCreateInfo invalid_buffer_info{
+        .size = 16U,
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        .memory_usage = Renderer::GpuMemoryUsage::Device,
+    };
+
+    const Vulkan::VulkanImageCreateInfo image_info{
+        .extent =
+            {
+                .width = 2U,
+                .height = 2U,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+    };
+
+    const Vulkan::VulkanImage source{memoryAllocator(), image_info};
+
+    const Vulkan::VulkanBuffer destination{memoryAllocator(),
+                                           valid_buffer_info};
+
+    const Vulkan::VulkanBuffer invalid_destination{memoryAllocator(),
+                                                   invalid_buffer_info};
+
+    VkBufferImageCopy2 region{};
+    region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.layerCount = 1U;
+    region.imageExtent = {
+        .width = 2U,
+        .height = 2U,
+        .depth = 1U,
+    };
+
+    const std::array regions{region};
+
+    const Vulkan::ImageToBufferCopyRequest valid_request{
+        .source = source.nativeHandle(),
+        .destination = destination,
+        .regions = regions,
+    };
+
+    std::byte dummy{};
+    auto *command_buffer = reinterpret_cast<VkCommandBuffer>(&dummy);
+
+    ASSERT_DEATH(Vulkan::recordImageToBufferCopy(VK_NULL_HANDLE, valid_request),
+                 "recordImageToBufferCopy requires a valid command buffer");
+
+    const Vulkan::ImageToBufferCopyRequest null_image_request{
+        .source = VK_NULL_HANDLE,
+        .destination = destination,
+        .regions = regions,
+    };
+
+    ASSERT_DEATH(
+        Vulkan::recordImageToBufferCopy(command_buffer, null_image_request),
+        "recordImageToBufferCopy requires a valid source image");
+
+    const Vulkan::ImageToBufferCopyRequest invalid_usage_request{
+        .source = source.nativeHandle(),
+        .destination = invalid_destination,
+        .regions = regions,
+    };
+
+    ASSERT_DEATH(
+        Vulkan::recordImageToBufferCopy(command_buffer, invalid_usage_request),
+        "recordImageToBufferCopy requires the destination buffer to "
+        "support transfer-destination usage");
+
+    const Vulkan::ImageToBufferCopyRequest empty_regions_request{
+        .source = source.nativeHandle(),
+        .destination = destination,
+        .regions = {},
+    };
+
+    ASSERT_DEATH(
+        Vulkan::recordImageToBufferCopy(command_buffer, empty_regions_request),
+        "recordImageToBufferCopy requires at least one copy region");
+}
+
+TEST_F(VulkanIntegrationTest, RejectsInvalidImageToBufferCopyRegions) {
+    const Vulkan::VulkanBufferCreateInfo buffer_info{
+        .size = 16U,
+        .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        .memory_usage = Renderer::GpuMemoryUsage::Device,
+    };
+
+    const Vulkan::VulkanImageCreateInfo image_info{
+        .extent =
+            {
+                .width = 2U,
+                .height = 2U,
+                .depth = 1U,
+            },
+        .image_type = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+        .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+    };
+
+    const Vulkan::VulkanImage source{memoryAllocator(), image_info};
+    const Vulkan::VulkanBuffer destination{memoryAllocator(), buffer_info};
+
+    VkBufferImageCopy2 region{};
+    region.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.layerCount = 1U;
+    region.imageExtent = {
+        .width = 2U,
+        .height = 2U,
+        .depth = 1U,
+    };
+
+    std::array regions{region};
+
+    const Vulkan::ImageToBufferCopyRequest request{
+        .source = source.nativeHandle(),
+        .destination = destination,
+        .regions = regions,
+    };
+
+    std::byte dummy{};
+    auto *command_buffer = reinterpret_cast<VkCommandBuffer>(&dummy);
+
+    regions[0].sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+
+    ASSERT_DEATH(
+        Vulkan::recordImageToBufferCopy(command_buffer, request),
+        "recordImageToBufferCopy requires a valid copy region structure type");
+
+    regions[0].sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2;
+    regions[0].imageExtent.width = 0U;
+
+    ASSERT_DEATH(
+        Vulkan::recordImageToBufferCopy(command_buffer, request),
+        "recordImageToBufferCopy requires a non-zero image copy extent");
+
+    regions[0].imageExtent.width = 2U;
+    regions[0].imageExtent.height = 0U;
+
+    ASSERT_DEATH(
+        Vulkan::recordImageToBufferCopy(command_buffer, request),
+        "recordImageToBufferCopy requires a non-zero image copy extent");
+
+    regions[0].imageExtent.height = 2U;
+    regions[0].imageExtent.depth = 0U;
+
+    ASSERT_DEATH(
+        Vulkan::recordImageToBufferCopy(command_buffer, request),
+        "recordImageToBufferCopy requires a non-zero image copy extent");
+
+    regions[0].imageExtent.depth = 1U;
+    regions[0].imageSubresource.layerCount = 0U;
+
+    ASSERT_DEATH(
+        Vulkan::recordImageToBufferCopy(command_buffer, request),
+        "recordImageToBufferCopy requires at least one image array layer");
+
+    regions[0].imageSubresource.layerCount = 1U;
+    regions[0].bufferRowLength = 1U;
+
+    ASSERT_DEATH(Vulkan::recordImageToBufferCopy(command_buffer, request),
+                 "recordImageToBufferCopy buffer row length is smaller than "
+                 "the copy width");
+
+    regions[0].bufferRowLength = 0U;
+    regions[0].bufferImageHeight = 1U;
+
+    ASSERT_DEATH(Vulkan::recordImageToBufferCopy(command_buffer, request),
+                 "recordImageToBufferCopy buffer image height is smaller "
+                 "than the copy height");
+
+    regions[0].bufferImageHeight = 0U;
+    regions[0].imageSubresource.aspectMask = 0U;
+
+    ASSERT_DEATH(Vulkan::recordImageToBufferCopy(command_buffer, request),
+                 "recordImageToBufferCopy requires exactly one image aspect "
+                 "per region");
+
+    regions[0].imageSubresource.aspectMask =
+        VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    ASSERT_DEATH(Vulkan::recordImageToBufferCopy(command_buffer, request),
+                 "recordImageToBufferCopy requires exactly one image aspect "
+                 "per region");
 }
