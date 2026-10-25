@@ -2820,5 +2820,29 @@ namespace SNE::Engine::Renderer::Vulkan {
         setDrawInstanceModelMatrix(std::size_t instance_index,
                                    const Core::Math::Matrix4f &model_matrix)
             -> void;
+
+        /**
+         * @brief Updates the camera's world-to-view transformation.
+         *
+         * Replaces the view matrix used when recording subsequent frames.
+         * Preserves the existing camera projection parameters.
+         *
+         * The supplied matrix represents the transformation from world
+         * coordinates into camera coordinates, not the camera's world-space
+         * model transformation.
+         *
+         * @param view_matrix Replacement world-to-view matrix.
+         *
+         * @pre An initial camera configuration must exist.
+         * @pre Every matrix element must be finite.
+         * @pre Updates must be serialized with frame command recording.
+         *
+         * @post Subsequent frames use the updated camera view matrix.
+         *
+         * @note Does not recreate graphics pipelines, upload GPU resources,
+         * or modify swapchain resources.
+         */
+        auto setCameraViewMatrix(const Core::Math::Matrix4f &view_matrix)
+            -> void;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

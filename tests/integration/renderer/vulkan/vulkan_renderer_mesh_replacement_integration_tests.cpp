@@ -1,6 +1,7 @@
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
@@ -992,4 +993,184 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         "requires a valid draw instance index");
 
     ASSERT_NO_THROW(renderer.renderFrame());
+}
+
+TEST(VulkanRendererCameraIntegrationTests,
+     UpdatesCameraViewAcrossRenderedFrames) {
+    if (std::getenv("DISPLAY") == nullptr &&
+        std::getenv("WAYLAND_DISPLAY") == nullptr) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    Platform::GlfwContext glfw{};
+
+    const Platform::Window window{
+        kWindowSize,
+        "Signum Runtime Camera Update Test",
+    };
+
+    Vulkan::VulkanInstance instance{
+        "Signum Runtime Camera Update Test",
+        false,
+    };
+
+    Vulkan::VulkanSurface surface{
+        instance.nativeHandle(),
+        window.nativeHandle(),
+    };
+
+    const auto devices =
+        Vulkan::enumeratePhysicalDevices(instance.nativeHandle());
+
+    const auto discovered =
+        Vulkan::inspectPhysicalDevices(devices, surface.nativeHandle());
+
+    if (!Vulkan::selectPhysicalDevice(discovered).has_value()) {
+        GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+    }
+
+    const Renderer::MeshUploadData triangle_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kTriangleVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kTriangleIndices,
+    };
+
+    const std::array model_matrices{
+        Math::identity(),
+    };
+
+    const Renderer::InitialMeshData initial_mesh{
+        .mesh = triangle_mesh,
+        .layout =
+            {
+                .attributes = kVertexAttributes,
+            },
+        .model_matrices = model_matrices,
+    };
+
+    const Renderer::InitialCameraData initial_camera{
+        .view = Math::translate(0.0F, 0.0F, -2.0F),
+        .fov_y_radians = std::numbers::pi_v<float> / 3.0F,
+        .near_plane = 0.1F,
+        .far_plane = 100.0F,
+    };
+
+    const std::filesystem::path shader_directory{
+        SIGNUM_TEST_SHADER_DIR,
+    };
+
+    Shader::GraphicsShaderData shaders{
+        .vertex =
+            {
+                .artifact =
+                    Vulkan::loadSpirv(shader_directory / "triangle.vert.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Vertex,
+                        .entry_point = "main",
+                    },
+            },
+        .fragment =
+            {
+                .artifact =
+                    Vulkan::loadSpirv(shader_directory / "triangle.frag.spv"),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            },
+    };
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Runtime Camera Update Test",
+        window,
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        initial_camera,
+        std::move(shaders),
+    };
+
+    ASSERT_NO_THROW(renderer.renderFrame());
+
+    const Math::Matrix4f second_view = Math::translate(-0.25F, 0.0F, -3.0F);
+
+    ASSERT_NO_THROW(renderer.setCameraViewMatrix(second_view));
+
+    for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+
+    const Math::Matrix4f third_view = Math::multiply(
+        Math::rotateX(0.2F), Math::translate(0.15F, -0.1F, -4.0F));
+
+    ASSERT_NO_THROW(renderer.setCameraViewMatrix(third_view));
+
+    for (std::size_t frame{}; frame < kFramesPerMesh; ++frame) {
+        ASSERT_NO_THROW(renderer.renderFrame());
+    }
+
+    Math::Matrix4f invalid_view = Math::identity();
+    invalid_view.at(0U, 0U) = std::numeric_limits<float>::quiet_NaN();
+
+    ASSERT_DEATH(
+        { renderer.setCameraViewMatrix(invalid_view); },
+        "requires finite matrix elements");
+
+    invalid_view = Math::identity();
+    invalid_view.at(1U, 3U) = std::numeric_limits<float>::infinity();
+
+    ASSERT_DEATH(
+        { renderer.setCameraViewMatrix(invalid_view); },
+        "requires finite matrix elements");
+
+    ASSERT_NO_THROW(renderer.renderFrame());
+}
+
+TEST(VulkanRendererCameraIntegrationTests,
+     RejectsCameraUpdatesWithoutInitializedCamera) {
+    if (std::getenv("DISPLAY") == nullptr &&
+        std::getenv("WAYLAND_DISPLAY") == nullptr) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    Platform::GlfwContext glfw{};
+
+    const Platform::Window window{
+        kWindowSize,
+        "Signum Missing Camera Test",
+    };
+
+    Vulkan::VulkanInstance instance{
+        "Signum Missing Camera Test",
+        false,
+    };
+
+    Vulkan::VulkanSurface surface{
+        instance.nativeHandle(),
+        window.nativeHandle(),
+    };
+
+    const auto devices =
+        Vulkan::enumeratePhysicalDevices(instance.nativeHandle());
+
+    const auto discovered =
+        Vulkan::inspectPhysicalDevices(devices, surface.nativeHandle());
+
+    if (!Vulkan::selectPhysicalDevice(discovered).has_value()) {
+        GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+    }
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Missing Camera Test",
+        window,
+        Renderer::PresentationPreference::VSync,
+        false,
+    };
+
+    ASSERT_DEATH(
+        { renderer.setCameraViewMatrix(Math::identity()); },
+        "requires an initialized camera");
 }

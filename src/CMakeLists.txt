@@ -21,6 +21,7 @@ add_library(
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp
+    engine/renderer/camera/camera_relative_position.cpp
     engine/renderer/geometry/uv_sphere_mesh.cpp
     engine/renderer/geometry/vertex_format.cpp
     engine/renderer/lighting/directional_light.cpp

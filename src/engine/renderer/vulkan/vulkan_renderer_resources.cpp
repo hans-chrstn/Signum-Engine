@@ -14,6 +14,7 @@
 #include "vulkan_renderer.hpp"
 #include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -712,5 +713,31 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         m_DrawInstances[instance_index].model_matrix = model_matrix;
+    }
+
+    auto
+    VulkanRenderer::setCameraViewMatrix(const Core::Math::Matrix4f &view_matrix)
+        -> void {
+        if (!m_InitialCamera.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::setCameraViewMatrix requires an initialized "
+                "camera");
+        }
+
+        const auto finite_elements = std::ranges::all_of(
+            view_matrix.elements,
+            [](float element) -> bool { return std::isfinite(element); });
+
+        if (!finite_elements) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::setCameraViewMatrix requires finite matrix "
+                "elements");
+        }
+
+        m_InitialCamera->view = view_matrix;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

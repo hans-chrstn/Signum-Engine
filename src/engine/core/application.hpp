@@ -103,6 +103,24 @@ namespace SNE::Engine::Core {
             -> void;
 
         /**
+         * @brief Updates the camera view used for subsequent frames.
+         *
+         * Forwards a world-to-view transformation to the renderer.
+         * Preserves the existing camera projection parameters.
+         *
+         * @param view_matrix Replacement world-to-view matrix.
+         *
+         * @pre A camera must already be configured.
+         * @pre Every matrix element must be finite.
+         * @pre Updates must be serialized with rendering operations.
+         *
+         * @post Subsequent frames use the supplied view matrix.
+         *
+         * @note Does not recreate renderer resources.
+         */
+        auto setCameraViewMatrix(const Math::Matrix4f &view_matrix) -> void;
+
+        /**
          * @brief Updates an existing material uniform or storage buffer.
          *
          * Forwards the supplied descriptor location and CPU data to the

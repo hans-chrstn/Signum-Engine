@@ -41,6 +41,11 @@ namespace SNE::Engine::Core {
         m_Renderer.setDrawInstanceModelMatrix(instance_index, model_matrix);
     }
 
+    auto Application::setCameraViewMatrix(const Math::Matrix4f &view_matrix)
+        -> void {
+        m_Renderer.setCameraViewMatrix(view_matrix);
+    }
+
     auto
     Application::updateMaterialBuffer(Renderer::MaterialBufferUpdateInput input)
         -> void {
