@@ -21,33 +21,6 @@ option(
   OFF
 )
 
-find_package(Vulkan REQUIRED)
-find_package(glfw3 3.4 REQUIRED)
-find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-find_package(PkgConfig REQUIRED)
-
-find_path(
-  SIGNUM_STB_INCLUDE_DIR
-  NAMES stb_image.h
-  PATH_SUFFIXES stb
-  REQUIRED
-)
-
-pkg_check_modules(
-  SPIRVTools
-  REQUIRED
-  IMPORTED_TARGET
-  SPIRV-Tools
-)
-
-add_library(signum_project_options INTERFACE)
-
-target_compile_features(
-  signum_project_options
-  INTERFACE
-    cxx_std_26
-)
-
 option(
   SIGNUM_ENABLE_REFLECTION
   "Enable experimental C++26 reflection"
@@ -76,6 +49,45 @@ option(
   SIGNUM_BUILD_SHADERS
   "Build the shaders"
   OFF
+)
+
+option(
+  SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION
+  "Enable runtime shader source compilation"
+  OFF
+)
+
+
+
+find_package(Vulkan REQUIRED)
+find_package(glfw3 3.4 REQUIRED)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+find_package(PkgConfig REQUIRED)
+
+if(SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION)
+  find_package(slang CONFIG REQUIRED)
+endif()
+
+find_path(
+  SIGNUM_STB_INCLUDE_DIR
+  NAMES stb_image.h
+  PATH_SUFFIXES stb
+  REQUIRED
+)
+
+pkg_check_modules(
+  SPIRVTools
+  REQUIRED
+  IMPORTED_TARGET
+  SPIRV-Tools
+)
+
+add_library(signum_project_options INTERFACE)
+
+target_compile_features(
+  signum_project_options
+  INTERFACE
+    cxx_std_26
 )
 
 if(SIGNUM_ENABLE_REFLECTION OR SIGNUM_ENABLE_CONTRACTS)

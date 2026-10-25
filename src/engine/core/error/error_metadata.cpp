@@ -299,6 +299,31 @@ namespace SNE::Engine::Core::Error {
                     .subsystem = Subsystem::Vulkan,
                 },
                 ErrorMetadata{
+                    .code = Code::ShaderCompilerInitializationFailed,
+                    .name = "ShaderCompilerInitializationFailed",
+                    .subsystem = Subsystem::Renderer,
+                },
+                ErrorMetadata{
+                    .code = Code::ShaderCompilerSessionCreationFailed,
+                    .name = "ShaderCompilerSessionCreationFailed",
+                    .subsystem = Subsystem::Renderer,
+                },
+                ErrorMetadata{
+                    .code = Code::ShaderSourceInvalid,
+                    .name = "ShaderSourceInvalid",
+                    .subsystem = Subsystem::Renderer,
+                },
+                ErrorMetadata{
+                    .code = Code::ShaderSourceLoadFailed,
+                    .name = "ShaderSourceLoadFailed",
+                    .subsystem = Subsystem::Renderer,
+                },
+                ErrorMetadata{
+                    .code = Code::ShaderSourceCompilationFailed,
+                    .name = "ShaderSourceCompilationFailed",
+                    .subsystem = Subsystem::Renderer,
+                },
+                ErrorMetadata{
                     .code = Code::ImageLoadFailed,
                     .name = "ImageLoadFailed",
                     .subsystem = Subsystem::Renderer,

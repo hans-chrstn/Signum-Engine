@@ -135,6 +135,16 @@ namespace SNE::Engine::Core::Error {
         VulkanDescriptorLayoutIncompatible,
         /** Replacement shader material bindings are incompatible. */
         VulkanMaterialBindingsIncompatible,
+        /** Initialization of a shader source compiler failed. */
+        ShaderCompilerInitializationFailed,
+        /** Creation of a shader compiler session failed. */
+        ShaderCompilerSessionCreationFailed,
+        /** Shader source description contains invalid input. */
+        ShaderSourceInvalid,
+        /** Loading a shader source file failed. */
+        ShaderSourceLoadFailed,
+        /** Compilation of shader source code failed. */
+        ShaderSourceCompilationFailed,
         /** Loading or decoding an image file failed. */
         ImageLoadFailed,
         /**

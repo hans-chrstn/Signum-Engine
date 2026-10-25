@@ -114,6 +114,22 @@ target_link_libraries(
     spirv-reflect-static
 )
 
+if(SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION)
+  add_library(
+    signum_shader_compiler
+    STATIC
+      engine/renderer/shader/shader_source_compiler.cpp
+  )
+
+  target_link_libraries(
+    signum_shader_compiler
+    PUBLIC
+      signum_engine
+    PRIVATE
+      slang::slang
+  )
+endif()
+
 add_executable(
   signum
   main.cpp

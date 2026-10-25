@@ -20,8 +20,10 @@
 #include "engine/renderer/material/material_buffer_update_frequency.hpp"
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/shader/shader_artifact.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
+#include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/texture/image_loader.hpp"
 #include "engine/renderer/texture/texture_format.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
@@ -32,9 +34,11 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <filesystem>
 #include <iostream>
 #include <numbers>
 #include <span>
+#include <system_error>
 #include <utility>
 
 namespace Renderer = SNE::Engine::Renderer;
@@ -44,22 +48,255 @@ namespace Math = SNE::Engine::Core::Math;
 namespace Shader = SNE::Engine::Renderer::Shader;
 namespace Platform = SNE::Engine::Platform;
 
-auto main() -> int {
-    try {
-        constexpr float kSphereRadius{0.75F};
-        constexpr std::uint32_t kSphereLongitudeSegments{64U};
-        constexpr std::uint32_t kSphereLatitudeSegments{32U};
+namespace {
+    [[nodiscard]] auto
+    tryReplaceFragmentShader(Core::Application &application,
+                             const std::filesystem::path &shader_path) -> bool {
 
-        constexpr Renderer::UvSphereParameters sphere_param{
-            .radius = kSphereRadius,
-            .longitude_segments = kSphereLongitudeSegments,
-            .latitude_segments = kSphereLatitudeSegments,
+        try {
+            Shader::ShaderArtifact artifact = Vulkan::loadSpirv(shader_path);
+
+            Shader::ShaderStageInput input{
+                .artifact = std::move(artifact),
+                .selection =
+                    {
+                        .stage = Shader::ShaderStage::Fragment,
+                        .entry_point = "main",
+                    },
+            };
+
+            application.replaceFragmentShader(std::move(input));
+
+        } catch (const Core::Error::EngineError &error) {
+            Core::Error::writeDiagnostic(std::cerr, error);
+            return false;
+        }
+        return true;
+    }
+
+    struct CloudUniformData {
+        Math::Vector4f uv_offset{};
+    };
+
+    struct alignas(sizeof(Math::Vector4f)) EarthViewUniformData {
+        Math::Vector4f camera_world_position{};
+        Math::Vector4f sphere_center_radius{};
+    };
+
+    struct FrameState {
+        Core::Application &app;
+        Math::Vector3f rotation;
+        Renderer::DirectionalLight directional_light;
+        Renderer::DirectionalLightUniformData uniform_data;
+        CloudUniformData cloud_data;
+        Platform::CursorPosition previous_cursor{};
+        bool was_dragging{};
+        bool was_right_pressed{};
+        bool was_middle_pressed{};
+        bool light_enabled{true};
+        bool is_earth_shader_active{true};
+        double planet_spin_radians{};
+        std::chrono::steady_clock::time_point cloud_animation_start;
+        std::chrono::steady_clock::time_point previous_frame_time;
+        std::chrono::steady_clock::time_point last_shader_poll_time;
+        std::filesystem::file_time_type observed_shader_write_time;
+        std::filesystem::path earth_shader_path;
+    };
+
+    constexpr float kSphereRadius{0.75F};
+    constexpr std::uint32_t kSphereLongitudeSegments{64U};
+    constexpr std::uint32_t kSphereLatitudeSegments{32U};
+    constexpr float kCameraDistance = 3.0F;
+    constexpr float kCameraFovRadians = std::numbers::pi_v<float> / 3.0F;
+    constexpr float kCameraNearPlane = 0.1F;
+    constexpr float kCameraFarPlane = 100.0F;
+    constexpr float kDegreesToRadians = std::numbers::pi_v<float> / 180.0F;
+    constexpr float kRotateX = 20.0F;
+    constexpr float kRotateY = -30.0F;
+    constexpr float kRotateZ = 0.0F;
+    constexpr float kRotationSensitivity{0.005F};
+    constexpr double kCloudScrollSpeed{0.005};
+    constexpr double kAutoRotationRadiansPerSecond{0.05};
+    constexpr double kFullRotationRadians = 2.0;
+    constexpr auto kShaderPollInterval = std::chrono::milliseconds{250};
+    constexpr std::size_t kInitialTextureBindingsSize{5U};
+    constexpr std::uint32_t kMaterialDescriptorSet{0U};
+    constexpr std::uint32_t kDayTextureBinding{0U};
+    constexpr std::uint32_t kMaterialArrayElement{0U};
+    constexpr std::uint32_t kNightTextureBinding{2U};
+    constexpr std::uint32_t kCloudTextureBinding{3U};
+    constexpr std::uint32_t kSpecularTextureBinding{5U};
+    constexpr std::uint32_t kNormalTextureBinding{7U};
+    constexpr std::uint32_t kDirectionalLightUniformBinding{1U};
+    constexpr std::uint32_t kCloudUniformBinding{4U};
+    constexpr std::uint32_t kEarthViewUniformBinding{6U};
+    constexpr std::size_t kCloudUniformDataSize = 16U;
+    constexpr std::size_t kEarthViewUniformDataSize = 32U;
+
+    static_assert(sizeof(CloudUniformData) == kCloudUniformDataSize);
+    static_assert(sizeof(EarthViewUniformData) == kEarthViewUniformDataSize);
+    static_assert(alignof(EarthViewUniformData) == sizeof(Math::Vector4f));
+    static_assert(offsetof(EarthViewUniformData, sphere_center_radius) ==
+                  sizeof(Math::Vector4f));
+
+    auto updateCloudUniforms(FrameState &state, double elapsed_seconds)
+        -> void {
+        const double cloud_offset =
+            std::fmod(elapsed_seconds * kCloudScrollSpeed, 1.0);
+        state.cloud_data.uv_offset.x = static_cast<float>(cloud_offset);
+
+        state.app.updateMaterialBuffer({
+            .set = kMaterialDescriptorSet,
+            .binding = kCloudUniformBinding,
+            .array_element = kMaterialArrayElement,
+            .data = std::as_bytes(std::span{&state.cloud_data, 1}),
+        });
+    }
+
+    auto updatePlanetSpin(FrameState &state, double clamped_delta_seconds)
+        -> void {
+        state.planet_spin_radians = std::fmod(
+            state.planet_spin_radians +
+                (clamped_delta_seconds * kAutoRotationRadiansPerSecond),
+            kFullRotationRadians * std::numbers::pi);
+    }
+
+    auto pollShaderHotReload(FrameState &state,
+                             std::chrono::steady_clock::time_point frame_time)
+        -> void {
+        if (frame_time - state.last_shader_poll_time < kShaderPollInterval) {
+            return;
+        }
+        state.last_shader_poll_time = frame_time;
+
+        std::error_code filesystem_error;
+        const auto current_write_time = std::filesystem::last_write_time(
+            state.earth_shader_path, filesystem_error);
+
+        if (filesystem_error ||
+            current_write_time == state.observed_shader_write_time) {
+            return;
+        }
+        state.observed_shader_write_time = current_write_time;
+
+        if (state.is_earth_shader_active) {
+            static_cast<void>(
+                tryReplaceFragmentShader(state.app, state.earth_shader_path));
+        }
+    }
+
+    auto handleLightToggle(FrameState &state, bool is_right_pressed) -> void {
+        if (!is_right_pressed || state.was_right_pressed) {
+            return;
+        }
+        state.light_enabled = !state.light_enabled;
+        state.directional_light.intensity = state.light_enabled ? 1.0F : 0.0F;
+        state.uniform_data =
+            Renderer::makeDirectionalLightUniformData(state.directional_light);
+
+        state.app.updateMaterialBuffer({
+            .set = kMaterialDescriptorSet,
+            .binding = kDirectionalLightUniformBinding,
+            .array_element = kMaterialArrayElement,
+            .data = std::as_bytes(std::span{&state.uniform_data, 1}),
+        });
+    }
+
+    auto handleShaderToggle(FrameState &state, bool is_middle_pressed) -> void {
+        if (!is_middle_pressed || state.was_middle_pressed) {
+            return;
+        }
+        const std::filesystem::path replacement_path =
+            state.is_earth_shader_active ? "build/shaders/textured.frag.spv"
+                                         : "build/shaders/earth.frag.spv";
+
+        if (tryReplaceFragmentShader(state.app, replacement_path)) {
+            state.is_earth_shader_active = !state.is_earth_shader_active;
+        }
+    }
+
+    auto handleDragRotation(FrameState &state, bool is_dragging,
+                            const Platform::CursorPosition &current_cursor)
+        -> void {
+        if (is_dragging && !state.was_dragging) {
+            state.previous_cursor = current_cursor;
+            return;
+        }
+        if (!is_dragging) {
+            return;
+        }
+
+        const double delta_x = current_cursor.x - state.previous_cursor.x;
+        const double delta_y = current_cursor.y - state.previous_cursor.y;
+
+        state.rotation.y += static_cast<float>(delta_x) * kRotationSensitivity;
+        state.rotation.x += static_cast<float>(delta_y) * kRotationSensitivity;
+        state.previous_cursor = current_cursor;
+    }
+
+    auto updateModelMatrix(FrameState &state) -> void {
+        const Math::Vector3f translation{
+            .x = 0.0F,
+            .y = 0.0F,
+            .z = 0.0F,
+        };
+        const Math::Vector3f scale{
+            .x = 1.0F,
+            .y = 1.0F,
+            .z = 1.0F,
         };
 
-        const Renderer::UvSphereMesh sphere =
-            Renderer::generateUvSphereMesh(sphere_param);
+        const Math::Matrix4f orientation_matrix =
+            Math::composeTRS(translation, state.rotation, scale);
+        const Math::Matrix4f spin_matrix =
+            Math::rotateY(static_cast<float>(state.planet_spin_radians));
+        const Math::Matrix4f oriented_spin_matrix =
+            Math::multiply(orientation_matrix, spin_matrix);
 
-        constexpr std::array<Renderer::VertexAttributeDescription, 4>
+        state.app.setDrawInstanceModelMatrix(0U, oriented_spin_matrix);
+    }
+
+    auto processFrame(FrameState &state) -> void {
+        const auto frame_time = std::chrono::steady_clock::now();
+        const double frame_delta_seconds =
+            std::chrono::duration<double>{frame_time -
+                                          state.previous_frame_time}
+                .count();
+        state.previous_frame_time = frame_time;
+        const double clamped_delta_seconds =
+            frame_delta_seconds > 0.1 ? 0.1 : frame_delta_seconds;
+
+        const auto duration = frame_time - state.cloud_animation_start;
+        const double elapsed_seconds =
+            std::chrono::duration<double>{duration}.count();
+
+        updateCloudUniforms(state, elapsed_seconds);
+        updatePlanetSpin(state, clamped_delta_seconds);
+        pollShaderHotReload(state, frame_time);
+
+        const Platform::CursorPosition current_cursor =
+            state.app.window().cursorPosition();
+        const bool is_dragging = state.app.window().isMouseButtonPressed(
+            Platform::MouseButton::Left);
+        const bool is_right_pressed = state.app.window().isMouseButtonPressed(
+            Platform::MouseButton::Right);
+        const bool is_middle_pressed = state.app.window().isMouseButtonPressed(
+            Platform::MouseButton::Middle);
+
+        handleLightToggle(state, is_right_pressed);
+        handleShaderToggle(state, is_middle_pressed);
+        handleDragRotation(state, is_dragging, current_cursor);
+        updateModelMatrix(state);
+
+        state.was_dragging = is_dragging;
+        state.was_right_pressed = is_right_pressed;
+        state.was_middle_pressed = is_middle_pressed;
+    }
+
+    auto createInitialMesh(const Renderer::UvSphereMesh &sphere,
+                           const std::array<Math::Matrix4f, 1> &model_matrices)
+        -> Renderer::InitialMeshData {
+        static constexpr std::array<Renderer::VertexAttributeDescription, 4>
             kSphereVertexAttributes{
                 {
                     {
@@ -100,153 +337,27 @@ auto main() -> int {
             .attributes = kSphereVertexAttributes,
         };
 
-        constexpr float kCameraDistance = 3.0F;
-        constexpr float kCameraFovRadians = std::numbers::pi_v<float> / 3.0F;
-        constexpr float kCameraNearPlane = 0.1F;
-        constexpr float kCameraFarPlane = 100.0F;
-
-        constexpr float kDegreesToRadians = std::numbers::pi_v<float> / 180.0F;
-        constexpr float kRotateX = 20.0F;
-        constexpr float kRotateY = -30.0F;
-        constexpr float kRotateZ = 0.0F;
-
-        const Math::Vector3f translation{
-            .x = 0.0F,
-            .y = 0.0F,
-            .z = 0.0F,
-        };
-
-        Math::Vector3f rotation{
-            .x = kRotateX * kDegreesToRadians,
-            .y = kRotateY * kDegreesToRadians,
-            .z = kRotateZ * kDegreesToRadians,
-        };
-
-        const Math::Vector3f scale{
-            .x = 1.0F,
-            .y = 1.0F,
-            .z = 1.0F,
-        };
-
-        const Math::Matrix4f model_matrix =
-            Math::composeTRS(translation, rotation, scale);
-
-        const std::array<Math::Matrix4f, 1> model_matrices{
-            model_matrix,
-        };
-
-        const Renderer::InitialMeshData initial_mesh{
+        return Renderer::InitialMeshData{
             .mesh = mesh,
             .layout = layout,
             .model_matrices = model_matrices,
         };
+    }
 
-        const Renderer::InitialCameraData initial_camera{
+    auto createInitialCamera() -> Renderer::InitialCameraData {
+        return Renderer::InitialCameraData{
             .view = Math::translate(0.0F, 0.0F, -kCameraDistance),
             .fov_y_radians = kCameraFovRadians,
             .near_plane = kCameraNearPlane,
             .far_plane = kCameraFarPlane,
         };
+    }
 
-        const Renderer::Rgba8Image day_image =
-            Renderer::loadRgba8Image("playground/assets/earth_day.jpg");
-
-        const Renderer::Rgba8Image night_image =
-            Renderer::loadRgba8Image("playground/assets/earth_night.jpg");
-
-        const Renderer::Rgba8Image cloud_image =
-            Renderer::loadRgba8Image("playground/assets/earth_clouds.jpg");
-
-        const Renderer::Rgba8Image specular_image = Renderer::loadRgba8Image(
-            "playground/assets/earth_specular_map.png");
-
-        const Renderer::Rgba8Image normal_image =
-            Renderer::loadRgba8Image("playground/assets/earth_normal_map.png");
-
-        constexpr std::size_t kInitialTextureBindingsSize{5U};
-        constexpr std::uint32_t kMaterialDescriptorSet{0U};
-        constexpr std::uint32_t kDayTextureBinding{0U};
-        constexpr std::uint32_t kMaterialArrayElement{0U};
-        constexpr std::uint32_t kNightTextureBinding{2U};
-        constexpr std::uint32_t kCloudTextureBinding{3U};
-        constexpr std::uint32_t kSpecularTextureBinding{5U};
-        constexpr std::uint32_t kNormalTextureBinding{7U};
-        std::array<Renderer::MaterialTextureBindingInput,
-                   kInitialTextureBindingsSize>
-            initial_texture_bindings{
-                Renderer::MaterialTextureBindingInput{
-                    .set = kMaterialDescriptorSet,
-                    .binding = kDayTextureBinding,
-                    .array_element = kMaterialArrayElement,
-                    .texture =
-                        {
-                            .width = day_image.width,
-                            .height = day_image.height,
-                            .pixels = day_image.pixels,
-                            .format = Renderer::TextureFormat::Rgba8Srgb,
-                            .mip_levels = 1U,
-                        },
-                },
-                Renderer::MaterialTextureBindingInput{
-                    .set = kMaterialDescriptorSet,
-                    .binding = kNightTextureBinding,
-                    .array_element = kMaterialArrayElement,
-                    .texture =
-                        {
-                            .width = night_image.width,
-                            .height = night_image.height,
-                            .pixels = night_image.pixels,
-                            .format = Renderer::TextureFormat::Rgba8Srgb,
-                            .mip_levels = 1U,
-                        },
-                },
-                Renderer::MaterialTextureBindingInput{
-                    .set = kMaterialDescriptorSet,
-                    .binding = kCloudTextureBinding,
-                    .array_element = kMaterialArrayElement,
-                    .texture =
-                        {
-                            .width = cloud_image.width,
-                            .height = cloud_image.height,
-                            .pixels = cloud_image.pixels,
-                            .format = Renderer::TextureFormat::Rgba8Unorm,
-                            .mip_levels = 1U,
-                        },
-                },
-
-                Renderer::MaterialTextureBindingInput{
-                    .set = kMaterialDescriptorSet,
-                    .binding = kSpecularTextureBinding,
-                    .array_element = kMaterialArrayElement,
-                    .texture =
-                        {
-                            .width = specular_image.width,
-                            .height = specular_image.height,
-                            .pixels = specular_image.pixels,
-                            .format = Renderer::TextureFormat::Rgba8Unorm,
-                            .mip_levels = 1U,
-                        },
-                },
-
-                Renderer::MaterialTextureBindingInput{
-                    .set = kMaterialDescriptorSet,
-                    .binding = kNormalTextureBinding,
-                    .array_element = kMaterialArrayElement,
-                    .texture =
-                        {
-                            .width = normal_image.width,
-                            .height = normal_image.height,
-                            .pixels = normal_image.pixels,
-                            .format = Renderer::TextureFormat::Rgba8Unorm,
-                            .mip_levels = 1U,
-                        },
-                },
-        };
-
+    auto createInitialShaders() -> Shader::GraphicsShaderData {
         auto vertex_data = Vulkan::loadSpirv("build/shaders/textured.vert.spv");
         auto fragment_data = Vulkan::loadSpirv("build/shaders/earth.frag.spv");
 
-        Shader::GraphicsShaderData graphics_data{
+        return Shader::GraphicsShaderData{
             .vertex =
                 {
                     .artifact = std::move(vertex_data),
@@ -265,6 +376,149 @@ auto main() -> int {
                             .entry_point = "main",
                         },
                 },
+        };
+    }
+
+    struct InitialTextureImages {
+        Renderer::Rgba8Image day;
+        Renderer::Rgba8Image night;
+        Renderer::Rgba8Image clouds;
+        Renderer::Rgba8Image specular;
+        Renderer::Rgba8Image normal;
+    };
+
+    auto loadInitialTextureImages() -> InitialTextureImages {
+        return {
+            .day = Renderer::loadRgba8Image("playground/assets/earth_day.jpg"),
+            .night =
+                Renderer::loadRgba8Image("playground/assets/earth_night.jpg"),
+            .clouds =
+                Renderer::loadRgba8Image("playground/assets/earth_clouds.jpg"),
+            .specular = Renderer::loadRgba8Image(
+                "playground/assets/earth_specular_map.png"),
+            .normal = Renderer::loadRgba8Image(
+                "playground/assets/earth_normal_map.png"),
+        };
+    }
+
+    auto createInitialTextures(const InitialTextureImages &images)
+        -> std::array<Renderer::MaterialTextureBindingInput,
+                      kInitialTextureBindingsSize> {
+        return std::array<Renderer::MaterialTextureBindingInput,
+                          kInitialTextureBindingsSize>{
+            Renderer::MaterialTextureBindingInput{
+                .set = kMaterialDescriptorSet,
+                .binding = kDayTextureBinding,
+                .array_element = kMaterialArrayElement,
+                .texture =
+                    {
+                        .width = images.day.width,
+                        .height = images.day.height,
+                        .pixels = images.day.pixels,
+                        .format = Renderer::TextureFormat::Rgba8Srgb,
+                        .mip_levels = 1U,
+                    },
+            },
+            Renderer::MaterialTextureBindingInput{
+                .set = kMaterialDescriptorSet,
+                .binding = kNightTextureBinding,
+                .array_element = kMaterialArrayElement,
+                .texture =
+                    {
+                        .width = images.night.width,
+                        .height = images.night.height,
+                        .pixels = images.night.pixels,
+                        .format = Renderer::TextureFormat::Rgba8Srgb,
+                        .mip_levels = 1U,
+                    },
+            },
+            Renderer::MaterialTextureBindingInput{
+                .set = kMaterialDescriptorSet,
+                .binding = kCloudTextureBinding,
+                .array_element = kMaterialArrayElement,
+                .texture =
+                    {
+                        .width = images.clouds.width,
+                        .height = images.clouds.height,
+                        .pixels = images.clouds.pixels,
+                        .format = Renderer::TextureFormat::Rgba8Unorm,
+                        .mip_levels = 1U,
+                    },
+            },
+            Renderer::MaterialTextureBindingInput{
+                .set = kMaterialDescriptorSet,
+                .binding = kSpecularTextureBinding,
+                .array_element = kMaterialArrayElement,
+                .texture =
+                    {
+                        .width = images.specular.width,
+                        .height = images.specular.height,
+                        .pixels = images.specular.pixels,
+                        .format = Renderer::TextureFormat::Rgba8Unorm,
+                        .mip_levels = 1U,
+                    },
+            },
+            Renderer::MaterialTextureBindingInput{
+                .set = kMaterialDescriptorSet,
+                .binding = kNormalTextureBinding,
+                .array_element = kMaterialArrayElement,
+                .texture =
+                    {
+                        .width = images.normal.width,
+                        .height = images.normal.height,
+                        .pixels = images.normal.pixels,
+                        .format = Renderer::TextureFormat::Rgba8Unorm,
+                        .mip_levels = 1U,
+                    },
+            },
+        };
+    }
+
+    auto createInitialBuffers(
+        const Renderer::DirectionalLightUniformData &uniform_data,
+        const CloudUniformData &cloud_data,
+        const EarthViewUniformData &earth_data)
+        -> std::array<Renderer::MaterialBufferBindingInput, 3> {
+        return std::array<Renderer::MaterialBufferBindingInput, 3>{
+            Renderer::MaterialBufferBindingInput{
+                .set = kMaterialDescriptorSet,
+                .binding = kDirectionalLightUniformBinding,
+                .array_element = kMaterialArrayElement,
+                .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
+                .data = std::as_bytes(std::span{&uniform_data, 1}),
+            },
+            Renderer::MaterialBufferBindingInput{
+                .set = kMaterialDescriptorSet,
+                .binding = kCloudUniformBinding,
+                .array_element = kMaterialArrayElement,
+                .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
+                .update_frequency =
+                    Renderer::MaterialBufferUpdateFrequency::Frequent,
+                .data = std::as_bytes(std::span{&cloud_data, 1}),
+            },
+            Renderer::MaterialBufferBindingInput{
+                .set = kMaterialDescriptorSet,
+                .binding = kEarthViewUniformBinding,
+                .array_element = kMaterialArrayElement,
+                .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
+                .data = std::as_bytes(std::span{&earth_data, 1}),
+            },
+        };
+    }
+} // namespace
+
+auto main() -> int {
+    try {
+        const Math::Vector3f translation{
+            .x = 0.0F,
+            .y = 0.0F,
+            .z = 0.0F,
+        };
+
+        Math::Vector3f rotation{
+            .x = kRotateX * kDegreesToRadians,
+            .y = kRotateY * kDegreesToRadians,
+            .z = kRotateZ * kDegreesToRadians,
         };
 
         constexpr float kLightDirectionX = 3.0F;
@@ -290,28 +544,7 @@ auto main() -> int {
         Renderer::DirectionalLightUniformData uniform_data =
             Renderer::makeDirectionalLightUniformData(directional_light);
 
-        struct CloudUniformData {
-            Math::Vector4f uv_offset{};
-        };
-
-        constexpr std::size_t kCloudUniformDataSize = 16U;
-
-        static_assert(sizeof(CloudUniformData) == kCloudUniformDataSize);
-
         CloudUniformData cloud_data{};
-
-        struct alignas(sizeof(Math::Vector4f)) EarthViewUniformData {
-            Math::Vector4f camera_world_position{};
-            Math::Vector4f sphere_center_radius{};
-        };
-
-        constexpr std::size_t kEarthViewUniformDataSize = 32U;
-
-        static_assert(sizeof(EarthViewUniformData) ==
-                      kEarthViewUniformDataSize);
-        static_assert(alignof(EarthViewUniformData) == sizeof(Math::Vector4f));
-        static_assert(offsetof(EarthViewUniformData, sphere_center_radius) ==
-                      sizeof(Math::Vector4f));
 
         const EarthViewUniformData earth_data{
             .camera_world_position =
@@ -330,159 +563,72 @@ auto main() -> int {
                 },
         };
 
-        constexpr std::uint32_t kDirectionalLightUniformBinding{1U};
-        constexpr std::uint32_t kCloudUniformBinding{4U};
-        constexpr std::uint32_t kEarthViewUniformBinding{6U};
-        std::array<Renderer::MaterialBufferBindingInput, 3>
-            initial_buffer_bindings{
-                Renderer::MaterialBufferBindingInput{
-                    .set = kMaterialDescriptorSet,
-                    .binding = kDirectionalLightUniformBinding,
-                    .array_element = kMaterialArrayElement,
-                    .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
-                    .data = std::as_bytes(std::span{&uniform_data, 1}),
-                },
-                Renderer::MaterialBufferBindingInput{
-                    .set = kMaterialDescriptorSet,
-                    .binding = kCloudUniformBinding,
-                    .array_element = kMaterialArrayElement,
-                    .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
-                    .update_frequency =
-                        Renderer::MaterialBufferUpdateFrequency::Frequent,
-                    .data = std::as_bytes(std::span{&cloud_data, 1}),
-                },
-                Renderer::MaterialBufferBindingInput{
-                    .set = kMaterialDescriptorSet,
-                    .binding = kEarthViewUniformBinding,
-                    .array_element = kMaterialArrayElement,
-                    .type = Renderer::Shader::ShaderResourceType::UniformBuffer,
-                    .data = std::as_bytes(std::span{&earth_data, 1}),
-                },
+        constexpr Renderer::UvSphereParameters sphere_params{
+            .radius = kSphereRadius,
+            .longitude_segments = kSphereLongitudeSegments,
+            .latitude_segments = kSphereLatitudeSegments,
         };
+
+        const Renderer::UvSphereMesh sphere =
+            Renderer::generateUvSphereMesh(sphere_params);
+
+        const Math::Vector3f scale{
+            .x = 1.0F,
+            .y = 1.0F,
+            .z = 1.0F,
+        };
+
+        const std::array<Math::Matrix4f, 1> model_matrices{
+            Math::composeTRS(translation, rotation, scale),
+        };
+
+        const auto initial_mesh = createInitialMesh(sphere, model_matrices);
+        const auto initial_camera = createInitialCamera();
+        auto initial_shaders = createInitialShaders();
+
+        const InitialTextureImages texture_images = loadInitialTextureImages();
+
+        const auto initial_textures = createInitialTextures(texture_images);
+        const auto initial_buffers =
+            createInitialBuffers(uniform_data, cloud_data, earth_data);
 
         Core::ApplicationConfiguration configuration{};
         configuration.initial_mesh = initial_mesh;
         configuration.initial_camera = initial_camera;
-        configuration.initial_graphics_shaders = std::move(graphics_data);
-        configuration.initial_buffer_bindings = initial_buffer_bindings;
-        configuration.initial_texture_bindings = initial_texture_bindings;
+        configuration.initial_graphics_shaders = std::move(initial_shaders);
+        configuration.initial_buffer_bindings = initial_buffers;
+        configuration.initial_texture_bindings = initial_textures;
 
         Core::Application application{std::move(configuration)};
 
-        Platform::CursorPosition previous_cursor{};
-        bool was_dragging{};
+        const auto now = std::chrono::steady_clock::now();
+        const std::filesystem::path earth_shader_path =
+            "build/shaders/earth.frag.spv";
 
-        constexpr float kRotationSensitivity{0.005F};
+        FrameState state{
+            .app = application,
+            .rotation = rotation,
+            .directional_light = directional_light,
+            .uniform_data = uniform_data,
+            .cloud_data = cloud_data,
+            .previous_cursor = {},
+            .was_dragging = false,
+            .was_right_pressed = false,
+            .was_middle_pressed = false,
+            .light_enabled = true,
+            .is_earth_shader_active = true,
+            .planet_spin_radians = 0.0,
+            .cloud_animation_start = now,
+            .previous_frame_time = now,
+            .last_shader_poll_time = now,
+            .observed_shader_write_time =
+                std::filesystem::last_write_time(earth_shader_path),
+            .earth_shader_path = earth_shader_path,
+        };
 
-        bool was_right_pressed{};
-        bool light_enabled{true};
+        application.run(
+            [&state](Core::Application &) -> void { processFrame(state); });
 
-        constexpr double kCloudScrollSpeed{0.005};
-
-        const auto cloud_animation_start = std::chrono::steady_clock::now();
-
-        double planet_spin_radians{};
-
-        constexpr double kAutoRotationRadiansPerSecond{0.05};
-
-        auto previous_frame_time = std::chrono::steady_clock::now();
-
-        application.run([&](Core::Application &app) -> void {
-            const auto frame_time = std::chrono::steady_clock::now();
-
-            const double frame_delta_seconds =
-                std::chrono::duration<double>{frame_time - previous_frame_time}
-                    .count();
-
-            previous_frame_time = frame_time;
-
-            const double clamped_delta_seconds =
-                frame_delta_seconds > 0.1 ? 0.1 : frame_delta_seconds;
-
-            const auto duration = frame_time - cloud_animation_start;
-
-            const double elapsed_seconds =
-                std::chrono::duration<double>{duration}.count();
-
-            const double cloud_offset =
-                std::fmod(elapsed_seconds * kCloudScrollSpeed, 1.0);
-
-            cloud_data.uv_offset.x = static_cast<float>(cloud_offset);
-
-            app.updateMaterialBuffer({
-                .set = kMaterialDescriptorSet,
-                .binding = kCloudUniformBinding,
-                .array_element = kMaterialArrayElement,
-                .data = std::as_bytes(std::span{&cloud_data, 1}),
-            });
-
-            constexpr double kFullRotationRadians = 2.0;
-            planet_spin_radians =
-                std::fmod(planet_spin_radians + (clamped_delta_seconds *
-                                                 kAutoRotationRadiansPerSecond),
-                          kFullRotationRadians * std::numbers::pi);
-
-            const Platform::CursorPosition current_cursor =
-                app.window().cursorPosition();
-
-            const bool is_dragging =
-                app.window().isMouseButtonPressed(Platform::MouseButton::Left);
-
-            const bool is_right_pressed =
-                app.window().isMouseButtonPressed(Platform::MouseButton::Right);
-
-            if (is_right_pressed && !was_right_pressed) {
-                light_enabled = !light_enabled;
-
-                directional_light.intensity = light_enabled ? 1.0F : 0.0F;
-
-                uniform_data = Renderer::makeDirectionalLightUniformData(
-                    directional_light);
-
-                app.updateMaterialBuffer({
-                    .set = kMaterialDescriptorSet,
-                    .binding = kDirectionalLightUniformBinding,
-                    .array_element = kMaterialArrayElement,
-                    .data = std::as_bytes(std::span{&uniform_data, 1}),
-                });
-            }
-
-            if (is_dragging && !was_dragging) {
-                previous_cursor = current_cursor;
-            } else if (is_dragging) {
-                const double delta_x = current_cursor.x - previous_cursor.x;
-                const double delta_y = current_cursor.y - previous_cursor.y;
-
-                rotation.y +=
-                    static_cast<float>(delta_x) * kRotationSensitivity;
-
-                rotation.x +=
-                    static_cast<float>(delta_y) * kRotationSensitivity;
-
-                previous_cursor = current_cursor;
-            }
-
-            const Math::Matrix4f orientation_matrix = Math::composeTRS(
-                translation, rotation,
-                Math::Vector3f{.x = 1.0F, .y = 1.0F, .z = 1.0F});
-
-            const Math::Matrix4f spin_matrix =
-                Math::rotateY(static_cast<float>(planet_spin_radians));
-
-            const Math::Matrix4f scale_matrix =
-                Math::scale(scale.x, scale.y, scale.z);
-
-            const Math::Matrix4f oriented_spin_matrix =
-                Math::multiply(orientation_matrix, spin_matrix);
-
-            const Math::Matrix4f updated_model_matrix =
-                Math::multiply(oriented_spin_matrix, scale_matrix);
-
-            app.setDrawInstanceModelMatrix(0U, updated_model_matrix);
-
-            was_dragging = is_dragging;
-            was_right_pressed = is_right_pressed;
-        });
     } catch (const Core::Error::EngineError &engine_error) {
         Core::Error::writeDiagnostic(std::cerr, engine_error);
         return EXIT_FAILURE;

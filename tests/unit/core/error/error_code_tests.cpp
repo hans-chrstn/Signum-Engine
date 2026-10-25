@@ -328,14 +328,39 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Subsystem::Vulkan,
         },
         ErrorCodeTestCase{
-            Error::Code::ImageLoadFailed,
-            "ImageLoadFailed",
-            Error::Subsystem::Renderer,
-        },
-        ErrorCodeTestCase{
             Error::Code::VulkanMaterialBindingsIncompatible,
             "VulkanMaterialBindingsIncompatible",
             Error::Subsystem::Vulkan,
+        },
+        ErrorCodeTestCase{
+            Error::Code::ShaderCompilerInitializationFailed,
+            "ShaderCompilerInitializationFailed",
+            Error::Subsystem::Renderer,
+        },
+        ErrorCodeTestCase{
+            Error::Code::ShaderCompilerSessionCreationFailed,
+            "ShaderCompilerSessionCreationFailed",
+            Error::Subsystem::Renderer,
+        },
+        ErrorCodeTestCase{
+            Error::Code::ShaderSourceInvalid,
+            "ShaderSourceInvalid",
+            Error::Subsystem::Renderer,
+        },
+        ErrorCodeTestCase{
+            Error::Code::ShaderSourceLoadFailed,
+            "ShaderSourceLoadFailed",
+            Error::Subsystem::Renderer,
+        },
+        ErrorCodeTestCase{
+            Error::Code::ShaderSourceCompilationFailed,
+            "ShaderSourceCompilationFailed",
+            Error::Subsystem::Renderer,
+        },
+        ErrorCodeTestCase{
+            Error::Code::ImageLoadFailed,
+            "ImageLoadFailed",
+            Error::Subsystem::Renderer,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

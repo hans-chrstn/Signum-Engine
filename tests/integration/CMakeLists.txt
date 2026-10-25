@@ -34,6 +34,20 @@ target_link_libraries(
     GTest::gtest_main
 )
 
+if(SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION)
+  target_sources(
+    signum_integration_tests
+    PRIVATE
+      renderer/shader/shader_source_compiler_integration_tests.cpp
+  )
+
+  target_link_libraries(
+    signum_integration_tests
+    PRIVATE
+      signum_shader_compiler
+  )
+endif()
+
 target_compile_definitions(
   signum_integration_tests
   PRIVATE
