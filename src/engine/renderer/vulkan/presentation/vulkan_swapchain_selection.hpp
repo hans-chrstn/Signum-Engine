@@ -2,6 +2,7 @@
 
 #include "engine/renderer/presentation_preference.hpp"
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <vulkan/vulkan.h>
 
@@ -123,6 +124,25 @@ namespace SNE::Engine::Renderer::Vulkan {
     [[nodiscard]] auto
     selectSwapchainImageCount(const VkSurfaceCapabilitiesKHR &capabilities)
         -> std::uint32_t;
+
+    /**
+     * @brief Selects supported swapchain image usage flags.
+     *
+     * Always requires color-attachment usage. Optionally requires
+     * transfer-source usage for framebuffer readback.
+     *
+     * @param capabilities Surface capabilities reported by Vulkan.
+     * @param require_transfer_source Whether image readback is required.
+     *
+     * @return Requested usage flags when supported, or std::nullopt
+     * when the surface cannot provide all required usage flags.
+     *
+     * @note Transfer-source usage is not enabled unless requested.
+     */
+    [[nodiscard]] auto
+    selectSwapchainImageUsage(const VkSurfaceCapabilitiesKHR &capabilities,
+                              bool require_transfer_source) noexcept
+        -> std::optional<VkImageUsageFlags>;
 
     /**
      * @brief Selects the composite-alpha mode for the Vulkan swapchain.

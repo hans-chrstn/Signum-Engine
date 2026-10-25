@@ -57,7 +57,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         const SelectedQueueFamilies &queue_families,
         const Platform::FramebufferSize &framebuffer_size,
         PresentationPreference presentation_preference,
-        bool fifo_latest_ready_enabled, VkSwapchainKHR old_swapchain)
+        bool fifo_latest_ready_enabled, VkSwapchainKHR old_swapchain,
+        bool require_transfer_source)
         : m_Device(device) {
         if (physical_device == VK_NULL_HANDLE) {
             Core::Assertion::failAssertion(
@@ -126,7 +127,20 @@ namespace SNE::Engine::Renderer::Vulkan {
         swapchain_create_info.imageExtent = m_Extent;
         swapchain_create_info.presentMode = presentation_mode;
         swapchain_create_info.imageArrayLayers = 1U;
-        swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        const std::optional<VkImageUsageFlags> image_usage =
+            selectSwapchainImageUsage(swapchain_support.surface_capabilities,
+                                      require_transfer_source);
+
+        if (!image_usage.has_value()) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::VulkanSwapchainCreationFailed,
+                "Swapchain surface does not support the requested image usage "
+                "flags",
+                "Select Vulkan Swapchain Image Usage");
+        }
+
+        swapchain_create_info.imageUsage = image_usage.value();
         swapchain_create_info.preTransform =
             swapchain_support.surface_capabilities.currentTransform;
 

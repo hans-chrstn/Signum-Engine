@@ -3,11 +3,13 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/material/material_buffer_update_frequency.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_compatibility.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
+#include "engine/renderer/shader/shader_interface.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_type.hpp"
 #include "engine/renderer/vulkan/descriptor/vulkan_descriptor_updates.hpp"
@@ -25,9 +27,7 @@
 namespace SNE::Engine::Renderer::Vulkan {
     auto VulkanRenderer::registerMaterialTextureBinding(
         const MaterialTextureBindingInput &input) -> MaterialResourceBinding {
-        TextureResources texture = uploadTexture(input.texture);
-
-        GpuResourceHandle handle = m_TextureRegistry.insert(std::move(texture));
+        const GpuResourceHandle handle = registerTexture(input.texture);
 
         return MaterialResourceBinding{
             .set = input.set,
@@ -155,6 +155,145 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Error::Subsystem::Vulkan,
                 "VulkanRenderer material binding has an incompatible "
                 "descriptor type or array element");
+        }
+    }
+
+    auto VulkanRenderer::validateMaterialInstanceDescription(
+        const MaterialInstanceDescription &description) const -> void {
+        if (!m_Material.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::registerMaterialInstance requires an "
+                "initialized material");
+        }
+
+        const Shader::ShaderStageInput &vertex = m_Material->shaders.vertex;
+        const Shader::ShaderStageInput &fragment = m_Material->shaders.fragment;
+
+        const Shader::ShaderInterface vertex_interface =
+            reflectSpirvInterface(vertex.artifact.words, vertex.selection);
+
+        const Shader::ShaderInterface fragment_interface =
+            reflectSpirvInterface(fragment.artifact.words, fragment.selection);
+
+        if (!areMaterialResourceBindingsCompatible(
+                description.resource_bindings.bindings,
+                vertex_interface.descriptor_bindings) ||
+            !areMaterialResourceBindingsCompatible(
+                description.resource_bindings.bindings,
+                fragment_interface.descriptor_bindings)) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::registerMaterialInstance requires bindings "
+                "compatible with the active shaders");
+        }
+
+        if (m_DescriptorSetLayouts.empty() &&
+            !description.resource_bindings.bindings.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::registerMaterialInstance requires empty "
+                "bindings when no descriptor layouts exist");
+        }
+
+        for (const MaterialResourceBinding &binding :
+             description.resource_bindings.bindings) {
+            validateMaterialInstanceResourceBinding(binding);
+        }
+
+        validateMaterialInstanceFrequentBindings(
+            description.resource_bindings.bindings);
+    }
+
+    auto VulkanRenderer::validateMaterialInstanceResourceBinding(
+        const MaterialResourceBinding &binding) const -> void {
+        validateMaterialDescriptorBinding(binding,
+                                          m_DescriptorSetLayouts.size());
+
+        switch (binding.type) {
+        case Shader::ShaderResourceType::CombinedImageSampler: {
+            const TextureResources *resources =
+                m_TextureRegistry.find(binding.resource_handle);
+
+            if (resources == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer::registerMaterialInstance requires "
+                    "registered texture handles");
+            }
+            break;
+        }
+        case Shader::ShaderResourceType::UniformBuffer:
+        case Shader::ShaderResourceType::StorageBuffer: {
+            const VulkanBuffer *buffer =
+                m_BufferRegistry.find(binding.resource_handle);
+
+            if (buffer == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer::registerMaterialInstance requires "
+                    "registered buffer handles");
+            }
+
+            const VkBufferUsageFlags required_usage =
+                binding.type == Shader::ShaderResourceType::UniformBuffer
+                    ? VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+                    : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+            if ((buffer->usage() & required_usage) == 0U) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer::registerMaterialInstance requires buffer "
+                    "usage compatible with the binding type");
+            }
+            break;
+        }
+        default:
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::registerMaterialInstance does not support "
+                "the requested resource type");
+        }
+    }
+
+    auto VulkanRenderer::validateMaterialInstanceFrequentBindings(
+        std::span<const MaterialResourceBinding> bindings) const -> void {
+
+        for (const FrequentMaterialBufferState &state :
+             m_FrequentMaterialBuffers) {
+            if (state.m_Frames.empty()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer::registerMaterialInstance requires "
+                    "initialized frequent-buffer frame resources");
+            }
+
+            const auto binding_it = std::ranges::find_if(
+                bindings,
+                [&state](const MaterialResourceBinding &binding) -> bool {
+                    return binding.set == state.m_Set &&
+                           binding.binding == state.m_Binding &&
+                           binding.array_element == state.m_ArrayElement;
+                });
+
+            if (binding_it == bindings.end() ||
+                binding_it->type != state.m_Type ||
+                binding_it->resource_handle !=
+                    state.m_Frames.front().m_BufferHandle) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Precondition,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer::registerMaterialInstance requires "
+                    "shared frequent-buffer bindings");
+            }
         }
     }
 
@@ -388,6 +527,73 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         return resources;
+    }
+
+    auto VulkanRenderer::findMaterialInstanceDescriptorResourcesForFrame(
+        GpuResourceHandle material_handle,
+        std::size_t frame_index) const noexcept
+        -> const MaterialDescriptorResources * {
+        if (frame_index >= m_FrameResources.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material instance descriptor selection "
+                "requires a valid frame index");
+        }
+
+        const MaterialInstanceResources *resources =
+            m_MaterialInstanceRegistry.find(material_handle);
+
+        if (resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer draw material instance handle does not "
+                "resolve to a registered material");
+        }
+
+        if (resources->m_DescriptorHandles.empty()) {
+            if (!m_DescriptorSetLayouts.empty()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer material instance requires descriptors "
+                    "for the active shader interface");
+            }
+
+            return nullptr;
+        }
+
+        const std::size_t descriptor_count =
+            resources->m_DescriptorHandles.size();
+
+        std::size_t selected_index{};
+
+        if (descriptor_count == 1U) {
+            selected_index = 0U;
+        } else if (descriptor_count == m_FrameResources.size()) {
+            selected_index = frame_index;
+        } else {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer material instance descriptor handle "
+                "count is invalid");
+        }
+
+        const MaterialDescriptorResources *material_resource =
+            m_MaterialDescriptorRegistry.find(
+                resources->m_DescriptorHandles[selected_index]);
+
+        if (material_resource == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer selected material instance descriptor "
+                "handle does not resolve to registered resources");
+        }
+
+        return material_resource;
     }
 
     auto VulkanRenderer::collectActiveMaterialDescriptorHandles() const
@@ -1196,6 +1402,122 @@ namespace SNE::Engine::Renderer::Vulkan {
         for (const GpuResourceHandle &handle : descriptor_handles) {
             rollbackRegisteredMaterialDescriptorResources(handle);
         }
+    }
+
+    auto VulkanRenderer::createMaterialInstanceResources(
+        const MaterialInstanceDescription &description)
+        -> MaterialInstanceResources {
+        MaterialInstanceResources instance_resources{};
+        instance_resources.m_Description = description;
+
+        if (!m_DescriptorSetLayouts.empty()) {
+            if (m_FrequentMaterialBuffers.empty()) {
+                instance_resources.m_DescriptorHandles.reserve(1U);
+
+                instance_resources.m_DescriptorHandles.push_back(
+                    registerMaterialDescriptorResources(
+                        instance_resources.m_Description.resource_bindings
+                            .bindings));
+            } else {
+                instance_resources.m_DescriptorHandles =
+                    registerFrameMaterialDescriptorResources(
+                        instance_resources.m_Description.resource_bindings
+                            .bindings);
+            }
+        }
+
+        return instance_resources;
+    }
+
+    auto VulkanRenderer::registerMaterialInstance(
+        const MaterialInstanceDescription &description) -> GpuResourceHandle {
+
+        validateMaterialInstanceDescription(description);
+
+        MaterialInstanceResources instance_resources =
+            createMaterialInstanceResources(description);
+
+        const std::span<const GpuResourceHandle> descriptor_handles_to_rollback{
+            instance_resources.m_DescriptorHandles,
+        };
+
+        try {
+            return m_MaterialInstanceRegistry.insert(
+                std::move(instance_resources));
+        } catch (...) {
+            rollbackRegisteredFrameMaterialDescriptorResources(
+                descriptor_handles_to_rollback);
+            throw;
+        }
+    }
+
+    auto VulkanRenderer::unregisterMaterialInstance(GpuResourceHandle handle)
+        -> void {
+        MaterialInstanceResources *resources =
+            m_MaterialInstanceRegistry.find(handle);
+
+        if (resources == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::unregisterMaterialInstance requires a "
+                "registered material instance handle");
+        }
+
+        const bool is_material_referenced = std::ranges::any_of(
+            m_DrawInstances,
+            [handle](const MeshDrawInstance &instance) -> bool {
+                return instance.material_handle == handle;
+            });
+
+        if (is_material_referenced) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::unregisterMaterialInstance cannot remove a "
+                "referenced material instance");
+        }
+
+        std::vector<MaterialDescriptorResources *>
+            descriptor_resources_to_retire;
+
+        descriptor_resources_to_retire.reserve(
+            resources->m_DescriptorHandles.size());
+
+        for (const GpuResourceHandle &descriptor_handle :
+             resources->m_DescriptorHandles) {
+            MaterialDescriptorResources *material_resources =
+                m_MaterialDescriptorRegistry.find(descriptor_handle);
+
+            if (material_resources == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer material instance descriptor handle does "
+                    "not resolve to registered resources during retirement");
+            }
+
+            descriptor_resources_to_retire.push_back(material_resources);
+        }
+
+        m_GraphicsResourceRetirementQueue
+            .retireMany<MaterialDescriptorResources>(
+                m_GraphicsSubmissionState.lastSubmitted(),
+                std::span<MaterialDescriptorResources *const>{
+                    descriptor_resources_to_retire,
+                });
+
+        for (const GpuResourceHandle &descriptor_handle :
+             resources->m_DescriptorHandles) {
+            static_cast<void>(
+                m_ResourceDependencies.removeRelationshipsInvolving(
+                    descriptor_handle));
+
+            static_cast<void>(
+                m_MaterialDescriptorRegistry.remove(descriptor_handle));
+        }
+
+        static_cast<void>(m_MaterialInstanceRegistry.remove(handle));
     }
 
     auto VulkanRenderer::initializeInitialMaterial(

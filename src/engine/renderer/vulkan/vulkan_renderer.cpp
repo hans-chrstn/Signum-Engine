@@ -138,13 +138,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<InitialCameraData> initial_camera,
         std::optional<Shader::GraphicsShaderData> initial_graphics_shaders,
         std::span<const MaterialBufferBindingInput> initial_buffer_bindings,
-        std::span<const MaterialTextureBindingInput> initial_texture_bindings)
+        std::span<const MaterialTextureBindingInput> initial_texture_bindings,
+        bool require_swapchain_transfer_source)
         : m_Window(&window),
           m_Instance(application_name, development_diagnostics_enabled),
           m_Surface(m_Instance.nativeHandle(), window.nativeHandle()),
           m_PhysicalDevice(selectRequiredPhysicalDevice(
               m_Instance.nativeHandle(), m_Surface.nativeHandle())),
           m_PresentationPreference(presentation_preference),
+          m_RequireSwapchainTransferSource(require_swapchain_transfer_source),
           m_LogicalDeviceFeatureConfiguration(
               deriveLogicalDeviceFeatureConfiguration(
                   deriveLogicalDeviceFeatureRequest(presentation_preference),
@@ -272,6 +274,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             MeshDrawInstance instance{
                 .mesh_handle = *m_ActiveMeshHandle,
                 .model_matrix = matrix,
+                .material_handle = {},
             };
 
             m_DrawInstances.push_back(instance);

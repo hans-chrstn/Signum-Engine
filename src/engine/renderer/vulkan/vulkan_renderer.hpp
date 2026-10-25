@@ -9,6 +9,7 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
+#include "engine/renderer/material/material_instance_description.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_set.hpp"
 #include "engine/renderer/material/material_texture_binding_input.hpp"
@@ -173,6 +174,43 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
         static_assert(
             std::is_nothrow_move_constructible_v<MaterialDescriptorResources>);
+
+        /**
+         * @brief Stores the registered state of a material instance.
+         *
+         * Retains the material instance's resource binding description and
+         * references its allocated descriptor resources.
+         *
+         * Texture and buffer resources remain owned by their respective
+         * registries. Descriptor allocations remain owned by
+         * m_MaterialDescriptorRegistry.
+         *
+         * Material instance handles identify this state independently of
+         * the Vulkan descriptor resources used to render it.
+         */
+        struct MaterialInstanceResources {
+            /**
+             * @brief Resource bindings supplied when the instance was
+             * registered.
+             *
+             * Stores non-owning handles to registered textures and buffers.
+             * The renderer validates these bindings against the active material
+             * interface before creating descriptor resources.
+             */
+            MaterialInstanceDescription m_Description{};
+
+            /**
+             * @brief Handles identifying the instance's descriptor resources.
+             *
+             * Contains one handle when descriptors are shared across frames,
+             * or one handle per frame-in-flight slot when frame-specific
+             * descriptor bindings are required.
+             *
+             * Handles reference m_MaterialDescriptorRegistry without owning
+             * its resources.
+             */
+            std::vector<GpuResourceHandle> m_DescriptorHandles;
+        };
 
         /**
          * @brief Tracks a frequently updated material buffer.
@@ -436,6 +474,16 @@ namespace SNE::Engine::Renderer::Vulkan {
         PresentationPreference m_PresentationPreference;
 
         /**
+         * @brief Whether swapchain images require transfer-source support.
+         *
+         * Preserves the framebuffer-readback requirement across initial
+         * swapchain creation and subsequent recreation.
+         *
+         * Defaults to false to preserve normal presentation behavior.
+         */
+        bool m_RequireSwapchainTransferSource{false};
+
+        /**
          * @brief Vulkan features selected for logical-device creation.
          *
          * Stores the feature configuration derived from the selected
@@ -599,6 +647,24 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         GpuResourceRegistry<MaterialDescriptorResources>
             m_MaterialDescriptorRegistry;
+
+        /**
+         * @brief Owns registered material instance states.
+         *
+         * Stores material instance descriptions and non-owning handles to
+         * their descriptor resources.
+         *
+         * Material instances are identified by generation-checked,
+         * registry-scoped GPU resource handles.
+         *
+         * Descriptor allocations, textures, and buffers remain owned
+         * by their respective registries.
+         *
+         * Material instance removal must preserve resources referenced
+         * by outstanding GPU submissions until execution completes.
+         */
+        GpuResourceRegistry<MaterialInstanceResources>
+            m_MaterialInstanceRegistry;
 
         /**
          * @brief Identifies the active material descriptor resources.
@@ -1094,6 +1160,26 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> void;
 
         /**
+         * @brief Binds the renderer's default material descriptors.
+         *
+         * Selects the descriptor resources for the current frame and binds
+         * them to the supplied graphics pipeline layout.
+         *
+         * Falls back to the legacy texture descriptor binding when no
+         * registered default material descriptors are available.
+         *
+         * @param command_buffer Command buffer recording graphics commands.
+         * @param pipeline_layout Graphics pipeline layout used for binding.
+         *
+         * @pre Both Vulkan handles must be valid for command recording.
+         *
+         * @note Does not own or allocate descriptor resources.
+         */
+        auto bindMaterialDescriptors(
+            VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout,
+            std::optional<GpuResourceHandle> material_handle) const -> void;
+
+        /**
          * @brief Submits a recorded frame command buffer to the graphics queue.
          *
          * Configures image-availability and render-completion semaphore
@@ -1295,6 +1381,75 @@ namespace SNE::Engine::Renderer::Vulkan {
             std::size_t descriptor_set_count) const -> void;
 
         /**
+         * @brief Validates a material instance description for registration.
+         *
+         * Checks that an active material exists, the supplied bindings satisfy
+         * the vertex and fragment shader interfaces, and the descriptor
+         * locations and referenced GPU resources are valid.
+         *
+         * Also validates compatibility with the renderer's frequently
+         * updated material-buffer configuration.
+         *
+         * @param description Material instance description to validate.
+         *
+         * @pre The renderer must have an initialized material configuration.
+         * @pre Resource bindings must satisfy the active shader interfaces.
+         * @pre Referenced resources must be registered and compatible.
+         *
+         * @post Renderer resources and material state remain unchanged.
+         *
+         * @throws Core::Error::EngineError if shader reflection fails.
+         *
+         * @note Invalid descriptions trigger precondition assertions.
+         * @note This operation does not allocate descriptor resources.
+         */
+        auto validateMaterialInstanceDescription(
+            const MaterialInstanceDescription &description) const -> void;
+
+        /**
+         * @brief Validates one material instance resource binding.
+         *
+         * Checks the descriptor location and resource type against the
+         * active descriptor-set layouts, then verifies that the referenced
+         * texture or buffer exists in the corresponding resource registry.
+         *
+         * @param binding Material resource binding to validate.
+         *
+         * @pre Descriptor-set layouts must describe the active shaders.
+         * @pre The binding must reference a supported resource type.
+         * @pre Buffer resources must have Vulkan usage flags compatible
+         * with their declared shader resource types.
+         *
+         * @post Renderer resources remain unchanged.
+         *
+         * @note Invalid bindings and resource handles trigger
+         * precondition assertions.
+         */
+        auto validateMaterialInstanceResourceBinding(
+            const MaterialResourceBinding &binding) const -> void;
+
+        /**
+         * @brief Validates shared frequently updated material-buffer bindings.
+         *
+         * Ensures that each renderer-managed frequent material buffer has
+         * a corresponding binding with the expected descriptor location,
+         * resource type, and initial frame-buffer handle.
+         *
+         * @param bindings Material resource bindings to validate.
+         *
+         * @pre Frequently updated material buffers must have initialized
+         * frame-specific GPU resources.
+         *
+         * @post Renderer resources remain unchanged.
+         *
+         * @note Invalid shared bindings trigger precondition assertions.
+         * @note Incomplete internal frequent-buffer state triggers an
+         * invariant assertion.
+         */
+        auto validateMaterialInstanceFrequentBindings(
+            std::span<const MaterialResourceBinding> bindings) const -> void;
+
+        /**
          * @brief Prepares a descriptor write for a sampled texture.
          *
          * Resolves the texture handle through the texture registry and
@@ -1461,31 +1616,27 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> const MaterialDescriptorResources *;
 
         /**
-         * @brief Creates and registers a material buffer.
+         * @brief Finds descriptor resources for a material instance and frame.
          *
-         * Allocates a Vulkan buffer with usage determined by the shader
-         * resource type, copies the supplied initial data, and transfers
-         * ownership to m_BufferRegistry.
+         * Selects shared descriptor resources or frame-specific descriptor
+         * resources associated with the material instance.
          *
-         * @param data Initial buffer contents borrowed from the caller.
-         * @param type Shader resource type determining the Vulkan buffer usage.
+         * @param material_handle Registered material instance handle.
+         * @param frame_index Current frame-in-flight index.
+         * @return Descriptor resources for the selected frame, or nullptr
+         * when the material requires no descriptor sets.
          *
-         * @return Handle identifying the registered material buffer.
+         * @pre material_handle must resolve to a registered material instance.
+         * @pre frame_index must identify a valid frame slot.
          *
-         * @pre data must not be empty.
-         * @pre type must identify a uniform buffer or storage buffer.
-         *
-         * @post The returned handle resolves to an initialized buffer owned
-         * by m_BufferRegistry.
-         *
-         * @throws Core::Error::EngineError if buffer allocation or writing
-         * fails.
-         * @throws std::bad_alloc if registry insertion fails.
+         * @note Invalid material or descriptor registry state triggers an
+         * invariant assertion.
+         * @note Does not allocate resources or modify descriptor bindings.
          */
-        [[nodiscard]] auto
-        registerMaterialBuffer(std::span<const std::byte> data,
-                               Shader::ShaderResourceType type)
-            -> GpuResourceHandle;
+        [[nodiscard]] auto findMaterialInstanceDescriptorResourcesForFrame(
+            GpuResourceHandle material_handle,
+            std::size_t frame_index) const noexcept
+            -> const MaterialDescriptorResources *;
 
         /**
          * @brief Creates registered GPU buffers for a frequently updated
@@ -1937,6 +2088,41 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> std::vector<GpuResourceHandle>;
 
         /**
+         * @brief Creates the registered descriptor state of a material
+         * instance.
+         *
+         * Copies the material instance description and registers descriptor
+         * resources compatible with the active material configuration.
+         *
+         * Uses shared descriptor resources when no frequently updated
+         * material buffers exist, or frame-specific descriptor resources
+         * otherwise.
+         *
+         * @param description Validated material instance description.
+         * @return Prepared material instance resources containing the
+         * copied description and registered descriptor handles.
+         *
+         * @pre The description must have passed material instance validation.
+         * @pre Descriptor layouts and resource registries must be initialized.
+         *
+         * @post On success, descriptor resources are registered and tracked
+         * through their resource dependencies.
+         * @post On failure, no newly registered descriptor resources remain.
+         * @post The logical material instance registry remains unchanged.
+         *
+         * @throws Core::Error::EngineError if Vulkan descriptor allocation
+         * fails.
+         * @throws std::bad_alloc if host allocation fails.
+         *
+         * @note The caller is responsible for rolling back the returned
+         * descriptor handles if logical instance registration subsequently
+         * fails.
+         */
+        [[nodiscard]] auto createMaterialInstanceResources(
+            const MaterialInstanceDescription &description)
+            -> MaterialInstanceResources;
+
+        /**
          * @brief Rolls back a newly registered material descriptor resource.
          *
          * Removes tracked relationships involving the descriptor handle,
@@ -2158,6 +2344,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Each input specifies a shader descriptor location and borrowed
          * texture upload data. Pixel storage must remain valid until
          * renderer construction completes.
+         * @param require_swapchain_transfer_source Whether swapchain images
+         * must support transfer-source operations for framebuffer readback. The
+         * requirement is preserved across swapchain recreation. Defaults to
+         * false.
          *
          * @throws Core::Error::EngineError if a required Vulkan resource or
          * capability cannot be initialized.
@@ -2174,7 +2364,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             std::span<const MaterialBufferBindingInput>
                 initial_buffer_bindings = {},
             std::span<const MaterialTextureBindingInput>
-                initial_texture_bindings = {});
+                initial_texture_bindings = {},
+            bool require_swapchain_transfer_source = false);
 
         /**
          * @brief Releases the Vulkan renderer runtime.
@@ -2229,6 +2420,160 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto registerMesh(const MeshUploadData &mesh)
             -> GpuResourceHandle;
+
+        /**
+         * @brief Uploads and registers an independent GPU texture.
+         *
+         * Creates a sampled GPU image, image view, and sampler from the
+         * supplied texture description.
+         *
+         * The resulting texture is owned by the renderer's texture registry
+         * and identified through a generation-checked GPU resource handle.
+         *
+         * Registration does not create material descriptors, replace the
+         * active texture, or modify existing material bindings.
+         *
+         * @param texture Borrowed CPU texture data and sampler configuration.
+         * @return Handle identifying the registered GPU texture.
+         *
+         * @pre Texture dimensions, mip levels, pixel data, format, and
+         * sampler configuration must satisfy the texture upload requirements.
+         * @pre Registration must be serialized with rendering and other
+         * resource operations.
+         *
+         * @post On success, the returned handle resolves to the registered
+         * texture resources.
+         * @post Existing textures and material bindings remain unchanged.
+         * @post On failure, no new texture remains registered.
+         * @post Texture upload and layout transitions complete before the
+         * resource handle is returned.
+         *
+         * @throws Core::Error::EngineError if Vulkan resource creation
+         * or texture upload fails.
+         * @throws std::bad_alloc if resource allocation or registration fails.
+         *
+         * @note Invalid texture descriptions trigger precondition assertions.
+         * @note Registered textures must remain alive while descriptors or
+         * outstanding GPU submissions reference them.
+         */
+        [[nodiscard]] auto registerTexture(const TextureUploadData &texture)
+            -> GpuResourceHandle;
+
+        /**
+         * @brief Creates and registers an independent material GPU buffer.
+         *
+         * Allocates and initializes a uniform or storage buffer using the
+         * supplied CPU data.
+         *
+         * The buffer is owned by the renderer's buffer registry and is
+         * identified through a generation-checked GPU resource handle.
+         *
+         * Registration does not create descriptor sets, modify material
+         * bindings, or configure frame-specific buffer updates.
+         *
+         * @param data Borrowed initial buffer contents.
+         * @param type Shader resource type determining the buffer usage.
+         * @return Handle identifying the registered GPU buffer.
+         *
+         * @pre data must not be empty.
+         * @pre type must be UniformBuffer or StorageBuffer.
+         * @pre Registration must be serialized with rendering and other
+         * resource operations.
+         *
+         * @post On success, the returned handle resolves to an initialized
+         * buffer owned by the renderer.
+         * @post Existing buffers and material bindings remain unchanged.
+         * @post On failure, no new buffer remains registered.
+         *
+         * @throws Core::Error::EngineError if GPU buffer allocation or
+         * initialization fails.
+         * @throws std::bad_alloc if resource registration fails.
+         *
+         * @note The input data only needs to remain valid until registration
+         * completes.
+         * @note Registered buffers must remain alive while material
+         * descriptors or outstanding GPU submissions reference them.
+         */
+        [[nodiscard]] auto
+        registerMaterialBuffer(std::span<const std::byte> data,
+                               Shader::ShaderResourceType type)
+            -> GpuResourceHandle;
+
+        /**
+         * @brief Registers a material instance for rendering.
+         *
+         * Validates the supplied resource bindings against the active shader
+         * interface and creates the required Vulkan descriptor resources.
+         *
+         * Material instance state is owned by m_MaterialInstanceRegistry.
+         * Descriptor allocations remain owned by m_MaterialDescriptorRegistry.
+         * Referenced textures and buffers retain their existing ownership.
+         *
+         * Registration does not change the default material or existing draw
+         * instances.
+         *
+         * @param description Material instance configuration to register.
+         * @return Handle identifying the registered material instance.
+         *
+         * @pre An active material configuration must be initialized.
+         * @pre Resource bindings must satisfy the active shader interface.
+         * @pre Referenced texture and buffer handles must resolve to registered
+         * resources of the expected types.
+         * @pre Frequently updated material buffers must use the renderer's
+         * shared frame-specific buffer configuration.
+         * @pre Registration must be serialized with rendering and other
+         * resource operations.
+         *
+         * @post On success, the returned handle resolves to a registered
+         * material instance.
+         * @post Descriptor resources are registered for the required frame
+         * slots when the material uses descriptors.
+         * @post The default material and draw instances remain unchanged.
+         * @post On failure, no new material instance, descriptor resources, or
+         * dependency relationships remain registered.
+         *
+         * @throws Core::Error::EngineError if Vulkan descriptor resource
+         * creation or allocation fails.
+         * @throws std::bad_alloc if host resource allocation fails.
+         *
+         * @note Invalid material configurations and resource bindings trigger
+         * precondition assertions.
+         * @note Registration does not submit GPU rendering commands.
+         */
+        [[nodiscard]] auto
+        registerMaterialInstance(const MaterialInstanceDescription &description)
+            -> GpuResourceHandle;
+
+        /**
+         * @brief Unregisters an independent material instance.
+         *
+         * Removes a registered material instance and retires its descriptor
+         * resources after all relevant GPU submissions have completed.
+         *
+         * The textures and buffers referenced by the material remain owned
+         * by their respective resource registries.
+         *
+         * @param handle Handle identifying the material instance to remove.
+         *
+         * @pre The handle must identify a registered material instance.
+         * @pre No active draw instance may reference the material.
+         * @pre Removal must be serialized with rendering and other resource
+         * operations.
+         *
+         * @post On success, the material handle becomes stale.
+         * @post Descriptor resources remain alive until outstanding GPU
+         * submissions referencing them have completed.
+         * @post Descriptor dependency relationships are removed.
+         * @post Referenced textures and buffers remain registered.
+         * @post On failure, the material instance and descriptor resources
+         * remain unchanged.
+         *
+         * @throws std::bad_alloc if retirement preparation fails.
+         *
+         * @note Invalid, stale, foreign, or referenced material handles
+         * trigger precondition assertions.
+         */
+        auto unregisterMaterialInstance(GpuResourceHandle handle) -> void;
 
         /**
          * @brief Unregisters an independent GPU mesh.

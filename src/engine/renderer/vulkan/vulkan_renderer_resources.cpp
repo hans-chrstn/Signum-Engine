@@ -184,7 +184,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         draw_instances.reserve(instances.size());
 
         for (const MeshDrawInstance &instance : instances) {
-            MeshBufferResources *resources =
+            const MeshBufferResources *resources =
                 m_MeshRegistry.find(instance.mesh_handle);
 
             if (resources == nullptr) {
@@ -193,6 +193,19 @@ namespace SNE::Engine::Renderer::Vulkan {
                     Core::Error::Subsystem::Vulkan,
                     "VulkanRenderer::setDrawInstances requires registered mesh "
                     "handles");
+            }
+
+            if (instance.material_handle.has_value()) {
+                const MaterialInstanceResources *material_resources =
+                    m_MaterialInstanceRegistry.find(*instance.material_handle);
+
+                if (material_resources == nullptr) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "VulkanRenderer::setDrawInstances requires registered "
+                        "material instance handles");
+                }
             }
 
             draw_instances.push_back(instance);
@@ -425,6 +438,16 @@ namespace SNE::Engine::Renderer::Vulkan {
         };
 
         return texture_resources;
+    }
+
+    auto VulkanRenderer::registerTexture(const TextureUploadData &texture)
+        -> GpuResourceHandle {
+        TextureResources resources = uploadTexture(texture);
+
+        GpuResourceHandle handle =
+            m_TextureRegistry.insert(std::move(resources));
+
+        return handle;
     }
 
     auto VulkanRenderer::replaceTexture(const TextureUploadData &texture)

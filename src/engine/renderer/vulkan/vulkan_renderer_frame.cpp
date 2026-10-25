@@ -35,28 +35,14 @@ namespace {
 } // namespace
 
 namespace SNE::Engine::Renderer::Vulkan {
-    auto VulkanRenderer::recordMeshDraws(
-        VkCommandBuffer command_buffer,
-        const SwapchainResources &swapchain_resources) const -> void {
-
-        const VulkanSwapchain &swapchain =
-            swapchain_resources.m_VulkanSwapchain;
-
-        if (swapchain_resources.m_VulkanGraphicsPipeline == nullptr) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires a graphics pipeline when drawing");
-        }
-
-        const VulkanGraphicsPipeline &graphics_pipeline =
-            *swapchain_resources.m_VulkanGraphicsPipeline;
-
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          graphics_pipeline.nativeHandle());
-
+    auto VulkanRenderer::bindMaterialDescriptors(
+        VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout,
+        std::optional<GpuResourceHandle> material_handle) const -> void {
         const MaterialDescriptorResources *active_material_descriptors =
-            findMaterialDescriptorResourcesForFrame(m_CurrentFrameIndex);
+            material_handle.has_value()
+                ? findMaterialInstanceDescriptorResourcesForFrame(
+                      *material_handle, m_CurrentFrameIndex)
+                : findMaterialDescriptorResourcesForFrame(m_CurrentFrameIndex);
 
         if (active_material_descriptors != nullptr) {
             const std::vector<VkDescriptorSet> &descriptor_sets =
@@ -83,10 +69,11 @@ namespace SNE::Engine::Renderer::Vulkan {
 
             vkCmdBindDescriptorSets(
                 command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                graphics_pipeline.layoutHandle(), 0U, descriptor_count.value(),
+                pipeline_layout, 0U, descriptor_count.value(),
                 descriptor_sets.data(), 0U, nullptr);
 
-        } else if (m_TextureBindingResources.has_value()) {
+        } else if (!material_handle.has_value() &&
+                   m_TextureBindingResources.has_value()) {
             auto texture_binding_it = std::ranges::find_if(
                 m_MaterialBindings.bindings,
                 [](const MaterialResourceBinding &binding) -> bool {
@@ -100,7 +87,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer active material texture binding was not "
+                    "VulkanRenderer active material texture binding was "
+                    "not "
                     "found");
             }
 
@@ -111,8 +99,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer active texture handle does not match its "
-                    "descriptor binding");
+                    "VulkanRenderer active texture handle does not match "
+                    "its descriptor binding");
             }
 
             const TextureResources *active_texture =
@@ -122,15 +110,36 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Core::Assertion::failAssertion(
                     Core::Assertion::AssertionType::Invariant,
                     Core::Error::Subsystem::Vulkan,
-                    "VulkanRenderer active texture handle does not resolve to "
-                    "a registered texture");
+                    "VulkanRenderer active texture handle does not resolve "
+                    "to a registered texture");
             }
 
             vkCmdBindDescriptorSets(
                 command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                graphics_pipeline.layoutHandle(), 0U, 1U,
+                pipeline_layout, 0U, 1U,
                 &m_TextureBindingResources->m_DescriptorSet, 0U, nullptr);
         }
+    }
+
+    auto VulkanRenderer::recordMeshDraws(
+        VkCommandBuffer command_buffer,
+        const SwapchainResources &swapchain_resources) const -> void {
+
+        const VulkanSwapchain &swapchain =
+            swapchain_resources.m_VulkanSwapchain;
+
+        if (swapchain_resources.m_VulkanGraphicsPipeline == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires a graphics pipeline when drawing");
+        }
+
+        const VulkanGraphicsPipeline &graphics_pipeline =
+            *swapchain_resources.m_VulkanGraphicsPipeline;
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          graphics_pipeline.nativeHandle());
 
         VkViewport viewport{};
         viewport.x = 0.0F;
@@ -179,6 +188,10 @@ namespace SNE::Engine::Renderer::Vulkan {
                     "VulkanRenderer draw instance mesh handle does not resolve "
                     "to a registered mesh");
             }
+
+            bindMaterialDescriptors(command_buffer,
+                                    graphics_pipeline.layoutHandle(),
+                                    instance.material_handle);
 
             const VkDeviceSize vertex_offset = 0U;
             const VkBuffer vertex_buffer = mesh->m_VertexBuffer.nativeHandle();

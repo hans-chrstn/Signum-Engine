@@ -2,6 +2,8 @@
 
 #include "engine/core/math/matrix4.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
+#include <optional>
+
 namespace SNE::Engine::Renderer {
     /**
      * @brief Describes one mesh instance submitted for rendering.
@@ -18,5 +20,13 @@ namespace SNE::Engine::Renderer {
 
         /** @brief Model transformation applied to this instance. */
         Core::Math::Matrix4f model_matrix;
+
+        /**
+         * @brief Optional material instance used to render this mesh.
+         *
+         * References a renderer-registered material without owning it.
+         * An empty value selects the renderer's default material.
+         */
+        std::optional<GpuResourceHandle> material_handle;
     };
 } // namespace SNE::Engine::Renderer

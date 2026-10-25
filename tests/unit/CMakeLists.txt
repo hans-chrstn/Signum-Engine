@@ -29,6 +29,7 @@ add_executable(
   renderer/material/material_resource_binding_tests.cpp
   renderer/material/material_resource_binding_compatibility_tests.cpp
   renderer/material/material_resource_binding_set_tests.cpp
+  renderer/material/material_instance_description_tests.cpp
   renderer/pipeline/graphics_pipeline_state_tests.cpp
   renderer/pipeline/pipeline_identity_value_tests.cpp
   renderer/shader/shader_equality_tests.cpp

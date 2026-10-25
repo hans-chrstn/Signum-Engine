@@ -234,6 +234,7 @@ TEST(MeshDrawInstanceTests, StoresMeshIdentityAndTransformation) {
         .mesh_handle = mesh_handle,
         .model_matrix = SNE::Engine::Core::Math::translate(1.0F, kTranslationY,
                                                            kTranslationZ),
+        .material_handle = {},
     };
 
     EXPECT_EQ(instance.mesh_handle, mesh_handle);
@@ -248,4 +249,46 @@ TEST(MeshDrawInstanceTests, StoresMeshIdentityAndTransformation) {
 
     EXPECT_FLOAT_EQ(
         instance.model_matrix.at(kTranslationColumn, kTranslationColumn), 1.0F);
+}
+
+TEST(MeshDrawInstanceTests, DefaultsToNoExplicitMaterial) {
+    const Renderer::GpuResourceHandle mesh_handle{
+        .index = 2U,
+        .generation = 1U,
+        .registry_id = 10U,
+    };
+
+    const Renderer::MeshDrawInstance instance{
+        .mesh_handle = mesh_handle,
+        .model_matrix = SNE::Engine::Core::Math::identity(),
+        .material_handle = {},
+    };
+
+    EXPECT_EQ(instance.mesh_handle, mesh_handle);
+    EXPECT_FALSE(instance.material_handle.has_value());
+}
+
+TEST(MeshDrawInstanceTests, StoresExplicitMaterialHandle) {
+    const Renderer::GpuResourceHandle mesh_handle{
+        .index = 2U,
+        .generation = 1U,
+        .registry_id = 10U,
+    };
+
+    const Renderer::GpuResourceHandle material_handle{
+        .index = 4U,
+        .generation = 3U,
+        .registry_id = 20U,
+    };
+
+    const Renderer::MeshDrawInstance instance{
+        .mesh_handle = mesh_handle,
+        .model_matrix = SNE::Engine::Core::Math::identity(),
+        .material_handle = material_handle,
+    };
+
+    EXPECT_EQ(instance.mesh_handle, mesh_handle);
+
+    ASSERT_TRUE(instance.material_handle.has_value());
+    EXPECT_EQ(instance.material_handle.value(), material_handle);
 }

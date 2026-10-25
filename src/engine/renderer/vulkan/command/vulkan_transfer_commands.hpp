@@ -39,6 +39,36 @@ namespace SNE::Engine::Renderer::Vulkan {
     };
 
     /**
+     * @brief Describes an image-to-buffer copy operation.
+     *
+     * Identifies the source image, destination buffer, source image layout,
+     * and image regions to copy.
+     *
+     * Supports borrowed Vulkan image handles, including swapchain images.
+     * The source image and destination buffer must remain valid until the
+     * recorded GPU work completes.
+     *
+     * The copy regions are borrowed for command recording and must remain
+     * valid for the duration of the recording call.
+     *
+     * This structure does not manage image layout transitions, queue
+     * submission, synchronization, or resource ownership.
+     */
+    struct ImageToBufferCopyRequest {
+        /** Source image containing the data to copy. */
+        VkImage source{VK_NULL_HANDLE};
+
+        /** Destination buffer receiving the copied image data. */
+        const VulkanBuffer &destination;
+
+        /** Layout required for the source image during copying. */
+        VkImageLayout source_layout{VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL};
+
+        /** Regions describing the image subresources and buffer offsets. */
+        std::span<const VkBufferImageCopy2> regions;
+    };
+
+    /**
      * @brief Describes a buffer-to-buffer copy operation.
      *
      * Identifies the source and destination buffers together with the byte

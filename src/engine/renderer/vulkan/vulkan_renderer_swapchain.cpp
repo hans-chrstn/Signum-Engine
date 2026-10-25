@@ -227,7 +227,7 @@ namespace SNE::Engine::Renderer::Vulkan {
                     m_LogicalDeviceFeatureConfiguration
                             .fifo_latest_ready_feature
                             .presentModeFifoLatestReady == VK_TRUE,
-                    old_swapchain);
+                    old_swapchain, m_RequireSwapchainTransferSource);
 
                 const std::optional<VkFormat> depth_format =
                     selectSupportedDepthFormat(m_PhysicalDevice.handle);

@@ -159,6 +159,11 @@ set(
 )
 
 set(
+  SIGNUM_MATERIAL_INSTANCE_TEXTURED_FRAGMENT_SPIRV
+  "${SIGNUM_SHADER_OUTPUT_DIR}/material_instance_textured.frag.spv"
+)
+
+set(
   SIGNUM_MATERIAL_TWO_TEXTURES_FRAGMENT_SPIRV
   "${SIGNUM_SHADER_OUTPUT_DIR}/material_two_textures.frag.spv"
 )
@@ -233,6 +238,11 @@ signum_compile_slang_shader(
   fragment
 )
 
+signum_compile_glsl_shader(
+  "${SIGNUM_MATERIAL_INSTANCE_TEXTURED_FRAGMENT_SPIRV}"
+  "${SIGNUM_GLSL_TEST_SOURCE_DIR}/material_instance_textured.frag"
+)
+
 signum_compile_slang_shader(
   "${SIGNUM_MATERIAL_TWO_TEXTURES_FRAGMENT_SPIRV}"
   "${SIGNUM_SLANG_TEST_SOURCE_DIR}/material_two_textures.slang"
@@ -295,6 +305,7 @@ add_custom_target(
     "${SIGNUM_TRIANGLE_VERTEX_SPIRV}"
     "${SIGNUM_TRIANGLE_FRAGMENT_SPIRV}"
     "${SIGNUM_TEXTURED_FRAGMENT_SPIRV}"
+    "${SIGNUM_MATERIAL_INSTANCE_TEXTURED_FRAGMENT_SPIRV}"
     "${SIGNUM_MATERIAL_TWO_TEXTURES_FRAGMENT_SPIRV}"
     "${SIGNUM_MATRIX_TRANSFORM_COMPUTE_SPIRV}"
     "${SIGNUM_TRIANGLE_MATRIX_LAYOUT_STAMP}"

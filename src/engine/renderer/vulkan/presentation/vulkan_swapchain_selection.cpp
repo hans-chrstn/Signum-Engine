@@ -5,6 +5,7 @@
 #include "engine/platform/window.hpp"
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <span>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -150,14 +151,29 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         const std::uint32_t preferred_count = capabilities.minImageCount + 1U;
-        // A maximum of zero means the surface imposes no explicit image-count
-        // limit.
         if (capabilities.maxImageCount != 0U &&
             capabilities.maxImageCount < preferred_count) {
             return capabilities.maxImageCount;
         }
 
         return preferred_count;
+    }
+
+    auto selectSwapchainImageUsage(const VkSurfaceCapabilitiesKHR &capabilities,
+                                   bool require_transfer_source) noexcept
+        -> std::optional<VkImageUsageFlags> {
+        VkImageUsageFlags requested_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        if (require_transfer_source) {
+            requested_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        }
+
+        if ((requested_usage & capabilities.supportedUsageFlags) !=
+            requested_usage) {
+            return std::nullopt;
+        }
+
+        return requested_usage;
     }
 
     auto selectCompositeAlpha(const VkSurfaceCapabilitiesKHR &capabilities)

@@ -95,6 +95,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * recreation. May be VK_NULL_HANDLE when creating the initial
          * swapchain. The handle is borrowed and is not destroyed directly by
          * this constructor.
+         * @param require_transfer_source Whether swapchain images must support
+         * transfer-source operations for framebuffer readback. When true,
+         * construction fails if the surface does not support the required
+         * usage. Defaults to false.
          *
          * @pre physical_device must be a valid Vulkan physical-device handle.
          * @pre device must be a valid Vulkan logical-device handle.
@@ -119,7 +123,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                         const Platform::FramebufferSize &framebuffer_size,
                         PresentationPreference presentation_preference,
                         bool fifo_latest_ready_enabled,
-                        VkSwapchainKHR old_swapchain = VK_NULL_HANDLE);
+                        VkSwapchainKHR old_swapchain = VK_NULL_HANDLE,
+                        bool require_transfer_source = false);
 
         /**
          * @brief Destroys the owned Vulkan image views and swapchain.

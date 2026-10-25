@@ -455,14 +455,17 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         Renderer::MeshDrawInstance{
             .mesh_handle = triangle_handle,
             .model_matrix = Math::translate(-0.5F, 0.0F, 0.0F),
+            .material_handle = {},
         },
         Renderer::MeshDrawInstance{
             .mesh_handle = quad_handle,
             .model_matrix = Math::translate(0.5F, 0.0F, 0.0F),
+            .material_handle = {},
         },
         Renderer::MeshDrawInstance{
             .mesh_handle = triangle_handle,
             .model_matrix = Math::translate(0.0F, 0.5F, 0.0F),
+            .material_handle = {},
         },
     };
 
@@ -578,10 +581,12 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         Renderer::MeshDrawInstance{
             .mesh_handle = triangle_handle,
             .model_matrix = Math::translate(-0.5F, 0.0F, 0.0F),
+            .material_handle = {},
         },
         Renderer::MeshDrawInstance{
             .mesh_handle = quad_handle,
             .model_matrix = Math::translate(0.5F, 0.0F, 0.0F),
+            .material_handle = {},
         },
     };
 
@@ -603,6 +608,7 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         Renderer::MeshDrawInstance{
             .mesh_handle = quad_handle,
             .model_matrix = Math::identity(),
+            .material_handle = {},
         },
     };
 
@@ -618,6 +624,7 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         Renderer::MeshDrawInstance{
             .mesh_handle = triangle_handle,
             .model_matrix = Math::identity(),
+            .material_handle = {},
         },
     };
 
@@ -640,10 +647,12 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
         Renderer::MeshDrawInstance{
             .mesh_handle = replacement_triangle_handle,
             .model_matrix = Math::translate(-0.5F, 0.0F, 0.0F),
+            .material_handle = {},
         },
         Renderer::MeshDrawInstance{
             .mesh_handle = quad_handle,
             .model_matrix = Math::translate(0.5F, 0.0F, 0.0F),
+            .material_handle = {},
         },
     };
 
@@ -817,6 +826,7 @@ TEST(VulkanRendererMeshReplacementIntegrationTests,
                 instances.push_back(Renderer::MeshDrawInstance{
                     .mesh_handle = mesh_handle,
                     .model_matrix = model_matrix,
+                    .material_handle = {},
                 });
             }
         }
