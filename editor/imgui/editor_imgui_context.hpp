@@ -40,7 +40,8 @@ namespace SNE::Editor {
          * @pre window must not be nullptr.
          * @pre GLFW must remain initialized throughout this object's lifetime.
          *
-         * @throws std::runtime_error if GLFW backend initialization fails.
+         * @throws SNE::Engine::Core::Error::EngineError if the Dear ImGui
+         * GLFW platform backend cannot be initialized.
          */
         explicit EditorImGuiContext(GLFWwindow *window);
 

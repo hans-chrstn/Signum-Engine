@@ -299,6 +299,11 @@ namespace SNE::Engine::Core::Error {
                     .subsystem = Subsystem::Vulkan,
                 },
                 ErrorMetadata{
+                    .code = Code::EditorGlfwBackendInitializationFailed,
+                    .name = "EditorGlfwBackendInitializationFailed",
+                    .subsystem = Subsystem::Editor,
+                },
+                ErrorMetadata{
                     .code = Code::ShaderCompilerInitializationFailed,
                     .name = "ShaderCompilerInitializationFailed",
                     .subsystem = Subsystem::Renderer,

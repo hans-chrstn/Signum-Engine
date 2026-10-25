@@ -76,6 +76,24 @@
  */
 
 /**
+ * @namespace SNE::Engine::Renderer::Shader
+ * @brief Contains shader descriptions, compilation, and interface metadata.
+ *
+ * Defines graphics-API-independent representations of shader stages,
+ * compiled shader artifacts, entry-point selections, and shader resource
+ * interfaces.
+ *
+ * Provides shader source compilation facilities and metadata used to
+ * describe descriptor bindings and push-constant requirements.
+ *
+ * Shader descriptions remain separate from Vulkan shader modules,
+ * graphics pipelines, and GPU resource ownership.
+ *
+ * Backend implementations are responsible for validating and translating
+ * shader descriptions into native graphics resources.
+ */
+
+/**
  * @namespace SNE::Engine::Renderer::Vulkan
  * @brief Contains the Vulkan rendering backend for Signum Engine.
  *
@@ -88,4 +106,19 @@
  * policy and resource creation so supported hardware capabilities, selected
  * features, queue requirements, and owned Vulkan resources remain distinct
  * architectural concerns.
+ */
+
+/**
+ * @namespace SNE::Editor
+ * @brief Contains the Signum Editor application and its supporting systems.
+ *
+ * Provides editor-specific functionality, including Dear ImGui context
+ * management, platform input integration, and the foundation for editor
+ * windows, panels, and interaction.
+ *
+ * Editor systems use existing engine services without taking ownership of
+ * engine-managed windows or rendering resources.
+ *
+ * Dear ImGui dependencies remain isolated from the reusable engine runtime
+ * so editor implementation details do not become engine requirements.
  */

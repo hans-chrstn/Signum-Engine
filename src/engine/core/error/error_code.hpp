@@ -135,6 +135,8 @@ namespace SNE::Engine::Core::Error {
         VulkanDescriptorLayoutIncompatible,
         /** Replacement shader material bindings are incompatible. */
         VulkanMaterialBindingsIncompatible,
+        /** Initialization of Editor GLFW backend failed. */
+        EditorGlfwBackendInitializationFailed,
         /** Initialization of a shader source compiler failed. */
         ShaderCompilerInitializationFailed,
         /** Creation of a shader compiler session failed. */

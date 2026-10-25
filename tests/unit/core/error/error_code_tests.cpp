@@ -333,6 +333,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Subsystem::Vulkan,
         },
         ErrorCodeTestCase{
+            Error::Code::EditorGlfwBackendInitializationFailed,
+            "EditorGlfwBackendInitializationFailed",
+            Error::Subsystem::Editor,
+        },
+        ErrorCodeTestCase{
             Error::Code::ShaderCompilerInitializationFailed,
             "ShaderCompilerInitializationFailed",
             Error::Subsystem::Renderer,

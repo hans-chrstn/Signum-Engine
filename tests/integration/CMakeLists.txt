@@ -51,6 +51,27 @@ if(SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION)
   )
 endif()
 
+if(SIGNUM_BUILD_EDITOR)
+  target_sources(
+    signum_integration_tests
+    PRIVATE
+      editor/editor_imgui_context_integration_tests.cpp
+      "${CMAKE_SOURCE_DIR}/editor/imgui/editor_imgui_context.cpp"
+  )
+
+  target_include_directories(
+    signum_integration_tests
+    PRIVATE
+      "${CMAKE_SOURCE_DIR}/editor"
+  )
+
+  target_link_libraries(
+    signum_integration_tests
+    PRIVATE
+      signum_editor_imgui
+  )
+endif()
+
 target_compile_definitions(
   signum_integration_tests
   PRIVATE

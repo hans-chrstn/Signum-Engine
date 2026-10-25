@@ -39,6 +39,7 @@ target_link_libraries(
 add_executable(
   signum_editor
   main.cpp
+  imgui/editor_imgui_context.cpp
 )
 
 target_link_libraries(

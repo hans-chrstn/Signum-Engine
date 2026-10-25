@@ -8,7 +8,7 @@ if ! command -v clang-format >/dev/null 2>&1; then
 fi
 
 mapfile -d '' files < <(
-  find src tests \
+  find src tests editor \
     -type f \
     \( \
       -name '*.cpp' -o \
