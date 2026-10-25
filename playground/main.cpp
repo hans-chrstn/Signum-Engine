@@ -21,7 +21,10 @@
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_artifact.hpp"
+#include "engine/renderer/shader/shader_compilation_result.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
+#include "engine/renderer/shader/shader_source_compiler.hpp"
+#include "engine/renderer/shader/shader_source_description.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/texture/image_loader.hpp"
@@ -71,6 +74,30 @@ namespace {
             Core::Error::writeDiagnostic(std::cerr, error);
             return false;
         }
+        return true;
+    }
+
+    [[nodiscard]] auto
+    tryReplaceFragmentShaderSource(Core::Application &application,
+                                   const std::filesystem::path &shader_path)
+        -> bool {
+        try {
+            Shader::ShaderSourceDescription description{
+                .path = shader_path,
+                .language = Shader::ShaderSourceLanguage::Slang,
+                .stage = Shader::ShaderStage::Fragment,
+                .entry_point = "fragmentMain",
+            };
+
+            Shader::ShaderCompilationResult result =
+                SNE::Engine::Renderer::Shader::compileShaderSource(description);
+
+            application.replaceFragmentShader(std::move(result.stage_input));
+        } catch (const Core::Error::EngineError &error) {
+            Core::Error::writeDiagnostic(std::cerr, error);
+            return false;
+        }
+
         return true;
     }
 
@@ -180,8 +207,8 @@ namespace {
         state.observed_shader_write_time = current_write_time;
 
         if (state.is_earth_shader_active) {
-            static_cast<void>(
-                tryReplaceFragmentShader(state.app, state.earth_shader_path));
+            static_cast<void>(tryReplaceFragmentShaderSource(
+                state.app, state.earth_shader_path));
         }
     }
 
@@ -206,11 +233,18 @@ namespace {
         if (!is_middle_pressed || state.was_middle_pressed) {
             return;
         }
-        const std::filesystem::path replacement_path =
-            state.is_earth_shader_active ? "build/shaders/textured.frag.spv"
-                                         : "build/shaders/earth.frag.spv";
 
-        if (tryReplaceFragmentShader(state.app, replacement_path)) {
+        bool replacement_succeeded{false};
+
+        if (state.is_earth_shader_active) {
+            replacement_succeeded = tryReplaceFragmentShader(
+                state.app, "build/shaders/textured.frag.spv");
+        } else {
+            replacement_succeeded = tryReplaceFragmentShaderSource(
+                state.app, state.earth_shader_path);
+        }
+
+        if (replacement_succeeded) {
             state.is_earth_shader_active = !state.is_earth_shader_active;
         }
     }
@@ -601,9 +635,12 @@ auto main() -> int {
 
         Core::Application application{std::move(configuration)};
 
+        static_cast<void>(tryReplaceFragmentShaderSource(
+            application, "shaders/slang/basic/earth.slang"));
+
         const auto now = std::chrono::steady_clock::now();
         const std::filesystem::path earth_shader_path =
-            "build/shaders/earth.frag.spv";
+            "shaders/slang/basic/earth.slang";
 
         FrameState state{
             .app = application,

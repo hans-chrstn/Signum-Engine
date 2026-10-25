@@ -35,6 +35,7 @@
       "inherits": "debug",
       "cacheVariables": {
         "SIGNUM_BUILD_PLAYGROUND": true,
+        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true,
         "BUILD_TESTING": false
       }
     },

@@ -4,11 +4,14 @@
 #include "engine/renderer/shader/shader_source_description.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_spirv_validation.hpp"
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 
 namespace Core = SNE::Engine::Core;
@@ -207,4 +210,72 @@ TEST(ShaderSourceCompilerIntegrationTests,
 
     EXPECT_NO_THROW(Vulkan::validateSpirvEntryPoint(
         result.stage_input.artifact.words, result.stage_input.selection));
+}
+
+TEST(ShaderSourceCompilerIntegrationTests,
+     RejectsEntryPointContainingEmbeddedNull) {
+
+    Shader::ShaderSourceDescription source =
+        makeShaderSource(Shader::ShaderStage::Fragment, "fragmentMain");
+
+    source.entry_point.push_back('\0');
+    source.entry_point.append("unexpected");
+
+    expectCompilationFailure(source, Core::Error::Code::ShaderSourceInvalid,
+                             "Validate Shader Source");
+}
+
+TEST(ShaderSourceCompilerIntegrationTests,
+     RejectsSourceFileContainingEmbeddedNull) {
+
+    const auto unique_id =
+        std::chrono::steady_clock::now().time_since_epoch().count();
+
+    const std::filesystem::path shader_path =
+        std::filesystem::temp_directory_path() /
+        ("signum_shader_embedded_null_" + std::to_string(unique_id) + ".slang");
+
+    struct ScopedShaderFile {
+        std::filesystem::path path;
+
+        ~ScopedShaderFile() {
+            std::error_code ignored_error;
+            static_cast<void>(std::filesystem::remove(path, ignored_error));
+        }
+    };
+
+    const ScopedShaderFile temporary_file{shader_path};
+
+    std::string source_text{"[shader(\"fragment\")]\n"};
+    source_text.push_back('\0');
+    source_text.append("float4 fragmentMain() : SV_Target\n"
+                       "{\n"
+                       "    return float4(1.0, 0.0, 0.0, 1.0);\n"
+                       "}\n");
+
+    {
+        std::ofstream file{
+            temporary_file.path,
+            std::ios::binary | std::ios::trunc,
+        };
+
+        ASSERT_TRUE(file.is_open());
+
+        file.write(source_text.data(),
+                   static_cast<std::streamsize>(source_text.size()));
+
+        ASSERT_TRUE(file.good());
+
+        file.close();
+
+        ASSERT_FALSE(file.fail());
+    }
+
+    Shader::ShaderSourceDescription source =
+        makeShaderSource(Shader::ShaderStage::Fragment, "fragmentMain");
+
+    source.path = temporary_file.path;
+
+    expectCompilationFailure(source, Core::Error::Code::ShaderSourceInvalid,
+                             "Validate Shader Source Text");
 }

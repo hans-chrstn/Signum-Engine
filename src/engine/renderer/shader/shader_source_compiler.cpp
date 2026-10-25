@@ -3,7 +3,6 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/renderer/shader/shader_artifact.hpp"
-#include "engine/renderer/shader/shader_stage_input.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -45,6 +44,13 @@ namespace {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceInvalid,
                 "Shader source entry point must not be empty",
+                "Validate Shader Source");
+        }
+
+        if (source.entry_point.contains('\0')) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::ShaderSourceInvalid,
+                "Shader source entry point contains an embedded null character",
                 "Validate Shader Source");
         }
 
@@ -120,6 +126,13 @@ namespace {
                 Core::Error::Code::ShaderSourceLoadFailed,
                 "Failed to read shader source file completely",
                 "Read Shader Source");
+        }
+
+        if (source_text.contains('\0')) {
+            throw Core::Error::EngineError(
+                Core::Error::Code::ShaderSourceInvalid,
+                "Shader source contains an embedded null character",
+                "Validate Shader Source Text");
         }
 
         return source_text;
