@@ -2,6 +2,7 @@
 #include "engine/core/application_configuration.hpp"
 #include "engine/core/error/diagnostic_writer.hpp"
 #include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/error_boundary.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/vector3.hpp"
 #include "engine/core/math/vector3d.hpp"
@@ -39,8 +40,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
-#include <exception>
 #include <filesystem>
 #include <iostream>
 #include <numbers>
@@ -721,155 +720,147 @@ namespace {
 } // namespace
 
 auto main() -> int {
-    try {
-        const Math::Vector3f translation{
-            .x = 0.0F,
-            .y = 0.0F,
-            .z = 0.0F,
-        };
+    return Core::Error::runWithErrorBoundary(
+        [] -> void {
+            const Math::Vector3f translation{
+                .x = 0.0F,
+                .y = 0.0F,
+                .z = 0.0F,
+            };
 
-        Math::Vector3f rotation{
-            .x = kRotateX * kDegreesToRadians,
-            .y = kRotateY * kDegreesToRadians,
-            .z = kRotateZ * kDegreesToRadians,
-        };
+            Math::Vector3f rotation{
+                .x = kRotateX * kDegreesToRadians,
+                .y = kRotateY * kDegreesToRadians,
+                .z = kRotateZ * kDegreesToRadians,
+            };
 
-        constexpr float kLightDirectionX = 3.0F;
-        constexpr float kLightDirectionY = 1.5F;
-        constexpr float kLightDirectionZ = 1.0F;
+            constexpr float kLightDirectionX = 3.0F;
+            constexpr float kLightDirectionY = 1.5F;
+            constexpr float kLightDirectionZ = 1.0F;
 
-        Renderer::DirectionalLight directional_light{
-            .direction_to_light =
-                {
-                    .x = kLightDirectionX,
-                    .y = kLightDirectionY,
-                    .z = kLightDirectionZ,
-                },
-            .color =
-                {
-                    .x = 1.0F,
-                    .y = 1.0F,
-                    .z = 1.0F,
-                },
-            .intensity = 1.0F,
-        };
+            Renderer::DirectionalLight directional_light{
+                .direction_to_light =
+                    {
+                        .x = kLightDirectionX,
+                        .y = kLightDirectionY,
+                        .z = kLightDirectionZ,
+                    },
+                .color =
+                    {
+                        .x = 1.0F,
+                        .y = 1.0F,
+                        .z = 1.0F,
+                    },
+                .intensity = 1.0F,
+            };
 
-        Renderer::DirectionalLightUniformData uniform_data =
-            Renderer::makeDirectionalLightUniformData(directional_light);
+            Renderer::DirectionalLightUniformData uniform_data =
+                Renderer::makeDirectionalLightUniformData(directional_light);
 
-        CloudUniformData cloud_data{};
+            CloudUniformData cloud_data{};
 
-        const EarthViewUniformData earth_data{
-            .camera_world_position =
-                {
-                    .x = 0.0F,
-                    .y = 0.0F,
-                    .z = 0.0F,
-                    .w = 0.0F,
-                },
-            .sphere_center_radius =
-                {
-                    .x = translation.x,
-                    .y = translation.y,
-                    .z = translation.z,
-                    .w = kSphereRadius,
-                },
-        };
+            const EarthViewUniformData earth_data{
+                .camera_world_position =
+                    {
+                        .x = 0.0F,
+                        .y = 0.0F,
+                        .z = 0.0F,
+                        .w = 0.0F,
+                    },
+                .sphere_center_radius =
+                    {
+                        .x = translation.x,
+                        .y = translation.y,
+                        .z = translation.z,
+                        .w = kSphereRadius,
+                    },
+            };
 
-        constexpr Renderer::UvSphereParameters sphere_params{
-            .radius = kSphereRadius,
-            .longitude_segments = kSphereLongitudeSegments,
-            .latitude_segments = kSphereLatitudeSegments,
-        };
+            constexpr Renderer::UvSphereParameters sphere_params{
+                .radius = kSphereRadius,
+                .longitude_segments = kSphereLongitudeSegments,
+                .latitude_segments = kSphereLatitudeSegments,
+            };
 
-        const Renderer::UvSphereMesh sphere =
-            Renderer::generateUvSphereMesh(sphere_params);
+            const Renderer::UvSphereMesh sphere =
+                Renderer::generateUvSphereMesh(sphere_params);
 
-        const Math::Vector3f scale{
-            .x = 1.0F,
-            .y = 1.0F,
-            .z = 1.0F,
-        };
+            const Math::Vector3f scale{
+                .x = 1.0F,
+                .y = 1.0F,
+                .z = 1.0F,
+            };
 
-        const std::array<Math::Matrix4f, 1> model_matrices{
-            Math::composeTRS(translation, rotation, scale),
-        };
+            const std::array<Math::Matrix4f, 1> model_matrices{
+                Math::composeTRS(translation, rotation, scale),
+            };
 
-        const auto initial_mesh = createInitialMesh(sphere, model_matrices);
-        const auto initial_camera = createInitialCamera();
-        auto initial_shaders = createInitialShaders();
+            const auto initial_mesh = createInitialMesh(sphere, model_matrices);
+            const auto initial_camera = createInitialCamera();
+            auto initial_shaders = createInitialShaders();
 
-        const InitialTextureImages texture_images = loadInitialTextureImages();
+            const InitialTextureImages texture_images =
+                loadInitialTextureImages();
 
-        const auto initial_textures = createInitialTextures(texture_images);
-        const auto initial_buffers =
-            createInitialBuffers(uniform_data, cloud_data, earth_data);
+            const auto initial_textures = createInitialTextures(texture_images);
+            const auto initial_buffers =
+                createInitialBuffers(uniform_data, cloud_data, earth_data);
 
-        Core::ApplicationConfiguration configuration{};
-        configuration.initial_mesh = initial_mesh;
-        configuration.initial_camera = initial_camera;
-        configuration.initial_graphics_shaders = std::move(initial_shaders);
-        configuration.initial_buffer_bindings = initial_buffers;
-        configuration.initial_texture_bindings = initial_textures;
+            Core::ApplicationConfiguration configuration{};
+            configuration.initial_mesh = initial_mesh;
+            configuration.initial_camera = initial_camera;
+            configuration.initial_graphics_shaders = std::move(initial_shaders);
+            configuration.initial_buffer_bindings = initial_buffers;
+            configuration.initial_texture_bindings = initial_textures;
 
-        Core::Application application{std::move(configuration)};
+            Core::Application application{std::move(configuration)};
 
-        static_cast<void>(tryReplaceFragmentShaderSource(
-            application, "shaders/slang/basic/earth.slang"));
+            static_cast<void>(tryReplaceFragmentShaderSource(
+                application, "shaders/slang/basic/earth.slang"));
 
-        const auto now = std::chrono::steady_clock::now();
-        const std::filesystem::path earth_shader_path =
-            "shaders/slang/basic/earth.slang";
+            const auto now = std::chrono::steady_clock::now();
+            const std::filesystem::path earth_shader_path =
+                "shaders/slang/basic/earth.slang";
 
-        constexpr double kCameraDistanceInEarthRadii = 3.0;
+            constexpr double kCameraDistanceInEarthRadii = 3.0;
 
-        FrameState state{
-            .app = application,
-            .rotation = rotation,
-            .directional_light = directional_light,
-            .uniform_data = uniform_data,
-            .cloud_data = cloud_data,
-            .earth_data = earth_data,
-            .previous_cursor = {},
-            .was_dragging = false,
-            .was_right_pressed = false,
-            .was_middle_pressed = false,
-            .light_enabled = true,
-            .is_earth_shader_active = true,
-            .planet_spin_radians = 0.0,
-            .cloud_animation_start = now,
-            .previous_frame_time = now,
-            .last_shader_poll_time = now,
-            .observed_shader_write_time =
-                std::filesystem::last_write_time(earth_shader_path),
-            .earth_shader_path = earth_shader_path,
-            .earth_world_position =
-                {
-                    .x = kEarthOrbitDistanceMeters,
-                    .y = 0.0,
-                    .z = 0.0,
-                },
-            .camera_world_position =
-                {
-                    .x = kEarthOrbitDistanceMeters,
-                    .y = 0.0,
-                    .z = kCameraDistanceInEarthRadii * kEarthMeanRadiusMeters,
-                },
-        };
+            FrameState state{
+                .app = application,
+                .rotation = rotation,
+                .directional_light = directional_light,
+                .uniform_data = uniform_data,
+                .cloud_data = cloud_data,
+                .earth_data = earth_data,
+                .previous_cursor = {},
+                .was_dragging = false,
+                .was_right_pressed = false,
+                .was_middle_pressed = false,
+                .light_enabled = true,
+                .is_earth_shader_active = true,
+                .planet_spin_radians = 0.0,
+                .cloud_animation_start = now,
+                .previous_frame_time = now,
+                .last_shader_poll_time = now,
+                .observed_shader_write_time =
+                    std::filesystem::last_write_time(earth_shader_path),
+                .earth_shader_path = earth_shader_path,
+                .earth_world_position =
+                    {
+                        .x = kEarthOrbitDistanceMeters,
+                        .y = 0.0,
+                        .z = 0.0,
+                    },
+                .camera_world_position =
+                    {
+                        .x = kEarthOrbitDistanceMeters,
+                        .y = 0.0,
+                        .z = kCameraDistanceInEarthRadii *
+                             kEarthMeanRadiusMeters,
+                    },
+            };
 
-        application.run(
-            [&state](Core::Application &) -> void { processFrame(state); });
-
-    } catch (const Core::Error::EngineError &engine_error) {
-        Core::Error::writeDiagnostic(std::cerr, engine_error);
-        return EXIT_FAILURE;
-    } catch (const std::exception &error) {
-        std::cerr << "Unexpected standard exception: " << error.what() << '\n';
-        return EXIT_FAILURE;
-    } catch (...) {
-        std::cerr << "Unknown exception reached application boundary" << '\n';
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
+            application.run(
+                [&state](Core::Application &) -> void { processFrame(state); });
+        },
+        std::cerr);
 }

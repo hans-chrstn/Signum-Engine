@@ -1,4 +1,5 @@
 #include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/error_boundary.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
@@ -20,6 +21,7 @@
 #include <exception>
 #include <gtest/gtest.h>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -266,19 +268,29 @@ TEST(VulkanSwapchainRetirementIntegrationTests,
 
     bool replacement_created = false;
 
-    EXPECT_THROW(Vulkan::replaceRetiringResource(
-                     current,
-                     [&]() -> Vulkan::VulkanSwapchain {
-                         Vulkan::VulkanSwapchain replacement =
-                             make_swapchain(old_handle);
+    std::ostringstream diagnostics;
 
-                         replacement_created =
-                             replacement.nativeHandle() != VK_NULL_HANDLE;
+    const int exit_status = Core::Error::runWithErrorBoundary(
+        [&] -> void {
+            Vulkan::replaceRetiringResource(
+                current, [&] -> Vulkan::VulkanSwapchain {
+                    Vulkan::VulkanSwapchain replacement =
+                        make_swapchain(old_handle);
 
-                         throw std::runtime_error{
-                             "Deliberate failure after replacement creation"};
-                     }),
-                 std::runtime_error);
+                    replacement_created =
+                        replacement.nativeHandle() != VK_NULL_HANDLE;
+
+                    throw std::runtime_error{
+                        "Deliberate failure after replacement creation"};
+                });
+        },
+        diagnostics);
+
+    EXPECT_EQ(exit_status, EXIT_FAILURE);
+
+    EXPECT_EQ(diagnostics.str(),
+              "Unexpected standard exception: "
+              "Deliberate failure after replacement creation\n");
 
     EXPECT_TRUE(replacement_created);
     EXPECT_FALSE(current.has_value());

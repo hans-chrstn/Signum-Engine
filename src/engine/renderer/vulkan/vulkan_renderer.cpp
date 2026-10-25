@@ -23,7 +23,10 @@
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <optional>
+#include <print>
 #include <span>
 #include <string>
 #include <utility>
@@ -223,12 +226,15 @@ namespace SNE::Engine::Renderer::Vulkan {
     VulkanRenderer::~VulkanRenderer() noexcept {
         const VkResult result = vkDeviceWaitIdle(m_Device.nativeHandle());
 
-        if (result != VK_SUCCESS) {
-            Core::Assertion::failAssertion(
-                Core::Assertion::AssertionType::Invariant,
-                Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer failed to confirm GPU completion during "
-                "shutdown");
+        if (result != VK_SUCCESS && result != VK_ERROR_DEVICE_LOST) {
+            // NOLINTNEXTLINE(modernize-use-std-print)
+            std::fprintf(
+                stderr,
+                "Fatal Vulkan shutdown failure: vkDeviceWaitIdle returned %d\n",
+                static_cast<int>(result));
+
+            std::fflush(stderr);
+            std::abort();
         }
 
         for (std::size_t i{}; i < m_FrameResources.size(); ++i) {

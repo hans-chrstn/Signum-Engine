@@ -1141,12 +1141,12 @@
 - [x] Add Vulkan error conversion
 - [ ] Add nested causes only if needed
 - [x] Define recoverable result type policy
-- [ ] Enforce the Phase 5.5 exception policy across subsystems
-- [ ] Enforce the Phase 5.5 assertion/contract policy across subsystems
+- [x] Enforce the Phase 5.5 exception policy across subsystems
+- [x] Enforce the Phase 5.5 assertion/contract policy across subsystems
 - [x] Add fatal error reporting
 - [x] Add graceful fatal shutdown
-- [ ] Prevent duplicate error reporting
-- [ ] Audit recoverable failures for accidental fatal handling
+- [x] Prevent duplicate error reporting
+- [x] Audit recoverable failures for accidental fatal handling
 
 ### Learn
 
@@ -1154,8 +1154,8 @@
 - [x] reporting concept
 - [x] exception boundaries
 - [x] source-location diagnostics
-- [ ] fatal reporting
-- [ ] explicit result types
+- [x] fatal reporting
+- [x] explicit result types
 - [ ] nested error causes when justified
 
 ### Test
@@ -1165,19 +1165,19 @@
 - [x] Test native values
 - [x] Test core diagnostic fields
 - [x] Test source location formatting
-- [ ] Test fatal reporter
-- [ ] Test recoverable result behavior
-- [ ] Test programmer-contract failure behavior where testable
-- [ ] Test runtime failure propagation through the fatal boundary
-- [ ] Test duplicate-report prevention
+- [x] Test fatal reporter
+- [x] Test recoverable result behavior
+- [x] Test programmer-contract failure behavior where testable
+- [x] Test runtime failure propagation through the fatal boundary
+- [x] Test duplicate-report prevention
 
 ### Architecture
 
 - [x] Keep `EngineError` independent from terminal output
 - [x] Keep formatting independent from reporting
 - [x] Keep fatal reporting at defined boundary
-- [ ] Keep recoverable failures non-fatal
-- [ ] Keep programmer-contract failures distinct from runtime/environment failures
+- [x] Keep recoverable failures non-fatal
+- [x] Keep programmer-contract failures distinct from runtime/environment failures
 
 ---
 

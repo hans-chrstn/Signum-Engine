@@ -6,6 +6,7 @@ add_executable(
   core/error/diagnostic_formatter_tests.cpp
   core/error/diagnostic_writer_tests.cpp
   core/error/subsystem_tests.cpp
+  core/error/error_boundary_tests.cpp
   core/assert/assertion_type_tests.cpp
   core/assert/assertion_failure_tests.cpp
   core/assert/assertion_formatter_tests.cpp
