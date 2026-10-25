@@ -46,6 +46,12 @@ option(
 )
 
 option(
+  SIGNUM_BUILD_EDITOR
+  "Build the optional Signum Editor application"
+  OFF
+)
+
+option(
   SIGNUM_BUILD_SHADERS
   "Build the shaders"
   OFF
@@ -208,6 +214,10 @@ add_subdirectory(src)
 
 if(SIGNUM_BUILD_PLAYGROUND)
   add_subdirectory(playground)
+endif()
+
+if(SIGNUM_BUILD_EDITOR)
+  add_subdirectory(editor)
 endif()
 
 if(SIGNUM_BUILD_SHADERS)

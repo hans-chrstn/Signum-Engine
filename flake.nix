@@ -8,12 +8,18 @@
       url = "github:KhronosGroup/SPIRV-Reflect";
       flake = false;
     };
+
+    imgui = {
+      url = "github:ocornut/imgui/v1.93.0-docking";
+      flake = false;
+    };
   };
 
   outputs = {
     self,
     nixpkgs,
     spirv-reflect,
+    imgui,
     ...
   }: let
     system = "x86_64-linux";
@@ -108,6 +114,7 @@
         ];
 
         SPIRV_REFLECT_SOURCE_DIR = "${spirv-reflect}";
+        IMGUI_SOURCE_DIR = "${imgui}";
 
         LD_LIBRARY_PATH =
           pkgs.lib.makeLibraryPath runtimeLibraries;

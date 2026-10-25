@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "imgui": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791995460,
+        "narHash": "sha256-NCD0li4ECPSFhhU0egSWMiYNBKSJDoB80rSOUiRAQ6c=",
+        "owner": "ocornut",
+        "repo": "imgui",
+        "rev": "b916186e66aa3c02b72c6ca17455516512ed8049",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ocornut",
+        "ref": "v1.93.0-docking",
+        "repo": "imgui",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1790578696,
@@ -18,6 +35,7 @@
     },
     "root": {
       "inputs": {
+        "imgui": "imgui",
         "nixpkgs": "nixpkgs",
         "spirv-reflect": "spirv-reflect"
       }

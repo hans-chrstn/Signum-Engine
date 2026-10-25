@@ -1234,8 +1234,8 @@
 
 #### 9.5.1 — Editor Foundation
 
-- [ ] Add an optional `SIGNUM_BUILD_EDITOR` CMake option
-- [ ] Create a separate `signum_editor` executable
+- [x] Add an optional `SIGNUM_BUILD_EDITOR` CMake option
+- [x] Create a separate `signum_editor` executable
 - [ ] Integrate Dear ImGui with GLFW and Vulkan
 - [ ] Enable Dear ImGui docking
 - [ ] Keep Dear ImGui dependencies inside editor tooling
