@@ -1230,66 +1230,146 @@
 
 ---
 
-## Phase 9.5 — Developer Diagnostics UI
+## Phase 9.5 — Editor Prototype
 
-### Learn
+#### 9.5.1 — Editor Foundation
 
-- [ ] immediate-mode debug UI concepts
-- [ ] frame-time measurement
-- [ ] rolling performance graphs
-- [ ] debug-overlay ownership
-- [ ] CPU/GPU metric boundaries
+- [ ] Add an optional `SIGNUM_BUILD_EDITOR` CMake option
+- [ ] Create a separate `signum_editor` executable
+- [ ] Integrate Dear ImGui with GLFW and Vulkan
+- [ ] Enable Dear ImGui docking
+- [ ] Keep Dear ImGui dependencies inside editor tooling
+- [ ] Define editor initialization, update, rendering, and shutdown ownership
+- [ ] Keep the editor independent from Worldline and game-specific code
+- [ ] Verify the engine and playground still build without the editor
 
-### Design
+#### 9.5.2 — Editor Window and Layout
 
-- [ ] Keep developer UI separate from engine systems
-- [ ] Make developer UI consume diagnostics and metrics
-- [ ] Avoid engine subsystems depending directly on Dear ImGui
-- [ ] Keep developer UI removable from production builds
-- [ ] Define debug-metric lifetime and ownership
-- [ ] Keep profiler data independent from visualization
+- [ ] Create the main editor dockspace
+- [ ] Add a menu bar with File, Edit, View, and Help
+- [ ] Add a main toolbar
+- [ ] Add a Hierarchy panel
+- [ ] Add an Inspector panel
+- [ ] Add a Scene View panel
+- [ ] Add a Content Browser panel
+- [ ] Add a Performance panel
+- [ ] Support moving, docking, resizing, and closing panels
+- [ ] Add panel visibility controls
+- [ ] Add a default editor layout
+- [ ] Save and restore editor layouts
+- [ ] Define consistent editor colors, spacing, and typography
+- [ ] Keep theme values separate from individual panel implementations
+- [ ] Support editor UI scaling
 
-### Implement
+#### 9.5.3 — Scene Viewport
 
-- [ ] Integrate Dear ImGui for developer tooling
-- [ ] Add developer UI root
-- [ ] Add show/hide developer UI toggle
-- [ ] Add frame-time display
-- [ ] Add FPS display
-- [ ] Add rolling frame-time graph
-- [ ] Add Vulkan device information panel
-- [ ] Add Vulkan API/version information
-- [ ] Add swapchain information panel
-- [ ] Add renderer statistics panel
-- [ ] Add log viewer
-- [ ] Display Vulkan validation messages
-- [ ] Display engine diagnostics
-- [ ] Add basic memory/resource counters
-- [ ] Add basic frame counters
-- [ ] Display active renderable counts and draw/submission statistics when available
-- [ ] Add debug visualization toggle infrastructure
+- [ ] Define how the renderer provides an image to the editor viewport
+- [ ] Add an offscreen scene-rendering target
+- [ ] Display the rendered scene inside the Scene View panel
+- [ ] Support viewport resizing without recreating unrelated resources
+- [ ] Keep scene rendering independent from Dear ImGui
+- [ ] Handle viewport image synchronization and resource lifetimes
+- [ ] Preserve the existing non-editor rendering path
+- [ ] Match the camera aspect ratio to the scene viewport
+- [ ] Support camera movement when the viewport has input focus
+- [ ] Prevent camera controls from interfering with editor UI interaction
+- [ ] Handle zero-sized and minimized viewports
+- [ ] Verify viewport rendering after window and swapchain resizing
 
-### Test
+#### 9.5.4 — Hierarchy and Inspector
 
-- [ ] Launch with developer UI enabled
-- [ ] Launch with developer UI disabled
-- [ ] Toggle developer UI at runtime
-- [ ] Verify diagnostics appear in log viewer
-- [ ] Verify frame metrics update correctly
-- [ ] Verify renderer statistics remain usable while scaling the current reference rendering workload
-- [ ] Verify developer UI does not own engine diagnostic data
-- [ ] Verify engine can build without developer UI
-- [ ] Verify developer UI shutdown is clean
+- [ ] Define editor selection state independently from Dear ImGui
+- [ ] Define a small editor-facing representation of the current reference scene
+- [ ] Give displayed objects stable editor identities
+- [ ] Display the reference scene in the Hierarchy panel
+- [ ] Support selecting and clearing object selection
+- [ ] Highlight selected objects in the hierarchy
+- [ ] Display selected-object properties in the Inspector
+- [ ] Add editable position, rotation, and scale fields
+- [ ] Connect supported property changes to existing engine APIs
+- [ ] Keep editor properties separate from Vulkan resource ownership
+- [ ] Avoid implementing a temporary ECS or scene system
+- [ ] Add viewport transform gizmos using the same editor operations as the Inspector
 
-### Architecture
+#### 9.5.5 — Content Browser and File Tabs
 
-- [ ] Keep Dear ImGui behind developer-tooling boundaries
-- [ ] Keep profiling data independent from Dear ImGui
-- [ ] Keep logging independent from developer UI
-- [ ] Keep renderer independent from developer UI
-- [ ] Keep developer UI out of game-facing APIs
-- [ ] Allow future editor UI to consume the same diagnostics data
-- [ ] Allow future profiler views to replace temporary ImGui views
+- [ ] Define an editor project root
+- [ ] Add project directory navigation
+- [ ] Display files and folders in the Content Browser
+- [ ] Support selecting files and folders
+- [ ] Add basic file-type identification
+- [ ] Add file tabs for opened documents
+- [ ] Support opening, switching, and closing tabs
+- [ ] Display file information for supported file types
+- [ ] Add basic file and project navigation commands
+- [ ] Keep filesystem navigation separate from editor UI code
+- [ ] Avoid implementing an asset database before it is needed
+- [ ] Keep future asset importing and reimporting possible
+
+#### 9.5.6 — Performance and Renderer Information
+
+- [ ] Define basic engine-owned frame metrics
+- [ ] Measure CPU frame time
+- [ ] Calculate FPS from measured frame times
+- [ ] Store a bounded history of frame-time samples
+- [ ] Display FPS and frame time
+- [ ] Add a rolling frame-time graph
+- [ ] Display Vulkan device information
+- [ ] Display Vulkan API and driver information
+- [ ] Display swapchain extent and presentation information
+- [ ] Display basic resource counts
+- [ ] Display active renderable and draw counts when available
+- [ ] Display frame and submission counts when available
+- [ ] Keep metric collection independent from editor visualization
+- [ ] Do not present CPU measurements as GPU execution time
+
+#### 9.5.7 — Editor Interaction and Workspaces
+
+- [ ] Define editor actions independently from UI widgets
+- [ ] Add keyboard shortcuts for common editor actions
+- [ ] Add transform tool selection
+- [ ] Add local and world transform modes when supported
+- [ ] Support basic viewport snapping when transform tools are available
+- [ ] Add a Play/Stop toolbar structure without introducing a temporary game runtime
+- [ ] Separate editor state from application runtime state
+- [ ] Prepare workspace layouts for Scene, Modeling, and Profiling workflows
+- [ ] Keep modeling operations out of the initial prototype
+- [ ] Keep editor UI presentation replaceable without rewriting editor state and actions
+- [ ] Avoid building a general-purpose UI framework prematurely
+
+#### 9.5.8 — Testing and Integration
+
+- [ ] Verify editor startup and clean shutdown
+- [ ] Verify the editor can be enabled or disabled at build time
+- [ ] Verify docking and layout restoration
+- [ ] Verify viewport rendering and resizing
+- [ ] Verify viewport input does not conflict with UI interaction
+- [ ] Verify object selection and property editing
+- [ ] Verify file navigation and tab behavior
+- [ ] Verify performance metrics update correctly
+- [ ] Verify the editor works without a logging system
+- [ ] Verify Vulkan validation reports no new errors
+- [ ] Run supported unit and integration tests
+- [ ] Run Clang-Tidy and formatting checks
+- [ ] Run ASan/UBSan
+- [ ] Verify normal engine and playground behavior remains unchanged
+
+### Future Editor Capabilities — Deferred
+
+- [ ] Replace Dear ImGui with a custom UI implementation when justified
+- [ ] Add project and scene serialization
+- [ ] Connect the editor to the production world/entity model
+- [ ] Add undo/redo for real editor operations
+- [ ] Add asset importing and reimporting
+- [ ] Support Blender glTF 2.0 imports
+- [ ] Evaluate OpenUSD for scene interchange
+- [ ] Add an editable mesh representation separate from GPU mesh data
+- [ ] Add Object Mode and Mesh Edit Mode
+- [ ] Add vertex, edge, and face selection
+- [ ] Add basic mesh modeling tools
+- [ ] Add non-destructive modeling operations where justified
+- [ ] Add UV and material editing tools
+- [ ] Add additional editor workspaces as their functionality is implemented
 
 ---
 
