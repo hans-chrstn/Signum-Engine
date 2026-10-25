@@ -1031,7 +1031,7 @@
 - [x] Define GPU lifetime ordering
 - [x] Track GPU resource dependencies
 - [x] Expose resource lifetime/dependency data needed by later frame scheduling
-- [ ] Connect the first shader compilation or validated SPIR-V loading path to explicit compiler diagnostics
+- [x] Connect the first shader compilation or validated SPIR-V loading path to explicit compiler diagnostics
 - [x] Validate descriptor and push-constant declarations against the shader/pipeline interface
 - [x] Represent texture format, color space, mip ranges, and resource usage explicitly in Vulkan resource setup
 - [x] Preserve submitted GPU resource lifetimes until the relevant completion signal is observed
@@ -1307,11 +1307,10 @@
 - [x] Add Clang-Tidy
 - [x] Treat project warnings as errors
 - [x] Add integration-test structure
-- [ ] Add benchmark target
-- [ ] Add reusable benchmark helpers
-- [ ] Define benchmark result-recording convention
+- [x] Add benchmark target
+- [x] Add reusable benchmark helpers
+- [x] Define benchmark result-recording convention
 - [ ] Add repeatable reference-workload configurations for correctness and performance testing
-
 - [ ] Add targeted fault-injection seams for asset, allocation, shader, and device-facing failures as those systems appear
 - [ ] Record the runtime, driver, and capability configuration used by GPU integration tests
 
@@ -1339,18 +1338,17 @@
 - [x] Run memory checks
 - [ ] Debug a deliberately failing test
 - [ ] Inspect a thrown exception with debugger
-- [ ] Establish initial benchmark baseline
+- [x] Establish initial benchmark baseline
 - [ ] Record an initial multi-object rendering reference baseline
-
 - [ ] Verify representative failure-injection runs preserve ownership and cleanup invariants
 - [ ] Test feature-disabled and feature-unsupported renderer configurations where hardware permits
 
 ### Architecture
 
-- [ ] Keep deterministic logic in unit tests
-- [ ] Keep driver/OS/hardware behavior in integration tests
-- [ ] Keep benchmarks separate from correctness tests
-- [ ] Make performance comparisons reproducible enough to guide later optimization
+- [x] Keep deterministic logic in unit tests
+- [x] Keep driver/OS/hardware behavior in integration tests
+- [x] Keep benchmarks separate from correctness tests
+- [x] Make performance comparisons reproducible enough to guide later optimization
 - [ ] Keep reference workloads outside engine-core behavior and reusable as regression inputs as later phases add capabilities
 
 ---
@@ -1376,8 +1374,8 @@
 
 ### Implement
 
-- [ ] Add keyboard input
-- [ ] Add mouse input
+- [x] Add keyboard input
+- [x] Add mouse input
 - [ ] Add scrolling
 - [ ] Add resize events
 - [ ] Add focus events
@@ -1402,8 +1400,8 @@
 
 ### Architecture
 
-- [ ] Keep GLFW types out of engine-facing input API
-- [ ] Keep actions such as Jump/Shoot project-defined
+- [x] Keep GLFW types out of engine-facing input API
+- [x] Keep actions such as Jump/Shoot project-defined
 - [ ] Keep input-device/backend translation replaceable without changing gameplay-facing action/state contracts
 - [ ] Avoid assuming one window, keyboard/mouse-only input, or one platform event source in engine-facing APIs
 
@@ -1452,8 +1450,8 @@
 ### Implement
 
 - [ ] Move normal rendering callers away from raw Vulkan
-- [ ] Keep Vulkan as first backend
-- [ ] Avoid premature additional graphics backends
+- [x] Keep Vulkan as first backend
+- [x] Avoid premature additional graphics backends
 - [ ] Add render-feature registry when a real feature requires it
 - [ ] Add public custom render-feature registration path
 - [ ] Add public custom render-pass registration path

@@ -1,6 +1,7 @@
 add_executable(
   signum_integration_tests
   platform/window_keyboard_integration_tests.cpp
+  platform/window_cursor_capture_integration_tests.cpp
   renderer/vulkan/vulkan_integration_test_fixture.cpp
   renderer/vulkan/vulkan_renderer_mesh_replacement_integration_tests.cpp
   renderer/vulkan/vulkan_renderer_texture_replacement_integration_tests.cpp
