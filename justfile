@@ -61,8 +61,12 @@ bench:
     ./scripts/bench.sh
 
 playground preset="playground":
-    just build playground
-    ./build/playground/playground/signum_playground
+    just build {{preset}}
+    ./build/{{preset}}/playground/signum_playground
+
+editor preset="debug":
+    just build {{preset}}
+    ./build/{{preset}}/editor/signum_editor
 
 all:
     ./scripts/clean.sh

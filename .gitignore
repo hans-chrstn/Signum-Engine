@@ -37,3 +37,6 @@ CMakeScripts/
 cmake_install.cmake
 install_manifest.txt
 Makefile
+
+# Editor
+/imgui.ini

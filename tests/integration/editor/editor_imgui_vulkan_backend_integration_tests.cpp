@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <gtest/gtest.h>
 #include <imgui.h>
+#include <optional>
 
 namespace Editor = SNE::Editor;
 namespace Platform = SNE::Engine::Platform;
@@ -87,12 +88,27 @@ TEST(EditorImGuiVulkanBackendIntegrationTests,
         ASSERT_EQ(ImGui::GetIO().BackendRendererUserData, nullptr);
 
         {
-            Editor::EditorImGuiVulkanBackend backend{
-                renderer.externalRenderingInfo(),
-            };
+            std::optional<Editor::EditorImGuiVulkanBackend> backend;
+
+            backend.emplace(renderer.externalRenderingInfo());
+
+            ASSERT_NE(ImGui::GetIO().BackendRendererUserData, nullptr);
+            EXPECT_NE(ImGui::GetIO().BackendRendererName, nullptr);
+
+            backend.reset();
+
+            EXPECT_EQ(ImGui::GetIO().BackendRendererUserData, nullptr);
+            EXPECT_EQ(ImGui::GetIO().BackendRendererName, nullptr);
+
+            backend.emplace(renderer.externalRenderingInfo());
 
             EXPECT_NE(ImGui::GetIO().BackendRendererUserData, nullptr);
             EXPECT_NE(ImGui::GetIO().BackendRendererName, nullptr);
+
+            backend.reset();
+
+            EXPECT_EQ(ImGui::GetIO().BackendRendererUserData, nullptr);
+            EXPECT_EQ(ImGui::GetIO().BackendRendererName, nullptr);
         }
 
         EXPECT_EQ(ImGui::GetIO().BackendRendererUserData, nullptr);
