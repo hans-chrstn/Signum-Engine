@@ -27,10 +27,7 @@ case "${scope}" in
 esac
 
 case "${display_mode}" in
-    native)
-        exec ctest "${ctest_args[@]}"
-        ;;
-    headless)
+    native | headless)
         ;;
     *)
         echo "Unknown test display mode: ${display_mode}" >&2
@@ -38,6 +35,10 @@ case "${display_mode}" in
         exit 1
         ;;
 esac
+
+if [[ "${scope}" == "unit" || "${display_mode}" == "native" ]]; then
+    exec ctest "${ctest_args[@]}"
+fi
 
 if ! command -v weston >/dev/null 2>&1; then
     echo "Weston is required for headless integration testing" >&2
