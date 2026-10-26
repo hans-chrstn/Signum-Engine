@@ -15,10 +15,36 @@ namespace SNE::Editor {
          * @brief Whether the editor status panel is visible.
          */
         bool m_ShowEditorStatus = true;
+
         /**
          * @brief Whether the About window is visible.
          */
         bool m_ShowAbout = false;
+
+        /**
+         * @brief Whether the Hierarchy panel is visible.
+         */
+        bool m_ShowHierarchy = true;
+
+        /**
+         * @brief Whether the Inspector panel is visible.
+         */
+        bool m_ShowInspector = true;
+
+        /**
+         * @brief Whether the Scene View panel is visible.
+         */
+        bool m_ShowSceneView = true;
+
+        /**
+         * @brief Whether the Content Browser panel is visible.
+         */
+        bool m_ShowContentBrowserView = true;
+
+        /**
+         * @brief Whether the Performance panel is visible.
+         */
+        bool m_ShowPerformanceView = true;
 
       public:
         /**

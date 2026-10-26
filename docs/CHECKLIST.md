@@ -1236,27 +1236,27 @@
 
 - [x] Add an optional `SIGNUM_BUILD_EDITOR` CMake option
 - [x] Create a separate `signum_editor` executable
-- [ ] Integrate Dear ImGui with GLFW and Vulkan
-- [ ] Enable Dear ImGui docking
-- [ ] Keep Dear ImGui dependencies inside editor tooling
-- [ ] Define editor initialization, update, rendering, and shutdown ownership
-- [ ] Keep the editor independent from Worldline and game-specific code
-- [ ] Verify the engine and playground still build without the editor
+- [x] Integrate Dear ImGui with GLFW and Vulkan
+- [x] Enable Dear ImGui docking
+- [x] Keep Dear ImGui dependencies inside editor tooling
+- [x] Define editor initialization, update, rendering, and shutdown ownership
+- [x] Keep the editor independent from Worldline and game-specific code
+- [x] Verify the engine and playground still build without the editor
 
 #### 9.5.2 — Editor Window and Layout
 
-- [ ] Create the main editor dockspace
+- [x] Create the main editor dockspace
 - [ ] Add a menu bar with File, Edit, View, and Help
-- [ ] Add a main toolbar
-- [ ] Add a Hierarchy panel
-- [ ] Add an Inspector panel
-- [ ] Add a Scene View panel
-- [ ] Add a Content Browser panel
-- [ ] Add a Performance panel
-- [ ] Support moving, docking, resizing, and closing panels
-- [ ] Add panel visibility controls
-- [ ] Add a default editor layout
-- [ ] Save and restore editor layouts
+- [x] Add a main toolbar
+- [x] Add a Hierarchy panel
+- [x] Add an Inspector panel
+- [x] Add a Scene View panel
+- [x] Add a Content Browser panel
+- [x] Add a Performance panel
+- [x] Support moving, docking, resizing, and closing panels
+- [x] Add panel visibility controls
+- [x] Add a default editor layout
+- [x] Save and restore editor layouts
 - [ ] Define consistent editor colors, spacing, and typography
 - [ ] Keep theme values separate from individual panel implementations
 - [ ] Support editor UI scaling
@@ -1339,9 +1339,9 @@
 
 #### 9.5.8 — Testing and Integration
 
-- [ ] Verify editor startup and clean shutdown
-- [ ] Verify the editor can be enabled or disabled at build time
-- [ ] Verify docking and layout restoration
+- [x] Verify editor startup and clean shutdown
+- [x] Verify the editor can be enabled or disabled at build time
+- [x] Verify docking and layout restoration
 - [ ] Verify viewport rendering and resizing
 - [ ] Verify viewport input does not conflict with UI interaction
 - [ ] Verify object selection and property editing

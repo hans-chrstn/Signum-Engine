@@ -44,6 +44,11 @@ add_executable(
   imgui/editor_imgui_vulkan_backend.cpp
   panels/editor_status_panel.cpp
   panels/about_window.cpp
+  panels/hierarchy_panel.cpp
+  panels/inspector_panel.cpp
+  panels/scene_view_panel.cpp
+  panels/content_browser_panel.cpp
+  panels/performance_panel.cpp
 )
 
 target_link_libraries(
