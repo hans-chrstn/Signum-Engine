@@ -39,8 +39,11 @@ target_link_libraries(
 add_executable(
   signum_editor
   main.cpp
+  editor_workspace.cpp
   imgui/editor_imgui_context.cpp
   imgui/editor_imgui_vulkan_backend.cpp
+  panels/editor_status_panel.cpp
+  panels/about_window.cpp
 )
 
 target_link_libraries(

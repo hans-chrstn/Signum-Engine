@@ -1,3 +1,4 @@
+#include "editor_workspace.hpp"
 #include "engine/core/application.hpp"
 #include "engine/core/error/error_boundary.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
@@ -28,9 +29,11 @@ auto main() -> int {
 
             editor_backend.emplace(active_rendering_info);
 
+            Editor::EditorWorkspace workspace;
+
             application.run(
-                [&active_rendering_info,
-                 &editor_backend](Core::Application &app) -> void {
+                [&active_rendering_info, &editor_backend,
+                 &workspace](Core::Application &app) -> void {
                     const Vulkan::VulkanExternalRenderingInfo
                         new_rendering_info = app.externalRenderingInfo();
 
@@ -51,9 +54,8 @@ auto main() -> int {
                     ImGui_ImplGlfw_NewFrame();
                     ImGui::NewFrame();
 
-                    ImGui::Begin("Editor Status");
-                    ImGui::TextUnformatted("Signum Editor");
-                    ImGui::End();
+                    workspace.draw();
+
                     ImGui::Render();
                 },
                 [](VkCommandBuffer command_buffer) -> void {
