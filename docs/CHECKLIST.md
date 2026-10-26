@@ -1370,6 +1370,24 @@
 - [ ] Add non-destructive modeling operations where justified
 - [ ] Add UV and material editing tools
 - [ ] Add additional editor workspaces as their functionality is implemented
+- [ ] Add source-code editing inside editor file tabs
+- [ ] Evaluate existing Dear ImGui-compatible text editor components
+- [ ] Support C++ syntax highlighting
+- [ ] Support line numbers, indentation, and code folding
+- [ ] Support undo/redo, search, and replace
+- [ ] Support opening, editing, and saving source files
+- [ ] Keep text editing separate from language intelligence
+- [ ] Integrate clangd through the Language Server Protocol (LSP)
+- [ ] Support C++ code completion and function signature help
+- [ ] Support inline diagnostics and compiler error navigation
+- [ ] Support hover documentation and go-to-definition
+- [ ] Support Signum game-facing API completion and documentation
+- [ ] Generate or provide compilation databases for game projects
+- [ ] Verify language-server compatibility with supported C++26 features
+- [ ] Keep code editing separate from compilation and hot reload
+- [ ] Allow additional language servers without replacing the text editor
+- [ ] Keep the built-in code editor optional
+- [ ] Test file editing, saving, completion, and diagnostics
 
 ---
 
