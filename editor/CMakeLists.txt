@@ -40,6 +40,7 @@ add_executable(
   signum_editor
   main.cpp
   imgui/editor_imgui_context.cpp
+  imgui/editor_imgui_vulkan_backend.cpp
 )
 
 target_link_libraries(

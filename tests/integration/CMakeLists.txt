@@ -8,6 +8,8 @@ add_executable(
   renderer/vulkan/vulkan_renderer_material_integration_tests.cpp
   renderer/vulkan/vulkan_renderer_material_instance_integration_tests.cpp
   renderer/vulkan/vulkan_renderer_material_update_integration_tests.cpp
+  renderer/vulkan/vulkan_frame_command_recorder_integration_tests.cpp
+  renderer/vulkan/vulkan_external_rendering_info_integration_tests.cpp
   renderer/vulkan/command/vulkan_immediate_submission_integration_tests.cpp
   renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
   renderer/vulkan/compute/vulkan_matrix_transform_integration_tests.cpp
@@ -56,7 +58,9 @@ if(SIGNUM_BUILD_EDITOR)
     signum_integration_tests
     PRIVATE
       editor/editor_imgui_context_integration_tests.cpp
+      editor/editor_imgui_vulkan_backend_integration_tests.cpp
       "${CMAKE_SOURCE_DIR}/editor/imgui/editor_imgui_context.cpp"
+      "${CMAKE_SOURCE_DIR}/editor/imgui/editor_imgui_vulkan_backend.cpp"
   )
 
   target_include_directories(

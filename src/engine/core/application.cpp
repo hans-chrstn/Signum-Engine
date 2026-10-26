@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include <utility>
 
 namespace SNE::Engine::Core {
@@ -17,8 +18,9 @@ namespace SNE::Engine::Core {
                      m_Configuration.initial_buffer_bindings,
                      m_Configuration.initial_texture_bindings) {}
 
-    auto Application::run(const std::function<void(Application &)> &on_update)
-        -> void {
+    auto Application::run(const std::function<void(Application &)> &on_update,
+                          const Renderer::Vulkan::VulkanFrameCommandRecorder
+                              &record_external_commands) -> void {
         while (!m_Window.shouldClose()) {
             Platform::Window::pollEvents();
 
@@ -26,7 +28,7 @@ namespace SNE::Engine::Core {
                 on_update(*this);
             }
 
-            m_Renderer.renderFrame();
+            m_Renderer.renderFrame(record_external_commands);
         }
     }
 
@@ -60,5 +62,10 @@ namespace SNE::Engine::Core {
 
     auto Application::setCursorCaptured(bool captured) -> void {
         m_Window.setCursorCaptured(captured);
+    }
+
+    auto Application::externalRenderingInfo() const
+        -> Renderer::Vulkan::VulkanExternalRenderingInfo {
+        return m_Renderer.externalRenderingInfo();
     }
 } // namespace SNE::Engine::Core

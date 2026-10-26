@@ -39,10 +39,13 @@
 #include "engine/renderer/vulkan/synchronization/vulkan_queue_submission_state.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_resource_retirement_queue.hpp"
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
+#include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
+#include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_instance.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -1117,18 +1120,26 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @param depth_attachment Depth attachment owned by the current frame
          * slot.
          * @param image_index Index of the acquired swapchain image.
+         * @param record_external_commands Optional callback that records
+         * additional graphics commands into the active command buffer after
+         * mesh drawing and before dynamic rendering ends. An empty callback
+         * skips external rendering.
          *
+         * @pre The callback must not end the active rendering scope, submit or
+         * reset the command buffer, or retain it beyond the invocation.
+         * @pre The callback must not throw exceptions.
          * @pre command_buffer must be valid and ready for recording.
          * @pre image_index must reference an image in swapchain_resources.
          *
          * @throws Core::Error::EngineError if command buffer recording
          * initialization or completion fails.
          */
-        auto
-        recordFrameCommands(VkCommandBuffer command_buffer,
-                            const SwapchainResources &swapchain_resources,
-                            const DepthAttachmentResources &depth_attachment,
-                            std::size_t image_index) -> void;
+        auto recordFrameCommands(
+            VkCommandBuffer command_buffer,
+            const SwapchainResources &swapchain_resources,
+            const DepthAttachmentResources &depth_attachment,
+            std::size_t image_index,
+            const VulkanFrameCommandRecorder &record_external_commands) -> void;
 
         /**
          * @brief Records indexed mesh drawing commands within active dynamic
@@ -2785,6 +2796,14 @@ namespace SNE::Engine::Renderer::Vulkan {
          * The current frame slot is reused only after its previously submitted
          * GPU work has completed.
          *
+         * @param record_external_commands Optional callback invoked during
+         * active dynamic rendering, after mesh drawing and before rendering
+         * ends. An empty callback records no additional commands.
+         *
+         * @pre The callback must not end the rendering scope, submit or reset
+         * the command buffer, or retain it after invocation.
+         * @pre The callback must not throw exceptions.
+         *
          * @throws Core::Error::EngineError if a required Vulkan frame operation
          * fails.
          *
@@ -2793,7 +2812,9 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Subsequent renderFrame() calls throw rather than waiting
          * on potentially unsignaled synchronization objects.
          */
-        auto renderFrame() -> void;
+        auto renderFrame(
+            const VulkanFrameCommandRecorder &record_external_commands = {})
+            -> void;
 
         /**
          * @brief Updates the model transformation of an existing draw instance.
@@ -2844,5 +2865,27 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         auto setCameraViewMatrix(const Core::Math::Matrix4f &view_matrix)
             -> void;
+
+        /**
+         * @brief Returns Vulkan handles and configuration for external
+         * rendering.
+         *
+         * Provides a snapshot of the renderer's Vulkan initialization state
+         * and current swapchain color format and image count.
+         *
+         * All returned Vulkan handles are borrowed. The caller must not destroy
+         * them or use them after their owning renderer resources are destroyed.
+         *
+         * Swapchain-dependent values must be refreshed following swapchain
+         * recreation.
+         *
+         * @return Vulkan handles and current rendering configuration.
+         *
+         * @pre Swapchain resources must be initialized.
+         *
+         * @note The returned information does not transfer resource ownership.
+         */
+        [[nodiscard]] auto externalRenderingInfo() const
+            -> VulkanExternalRenderingInfo;
     };
 } // namespace SNE::Engine::Renderer::Vulkan

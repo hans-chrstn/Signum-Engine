@@ -338,6 +338,11 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Subsystem::Editor,
         },
         ErrorCodeTestCase{
+            Error::Code::EditorVulkanBackendInitializationFailed,
+            "EditorVulkanBackendInitializationFailed",
+            Error::Subsystem::Editor,
+        },
+        ErrorCodeTestCase{
             Error::Code::ShaderCompilerInitializationFailed,
             "ShaderCompilerInitializationFailed",
             Error::Subsystem::Renderer,

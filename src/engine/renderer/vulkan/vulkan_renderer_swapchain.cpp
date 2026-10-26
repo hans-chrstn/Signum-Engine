@@ -3,7 +3,9 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
+#include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/geometry/vulkan_vertex_input.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_draw_push_constants.hpp"
@@ -266,5 +268,46 @@ namespace SNE::Engine::Renderer::Vulkan {
             });
 
         return true;
+    }
+
+    auto VulkanRenderer::externalRenderingInfo() const
+        -> VulkanExternalRenderingInfo {
+        if (!m_SwapchainResources.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires initialized swapchain resources to "
+                "provide external rendering information");
+        }
+
+        VulkanExternalRenderingInfo external_info{};
+        external_info.instance = m_Instance.nativeHandle();
+        external_info.physical_device = m_PhysicalDevice.handle;
+        external_info.device = m_Device.nativeHandle();
+        external_info.graphics_queue = m_Device.graphicsQueue();
+        external_info.graphics_queue_family_index =
+            m_PhysicalDevice.queue_families.graphics_family.family_index;
+        external_info.api_version = kRequiredApiVersion;
+        external_info.color_attachment_format =
+            m_SwapchainResources.value()
+                .m_VulkanSwapchain.surfaceFormat()
+                .format;
+        external_info.depth_attachment_format =
+            m_SwapchainResources.value().m_DepthFormat;
+
+        std::optional<std::uint32_t> image_count =
+            Core::Numeric::tryConvertToUint32(
+                m_SwapchainResources.value().m_VulkanSwapchain.images().size());
+
+        if (!image_count.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer swapchain image count exceeds uint32_t");
+        }
+
+        external_info.swapchain_image_count = image_count.value();
+
+        return external_info;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

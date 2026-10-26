@@ -137,6 +137,8 @@ namespace SNE::Engine::Core::Error {
         VulkanMaterialBindingsIncompatible,
         /** Initialization of Editor GLFW backend failed. */
         EditorGlfwBackendInitializationFailed,
+        /** Initialization of the Dear ImGui Vulkan backend failed. */
+        EditorVulkanBackendInitializationFailed,
         /** Initialization of a shader source compiler failed. */
         ShaderCompilerInitializationFailed,
         /** Creation of a shader compiler session failed. */

@@ -12,6 +12,7 @@
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_draw_push_constants.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
+#include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
 #include "vulkan_renderer.hpp"
 #include <algorithm>
 #include <array>
@@ -235,7 +236,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         VkCommandBuffer command_buffer,
         const SwapchainResources &swapchain_resources,
         const DepthAttachmentResources &depth_attachment,
-        std::size_t image_index) -> void {
+        std::size_t image_index,
+        const VulkanFrameCommandRecorder &record_external_commands) -> void {
         const VulkanSwapchain &swapchain =
             swapchain_resources.m_VulkanSwapchain;
         VkCommandBufferBeginInfo command_buffer_info{};
@@ -375,6 +377,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             recordMeshDraws(command_buffer, swapchain_resources);
         }
 
+        if (record_external_commands) {
+            record_external_commands(command_buffer);
+        }
+
         vkCmdEndRendering(command_buffer);
 
         VkImageMemoryBarrier2 present_barrier{};
@@ -469,7 +475,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
-    auto VulkanRenderer::renderFrame() -> void {
+    auto VulkanRenderer::renderFrame(
+        const VulkanFrameCommandRecorder &record_external_commands) -> void {
         if (m_SubmissionFailed) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanQueueSubmissionFailed,
@@ -613,7 +620,8 @@ namespace SNE::Engine::Renderer::Vulkan {
             current_frame.commandBuffers().front();
 
         recordFrameCommands(command_buffer, swapchain_resources,
-                            depth_attachment, acquired_image_index);
+                            depth_attachment, acquired_image_index,
+                            record_external_commands);
 
         const VulkanSemaphore &render_finished_semaphore =
             semaphores[acquired_image_index];

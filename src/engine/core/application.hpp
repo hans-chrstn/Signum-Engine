@@ -6,6 +6,8 @@
 #include "engine/platform/window.hpp"
 #include "engine/renderer/material/material_buffer_update_input.hpp"
 #include "engine/renderer/shader/shader_stage_input.hpp"
+#include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
+#include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <cstddef>
 #include <functional>
@@ -60,11 +62,20 @@ namespace SNE::Engine::Core {
          *
          * @param on_update Optional callback invoked once per frame.
          * Receives a reference to the running application.
+         * @param record_external_commands Optional Vulkan command-recording
+         * callback forwarded to the renderer during each drawable frame.
+         * An empty callback preserves normal rendering behavior.
+         *
+         * @pre The external recording callback must not end the active
+         * rendering scope, reset or submit the command buffer, or retain it
+         * after invocation.
+         * @pre The external recording callback must not throw exceptions.
          *
          * @note An empty callback skips application-specific updates.
          */
-        auto run(const std::function<void(Application &)> &on_update = {})
-            -> void;
+        auto run(const std::function<void(Application &)> &on_update = {},
+                 const Renderer::Vulkan::VulkanFrameCommandRecorder
+                     &record_external_commands = {}) -> void;
 
         /**
          * @brief Provides read-only access to the application's primary window.
@@ -185,5 +196,24 @@ namespace SNE::Engine::Core {
          * @param captured true to capture the cursor; false to release it.
          */
         auto setCursorCaptured(bool captured) -> void;
+
+        /**
+         * @brief Returns Vulkan rendering information for external systems.
+         *
+         * Forwards the request to the application-owned Vulkan renderer.
+         *
+         * The returned information contains borrowed Vulkan handles and a
+         * snapshot of the current swapchain configuration.
+         *
+         * @return Vulkan initialization and swapchain information.
+         *
+         * @pre The renderer's swapchain resources must be initialized.
+         *
+         * @note The returned handles remain owned by the renderer.
+         * Swapchain-dependent information may become outdated following
+         * swapchain recreation.
+         */
+        [[nodiscard]] auto externalRenderingInfo() const
+            -> Renderer::Vulkan::VulkanExternalRenderingInfo;
     };
 } // namespace SNE::Engine::Core
