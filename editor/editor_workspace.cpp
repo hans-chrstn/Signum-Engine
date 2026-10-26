@@ -10,36 +10,25 @@
 #include <imgui_internal.h>
 
 namespace SNE::Editor {
-    auto EditorWorkspace::draw() -> void {
-        const bool main_menu = ImGui::BeginMainMenuBar();
-        if (main_menu) {
-            const bool view_menu = ImGui::BeginMenu("View");
-            if (view_menu) {
-                ImGui::MenuItem("Editor Status", nullptr, &m_ShowEditorStatus);
-                ImGui::MenuItem("Hierarchy", nullptr, &m_ShowHierarchy);
-                ImGui::MenuItem("Inspector", nullptr, &m_ShowInspector);
-                ImGui::MenuItem("Scene View", nullptr, &m_ShowSceneView);
-                ImGui::MenuItem("Performance", nullptr, &m_ShowPerformanceView);
-                ImGui::MenuItem("Content Browser", nullptr,
-                                &m_ShowContentBrowserView);
-                ImGui::EndMenu();
+    namespace {
+        /**
+         * @brief Initializes the editor's default docking layout.
+         *
+         * Creates and arranges the workspace docking nodes when no
+         * existing layout is available.
+         *
+         * Preserves an existing docking layout without modifying it.
+         *
+         * Must be called during an active ImGui frame before the
+         * workspace dockspace is submitted.
+         *
+         * @param dockspace_id Identifier of the workspace dockspace.
+         */
+        auto initializeDefaultDockingLayout(ImGuiID dockspace_id) -> void {
+            if (ImGui::DockBuilderGetNode(dockspace_id) != nullptr) {
+                return;
             }
 
-            const bool help_menu = ImGui::BeginMenu("Help");
-            if (help_menu) {
-                if (ImGui::MenuItem("About")) {
-                    m_ShowAbout = true;
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
-
-        const ImGuiID dockspace_id = ImGui::GetID("SignumEditorWorkspace");
-
-        const ImGuiDockNode *node = ImGui::DockBuilderGetNode(dockspace_id);
-
-        if (node == nullptr) {
             ImGuiID left_node_id = 0;
             ImGuiID remaining_node_id = 0;
             ImGuiID right_node_id = 0;
@@ -83,6 +72,58 @@ namespace SNE::Editor {
 
             ImGui::DockBuilderFinish(dockspace_id);
         }
+    } // namespace
+
+    auto EditorWorkspace::draw() -> bool {
+        bool exit_requested = false;
+        bool reset_layout_requested = false;
+
+        const bool main_menu = ImGui::BeginMainMenuBar();
+
+        if (main_menu) {
+            const bool file_menu = ImGui::BeginMenu("File");
+            if (file_menu) {
+                const bool exit_item = ImGui::MenuItem("Exit");
+                if (exit_item) {
+                    exit_requested = true;
+                }
+                ImGui::EndMenu();
+            }
+
+            const bool view_menu = ImGui::BeginMenu("View");
+            if (view_menu) {
+                ImGui::MenuItem("Editor Status", nullptr, &m_ShowEditorStatus);
+                ImGui::MenuItem("Hierarchy", nullptr, &m_ShowHierarchy);
+                ImGui::MenuItem("Inspector", nullptr, &m_ShowInspector);
+                ImGui::MenuItem("Scene View", nullptr, &m_ShowSceneView);
+                ImGui::MenuItem("Performance", nullptr, &m_ShowPerformanceView);
+                ImGui::MenuItem("Content Browser", nullptr,
+                                &m_ShowContentBrowserView);
+                ImGui::Separator();
+                const bool reset_layout = ImGui::MenuItem("Reset Layout");
+                if (reset_layout) {
+                    reset_layout_requested = true;
+                }
+                ImGui::EndMenu();
+            }
+
+            const bool help_menu = ImGui::BeginMenu("Help");
+            if (help_menu) {
+                if (ImGui::MenuItem("About")) {
+                    m_ShowAbout = true;
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
+
+        const ImGuiID dockspace_id = ImGui::GetID("SignumEditorWorkspace");
+
+        if (reset_layout_requested) {
+            ImGui::DockBuilderRemoveNode(dockspace_id);
+        }
+
+        initializeDefaultDockingLayout(dockspace_id);
 
         ImGui::DockSpaceOverViewport(dockspace_id);
         Panels::drawEditorStatusPanel(m_ShowEditorStatus);
@@ -92,5 +133,7 @@ namespace SNE::Editor {
         Panels::drawSceneViewPanel(m_ShowSceneView);
         Panels::drawPerformancePanel(m_ShowPerformanceView);
         Panels::drawContentBrowserPanel(m_ShowContentBrowserView);
+
+        return exit_requested;
     }
 } // namespace SNE::Editor

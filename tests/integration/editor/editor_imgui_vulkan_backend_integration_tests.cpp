@@ -82,7 +82,8 @@ TEST(EditorImGuiVulkanBackendIntegrationTests,
     };
 
     {
-        Editor::EditorImGuiContext context{window.nativeHandle()};
+        Editor::EditorImGuiContext context{window.nativeHandle(),
+                                           SIGNUM_TEST_EDITOR_FONT_PATH};
 
         ASSERT_NE(ImGui::GetCurrentContext(), nullptr);
         ASSERT_EQ(ImGui::GetIO().BackendRendererUserData, nullptr);

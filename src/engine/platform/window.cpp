@@ -124,4 +124,8 @@ namespace SNE::Engine::Platform {
         glfwSetInputMode(m_Window, GLFW_CURSOR,
                          captured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
     }
+
+    auto Window::requestClose() -> void {
+        glfwSetWindowShouldClose(m_Window, GLFW_TRUE);
+    }
 } // namespace SNE::Engine::Platform

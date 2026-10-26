@@ -1,6 +1,7 @@
 add_executable(
   signum_integration_tests
   platform/window_keyboard_integration_tests.cpp
+  platform/window_close_integration_tests.cpp
   platform/window_cursor_capture_integration_tests.cpp
   renderer/vulkan/vulkan_integration_test_fixture.cpp
   renderer/vulkan/vulkan_renderer_mesh_replacement_integration_tests.cpp
@@ -59,6 +60,8 @@ if(SIGNUM_BUILD_EDITOR)
     PRIVATE
       editor/editor_imgui_context_integration_tests.cpp
       editor/editor_imgui_vulkan_backend_integration_tests.cpp
+      editor/editor_imgui_style_integration_tests.cpp
+      "${CMAKE_SOURCE_DIR}/editor/imgui/editor_imgui_style.cpp"
       "${CMAKE_SOURCE_DIR}/editor/imgui/editor_imgui_context.cpp"
       "${CMAKE_SOURCE_DIR}/editor/imgui/editor_imgui_vulkan_backend.cpp"
   )
@@ -73,6 +76,12 @@ if(SIGNUM_BUILD_EDITOR)
     signum_integration_tests
     PRIVATE
       signum_editor_imgui
+  )
+
+  target_compile_definitions(
+    signum_integration_tests
+    PRIVATE
+      SIGNUM_TEST_EDITOR_FONT_PATH="${CMAKE_BINARY_DIR}/editor/assets/fonts/Inter-Regular.ttf"
   )
 endif()
 

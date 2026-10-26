@@ -79,6 +79,7 @@
             cppcheck
             codespell
             lcov
+            weston
 
             # Vulkan tooling
             glslang

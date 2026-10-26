@@ -161,5 +161,16 @@ namespace SNE::Engine::Platform {
          * movement or update the camera orientation.
          */
         auto setCursorCaptured(bool captured) -> void;
+
+        /**
+         * @brief Requests that the window close.
+         *
+         * Marks the underlying GLFW window for closure.
+         *
+         * Does not immediately destroy the window or its resources.
+         * The application event loop observes the request and exits
+         * through its normal shutdown path.
+         */
+        auto requestClose() -> void;
     };
 } // namespace SNE::Engine::Platform

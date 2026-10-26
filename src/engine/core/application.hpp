@@ -215,5 +215,15 @@ namespace SNE::Engine::Core {
          */
         [[nodiscard]] auto externalRenderingInfo() const
             -> Renderer::Vulkan::VulkanExternalRenderingInfo;
+
+        /**
+         * @brief Requests that the application exit its main loop.
+         *
+         * Forwards the close request to the application-owned window.
+         *
+         * Does not immediately destroy application resources.
+         * Normal resource cleanup occurs after the application loop exits.
+         */
+        auto requestClose() -> void;
     };
 } // namespace SNE::Engine::Core

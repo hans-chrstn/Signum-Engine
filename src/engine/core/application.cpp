@@ -68,4 +68,8 @@ namespace SNE::Engine::Core {
         -> Renderer::Vulkan::VulkanExternalRenderingInfo {
         return m_Renderer.externalRenderingInfo();
     }
+
+    auto Application::requestClose() -> void {
+        m_Window.requestClose();
+    }
 } // namespace SNE::Engine::Core

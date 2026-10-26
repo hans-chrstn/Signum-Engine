@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <filesystem>
 
 struct ImGuiContext;
 
@@ -35,15 +36,23 @@ namespace SNE::Editor {
         /**
          * @brief Initializes Dear ImGui for an existing GLFW window.
          *
+         * Creates the ImGui context, loads the editor's UI font,
+         * and initializes the GLFW platform backend.
+         *
+         * The font is registered once during initialization.
+         * The supplied font path is not retained.
+         *
          * @param window Borrowed pointer to a valid GLFW window.
+         * @param font_path Path to the editor's TrueType font file.
          *
          * @pre window must not be nullptr.
          * @pre GLFW must remain initialized throughout this object's lifetime.
          *
-         * @throws SNE::Engine::Core::Error::EngineError if the Dear ImGui
-         * GLFW platform backend cannot be initialized.
+         * @throws SNE::Engine::Core::Error::EngineError if the
+         * editor font cannot be loaded or GLFW backend initialization fails.
          */
-        explicit EditorImGuiContext(GLFWwindow *window);
+        explicit EditorImGuiContext(GLFWwindow *window,
+                                    const std::filesystem::path &font_path);
 
         /**
          * @brief Shuts down the GLFW backend and destroys the ImGui context.

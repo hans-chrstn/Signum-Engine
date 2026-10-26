@@ -139,6 +139,8 @@ namespace SNE::Engine::Core::Error {
         EditorGlfwBackendInitializationFailed,
         /** Initialization of the Dear ImGui Vulkan backend failed. */
         EditorVulkanBackendInitializationFailed,
+        /** Loading the editor's UI font failed. */
+        EditorFontLoadFailed,
         /** Initialization of a shader source compiler failed. */
         ShaderCompilerInitializationFailed,
         /** Creation of a shader compiler session failed. */

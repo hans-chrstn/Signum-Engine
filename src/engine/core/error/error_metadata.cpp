@@ -309,6 +309,11 @@ namespace SNE::Engine::Core::Error {
                     .subsystem = Subsystem::Editor,
                 },
                 ErrorMetadata{
+                    .code = Code::EditorFontLoadFailed,
+                    .name = "EditorFontLoadFailed",
+                    .subsystem = Subsystem::Editor,
+                },
+                ErrorMetadata{
                     .code = Code::ShaderCompilerInitializationFailed,
                     .name = "ShaderCompilerInitializationFailed",
                     .subsystem = Subsystem::Renderer,

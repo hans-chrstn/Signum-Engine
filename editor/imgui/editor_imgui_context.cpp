@@ -7,12 +7,14 @@
 #include <GLFW/glfw3.h>
 #include <backends/imgui_impl_glfw.h>
 #include <imgui.h>
+#include <string>
 
 namespace Assertion = SNE::Engine::Core::Assertion;
 namespace Error = SNE::Engine::Core::Error;
 
 namespace SNE::Editor {
-    EditorImGuiContext::EditorImGuiContext(GLFWwindow *window) {
+    EditorImGuiContext::EditorImGuiContext(
+        GLFWwindow *window, const std::filesystem::path &font_path) {
         if (window == nullptr) {
             Assertion::failAssertion(
                 Assertion::AssertionType::Precondition,
@@ -27,6 +29,25 @@ namespace SNE::Editor {
         ImGui::SetCurrentContext(m_Context);
 
         ImGuiIO &gui_io = ImGui::GetIO();
+
+        gui_io.ConfigDpiScaleFonts = true;
+
+        const std::string font_filename = font_path.string();
+
+        ImFontConfig font_config{};
+        font_config.Flags = ImFontFlags_NoLoadError;
+
+        ImFont *inter = gui_io.Fonts->AddFontFromFileTTF(font_filename.c_str(),
+                                                         0.0F, &font_config);
+
+        if (inter == nullptr) {
+            ImGui::DestroyContext(m_Context);
+
+            throw Error::EngineError(Error::Code::EditorFontLoadFailed,
+                                     "Failed to load the editor UI font",
+                                     "ImFontAtlas::AddFontFromFileTTF");
+        }
+
         auto imgui_flags = static_cast<unsigned int>(gui_io.ConfigFlags);
         imgui_flags |=
             static_cast<unsigned int>(ImGuiConfigFlags_NavEnableKeyboard) |

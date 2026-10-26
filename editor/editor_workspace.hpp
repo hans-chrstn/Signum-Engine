@@ -53,7 +53,10 @@ namespace SNE::Editor {
          * Draws the main menu bar, dockspace, and editor panels.
          *
          * Must be called between ImGui::NewFrame() and ImGui::Render().
+         *
+         * @return true if the user requests application exit during the
+         * current frame; otherwise false.
          */
-        auto draw() -> void;
+        [[nodiscard]] auto draw() -> bool;
     };
 } // namespace SNE::Editor

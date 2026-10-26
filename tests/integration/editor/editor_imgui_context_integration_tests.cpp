@@ -1,13 +1,17 @@
+#include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/error_code.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "imgui/editor_imgui_context.hpp"
 #include <GLFW/glfw3.h>
 #include <cstdlib>
+#include <filesystem>
 #include <gtest/gtest.h>
 #include <imgui.h>
 
 namespace Editor = SNE::Editor;
 namespace Platform = SNE::Engine::Platform;
+namespace Core = SNE::Engine::Core;
 
 namespace {
     constexpr int kWidth = 320;
@@ -28,7 +32,8 @@ namespace {
 } // namespace
 
 TEST(EditorImGuiContextIntegrationTests, RejectsNullWindow) {
-    EXPECT_DEATH(static_cast<void>(Editor::EditorImGuiContext{nullptr}),
+    EXPECT_DEATH(static_cast<void>(Editor::EditorImGuiContext{
+                     nullptr, SIGNUM_TEST_EDITOR_FONT_PATH}),
                  "EditorImGuiContext requires a non-null GLFW window");
 }
 
@@ -46,7 +51,8 @@ TEST(EditorImGuiContextIntegrationTests, InitializesAndDestroysContext) {
     ASSERT_EQ(ImGui::GetCurrentContext(), nullptr);
 
     {
-        Editor::EditorImGuiContext context{window.nativeHandle()};
+        Editor::EditorImGuiContext context{window.nativeHandle(),
+                                           SIGNUM_TEST_EDITOR_FONT_PATH};
 
         ASSERT_NE(ImGui::GetCurrentContext(), nullptr);
 
@@ -84,11 +90,43 @@ TEST(EditorImGuiContextIntegrationTests, RestoresGlfwKeyCallbackOnDestruction) {
     glfwSetKeyCallback(window.nativeHandle(), testKeyCallback);
 
     {
-        Editor::EditorImGuiContext context{window.nativeHandle()};
+        Editor::EditorImGuiContext context{window.nativeHandle(),
+                                           SIGNUM_TEST_EDITOR_FONT_PATH};
     }
 
     const GLFWkeyfun restored_callback =
         glfwSetKeyCallback(window.nativeHandle(), nullptr);
 
     EXPECT_EQ(restored_callback, testKeyCallback);
+}
+
+TEST(EditorImGuiContextIntegrationTests, MissingFontThrowsAndDestroysContext) {
+    if (!hasDisplay()) {
+        GTEST_SKIP() << "Requires a window-system display";
+    }
+
+    Platform::GlfwContext glfw_context{};
+
+    Platform::Window window{
+        {.width = kWidth, .height = kHeight},
+        "Signum ImGui Missing Font Test",
+    };
+
+    const std::filesystem::path missing_font_path =
+        std::filesystem::path{SIGNUM_TEST_EDITOR_FONT_PATH}.parent_path() /
+        "signum-intentionally-missing-font.ttf";
+
+    ASSERT_FALSE(std::filesystem::exists(missing_font_path));
+    ASSERT_EQ(ImGui::GetCurrentContext(), nullptr);
+
+    try {
+        [[maybe_unused]] Editor::EditorImGuiContext context{
+            window.nativeHandle(), missing_font_path};
+
+        FAIL() << "Expected font initialization to fail";
+    } catch (const Core::Error::EngineError &error) {
+        EXPECT_EQ(error.getCode(), Core::Error::Code::EditorFontLoadFailed);
+    }
+
+    EXPECT_EQ(ImGui::GetCurrentContext(), nullptr);
 }

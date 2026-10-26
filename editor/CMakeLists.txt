@@ -36,12 +36,25 @@ target_link_libraries(
     glfw
 )
 
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/Inter-Regular.ttf"
+  "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts/Inter-Regular.ttf"
+  COPYONLY
+)
+
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/LICENSE.txt"
+  "${CMAKE_CURRENT_BINARY_DIR}/assets/fonts/LICENSE.txt"
+  COPYONLY
+)
+
 add_executable(
   signum_editor
   main.cpp
   editor_workspace.cpp
   imgui/editor_imgui_context.cpp
   imgui/editor_imgui_vulkan_backend.cpp
+  imgui/editor_imgui_style.cpp
   panels/editor_status_panel.cpp
   panels/about_window.cpp
   panels/hierarchy_panel.cpp
