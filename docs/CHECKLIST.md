@@ -1257,9 +1257,9 @@
 - [x] Add panel visibility controls
 - [x] Add a default editor layout
 - [x] Save and restore editor layouts
-- [ ] Define consistent editor colors, spacing, and typography
-- [ ] Keep theme values separate from individual panel implementations
-- [ ] Support editor UI scaling
+- [x] Define consistent editor colors, spacing, and typography
+- [x] Keep theme values separate from individual panel implementations
+- [x] Support editor UI scaling
 
 #### 9.5.3 — Scene Viewport
 
@@ -1349,9 +1349,9 @@
 - [ ] Verify performance metrics update correctly
 - [ ] Verify the editor works without a logging system
 - [ ] Verify Vulkan validation reports no new errors
-- [ ] Run supported unit and integration tests
-- [ ] Run Clang-Tidy and formatting checks
-- [ ] Run ASan/UBSan
+- [x] Run supported unit and integration tests
+- [x] Run Clang-Tidy and formatting checks
+- [x] Run ASan/UBSan
 - [ ] Verify normal engine and playground behavior remains unchanged
 
 ### Future Editor Capabilities — Deferred
