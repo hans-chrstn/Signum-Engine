@@ -9,9 +9,13 @@
 #include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
+#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
+#include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstddef>
+#include <cstdint>
 #include <functional>
+#include <optional>
 
 namespace SNE::Engine::Core {
     /**
@@ -66,6 +70,9 @@ namespace SNE::Engine::Core {
          * @param record_external_commands Optional Vulkan command-recording
          * callback forwarded to the renderer during each drawable frame.
          * An empty callback preserves normal rendering behavior.
+         * @param on_graphics_submission Optional callback invoked when
+         * a new graphics submission is recorded and frame rendering
+         * returns successfully.
          *
          * @pre The external recording callback must not end the active
          * rendering scope, reset or submit the command buffer, or retain it
@@ -73,10 +80,14 @@ namespace SNE::Engine::Core {
          * @pre The external recording callback must not throw exceptions.
          *
          * @note An empty callback skips application-specific updates.
+         * @note A recorded submission is not necessarily complete.
+         * Its GPU completion must be checked separately.
          */
         auto run(const std::function<void(Application &)> &on_update = {},
                  const Renderer::Vulkan::VulkanFrameCommandRecorder
-                     &record_external_commands = {}) -> void;
+                     &record_external_commands = {},
+                 const std::function<void(std::uint64_t)>
+                     &on_graphics_submission = {}) -> void;
 
         /**
          * @brief Provides read-only access to the application's primary window.
@@ -158,6 +169,56 @@ namespace SNE::Engine::Core {
          */
         auto setSceneViewportExtent(
             std::optional<Renderer::RenderTargetExtent> extent) -> void;
+
+        /**
+         * @brief Returns the current offscreen scene image information.
+         *
+         * Forwards the renderer's borrowed scene viewport image description
+         * to external rendering consumers.
+         *
+         * Returns std::nullopt when no suitable offscreen scene image
+         * is currently available.
+         *
+         * The returned information identifies the image view, sampling
+         * layout, dimensions, frame slot, and resource generation.
+         *
+         * @return Borrowed scene viewport image information, or
+         * std::nullopt when unavailable.
+         *
+         * @pre Access must be serialized with frame rendering and
+         * renderer resource replacement.
+         *
+         * @note The application does not transfer ownership of
+         * the underlying Vulkan image or image view.
+         * @note Consumers must coordinate synchronization and resource
+         * lifetimes before sampling the image.
+         */
+        [[nodiscard]] auto sceneViewportImageInfo() const
+            -> std::optional<Renderer::Vulkan::VulkanSceneViewportImageInfo>;
+
+        /**
+         * @brief Returns the renderer's graphics submission progress.
+         *
+         * Forwards the latest submitted and confirmed completed graphics
+         * submission identifiers from the application-owned renderer.
+         *
+         * Allows external rendering consumers to inspect graphics
+         * completion progress without accessing the Vulkan renderer
+         * directly.
+         *
+         * This operation reads existing submission bookkeeping and
+         * does not wait for GPU execution.
+         *
+         * @return Snapshot of graphics submission and completion progress.
+         *
+         * @pre Access must be serialized with rendering operations.
+         *
+         * @note Completion information may lag behind actual GPU progress.
+         * @note The returned snapshot does not guarantee completion of
+         * submissions recorded after the snapshot was obtained.
+         */
+        [[nodiscard]] auto graphicsSubmissionProgress() const noexcept
+            -> Renderer::Vulkan::VulkanGraphicsSubmissionProgress;
 
         /**
          * @brief Updates an existing material uniform or storage buffer.

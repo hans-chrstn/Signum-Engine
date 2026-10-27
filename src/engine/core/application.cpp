@@ -1,6 +1,9 @@
 #include "application.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
+#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
+#include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
+#include <cstdint>
 #include <utility>
 
 namespace SNE::Engine::Core {
@@ -18,9 +21,12 @@ namespace SNE::Engine::Core {
                      m_Configuration.initial_buffer_bindings,
                      m_Configuration.initial_texture_bindings) {}
 
-    auto Application::run(const std::function<void(Application &)> &on_update,
-                          const Renderer::Vulkan::VulkanFrameCommandRecorder
-                              &record_external_commands) -> void {
+    auto Application::run(
+        const std::function<void(Application &)> &on_update,
+        const Renderer::Vulkan::VulkanFrameCommandRecorder
+            &record_external_commands,
+        const std::function<void(std::uint64_t)> &on_graphics_submission)
+        -> void {
         while (!m_Window.shouldClose()) {
             Platform::Window::pollEvents();
 
@@ -28,7 +34,18 @@ namespace SNE::Engine::Core {
                 on_update(*this);
             }
 
+            const std::uint64_t previous_submission_id =
+                m_Renderer.graphicsSubmissionProgress().last_submitted;
+
             m_Renderer.renderFrame(record_external_commands);
+
+            const std::uint64_t current_submission_id =
+                m_Renderer.graphicsSubmissionProgress().last_submitted;
+
+            if (on_graphics_submission &&
+                previous_submission_id != current_submission_id) {
+                on_graphics_submission(current_submission_id);
+            }
         }
     }
 
@@ -51,6 +68,16 @@ namespace SNE::Engine::Core {
     auto Application::setSceneViewportExtent(
         std::optional<Renderer::RenderTargetExtent> extent) -> void {
         m_Renderer.setSceneViewportExtent(extent);
+    }
+
+    auto Application::sceneViewportImageInfo() const
+        -> std::optional<Renderer::Vulkan::VulkanSceneViewportImageInfo> {
+        return m_Renderer.sceneViewportImageInfo();
+    }
+
+    auto Application::graphicsSubmissionProgress() const noexcept
+        -> Renderer::Vulkan::VulkanGraphicsSubmissionProgress {
+        return m_Renderer.graphicsSubmissionProgress();
     }
 
     auto

@@ -42,6 +42,8 @@
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
+#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
+#include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_instance.hpp"
 #include <cstddef>
@@ -960,6 +962,26 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<OffscreenSceneResources> m_OffscreenSceneResources;
 
         /**
+         * @brief Identifies the current offscreen scene resource allocation.
+         *
+         * Starts at zero to indicate that no offscreen resource generation
+         * has been established.
+         *
+         * Advances whenever the renderer successfully installs a new
+         * offscreen scene resource set.
+         *
+         * Remains unchanged when existing resources are reused or
+         * when replacement preparation fails.
+         *
+         * Allows external consumers to detect resource replacement
+         * and refresh their dependent image descriptors.
+         *
+         * @note Generation tracking does not extend GPU resource lifetimes
+         * or guarantee that external consumers have completed their work.
+         */
+        std::uint64_t m_OffscreenSceneGeneration{};
+
+        /**
          * @brief Tracks graphics queue submission and completion state.
          *
          * Associates graphics submissions with reusable frame-in-flight slots
@@ -1351,6 +1373,43 @@ namespace SNE::Engine::Renderer::Vulkan {
             const VulkanFrameCommandRecorder &record_external_commands) -> void;
 
         /**
+         * @brief Records a scene rendering pass into offscreen attachments.
+         *
+         * Transitions the offscreen color and depth images into their
+         * attachment layouts, begins dynamic rendering, records the
+         * scene's mesh draws, and ends the rendering scope.
+         *
+         * Transitions the resulting color image into a shader-readable
+         * layout for subsequent sampling.
+         *
+         * Uses the existing graphics pipeline without creating or
+         * transferring ownership of Vulkan resources.
+         *
+         * @param command_buffer Command buffer currently recording commands.
+         * @param swapchain_resources Resources providing the graphics pipeline.
+         * @param target Offscreen color and depth attachments to render into.
+         * @param render_extent Pixel dimensions of the offscreen attachments.
+         *
+         * @pre command_buffer must be recording outside a rendering scope.
+         * @pre render_extent must have nonzero dimensions and match the
+         * supplied attachments.
+         * @pre The graphics pipeline must be compatible with the
+         * supplied attachment formats.
+         * @pre The target must not be in use by an incomplete GPU submission.
+         *
+         * @post The scene drawing commands have been recorded.
+         * @post The color image is prepared for fragment-shader sampling.
+         *
+         * @note Does not begin or end command-buffer recording or submit
+         * GPU work.
+         */
+        auto
+        recordOffscreenScenePass(VkCommandBuffer command_buffer,
+                                 const SwapchainResources &swapchain_resources,
+                                 const OffscreenSceneTargetResources &target,
+                                 VkExtent2D render_extent) const -> void;
+
+        /**
          * @brief Records indexed mesh drawing commands within active dynamic
          * rendering.
          *
@@ -1366,18 +1425,20 @@ namespace SNE::Engine::Renderer::Vulkan {
          * commands.
          * @param swapchain_resources Swapchain resources providing the graphics
          * pipeline and current rendering extent.
+         * @param render_extent Pixel dimensions of the active rendering
+         * attachments, independent of the presentation swapchain.
          *
          * @pre command_buffer must be valid and recording within an active
          * dynamic-rendering instance.
          * @pre The renderer must have an uploaded mesh available for drawing.
+         * @pre render_extent.width and render_extent.height must be nonzero.
          *
          * @note Missing required graphics resources trigger invariant
          * assertions.
          */
-        auto
-        recordMeshDraws(VkCommandBuffer command_buffer,
-                        const SwapchainResources &swapchain_resources) const
-            -> void;
+        auto recordMeshDraws(VkCommandBuffer command_buffer,
+                             const SwapchainResources &swapchain_resources,
+                             VkExtent2D render_extent) const -> void;
 
         /**
          * @brief Binds the renderer's default material descriptors.
@@ -3099,6 +3160,61 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         auto setSceneViewportExtent(std::optional<RenderTargetExtent> extent)
             -> void;
+
+        /**
+         * @brief Returns the offscreen scene image selected for the current
+         * frame.
+         *
+         * Provides a borrowed description of the offscreen color image
+         * associated with the renderer's current frame-in-flight slot.
+         *
+         * Returns std::nullopt when no drawable scene viewport is requested,
+         * offscreen resources have not been initialized, or the allocated
+         * resources do not match the current viewport request.
+         *
+         * The returned description includes the image view, expected sampling
+         * layout, render-target extent, frame slot, and resource generation.
+         *
+         * @return Description of the selected offscreen scene image, or
+         * std::nullopt when no suitable image is available.
+         *
+         * @pre Access must be serialized with frame rendering and resource
+         * replacement.
+         *
+         * @note The returned image view is borrowed. Ownership remains
+         * with VulkanRenderer.
+         * @note This function does not allocate resources, wait for GPU work,
+         * or transition image layouts.
+         * @note The consumer must coordinate descriptor and GPU lifetimes
+         * before sampling the image.
+         */
+        [[nodiscard]] auto sceneViewportImageInfo() const
+            -> std::optional<VulkanSceneViewportImageInfo>;
+
+        /**
+         * @brief Returns the graphics queue's recorded submission progress.
+         *
+         * Provides the latest submitted and confirmed completed graphics
+         * submission identifiers without exposing synchronization objects.
+         *
+         * The returned snapshot allows external consumers to determine
+         * whether graphics submissions referencing their resources have
+         * completed.
+         *
+         * This operation reads existing submission bookkeeping and does
+         * not query the GPU or wait for execution.
+         *
+         * @return Current graphics submission and completion identifiers.
+         *
+         * @pre Access must be serialized with graphics submission and
+         * completion updates.
+         *
+         * @note Completion information may lag behind actual GPU progress
+         * until the renderer processes the corresponding frame fence.
+         * @note A snapshot does not account for future GPU submissions.
+         */
+        [[nodiscard]] auto graphicsSubmissionProgress() const noexcept
+            -> VulkanGraphicsSubmissionProgress;
 
         /**
          * @brief Returns Vulkan handles and configuration for external

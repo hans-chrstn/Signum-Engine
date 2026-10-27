@@ -23,6 +23,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace Math = SNE::Engine::Core::Math;
 
@@ -124,10 +125,8 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto VulkanRenderer::recordMeshDraws(
         VkCommandBuffer command_buffer,
-        const SwapchainResources &swapchain_resources) const -> void {
-
-        const VulkanSwapchain &swapchain =
-            swapchain_resources.m_VulkanSwapchain;
+        const SwapchainResources &swapchain_resources,
+        VkExtent2D render_extent) const -> void {
 
         if (swapchain_resources.m_VulkanGraphicsPipeline == nullptr) {
             Core::Assertion::failAssertion(
@@ -144,15 +143,15 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         VkViewport viewport{};
         viewport.x = 0.0F;
-        viewport.y = static_cast<float>(swapchain.extent().height);
-        viewport.width = static_cast<float>(swapchain.extent().width);
-        viewport.height = -static_cast<float>(swapchain.extent().height);
+        viewport.y = static_cast<float>(render_extent.height);
+        viewport.width = static_cast<float>(render_extent.width);
+        viewport.height = -static_cast<float>(render_extent.height);
         viewport.minDepth = 0.0F;
         viewport.maxDepth = 1.0F;
         vkCmdSetViewport(command_buffer, 0U, 1U, &viewport);
 
         VkRect2D scissor{};
-        scissor.extent = swapchain.extent();
+        scissor.extent = render_extent;
         scissor.offset.x = 0;
         scissor.offset.y = 0;
         vkCmdSetScissor(command_buffer, 0U, 1U, &scissor);
@@ -160,9 +159,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         Math::Matrix4f view_projection = Math::identity();
 
         if (m_InitialCamera.has_value()) {
-            const float aspect_ratio =
-                static_cast<float>(swapchain.extent().width) /
-                static_cast<float>(swapchain.extent().height);
+            const float aspect_ratio = static_cast<float>(render_extent.width) /
+                                       static_cast<float>(render_extent.height);
 
             const Math::PerspectiveProjectionParameters projection_parameters{
                 .fov_y_radians = m_InitialCamera->fov_y_radians,
@@ -255,6 +253,30 @@ namespace SNE::Engine::Renderer::Vulkan {
                     static_cast<int>(command_buffer_begin_result),
                     std::string(toString(command_buffer_begin_result))),
                 "Begin Vulkan Command Buffer");
+        }
+
+        if (m_RequestedSceneViewportExtent.has_value()) {
+            if (!m_OffscreenSceneResources.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "Offscreen scene rendering requires initialized target "
+                    "resources");
+            }
+
+            if (m_CurrentFrameIndex >=
+                m_OffscreenSceneResources->m_FrameTargets.size()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "Offscreen scene frame index exceeds the available target "
+                    "range");
+            }
+
+            recordOffscreenScenePass(
+                command_buffer, swapchain_resources,
+                m_OffscreenSceneResources->m_FrameTargets[m_CurrentFrameIndex],
+                m_OffscreenSceneResources->m_Extent);
         }
 
         const VkImage acquired_image = swapchain.images()[image_index];
@@ -374,7 +396,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         vkCmdBeginRendering(command_buffer, &render_info);
 
         if (!m_DrawInstances.empty()) {
-            recordMeshDraws(command_buffer, swapchain_resources);
+            recordMeshDraws(command_buffer, swapchain_resources,
+                            swapchain.extent());
         }
 
         if (record_external_commands) {
@@ -417,6 +440,152 @@ namespace SNE::Engine::Renderer::Vulkan {
                     std::string(toString(command_buffer_end_result))),
                 "End Vulkan Command Buffer");
         }
+    }
+
+    auto VulkanRenderer::recordOffscreenScenePass(
+        VkCommandBuffer command_buffer,
+        const SwapchainResources &swapchain_resources,
+        const OffscreenSceneTargetResources &target,
+        VkExtent2D render_extent) const -> void {
+
+        if (render_extent.width == 0U || render_extent.height == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Offscreen scene rendering requires a non-zero extent");
+        }
+
+        VkImageMemoryBarrier2 image_barrier{};
+        image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        image_barrier.image = target.m_ColorImage.nativeHandle();
+        image_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        image_barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        image_barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+        image_barrier.srcAccessMask = VK_ACCESS_2_NONE;
+        image_barrier.dstStageMask =
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        image_barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        image_barrier.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0U,
+            .levelCount = 1U,
+            .baseArrayLayer = 0U,
+            .layerCount = 1U,
+        };
+
+        recordImageBarrier(command_buffer, image_barrier);
+
+        VkImageMemoryBarrier2 depth_barrier{};
+        depth_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        depth_barrier.image = target.m_DepthImage.nativeHandle();
+        depth_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depth_barrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        depth_barrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+        depth_barrier.srcAccessMask = VK_ACCESS_2_NONE;
+        depth_barrier.dstStageMask =
+            static_cast<VkPipelineStageFlags2>(
+                VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT) |
+            static_cast<VkPipelineStageFlags2>(
+                VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT);
+        depth_barrier.dstAccessMask =
+            static_cast<VkAccessFlags2>(
+                VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT) |
+            static_cast<VkAccessFlags2>(
+                VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+        depth_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        depth_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        depth_barrier.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0U,
+            .levelCount = 1U,
+            .baseArrayLayer = 0U,
+            .layerCount = 1U,
+        };
+
+        recordImageBarrier(command_buffer, depth_barrier);
+
+        VkRenderingAttachmentInfo color_attachment_info{};
+        color_attachment_info.sType =
+            VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        color_attachment_info.imageView =
+            target.m_ColorImageView.nativeHandle();
+        color_attachment_info.imageLayout =
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        color_attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        color_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        const VkClearColorValue clear_color{{0.0F, 0.0F, 0.0F, 1.0F}};
+
+        color_attachment_info.clearValue = {
+            .color = clear_color,
+        };
+
+        VkRenderingAttachmentInfo depth_attachment_info{};
+        depth_attachment_info.sType =
+            VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depth_attachment_info.imageView =
+            target.m_DepthImageView.nativeHandle();
+        depth_attachment_info.imageLayout =
+            VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        depth_attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depth_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth_attachment_info.clearValue = {
+            .depthStencil =
+                {
+                    .depth = 1.0F,
+                    .stencil = 0U,
+                },
+        };
+
+        VkRenderingInfo rendering_info{};
+        rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        rendering_info.renderArea = {
+            .offset =
+                {
+                    .x = 0,
+                    .y = 0,
+                },
+            .extent = render_extent,
+        };
+        rendering_info.layerCount = 1U;
+        rendering_info.colorAttachmentCount = 1U;
+        rendering_info.pColorAttachments = &color_attachment_info;
+        rendering_info.pDepthAttachment = &depth_attachment_info;
+
+        vkCmdBeginRendering(command_buffer, &rendering_info);
+
+        if (!m_DrawInstances.empty()) {
+            recordMeshDraws(command_buffer, swapchain_resources, render_extent);
+        }
+
+        vkCmdEndRendering(command_buffer);
+
+        VkImageMemoryBarrier2 shader_read_barrier{};
+        shader_read_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        shader_read_barrier.image = target.m_ColorImage.nativeHandle();
+        shader_read_barrier.oldLayout =
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        shader_read_barrier.newLayout =
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        shader_read_barrier.srcStageMask =
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        shader_read_barrier.srcAccessMask =
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        shader_read_barrier.dstStageMask =
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+        shader_read_barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+        shader_read_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        shader_read_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        shader_read_barrier.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0U,
+            .levelCount = 1U,
+            .baseArrayLayer = 0U,
+            .layerCount = 1U,
+        };
+
+        recordImageBarrier(command_buffer, shader_read_barrier);
     }
 
     auto VulkanRenderer::submitFrame(VulkanFrameResources &current_frame,

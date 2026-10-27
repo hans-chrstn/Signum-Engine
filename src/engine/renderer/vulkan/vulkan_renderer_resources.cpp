@@ -12,6 +12,8 @@
 #include "engine/renderer/vulkan/texture/vulkan_texture_address_mode.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_filter.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_format.hpp"
+#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
+#include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include "vulkan_renderer.hpp"
 #include <algorithm>
 #include <bit>
@@ -23,6 +25,7 @@
 #include <span>
 #include <utility>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto VulkanRenderer::createOffscreenSceneTargetResources(
@@ -156,6 +159,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         m_OffscreenSceneResources.emplace(std::move(resources));
+
+        ++m_OffscreenSceneGeneration;
     }
 
     auto VulkanRenderer::createMeshBufferResources(const MeshUploadData &mesh)
@@ -886,5 +891,64 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         m_RequestedSceneViewportExtent = extent;
+    }
+
+    auto VulkanRenderer::sceneViewportImageInfo() const
+        -> std::optional<VulkanSceneViewportImageInfo> {
+        if (!m_RequestedSceneViewportExtent.has_value()) {
+            return std::nullopt;
+        }
+
+        if (!m_OffscreenSceneResources.has_value()) {
+            return std::nullopt;
+        }
+
+        if (m_OffscreenSceneResources->m_Extent.width !=
+                m_RequestedSceneViewportExtent->width ||
+            m_OffscreenSceneResources->m_Extent.height !=
+                m_RequestedSceneViewportExtent->height) {
+            return std::nullopt;
+        }
+
+        if (!m_SwapchainResources.has_value()) {
+            return std::nullopt;
+        }
+
+        if (m_OffscreenSceneResources->m_AttachmentFormats.color !=
+                m_SwapchainResources->m_VulkanSwapchain.surfaceFormat()
+                    .format ||
+            m_OffscreenSceneResources->m_AttachmentFormats.depth !=
+                m_SwapchainResources->m_DepthFormat) {
+
+            return std::nullopt;
+        }
+
+        if (m_CurrentFrameIndex >=
+            m_OffscreenSceneResources->m_FrameTargets.size()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "Scene viewport image frame index exceeds the available target "
+                "range");
+        }
+
+        const OffscreenSceneTargetResources &target =
+            m_OffscreenSceneResources->m_FrameTargets[m_CurrentFrameIndex];
+
+        return VulkanSceneViewportImageInfo{
+            .image_view = target.m_ColorImageView.nativeHandle(),
+            .image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .extent = m_OffscreenSceneResources->m_Extent,
+            .frame_slot = m_CurrentFrameIndex,
+            .generation = m_OffscreenSceneGeneration,
+        };
+    }
+
+    auto VulkanRenderer::graphicsSubmissionProgress() const noexcept
+        -> VulkanGraphicsSubmissionProgress {
+        return VulkanGraphicsSubmissionProgress{
+            .last_submitted = m_GraphicsSubmissionState.lastSubmitted(),
+            .last_completed = m_GraphicsSubmissionState.lastCompleted(),
+        };
     }
 } // namespace SNE::Engine::Renderer::Vulkan
