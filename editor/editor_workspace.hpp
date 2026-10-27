@@ -1,5 +1,6 @@
 #pragma once
 
+#include "panels/scene_view_panel.hpp"
 namespace SNE::Editor {
     /**
      * @brief Coordinates the editor's main workspace UI.
@@ -46,6 +47,19 @@ namespace SNE::Editor {
          */
         bool m_ShowPerformanceView = true;
 
+        /**
+         * @brief Stores the Scene View panel state from the current editor
+         * frame.
+         *
+         * Contains the drawable content dimensions, focus state, hover state,
+         * and visibility reported by the Scene View panel.
+         *
+         * Updated when the editor workspace draws its panels.
+         *
+         * Does not own scene rendering resources.
+         */
+        Panels::SceneViewPanelState m_SceneViewPanelState{};
+
       public:
         /**
          * @brief Draws the editor workspace for the current ImGui frame.
@@ -58,5 +72,22 @@ namespace SNE::Editor {
          * current frame; otherwise false.
          */
         [[nodiscard]] auto draw() -> bool;
+
+        /**
+         * @brief Returns the latest Scene View panel state.
+         *
+         * Provides the content dimensions, visibility, and input state
+         * recorded during the most recent workspace draw.
+         *
+         * The returned value is a snapshot and does not transfer ownership
+         * of rendering resources.
+         *
+         * @return Copy of the latest Scene View panel state.
+         *
+         * @note Before the first workspace draw, the returned state
+         * is default-initialized.
+         */
+        [[nodiscard]] auto sceneViewPanelState() const noexcept
+            -> Panels::SceneViewPanelState;
     };
 } // namespace SNE::Editor

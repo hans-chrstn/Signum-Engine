@@ -48,6 +48,11 @@ namespace SNE::Engine::Core {
         m_Renderer.setCameraViewMatrix(view_matrix);
     }
 
+    auto Application::setSceneViewportExtent(
+        std::optional<Renderer::RenderTargetExtent> extent) -> void {
+        m_Renderer.setSceneViewportExtent(extent);
+    }
+
     auto
     Application::updateMaterialBuffer(Renderer::MaterialBufferUpdateInput input)
         -> void {

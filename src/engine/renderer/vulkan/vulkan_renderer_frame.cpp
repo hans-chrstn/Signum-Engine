@@ -529,6 +529,24 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_GraphicsResourceRetirementQueue.collectCompleted(
             m_GraphicsSubmissionState);
 
+        if (m_RequestedSceneViewportExtent.has_value()) {
+            const RenderTargetExtent requested_extent =
+                m_RequestedSceneViewportExtent.value();
+
+            const VkExtent2D extent{
+                .width = requested_extent.width,
+                .height = requested_extent.height,
+            };
+
+            const GraphicsAttachmentFormats attachment_formats{
+                .color = swapchain_resources.m_VulkanSwapchain.surfaceFormat()
+                             .format,
+                .depth = swapchain_resources.m_DepthFormat,
+            };
+
+            ensureOffscreenSceneResources(extent, attachment_formats);
+        }
+
         uploadFrequentMaterialBuffersForFrame(m_CurrentFrameIndex);
 
         if (swapchain_resources.m_DepthAttachments.size() !=

@@ -7,6 +7,7 @@
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
+#include "engine/renderer/vulkan/memory/vulkan_image.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_address_mode.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_filter.hpp"
@@ -24,6 +25,139 @@
 #include <vector>
 
 namespace SNE::Engine::Renderer::Vulkan {
+    auto VulkanRenderer::createOffscreenSceneTargetResources(
+        VkExtent2D extent, GraphicsAttachmentFormats attachment_formats)
+        -> OffscreenSceneTargetResources {
+        if (extent.width == 0U || extent.height == 0U) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Offscreen scene target requires a non-zero extent");
+        }
+
+        VulkanImageCreateInfo color_image_info{};
+        color_image_info.extent = {
+            .width = extent.width,
+            .height = extent.height,
+            .depth = 1U,
+        };
+        color_image_info.image_type = VK_IMAGE_TYPE_2D;
+        color_image_info.format = attachment_formats.color;
+        color_image_info.usage =
+            static_cast<VkImageUsageFlags>(
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) |
+            static_cast<VkImageUsageFlags>(VK_IMAGE_USAGE_SAMPLED_BIT);
+        color_image_info.mip_levels = 1U;
+        color_image_info.array_layers = 1U;
+        color_image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        VulkanImage color_image{m_MemoryAllocator, color_image_info};
+
+        VkImageViewCreateInfo color_image_view_info{};
+        color_image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        color_image_view_info.image = color_image.nativeHandle();
+        color_image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        color_image_view_info.format = attachment_formats.color;
+        color_image_view_info.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0U,
+            .levelCount = 1U,
+            .baseArrayLayer = 0U,
+            .layerCount = 1U,
+        };
+
+        VulkanImageView color_image_view{m_Device.nativeHandle(),
+                                         color_image_view_info};
+
+        VulkanImageCreateInfo depth_image_info{};
+        depth_image_info.extent = {
+            .width = extent.width,
+            .height = extent.height,
+            .depth = 1U,
+        };
+        depth_image_info.image_type = VK_IMAGE_TYPE_2D;
+        depth_image_info.format = attachment_formats.depth;
+        depth_image_info.usage = static_cast<VkImageUsageFlags>(
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        depth_image_info.mip_levels = 1U;
+        depth_image_info.array_layers = 1U;
+        depth_image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        VulkanImage depth_image{m_MemoryAllocator, depth_image_info};
+
+        VkImageViewCreateInfo depth_image_view_info{};
+        depth_image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        depth_image_view_info.image = depth_image.nativeHandle();
+        depth_image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        depth_image_view_info.format = attachment_formats.depth;
+        depth_image_view_info.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0U,
+            .levelCount = 1U,
+            .baseArrayLayer = 0U,
+            .layerCount = 1U,
+        };
+
+        VulkanImageView depth_image_view{m_Device.nativeHandle(),
+                                         depth_image_view_info};
+
+        return OffscreenSceneTargetResources{
+            .m_ColorImage = std::move(color_image),
+            .m_ColorImageView = std::move(color_image_view),
+            .m_DepthImage = std::move(depth_image),
+            .m_DepthImageView = std::move(depth_image_view),
+        };
+    }
+
+    auto VulkanRenderer::createOffscreenSceneResources(
+        VkExtent2D extent, GraphicsAttachmentFormats attachment_formats)
+        -> OffscreenSceneResources {
+        if (m_FrameResources.empty()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Offscreen scene resource creation requires initialized frame "
+                "resources");
+        }
+
+        std::vector<OffscreenSceneTargetResources> target_resources;
+        target_resources.reserve(m_FrameResources.size());
+
+        for (std::size_t i{}; i < m_FrameResources.size(); ++i) {
+            target_resources.push_back(createOffscreenSceneTargetResources(
+                extent, attachment_formats));
+        }
+
+        return OffscreenSceneResources{
+            .m_Extent = extent,
+            .m_AttachmentFormats = attachment_formats,
+            .m_FrameTargets = std::move(target_resources),
+        };
+    }
+
+    auto VulkanRenderer::ensureOffscreenSceneResources(
+        VkExtent2D extent, GraphicsAttachmentFormats attachment_formats)
+        -> void {
+        if (m_OffscreenSceneResources.has_value() &&
+            (m_OffscreenSceneResources->m_Extent.width == extent.width &&
+             m_OffscreenSceneResources->m_Extent.height == extent.height &&
+             m_OffscreenSceneResources->m_AttachmentFormats ==
+                 attachment_formats)) {
+            return;
+        }
+
+        OffscreenSceneResources resources =
+            createOffscreenSceneResources(extent, attachment_formats);
+
+        if (m_OffscreenSceneResources.has_value()) {
+            m_GraphicsResourceRetirementQueue.retire(
+                m_GraphicsSubmissionState.lastSubmitted(),
+                m_OffscreenSceneResources.value());
+        }
+
+        m_OffscreenSceneResources.emplace(std::move(resources));
+    }
+
     auto VulkanRenderer::createMeshBufferResources(const MeshUploadData &mesh)
         -> MeshBufferResources {
         const std::optional<std::uint32_t> mesh_indices_size =
@@ -739,5 +873,18 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         m_InitialCamera->view = view_matrix;
+    }
+
+    auto VulkanRenderer::setSceneViewportExtent(
+        std::optional<RenderTargetExtent> extent) -> void {
+        if (extent.has_value() &&
+            (extent->width == 0U || extent->height == 0U)) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "Scene viewport extent requires non-zero dimensions");
+        }
+
+        m_RequestedSceneViewportExtent = extent;
     }
 } // namespace SNE::Engine::Renderer::Vulkan

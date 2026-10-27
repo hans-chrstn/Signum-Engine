@@ -3,21 +3,27 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_boundary.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "imgui/editor_imgui_context.hpp"
 #include "imgui/editor_imgui_style.hpp"
 #include "imgui/editor_imgui_vulkan_backend.hpp"
+#include "panels/scene_view_panel.hpp"
+#include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <vulkan/vulkan.h>
 
-namespace Core = SNE::Engine::Core;
-namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 namespace Editor = SNE::Editor;
+namespace Core = SNE::Engine::Core;
+namespace Renderer = SNE::Engine::Renderer;
+namespace Vulkan = Renderer::Vulkan;
 
 namespace {
     /**
@@ -43,6 +49,66 @@ namespace {
                 "Unsupported editor color attachment format",
                 "isSrgbAttachmentFormat");
         }
+    }
+
+    /**
+     * @brief Converts the Scene View content size to framebuffer pixels.
+     *
+     * Scales the panel's available content dimensions to produce an
+     * integer render-target extent.
+     *
+     * Rounds positive dimensions upward to avoid allocating an image
+     * smaller than the requested drawable area.
+     *
+     * Returns no extent when the panel is not drawable or when the
+     * dimensions or framebuffer scale cannot produce a valid extent.
+     *
+     * This conversion does not allocate Vulkan resources.
+     *
+     * @param panel_state Scene View dimensions and visibility state.
+     * @param framebuffer_scale Horizontal and vertical framebuffer scale.
+     *
+     * @return Pixel extent when valid; otherwise std::nullopt.
+     */
+    [[nodiscard]] auto tryMakeSceneViewportExtent(
+        const Editor::Panels::SceneViewPanelState &panel_state,
+        ImVec2 framebuffer_scale)
+        -> std::optional<Renderer::RenderTargetExtent> {
+        if (!panel_state.m_IsVisible) {
+            return std::nullopt;
+        }
+
+        if (!std::isfinite(panel_state.m_ContentWidth) ||
+            !std::isfinite(panel_state.m_ContentHeight) ||
+            !std::isfinite(framebuffer_scale.x) ||
+            !std::isfinite(framebuffer_scale.y) ||
+            panel_state.m_ContentWidth <= 0.0F ||
+            panel_state.m_ContentHeight <= 0.0F ||
+            framebuffer_scale.x <= 0.0F || framebuffer_scale.y <= 0.0F) {
+            return std::nullopt;
+        }
+
+        constexpr auto kMaxExtent =
+            static_cast<double>(std::numeric_limits<std::uint32_t>::max());
+
+        const double pixels_width =
+            std::ceil(static_cast<double>(panel_state.m_ContentWidth) *
+                      framebuffer_scale.x);
+
+        const double pixels_height =
+            std::ceil(static_cast<double>(panel_state.m_ContentHeight) *
+                      framebuffer_scale.y);
+
+        if (!std::isfinite(pixels_width) || !std::isfinite(pixels_height) ||
+            pixels_width <= 0.0 || pixels_height <= 0.0 ||
+            pixels_width > kMaxExtent || pixels_height > kMaxExtent) {
+            return std::nullopt;
+        }
+
+        return Renderer::RenderTargetExtent{
+            .width = static_cast<std::uint32_t>(pixels_width),
+            .height = static_cast<std::uint32_t>(pixels_height),
+        };
     }
 } // namespace
 
@@ -132,6 +198,18 @@ auto main() -> int {
                     if (workspace.draw()) {
                         app.requestClose();
                     }
+
+                    const Editor::Panels::SceneViewPanelState panel_state =
+                        workspace.sceneViewPanelState();
+
+                    const ImVec2 framebuffer_scale =
+                        ImGui::GetIO().DisplayFramebufferScale;
+
+                    const std::optional<Renderer::RenderTargetExtent> extent =
+                        tryMakeSceneViewportExtent(panel_state,
+                                                   framebuffer_scale);
+
+                    app.setSceneViewportExtent(extent);
 
                     ImGui::Render();
                 },

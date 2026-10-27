@@ -14,6 +14,7 @@
 #include "engine/renderer/material/material_resource_binding_set.hpp"
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/resource/gpu_resource_dependency_tracker.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
@@ -45,7 +46,6 @@
 #include "vulkan_instance.hpp"
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -302,6 +302,76 @@ namespace SNE::Engine::Renderer::Vulkan {
 
             /** @brief Owns the image view referencing the depth image. */
             VulkanImageView m_ImageView;
+        };
+
+        /**
+         * @brief Owns color and depth attachments for offscreen scene
+         * rendering.
+         *
+         * Groups the GPU images and image views used to render a scene
+         * independently of the presentation swapchain.
+         *
+         * The color attachment supports both rendering and shader sampling,
+         * allowing external consumers to display the rendered scene.
+         * The depth attachment supports depth testing during scene rendering.
+         *
+         * Image views reference the images owned by this structure.
+         * Members are declared in dependency order so each image view
+         * is destroyed before its underlying image.
+         *
+         * Resources must remain alive while outstanding GPU submissions
+         * reference them.
+         *
+         * The structure is move-only because its resources have
+         * exclusive Vulkan ownership.
+         */
+        struct OffscreenSceneTargetResources {
+            /** @brief Owns the VMA-backed offscreen color image. */
+            VulkanImage m_ColorImage;
+
+            /** @brief Owns the image view referencing the color image. */
+            VulkanImageView m_ColorImageView;
+
+            /** @brief Owns the VMA-backed offscreen depth image. */
+            VulkanImage m_DepthImage;
+
+            /** @brief Owns the image view referencing the depth image. */
+            VulkanImageView m_DepthImageView;
+        };
+
+        /**
+         * @brief Owns the offscreen scene targets for all frames in flight.
+         *
+         * Groups the render-target extent, attachment formats, and
+         * per-frame color and depth resources used for offscreen rendering.
+         *
+         * Each frame-in-flight slot has an independent render target,
+         * preventing overlapping frames from writing to the same images.
+         *
+         * The resources are independent of the presentation swapchain.
+         * Their extent is determined by the requested scene viewport size.
+         *
+         * Resources must not be destroyed while outstanding GPU submissions
+         * or external image consumers still reference them.
+         *
+         * The structure is move-only because its targets have
+         * exclusive Vulkan ownership.
+         */
+        struct OffscreenSceneResources {
+            /** @brief Extent shared by all offscreen scene targets. */
+            VkExtent2D m_Extent{};
+
+            /** @brief Color and depth formats used by the offscreen targets. */
+            GraphicsAttachmentFormats m_AttachmentFormats{};
+
+            /**
+             * @brief Owns one offscreen render target per frame-in-flight slot.
+             *
+             * Entries are indexed using the renderer's frame-resource index.
+             * Once initialized, the collection size matches
+             * m_FrameResources.size().
+             */
+            std::vector<OffscreenSceneTargetResources> m_FrameTargets;
         };
 
         /**
@@ -858,6 +928,38 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::vector<VulkanFrameResources> m_FrameResources;
 
         /**
+         * @brief Stores the requested offscreen scene viewport dimensions.
+         *
+         * Contains the framebuffer-pixel extent requested by the application.
+         *
+         * An empty value indicates that no drawable scene viewport is
+         * currently requested.
+         *
+         * The request is processed during frame rendering, independently
+         * of the presentation swapchain.
+         *
+         * Updating this value does not immediately allocate or destroy
+         * GPU resources.
+         */
+        std::optional<RenderTargetExtent> m_RequestedSceneViewportExtent;
+
+        /**
+         * @brief Owns the optional offscreen scene-rendering resources.
+         *
+         * Empty until an offscreen viewport target is requested.
+         *
+         * Stores the extent, attachment formats, and per-frame GPU
+         * resources independently of the presentation swapchain.
+         *
+         * Replacing these resources requires synchronization with
+         * outstanding GPU work and consumers of their image views.
+         *
+         * The Vulkan memory allocator and logical device must outlive
+         * the owned resources.
+         */
+        std::optional<OffscreenSceneResources> m_OffscreenSceneResources;
+
+        /**
          * @brief Tracks graphics queue submission and completion state.
          *
          * Associates graphics submissions with reusable frame-in-flight slots
@@ -966,6 +1068,113 @@ namespace SNE::Engine::Renderer::Vulkan {
         [[nodiscard]] auto createDepthAttachments(VkExtent2D extent,
                                                   VkFormat depth_format)
             -> std::vector<DepthAttachmentResources>;
+
+        /**
+         * @brief Creates color and depth attachments for offscreen scene
+         * rendering.
+         *
+         * Allocates a device-local color image supporting both rendering and
+         * shader sampling, together with a depth image for depth testing.
+         *
+         * Creates an image view for each attachment and returns their ownership
+         * as a single resource group.
+         *
+         * The resources are independent of the presentation swapchain.
+         * Image layout transitions and GPU synchronization are managed
+         * separately.
+         *
+         * @param extent Width and height of the offscreen rendering target.
+         * @param attachment_formats Color and depth attachment formats.
+         *
+         * @return Owned offscreen color and depth images with their image
+         * views.
+         *
+         * @pre extent.width and extent.height must be greater than zero.
+         * @pre attachment_formats.color must support color attachment and
+         * sampled image usage.
+         * @pre attachment_formats.depth must support depth attachment usage.
+         *
+         * @post On success, all images and image views are valid.
+         * @post If creation fails, previously created resources are released.
+         *
+         * @throws Core::Error::EngineError if image allocation, format
+         * validation, or image-view creation fails.
+         * @throws std::bad_alloc if host resource allocation fails.
+         */
+        [[nodiscard]] auto createOffscreenSceneTargetResources(
+            VkExtent2D extent, GraphicsAttachmentFormats attachment_formats)
+            -> OffscreenSceneTargetResources;
+
+        /**
+         * @brief Creates offscreen scene targets for every frame-in-flight
+         * slot.
+         *
+         * Allocates an independent color and depth attachment set for each
+         * initialized frame-resource slot.
+         *
+         * All targets share the requested extent and attachment formats.
+         * The resources are created independently of the presentation
+         * swapchain.
+         *
+         * @param extent Width and height of the offscreen rendering targets.
+         * @param attachment_formats Color and depth attachment formats.
+         *
+         * @return Owned offscreen resources containing one target per frame
+         * slot.
+         *
+         * @pre Frame resources must already be initialized.
+         * @pre extent.width and extent.height must be greater than zero.
+         * @pre The requested attachment formats must support their required
+         * image usages.
+         *
+         * @post On success, the number of targets matches
+         * m_FrameResources.size().
+         * @post If creation fails, all successfully created targets are
+         * released.
+         *
+         * @throws Core::Error::EngineError if Vulkan resource creation fails.
+         * @throws std::bad_alloc if host resource allocation fails.
+         */
+        [[nodiscard]] auto createOffscreenSceneResources(
+            VkExtent2D extent, GraphicsAttachmentFormats attachment_formats)
+            -> OffscreenSceneResources;
+
+        /**
+         * @brief Ensures offscreen scene resources match the requested
+         * configuration.
+         *
+         * Creates offscreen render targets when none exist and reuses existing
+         * targets when their extent and attachment formats are unchanged.
+         *
+         * When the configuration changes, constructs replacement resources
+         * before retiring the previous resource set.
+         *
+         * Previous resources remain alive until their associated graphics
+         * submissions complete.
+         *
+         * @param extent Requested offscreen render-target dimensions.
+         * @param attachment_formats Requested color and depth formats.
+         *
+         * @pre Frame resources must already be initialized.
+         * @pre extent.width and extent.height must be greater than zero.
+         * @pre No new commands may be recorded using the previous targets
+         * after they are replaced.
+         * @pre External image consumers must coordinate descriptor lifetimes
+         * with resource replacement.
+         *
+         * @post On success, the active resources match the requested
+         * extent and attachment formats.
+         * @post Unchanged configurations preserve existing resources.
+         * @post If replacement preparation fails, existing resources remain
+         * unchanged.
+         *
+         * @throws Core::Error::EngineError if Vulkan resource creation fails.
+         * @throws std::bad_alloc if resource allocation or retirement
+         * preparation fails.
+         */
+        auto ensureOffscreenSceneResources(
+            VkExtent2D extent, GraphicsAttachmentFormats attachment_formats)
+            -> void;
 
         /**
          * @brief Finds or creates a graphics pipeline for a material.
@@ -2864,6 +3073,31 @@ namespace SNE::Engine::Renderer::Vulkan {
          * or modify swapchain resources.
          */
         auto setCameraViewMatrix(const Core::Math::Matrix4f &view_matrix)
+            -> void;
+
+        /**
+         * @brief Updates the requested offscreen scene viewport extent.
+         *
+         * Stores the requested framebuffer-pixel dimensions for subsequent
+         * scene rendering.
+         *
+         * An empty extent disables the offscreen scene viewport request.
+         *
+         * This function only updates the requested configuration.
+         * GPU resource creation, replacement, and synchronization are
+         * managed separately during frame processing.
+         *
+         * @param extent Requested framebuffer-pixel dimensions, or
+         * std::nullopt when no drawable scene viewport is available.
+         *
+         * @pre An engaged extent must have nonzero width and height.
+         * @pre Updates must be serialized with frame rendering.
+         *
+         * @post The requested viewport extent matches the supplied value.
+         *
+         * @note Does not allocate or destroy Vulkan resources.
+         */
+        auto setSceneViewportExtent(std::optional<RenderTargetExtent> extent)
             -> void;
 
         /**

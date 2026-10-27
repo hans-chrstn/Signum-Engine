@@ -130,10 +130,15 @@ namespace SNE::Editor {
         Panels::drawAboutWindow(m_ShowAbout);
         Panels::drawHierarchyPanel(m_ShowHierarchy);
         Panels::drawInspectorPanel(m_ShowInspector);
-        Panels::drawSceneViewPanel(m_ShowSceneView);
+        m_SceneViewPanelState = Panels::drawSceneViewPanel(m_ShowSceneView);
         Panels::drawPerformancePanel(m_ShowPerformanceView);
         Panels::drawContentBrowserPanel(m_ShowContentBrowserView);
 
         return exit_requested;
+    }
+
+    auto EditorWorkspace::sceneViewPanelState() const noexcept
+        -> Panels::SceneViewPanelState {
+        return m_SceneViewPanelState;
     }
 } // namespace SNE::Editor

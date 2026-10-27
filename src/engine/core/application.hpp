@@ -5,6 +5,7 @@
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/material/material_buffer_update_input.hpp"
+#include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
@@ -130,6 +131,33 @@ namespace SNE::Engine::Core {
          * @note Does not recreate renderer resources.
          */
         auto setCameraViewMatrix(const Math::Matrix4f &view_matrix) -> void;
+
+        /**
+         * @brief Requests the rendering extent of an optional scene viewport.
+         *
+         * Forwards the requested framebuffer-pixel dimensions to the renderer.
+         *
+         * An engaged extent enables offscreen scene rendering at the requested
+         * dimensions. An empty extent indicates that no drawable scene viewport
+         * is currently available.
+         *
+         * The renderer processes the request during frame rendering.
+         * This function does not directly allocate GPU resources or record
+         * rendering commands.
+         *
+         * @param extent Requested viewport dimensions in framebuffer pixels,
+         * or std::nullopt when the viewport is not drawable.
+         *
+         * @pre An engaged extent must have nonzero width and height.
+         * @pre Requests must be serialized with frame rendering.
+         *
+         * @post The renderer's requested scene viewport extent is updated.
+         *
+         * @note Existing offscreen GPU resources are managed separately
+         * according to their outstanding usage and lifetime requirements.
+         */
+        auto setSceneViewportExtent(
+            std::optional<Renderer::RenderTargetExtent> extent) -> void;
 
         /**
          * @brief Updates an existing material uniform or storage buffer.
