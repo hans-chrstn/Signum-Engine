@@ -5,6 +5,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
+#include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include "imgui/editor_imgui_context.hpp"
 #include "imgui/editor_imgui_style.hpp"
 #include "imgui/editor_imgui_vulkan_backend.hpp"
@@ -149,9 +150,13 @@ auto main() -> int {
 
             Editor::EditorWorkspace workspace;
 
+            std::optional<VkDescriptorSet> scene_descriptor_this_frame;
+
             application.run(
-                [&active_rendering_info, &editor_backend, &workspace,
-                 &x_scale](Core::Application &app) -> void {
+                [&active_rendering_info, &editor_backend, &workspace, &x_scale,
+                 &scene_descriptor_this_frame](Core::Application &app) -> void {
+                    scene_descriptor_this_frame.reset();
+
                     float current_x_scale{};
                     float current_y_scale{};
 
@@ -191,11 +196,40 @@ auto main() -> int {
                         active_rendering_info = new_rendering_info;
                     }
 
+                    editor_backend->collectRetiredSceneViewportTextures(
+                        app.graphicsSubmissionProgress());
+
                     ImGui_ImplVulkan_NewFrame();
                     ImGui_ImplGlfw_NewFrame();
                     ImGui::NewFrame();
 
-                    if (workspace.draw()) {
+                    if (workspace.draw(
+                            [&app, &editor_backend,
+                             &scene_descriptor_this_frame](
+                                const Editor::Panels::SceneViewPanelState &
+                                    panel_state) -> std::optional<ImTextureID> {
+                                app.setSceneViewportExtent(
+                                    tryMakeSceneViewportExtent(
+                                        panel_state,
+                                        ImGui::GetIO()
+                                            .DisplayFramebufferScale));
+
+                                const std::optional<
+                                    Vulkan::VulkanSceneViewportImageInfo>
+                                    image_info = app.sceneViewportImageInfo();
+
+                                if (!image_info.has_value()) {
+                                    return std::nullopt;
+                                }
+
+                                scene_descriptor_this_frame =
+                                    editor_backend->sceneViewportTexture(
+                                        image_info.value());
+
+                                return static_cast<ImTextureID>(
+                                    reinterpret_cast<std::uintptr_t>(
+                                        scene_descriptor_this_frame.value()));
+                            })) {
                         app.requestClose();
                     }
 
@@ -216,6 +250,15 @@ auto main() -> int {
                 [](VkCommandBuffer command_buffer) -> void {
                     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
                                                     command_buffer);
+                },
+                [&editor_backend, &scene_descriptor_this_frame](
+                    std::uint64_t submission_id) -> void {
+                    if (!scene_descriptor_this_frame.has_value()) {
+                        return;
+                    }
+
+                    editor_backend->recordSceneViewportTextureSubmission(
+                        scene_descriptor_this_frame.value(), submission_id);
                 });
         },
         std::cerr);

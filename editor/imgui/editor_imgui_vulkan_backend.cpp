@@ -257,5 +257,22 @@ namespace SNE::Editor {
 
     auto EditorImGuiVulkanBackend::collectRetiredSceneViewportTextures(
         const Vulkan::VulkanGraphicsSubmissionProgress &submission_progress)
-        -> void {}
+        -> void {
+        auto retired_it = m_RetiredSceneViewportTextureRegistrations.begin();
+
+        while (retired_it != m_RetiredSceneViewportTextureRegistrations.end()) {
+            if (retired_it->m_LastUsedSubmissionId >
+                submission_progress.last_completed) {
+                ++retired_it;
+                continue;
+            }
+
+            if (retired_it->m_DescriptorSet != VK_NULL_HANDLE) {
+                ImGui_ImplVulkan_RemoveTexture(retired_it->m_DescriptorSet);
+            }
+
+            retired_it =
+                m_RetiredSceneViewportTextureRegistrations.erase(retired_it);
+        }
+    }
 } // namespace SNE::Editor

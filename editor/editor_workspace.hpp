@@ -1,6 +1,9 @@
 #pragma once
 
 #include "panels/scene_view_panel.hpp"
+#include <functional>
+#include <imgui.h>
+#include <optional>
 namespace SNE::Editor {
     /**
      * @brief Coordinates the editor's main workspace UI.
@@ -66,12 +69,28 @@ namespace SNE::Editor {
          *
          * Draws the main menu bar, dockspace, and editor panels.
          *
+         * Forwards the optional scene texture resolver to the Scene View
+         * panel, allowing it to display a renderer-provided texture
+         * without managing Vulkan resources.
+         *
          * Must be called between ImGui::NewFrame() and ImGui::Render().
+         *
+         * @param resolve_scene_texture Optional callback used to obtain
+         * an ImGui texture identifier for the current Scene View content
+         * area.
+         *
+         * The callback receives the Scene View panel state and returns
+         * std::nullopt when no compatible texture is available.
          *
          * @return true if the user requests application exit during the
          * current frame; otherwise false.
+         *
+         * @note The workspace does not own scene textures or Vulkan
+         * descriptor registrations.
          */
-        [[nodiscard]] auto draw() -> bool;
+        [[nodiscard]] auto draw(const std::function<std::optional<ImTextureID>(
+                                    const Panels::SceneViewPanelState &)>
+                                    &resolve_scene_texture = {}) -> bool;
 
         /**
          * @brief Returns the latest Scene View panel state.

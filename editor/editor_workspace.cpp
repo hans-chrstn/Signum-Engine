@@ -74,7 +74,10 @@ namespace SNE::Editor {
         }
     } // namespace
 
-    auto EditorWorkspace::draw() -> bool {
+    auto EditorWorkspace::draw(
+        const std::function<std::optional<ImTextureID>(
+            const Panels::SceneViewPanelState &)> &resolve_scene_texture)
+        -> bool {
         bool exit_requested = false;
         bool reset_layout_requested = false;
 
@@ -130,7 +133,8 @@ namespace SNE::Editor {
         Panels::drawAboutWindow(m_ShowAbout);
         Panels::drawHierarchyPanel(m_ShowHierarchy);
         Panels::drawInspectorPanel(m_ShowInspector);
-        m_SceneViewPanelState = Panels::drawSceneViewPanel(m_ShowSceneView);
+        m_SceneViewPanelState =
+            Panels::drawSceneViewPanel(m_ShowSceneView, resolve_scene_texture);
         Panels::drawPerformancePanel(m_ShowPerformanceView);
         Panels::drawContentBrowserPanel(m_ShowContentBrowserView);
 

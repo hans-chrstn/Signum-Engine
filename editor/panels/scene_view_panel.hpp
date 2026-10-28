@@ -1,5 +1,9 @@
 #pragma once
 
+#include <functional>
+#include <imgui.h>
+#include <optional>
+
 namespace SNE::Editor::Panels {
     /**
      * @brief Describes the Scene View panel's available area and input state.
@@ -48,10 +52,22 @@ namespace SNE::Editor::Panels {
      *
      * @param visible Reference to the panel's visibility state.
      * Updated when the user closes the panel.
+     * @param resolve_texture Callback invoked when the panel has
+     * drawable content.
+     *
+     * Receives the current panel dimensions and interaction state.
+     * Returns an ImGui texture identifier when a compatible scene
+     * image is available, or std::nullopt otherwise.
      *
      * @return Scene View content dimensions and interaction state.
      * Returns a default-initialized state when the panel has no
      * drawable content.
+     *
+     * @note The callback must not retain the panel state reference.
+     * @note The caller manages texture registration and GPU lifetime.
      */
-    auto drawSceneViewPanel(bool &visible) -> SceneViewPanelState;
+    auto drawSceneViewPanel(bool &visible,
+                            const std::function<std::optional<ImTextureID>(
+                                const SceneViewPanelState &)> &resolve_texture)
+        -> SceneViewPanelState;
 } // namespace SNE::Editor::Panels
