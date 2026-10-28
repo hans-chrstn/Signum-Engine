@@ -1263,11 +1263,11 @@
 
 #### 9.5.3 — Scene Viewport
 
-- [ ] Define how the renderer provides an image to the editor viewport
-- [ ] Add an offscreen scene-rendering target
+- [x] Define how the renderer provides an image to the editor viewport
+- [x] Add an offscreen scene-rendering target
 - [ ] Display the rendered scene inside the Scene View panel
-- [ ] Support viewport resizing without recreating unrelated resources
-- [ ] Keep scene rendering independent from Dear ImGui
+- [x] Support viewport resizing without recreating unrelated resources
+- [x] Keep scene rendering independent from Dear ImGui
 - [ ] Handle viewport image synchronization and resource lifetimes
 - [ ] Preserve the existing non-editor rendering path
 - [ ] Match the camera aspect ratio to the scene viewport
