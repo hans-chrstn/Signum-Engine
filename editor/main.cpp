@@ -5,9 +5,23 @@
 #include "engine/core/error/error_boundary.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/math/matrix4.hpp"
+#include "engine/core/math/vector4.hpp"
+#include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/primitive_initial_mesh_data.hpp"
 #include "engine/renderer/geometry/uv_sphere_mesh.hpp"
+#include "engine/renderer/lighting/directional_light.hpp"
+#include "engine/renderer/lighting/directional_light_uniform_data.hpp"
+#include "engine/renderer/material/material_buffer_binding_input.hpp"
+#include "engine/renderer/material/material_buffer_update_frequency.hpp"
+#include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/render_target_extent.hpp"
+#include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/shader/shader_resource_type.hpp"
+#include "engine/renderer/shader/shader_stage.hpp"
+#include "engine/renderer/texture/image_loader.hpp"
+#include "engine/renderer/texture/rgba8_image.hpp"
+#include "engine/renderer/texture/texture_format.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include "imgui/editor_imgui_context.hpp"
@@ -16,14 +30,19 @@
 #include "panels/scene_view_panel.hpp"
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <iostream>
 #include <limits>
+#include <numbers>
 #include <optional>
+#include <span>
+#include <utility>
 #include <vulkan/vulkan.h>
 
 namespace Editor = SNE::Editor;
@@ -117,15 +136,51 @@ namespace {
             .height = static_cast<std::uint32_t>(pixels_height),
         };
     }
+
+    struct CloudUniformData {
+        Math::Vector4f uv_offset{};
+    };
+
+    struct alignas(sizeof(Math::Vector4f)) EarthViewUniformData {
+        Math::Vector4f camera_world_position{};
+        Math::Vector4f sphere_center_radius{};
+    };
+
+    constexpr std::size_t kCloudUniformDataSize = 16U;
+
+    static_assert(sizeof(CloudUniformData) == kCloudUniformDataSize);
+    static_assert(alignof(EarthViewUniformData) == sizeof(Math::Vector4f));
+    static_assert(offsetof(EarthViewUniformData, sphere_center_radius) ==
+                  sizeof(Math::Vector4f));
+
+    constexpr std::uint32_t kMaterialDescriptorSet{0U};
+    constexpr std::uint32_t kMaterialArrayElement{0U};
+    constexpr std::uint32_t kDayTextureBinding{0U};
+    constexpr std::uint32_t kNightTextureBinding{2U};
+    constexpr std::uint32_t kCloudTextureBinding{3U};
+    constexpr std::uint32_t kSpecularTextureBinding{5U};
+    constexpr std::uint32_t kNormalTextureBinding{7U};
+    constexpr std::uint32_t kDirectionalLightUniformBinding{1U};
+    constexpr std::uint32_t kCloudUniformBinding{4U};
+    constexpr std::uint32_t kEarthViewUniformBinding{6U};
 } // namespace
 
 auto main() -> int {
     return SNE::Engine::Core::Error::runWithErrorBoundary(
         [] -> void {
+            constexpr float kSphereRadius{0.75F};
+            constexpr std::uint32_t kSphereLongitudeSegments{64U};
+            constexpr std::uint32_t kSphereLatitudeSegments{32U};
+            constexpr float kCameraFovRadians =
+                std::numbers::pi_v<float> / 3.0F;
+            constexpr float kCameraNearPlane{0.1F};
+            constexpr float kCameraFarPlane{100.0F};
+            constexpr float kCameraDistanceFromOrigin{3.0F};
+
             const Renderer::UvSphereParameters sphere_parameters{
-                .radius = 0.75F,
-                .longitude_segments = 32U,
-                .latitude_segments = 16U,
+                .radius = kSphereRadius,
+                .longitude_segments = kSphereLongitudeSegments,
+                .latitude_segments = kSphereLatitudeSegments,
             };
 
             const Renderer::UvSphereMesh reference_sphere =
@@ -135,9 +190,186 @@ auto main() -> int {
                 Math::identity(),
             };
 
+            const Renderer::DirectionalLight directional_light{
+                .direction_to_light = {.x = 3.0F, .y = 1.5F, .z = 1.0F},
+                .color = {.x = 1.0F, .y = 1.0F, .z = 1.0F},
+                .intensity = 1.0F,
+            };
+            const Renderer::DirectionalLightUniformData light_uniform_data =
+                Renderer::makeDirectionalLightUniformData(directional_light);
+
+            const CloudUniformData cloud_data{};
+            const EarthViewUniformData earth_data{
+                .camera_world_position =
+                    {
+                        .x = 0.0F,
+                        .y = 0.0F,
+                        .z = 0.0F,
+                        .w = 0.0F,
+                    },
+                .sphere_center_radius =
+                    {
+                        .x = 0.0F,
+                        .y = 0.0F,
+                        .z = 0.0F,
+                        .w = kSphereRadius,
+                    },
+            };
+
+            Shader::GraphicsShaderData shaders{
+                .vertex =
+                    {
+                        .artifact = Vulkan::loadSpirv(
+                            "build/shaders/textured.vert.spv"),
+                        .selection =
+                            {
+                                .stage = Shader::ShaderStage::Vertex,
+                                .entry_point = "main",
+                            },
+                    },
+                .fragment =
+                    {
+                        .artifact =
+                            Vulkan::loadSpirv("build/shaders/earth.frag.spv"),
+                        .selection =
+                            {
+                                .stage = Shader::ShaderStage::Fragment,
+                                .entry_point = "main",
+                            },
+                    },
+            };
+
+            const Renderer::Rgba8Image day =
+                Renderer::loadRgba8Image("playground/assets/earth_day.jpg");
+            const Renderer::Rgba8Image night =
+                Renderer::loadRgba8Image("playground/assets/earth_night.jpg");
+            const Renderer::Rgba8Image clouds =
+                Renderer::loadRgba8Image("playground/assets/earth_clouds.jpg");
+            const Renderer::Rgba8Image specular = Renderer::loadRgba8Image(
+                "playground/assets/earth_specular_map.png");
+            const Renderer::Rgba8Image normal = Renderer::loadRgba8Image(
+                "playground/assets/earth_normal_map.png");
+
+            const std::array<Renderer::MaterialTextureBindingInput, 5>
+                initial_textures{
+                    {
+                        Renderer::MaterialTextureBindingInput{
+                            .set = kMaterialDescriptorSet,
+                            .binding = kDayTextureBinding,
+                            .array_element = kMaterialArrayElement,
+                            .texture =
+                                {
+                                    .width = day.width,
+                                    .height = day.height,
+                                    .pixels = day.pixels,
+                                    .format =
+                                        Renderer::TextureFormat::Rgba8Srgb,
+                                    .mip_levels = 1U,
+                                },
+                        },
+                        Renderer::MaterialTextureBindingInput{
+                            .set = kMaterialDescriptorSet,
+                            .binding = kNightTextureBinding,
+                            .array_element = kMaterialArrayElement,
+                            .texture =
+                                {
+                                    .width = night.width,
+                                    .height = night.height,
+                                    .pixels = night.pixels,
+                                    .format =
+                                        Renderer::TextureFormat::Rgba8Srgb,
+                                    .mip_levels = 1U,
+                                },
+                        },
+                        Renderer::MaterialTextureBindingInput{
+                            .set = kMaterialDescriptorSet,
+                            .binding = kCloudTextureBinding,
+                            .array_element = kMaterialArrayElement,
+                            .texture =
+                                {
+                                    .width = clouds.width,
+                                    .height = clouds.height,
+                                    .pixels = clouds.pixels,
+                                    .format =
+                                        Renderer::TextureFormat::Rgba8Unorm,
+                                    .mip_levels = 1U,
+                                },
+                        },
+                        Renderer::MaterialTextureBindingInput{
+                            .set = kMaterialDescriptorSet,
+                            .binding = kSpecularTextureBinding,
+                            .array_element = kMaterialArrayElement,
+                            .texture =
+                                {
+                                    .width = specular.width,
+                                    .height = specular.height,
+                                    .pixels = specular.pixels,
+                                    .format =
+                                        Renderer::TextureFormat::Rgba8Unorm,
+                                    .mip_levels = 1U,
+                                },
+                        },
+                        Renderer::MaterialTextureBindingInput{
+                            .set = kMaterialDescriptorSet,
+                            .binding = kNormalTextureBinding,
+                            .array_element = kMaterialArrayElement,
+                            .texture =
+                                {
+                                    .width = normal.width,
+                                    .height = normal.height,
+                                    .pixels = normal.pixels,
+                                    .format =
+                                        Renderer::TextureFormat::Rgba8Unorm,
+                                    .mip_levels = 1U,
+                                },
+                        },
+                    },
+            };
+
+            const std::array<Renderer::MaterialBufferBindingInput, 3>
+                initial_buffers{
+                    {
+                        Renderer::MaterialBufferBindingInput{
+                            .set = kMaterialDescriptorSet,
+                            .binding = kDirectionalLightUniformBinding,
+                            .array_element = kMaterialArrayElement,
+                            .type = Shader::ShaderResourceType::UniformBuffer,
+                            .data = std::as_bytes(
+                                std::span{&light_uniform_data, 1}),
+                        },
+                        Renderer::MaterialBufferBindingInput{
+                            .set = kMaterialDescriptorSet,
+                            .binding = kCloudUniformBinding,
+                            .array_element = kMaterialArrayElement,
+                            .type = Shader::ShaderResourceType::UniformBuffer,
+                            .update_frequency = Renderer::
+                                MaterialBufferUpdateFrequency::Frequent,
+                            .data = std::as_bytes(std::span{&cloud_data, 1}),
+                        },
+                        Renderer::MaterialBufferBindingInput{
+                            .set = kMaterialDescriptorSet,
+                            .binding = kEarthViewUniformBinding,
+                            .array_element = kMaterialArrayElement,
+                            .type = Shader::ShaderResourceType::UniformBuffer,
+                            .update_frequency = Renderer::
+                                MaterialBufferUpdateFrequency::Frequent,
+                            .data = std::as_bytes(std::span{&earth_data, 1}),
+                        },
+                    },
+            };
+
             Core::ApplicationConfiguration configuration;
             configuration.initial_mesh = Renderer::makePrimitiveInitialMeshData(
                 reference_sphere, reference_model_matrices);
+            configuration.initial_camera = Renderer::InitialCameraData{
+                .view = Math::translate(0.0F, 0.0F, -kCameraDistanceFromOrigin),
+                .fov_y_radians = kCameraFovRadians,
+                .near_plane = kCameraNearPlane,
+                .far_plane = kCameraFarPlane,
+            };
+            configuration.initial_graphics_shaders = std::move(shaders);
+            configuration.initial_buffer_bindings = initial_buffers;
+            configuration.initial_texture_bindings = initial_textures;
 
             Core::Application application{std::move(configuration)};
 
