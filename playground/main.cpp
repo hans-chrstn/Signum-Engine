@@ -12,12 +12,8 @@
 #include "engine/platform/input/mouse_button.hpp"
 #include "engine/renderer/camera/camera_relative_position.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
-#include "engine/renderer/geometry/initial_mesh_data.hpp"
-#include "engine/renderer/geometry/mesh_upload_data.hpp"
+#include "engine/renderer/geometry/primitive_initial_mesh_data.hpp"
 #include "engine/renderer/geometry/uv_sphere_mesh.hpp"
-#include "engine/renderer/geometry/vertex_attribute_description.hpp"
-#include "engine/renderer/geometry/vertex_format.hpp"
-#include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/lighting/directional_light.hpp"
 #include "engine/renderer/lighting/directional_light_uniform_data.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
@@ -503,57 +499,6 @@ namespace {
         state.was_tab_pressed = is_tab_pressed;
     }
 
-    auto createInitialMesh(const Renderer::UvSphereMesh &sphere,
-                           const std::array<Math::Matrix4f, 1> &model_matrices)
-        -> Renderer::InitialMeshData {
-        static constexpr std::array<Renderer::VertexAttributeDescription, 4>
-            kSphereVertexAttributes{
-                {
-                    {
-                        .location = 0U,
-                        .format = Renderer::VertexFormat::Float32x3,
-                        .offset = static_cast<std::uint32_t>(
-                            offsetof(Renderer::UvSphereVertex, position)),
-                    },
-                    {
-                        .location = 1U,
-                        .format = Renderer::VertexFormat::Float32x3,
-                        .offset = static_cast<std::uint32_t>(
-                            offsetof(Renderer::UvSphereVertex, normal)),
-                    },
-                    {
-                        .location = 2U,
-                        .format = Renderer::VertexFormat::Float32x2,
-                        .offset = static_cast<std::uint32_t>(
-                            offsetof(Renderer::UvSphereVertex, uv)),
-                    },
-                    {
-                        .location = 3U,
-                        .format = Renderer::VertexFormat::Float32x4,
-                        .offset = static_cast<std::uint32_t>(
-                            offsetof(Renderer::UvSphereVertex, tangent)),
-                    },
-                },
-        };
-
-        const Renderer::MeshUploadData mesh{
-            .vertex_bytes = std::as_bytes(std::span{sphere.vertices}),
-            .vertex_stride =
-                static_cast<std::uint32_t>(sizeof(Renderer::UvSphereVertex)),
-            .indices = sphere.indices,
-        };
-
-        const Renderer::VertexLayoutDescription layout{
-            .attributes = kSphereVertexAttributes,
-        };
-
-        return Renderer::InitialMeshData{
-            .mesh = mesh,
-            .layout = layout,
-            .model_matrices = model_matrices,
-        };
-    }
-
     auto createInitialCamera() -> Renderer::InitialCameraData {
         return Renderer::InitialCameraData{
             .view = Math::identity(),
@@ -795,7 +740,8 @@ auto main() -> int {
                 Math::composeTRS(translation, rotation, scale),
             };
 
-            const auto initial_mesh = createInitialMesh(sphere, model_matrices);
+            const auto initial_mesh =
+                Renderer::makePrimitiveInitialMeshData(sphere, model_matrices);
             const auto initial_camera = createInitialCamera();
             auto initial_shaders = createInitialShaders();
 

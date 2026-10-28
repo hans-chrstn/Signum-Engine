@@ -1,9 +1,7 @@
 #pragma once
 
-#include <array>
-#include <cstddef>
+#include "engine/renderer/geometry/primitive_mesh.hpp"
 #include <cstdint>
-#include <vector>
 
 namespace SNE::Engine::Renderer {
     /**
@@ -39,78 +37,20 @@ namespace SNE::Engine::Renderer {
     };
 
     /**
-     * @brief Stores the attributes of one generated UV sphere vertex.
+     * @brief Compatibility alias for the shared primitive vertex format.
      *
-     * Contains the vertex position, outward-facing unit normal,
-     * normalized texture coordinates, and tangent-space information.
-     *
-     * The position is relative to the sphere center. Vertex attributes
-     * are stored independently of rendering backend types.
+     * Preserves existing UV sphere interfaces while using the common
+     * vertex representation for built-in primitives.
      */
-    struct UvSphereVertex {
-        /** @brief Number of floating-point components in a 3D vector. */
-        static constexpr std::size_t kSpatialComponentCount{3U};
-
-        /** @brief Number of floating-point components in a UV coordinate. */
-        static constexpr std::size_t kUvComponentCount{2U};
-
-        /** @brief Number of tangent-direction and handedness components. */
-        static constexpr std::size_t kTangentComponentCount{4U};
-
-        /** @brief Position relative to the sphere center. */
-        std::array<float, kSpatialComponentCount> position{};
-
-        /** @brief Outward-facing unit surface normal. */
-        std::array<float, kSpatialComponentCount> normal{};
-
-        /**
-         * @brief Normalized texture coordinates.
-         *
-         * The horizontal coordinate increases around the sphere, while
-         * the vertical coordinate increases from the north pole toward
-         * the south pole.
-         */
-        std::array<float, kUvComponentCount> uv{};
-
-        /**
-         * @brief Tangent-space direction and handedness of the vertex.
-         *
-         * The first three components store a unit tangent vector pointing
-         * along increasing horizontal texture coordinates (U).
-         *
-         * The fourth component stores the tangent-space handedness,
-         * allowing the bitangent to be reconstructed from the surface
-         * normal and tangent.
-         *
-         * The generated UV sphere uses a handedness of +1.
-         * Tangents remain consistent across the duplicated texture seam.
-         *
-         * At the poles, the tangent follows the longitude convention
-         * because the tangent direction is geometrically ambiguous.
-         */
-        std::array<float, kTangentComponentCount> tangent{};
-    };
+    using UvSphereVertex = PrimitiveVertex;
 
     /**
-     * @brief Owns CPU-side vertex and index data for a UV sphere.
+     * @brief Compatibility alias for the shared primitive mesh representation.
      *
-     * Stores independently owned geometry suitable for subsequent GPU
-     * upload through the renderer's existing mesh upload infrastructure.
-     *
-     * The geometry does not own GPU resources or depend on Vulkan.
+     * Preserves existing UV sphere interfaces while sharing the same
+     * CPU-owned vertex and index storage.
      */
-    struct UvSphereMesh {
-        /** @brief Generated sphere vertices. */
-        std::vector<UvSphereVertex> vertices;
-
-        /**
-         * @brief Triangle indices referencing generated vertices.
-         *
-         * Indices use 16-bit storage to match the current mesh upload
-         * contract.
-         */
-        std::vector<std::uint16_t> indices;
-    };
+    using UvSphereMesh = PrimitiveMesh;
 
     /**
      * @brief Generates an indexed UV sphere with positions, normals, UVs,

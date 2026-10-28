@@ -25,6 +25,8 @@ add_library(
     engine/renderer/camera/camera_relative_position.cpp
     engine/renderer/geometry/uv_sphere_mesh.cpp
     engine/renderer/geometry/vertex_format.cpp
+    engine/renderer/geometry/primitive_mesh_upload.cpp
+    engine/renderer/geometry/primitive_initial_mesh_data.cpp
     engine/renderer/lighting/directional_light.cpp
     engine/renderer/lighting/directional_light_uniform_data.cpp
     engine/renderer/material/material_resource_binding_compatibility.cpp

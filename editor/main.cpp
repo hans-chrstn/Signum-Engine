@@ -1,8 +1,12 @@
 #include "editor_workspace.hpp"
 #include "engine/core/application.hpp"
+#include "engine/core/application_configuration.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_boundary.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "engine/core/math/matrix4.hpp"
+#include "engine/renderer/geometry/primitive_initial_mesh_data.hpp"
+#include "engine/renderer/geometry/uv_sphere_mesh.hpp"
 #include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
@@ -10,6 +14,7 @@
 #include "imgui/editor_imgui_style.hpp"
 #include "imgui/editor_imgui_vulkan_backend.hpp"
 #include "panels/scene_view_panel.hpp"
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
@@ -23,6 +28,7 @@
 
 namespace Editor = SNE::Editor;
 namespace Core = SNE::Engine::Core;
+namespace Math = Core::Math;
 namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = Renderer::Vulkan;
 
@@ -116,7 +122,24 @@ namespace {
 auto main() -> int {
     return SNE::Engine::Core::Error::runWithErrorBoundary(
         [] -> void {
-            Core::Application application;
+            const Renderer::UvSphereParameters sphere_parameters{
+                .radius = 0.75F,
+                .longitude_segments = 32U,
+                .latitude_segments = 16U,
+            };
+
+            const Renderer::UvSphereMesh reference_sphere =
+                Renderer::generateUvSphereMesh(sphere_parameters);
+
+            const std::array<Math::Matrix4f, 1> reference_model_matrices = {
+                Math::identity(),
+            };
+
+            Core::ApplicationConfiguration configuration;
+            configuration.initial_mesh = Renderer::makePrimitiveInitialMeshData(
+                reference_sphere, reference_model_matrices);
+
+            Core::Application application{std::move(configuration)};
 
             float x_scale{};
             float y_scale{};
