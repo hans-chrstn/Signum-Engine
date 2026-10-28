@@ -1265,15 +1265,15 @@
 
 - [x] Define how the renderer provides an image to the editor viewport
 - [x] Add an offscreen scene-rendering target
-- [ ] Display the rendered scene inside the Scene View panel
+- [x] Display the rendered scene inside the Scene View panel
 - [x] Support viewport resizing without recreating unrelated resources
 - [x] Keep scene rendering independent from Dear ImGui
 - [ ] Handle viewport image synchronization and resource lifetimes
-- [ ] Preserve the existing non-editor rendering path
-- [ ] Match the camera aspect ratio to the scene viewport
+- [x] Preserve the existing non-editor rendering path
+- [x] Match the camera aspect ratio to the scene viewport
 - [ ] Support camera movement when the viewport has input focus
 - [ ] Prevent camera controls from interfering with editor UI interaction
-- [ ] Handle zero-sized and minimized viewports
+- [x] Handle zero-sized and minimized viewports
 - [ ] Verify viewport rendering after window and swapchain resizing
 
 #### 9.5.4 — Hierarchy and Inspector
