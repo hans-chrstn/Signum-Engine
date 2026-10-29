@@ -6,6 +6,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/vector4.hpp"
+#include "engine/platform/input/cursor_position.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/primitive_initial_mesh_data.hpp"
 #include "engine/renderer/geometry/uv_sphere_mesh.hpp"
@@ -50,8 +51,15 @@ namespace Core = SNE::Engine::Core;
 namespace Math = Core::Math;
 namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = Renderer::Vulkan;
+namespace Platform = SNE::Engine::Platform;
 
 namespace {
+    struct SceneViewCameraState {
+        bool is_dragging{};
+        Platform::CursorPosition previous_cursor{};
+        float yaw_radians{};
+        float pitch_radians{};
+    };
     /**
      * @brief Determines whether a supported editor attachment format uses sRGB
      * encoding.
@@ -407,9 +415,12 @@ auto main() -> int {
 
             std::optional<VkDescriptorSet> scene_descriptor_this_frame;
 
+            SceneViewCameraState camera_state{};
+
             application.run(
                 [&active_rendering_info, &editor_backend, &workspace, &x_scale,
-                 &scene_descriptor_this_frame](Core::Application &app) -> void {
+                 &scene_descriptor_this_frame,
+                 &camera_state](Core::Application &app) -> void {
                     scene_descriptor_this_frame.reset();
 
                     float current_x_scale{};
@@ -490,6 +501,15 @@ auto main() -> int {
 
                     const Editor::Panels::SceneViewPanelState panel_state =
                         workspace.sceneViewPanelState();
+
+                    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                        camera_state.is_dragging = false;
+                    } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+                               panel_state.m_IsImageHovered) {
+                        camera_state.is_dragging = true;
+                        camera_state.previous_cursor =
+                            app.window().cursorPosition();
+                    }
 
                     const ImVec2 framebuffer_scale =
                         ImGui::GetIO().DisplayFramebufferScale;

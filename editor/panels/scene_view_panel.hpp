@@ -34,6 +34,15 @@ namespace SNE::Editor::Panels {
 
         /** @brief Whether the Scene View has drawable content. */
         bool m_IsVisible{};
+
+        /**
+         * @brief Whether the pointer is hovering over the rendered scene image.
+         *
+         * True only when the scene image is available and hovered.
+         * False when the image is unavailable or the pointer is outside its
+         * bounds.
+         */
+        bool m_IsImageHovered{};
     };
 
     /**

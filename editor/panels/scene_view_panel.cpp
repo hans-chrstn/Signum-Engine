@@ -33,6 +33,7 @@ namespace SNE::Editor::Panels {
 
             if (texture.has_value()) {
                 ImGui::Image(texture.value(), available_region);
+                panel_state.m_IsImageHovered = ImGui::IsItemHovered();
             } else {
                 ImGui::TextUnformatted("Scene viewport unavailable.");
             }
