@@ -204,7 +204,7 @@ auto main() -> int {
                     {
                         .x = 0.0F,
                         .y = 0.0F,
-                        .z = 0.0F,
+                        .z = kCameraDistanceFromOrigin,
                         .w = 0.0F,
                     },
                 .sphere_center_radius =
