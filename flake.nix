@@ -34,24 +34,7 @@
       enableLibcxx = false;
     };
 
-    clangTools = pkgs.lib.hiPrio (clangToolsBase.overrideAttrs (oldAttrs: {
-      postInstall =
-        (oldAttrs.postInstall or "")
-        + ''
-          for tool in clangd clang-tidy clang-format; do
-            substituteInPlace "$out/bin/$tool" \
-              --replace-fail '#!/bin/sh' '#!${pkgs.bash}/bin/bash'
-          done
-        '';
-    }));
-
-    runtimeLibraries = with pkgs; [
-      glfw
-      libGL
-      vulkan-loader
-      vulkan-validation-layers
-      freetype
-    ];
+    clangTools = pkgs.lib.hiPrio clangToolsBase;
 
     mkDevShell = extraPackages:
       pkgs.mkShell.override {
@@ -116,9 +99,6 @@
 
         SPIRV_REFLECT_SOURCE_DIR = "${spirv-reflect}";
         IMGUI_SOURCE_DIR = "${imgui}";
-
-        LD_LIBRARY_PATH =
-          pkgs.lib.makeLibraryPath runtimeLibraries;
 
         VK_ADD_LAYER_PATH = "${pkgs.vulkan-validation-layers}/share/vulkan/explicit_layer.d";
 

@@ -19,11 +19,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1790578696,
-        "narHash": "sha256-ZoxIApko70jCdbH3l20HWXOBaT2HZd87orzd2yJ9dVE=",
+        "lastModified": 1793341285,
+        "narHash": "sha256-Y1CiZ4SoBUjLQyQM/pY+rS2dXD3CHLPstF0lmOc73D4=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "7a0f122f5090cf4c2ade2a13a0e229d4e19ba71f",
+        "rev": "1c89083e451e891152365b799595cf7790a43325",
         "type": "github"
       },
       "original": {
@@ -43,11 +43,11 @@
     "spirv-reflect": {
       "flake": false,
       "locked": {
-        "lastModified": 1791213505,
-        "narHash": "sha256-E48CPOSEl2aXeJHgHcdatBNfZDFQxXl/4DDLVSm9NGE=",
+        "lastModified": 1793049050,
+        "narHash": "sha256-ExNZndqcxp5k8dZs47DMI+aoiIdBN55l9px+0xrV3C8=",
         "owner": "KhronosGroup",
         "repo": "SPIRV-Reflect",
-        "rev": "563dc9a16d0e86145e12a66bb61f0695ca4a14b9",
+        "rev": "d1f241304475a491362a607f66fc11cf10c42f6f",
         "type": "github"
       },
       "original": {
