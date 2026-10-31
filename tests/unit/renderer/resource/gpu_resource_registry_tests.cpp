@@ -427,7 +427,9 @@ TEST(GpuResourceRegistryTests, MovedFromRegistryRejectsLookups) {
     auto *moved_from = &source;
     Registry destination{std::move(source)};
 
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
     EXPECT_EQ(moved_from->find(handle), nullptr);
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
     EXPECT_FALSE(moved_from->remove(handle).has_value());
     EXPECT_NE(destination.find(handle), nullptr);
 }

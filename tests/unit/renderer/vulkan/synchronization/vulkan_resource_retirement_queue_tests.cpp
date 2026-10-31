@@ -432,8 +432,11 @@ TEST(VulkanResourceRetirementQueueTests, DestroysThreeResourcesInReverseOrder) {
 
     queue.retire(submission_id, first, second, third);
 
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
     EXPECT_EQ(first.get(), nullptr);
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
     EXPECT_EQ(second.get(), nullptr);
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
     EXPECT_EQ(third.get(), nullptr);
     EXPECT_EQ(next_index, 0U);
 
