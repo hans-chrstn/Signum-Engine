@@ -1,10 +1,13 @@
 #include "editor_workspace.hpp"
 #include "engine/core/application.hpp"
 #include "engine/core/application_configuration.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_boundary.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/math/matrix4.hpp"
+#include "engine/core/math/quaternion.hpp"
 #include "engine/core/math/vector4.hpp"
 #include "engine/platform/input/cursor_position.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
@@ -48,18 +51,47 @@
 
 namespace Editor = SNE::Editor;
 namespace Core = SNE::Engine::Core;
+namespace Assertion = Core::Assertion;
+namespace Error = Core::Error;
 namespace Math = Core::Math;
 namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = Renderer::Vulkan;
 namespace Platform = SNE::Engine::Platform;
 
 namespace {
+    constexpr std::uint32_t kMaterialDescriptorSet{0U};
+    constexpr std::uint32_t kMaterialArrayElement{0U};
+    constexpr std::uint32_t kDayTextureBinding{0U};
+    constexpr std::uint32_t kNightTextureBinding{2U};
+    constexpr std::uint32_t kCloudTextureBinding{3U};
+    constexpr std::uint32_t kSpecularTextureBinding{5U};
+    constexpr std::uint32_t kNormalTextureBinding{7U};
+    constexpr std::uint32_t kDirectionalLightUniformBinding{1U};
+    constexpr std::uint32_t kCloudUniformBinding{4U};
+    constexpr std::uint32_t kEarthViewUniformBinding{6U};
+    constexpr float kCameraRotationSensitivity{0.005F};
     struct SceneViewCameraState {
         bool is_dragging{};
         Platform::CursorPosition previous_cursor{};
-        float yaw_radians{};
-        float pitch_radians{};
+        Math::Quaternionf orientation{Math::quaternionIdentity()};
     };
+
+    struct CloudUniformData {
+        Math::Vector4f uv_offset{};
+    };
+
+    struct alignas(sizeof(Math::Vector4f)) EarthViewUniformData {
+        Math::Vector4f camera_world_position{};
+        Math::Vector4f sphere_center_radius{};
+    };
+
+    constexpr std::size_t kCloudUniformDataSize = 16U;
+
+    static_assert(sizeof(CloudUniformData) == kCloudUniformDataSize);
+    static_assert(alignof(EarthViewUniformData) == sizeof(Math::Vector4f));
+    static_assert(offsetof(EarthViewUniformData, sphere_center_radius) ==
+                  sizeof(Math::Vector4f));
+
     /**
      * @brief Determines whether a supported editor attachment format uses sRGB
      * encoding.
@@ -145,32 +177,72 @@ namespace {
         };
     }
 
-    struct CloudUniformData {
-        Math::Vector4f uv_offset{};
-    };
+    auto updateSceneViewCamera(
+        SceneViewCameraState &camera_state,
+        const Editor::Panels::SceneViewPanelState &panel_state,
+        Core::Application &application, float camera_distance) -> void {
 
-    struct alignas(sizeof(Math::Vector4f)) EarthViewUniformData {
-        Math::Vector4f camera_world_position{};
-        Math::Vector4f sphere_center_radius{};
-    };
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            camera_state.is_dragging = false;
+        } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+                   panel_state.m_IsImageHovered) {
+            camera_state.is_dragging = true;
+            camera_state.previous_cursor =
+                application.window().cursorPosition();
+        }
 
-    constexpr std::size_t kCloudUniformDataSize = 16U;
+        if (camera_state.is_dragging) {
 
-    static_assert(sizeof(CloudUniformData) == kCloudUniformDataSize);
-    static_assert(alignof(EarthViewUniformData) == sizeof(Math::Vector4f));
-    static_assert(offsetof(EarthViewUniformData, sphere_center_radius) ==
-                  sizeof(Math::Vector4f));
+            const Platform::CursorPosition current_cursor_pos =
+                application.window().cursorPosition();
 
-    constexpr std::uint32_t kMaterialDescriptorSet{0U};
-    constexpr std::uint32_t kMaterialArrayElement{0U};
-    constexpr std::uint32_t kDayTextureBinding{0U};
-    constexpr std::uint32_t kNightTextureBinding{2U};
-    constexpr std::uint32_t kCloudTextureBinding{3U};
-    constexpr std::uint32_t kSpecularTextureBinding{5U};
-    constexpr std::uint32_t kNormalTextureBinding{7U};
-    constexpr std::uint32_t kDirectionalLightUniformBinding{1U};
-    constexpr std::uint32_t kCloudUniformBinding{4U};
-    constexpr std::uint32_t kEarthViewUniformBinding{6U};
+            const double delta_x =
+                current_cursor_pos.x - camera_state.previous_cursor.x;
+            const double delta_y =
+                current_cursor_pos.y - camera_state.previous_cursor.y;
+
+            const auto yaw_delta =
+                static_cast<float>(delta_x) * kCameraRotationSensitivity;
+            const auto pitch_delta =
+                static_cast<float>(delta_y) * kCameraRotationSensitivity;
+
+            const Math::Quaternionf yaw_rotation = Math::fromAxisAngle(
+                {.x = 0.0F, .y = 1.0F, .z = 0.0F}, -yaw_delta);
+
+            const Math::Quaternionf pitch_rotation = Math::fromAxisAngle(
+                {.x = 1.0F, .y = 0.0F, .z = 0.0F}, -pitch_delta);
+
+            const Math::Quaternionf drag_rotation =
+                Math::multiply(yaw_rotation, pitch_rotation);
+
+            camera_state.orientation = Math::normalize(
+                Math::multiply(camera_state.orientation, drag_rotation));
+
+            camera_state.previous_cursor = current_cursor_pos;
+
+            const Math::Matrix4f camera_translation =
+                Math::translate(0.0F, 0.0F, camera_distance);
+
+            const Math::Matrix4f camera_rotation =
+                Math::toRotationMatrix(camera_state.orientation);
+
+            const Math::Matrix4f camera_world_matrix =
+                Math::multiply(camera_rotation, camera_translation);
+
+            const std::optional<Math::Matrix4f> inverted_matrix =
+                Math::tryInverse(camera_world_matrix);
+
+            if (!inverted_matrix.has_value()) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Editor,
+                    "Scene View camera world transform must be "
+                    "invertible");
+            }
+
+            application.setCameraViewMatrix(inverted_matrix.value());
+        }
+    }
 } // namespace
 
 auto main() -> int {
@@ -502,14 +574,8 @@ auto main() -> int {
                     const Editor::Panels::SceneViewPanelState panel_state =
                         workspace.sceneViewPanelState();
 
-                    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-                        camera_state.is_dragging = false;
-                    } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-                               panel_state.m_IsImageHovered) {
-                        camera_state.is_dragging = true;
-                        camera_state.previous_cursor =
-                            app.window().cursorPosition();
-                    }
+                    updateSceneViewCamera(camera_state, panel_state, app,
+                                          kCameraDistanceFromOrigin);
 
                     const ImVec2 framebuffer_scale =
                         ImGui::GetIO().DisplayFramebufferScale;
