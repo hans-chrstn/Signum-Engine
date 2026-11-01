@@ -6,8 +6,10 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_boundary.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/quaternion.hpp"
+#include "engine/core/math/vector3.hpp"
 #include "engine/core/math/vector4.hpp"
 #include "engine/platform/input/cursor_position.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
@@ -180,7 +182,8 @@ namespace {
     auto updateSceneViewCamera(
         SceneViewCameraState &camera_state,
         const Editor::Panels::SceneViewPanelState &panel_state,
-        Core::Application &application, float camera_distance) -> void {
+        Core::Application &application, float camera_distance)
+        -> std::optional<Math::Vector3f> {
 
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             camera_state.is_dragging = false;
@@ -200,6 +203,10 @@ namespace {
                 current_cursor_pos.x - camera_state.previous_cursor.x;
             const double delta_y =
                 current_cursor_pos.y - camera_state.previous_cursor.y;
+
+            if (delta_x == 0.0 && delta_y == 0.0) {
+                return std::nullopt;
+            }
 
             const auto yaw_delta =
                 static_cast<float>(delta_x) * kCameraRotationSensitivity;
@@ -229,6 +236,9 @@ namespace {
             const Math::Matrix4f camera_world_matrix =
                 Math::multiply(camera_rotation, camera_translation);
 
+            const Math::Vector3f camera_world_position = Math::transformPoint(
+                camera_world_matrix, {.x = 0.0F, .y = 0.0F, .z = 0.0F});
+
             const std::optional<Math::Matrix4f> inverted_matrix =
                 Math::tryInverse(camera_world_matrix);
 
@@ -241,7 +251,11 @@ namespace {
             }
 
             application.setCameraViewMatrix(inverted_matrix.value());
+
+            return camera_world_position;
         }
+
+        return std::nullopt;
     }
 } // namespace
 
@@ -279,7 +293,7 @@ auto main() -> int {
                 Renderer::makeDirectionalLightUniformData(directional_light);
 
             const CloudUniformData cloud_data{};
-            const EarthViewUniformData earth_data{
+            EarthViewUniformData earth_data{
                 .camera_world_position =
                     {
                         .x = 0.0F,
@@ -491,8 +505,8 @@ auto main() -> int {
 
             application.run(
                 [&active_rendering_info, &editor_backend, &workspace, &x_scale,
-                 &scene_descriptor_this_frame,
-                 &camera_state](Core::Application &app) -> void {
+                 &scene_descriptor_this_frame, &camera_state,
+                 &earth_data](Core::Application &app) -> void {
                     scene_descriptor_this_frame.reset();
 
                     float current_x_scale{};
@@ -574,8 +588,27 @@ auto main() -> int {
                     const Editor::Panels::SceneViewPanelState panel_state =
                         workspace.sceneViewPanelState();
 
-                    updateSceneViewCamera(camera_state, panel_state, app,
-                                          kCameraDistanceFromOrigin);
+                    const std::optional<Math::Vector3f>
+                        updated_camera_position =
+                            updateSceneViewCamera(camera_state, panel_state,
+                                                  app,
+                                                  kCameraDistanceFromOrigin);
+
+                    if (updated_camera_position.has_value()) {
+                        earth_data.camera_world_position.x =
+                            updated_camera_position->x;
+                        earth_data.camera_world_position.y =
+                            updated_camera_position->y;
+                        earth_data.camera_world_position.z =
+                            updated_camera_position->z;
+
+                        app.updateMaterialBuffer({
+                            .set = kMaterialDescriptorSet,
+                            .binding = kEarthViewUniformBinding,
+                            .array_element = kMaterialArrayElement,
+                            .data = std::as_bytes(std::span{&earth_data, 1U}),
+                        });
+                    }
 
                     const ImVec2 framebuffer_scale =
                         ImGui::GetIO().DisplayFramebufferScale;
