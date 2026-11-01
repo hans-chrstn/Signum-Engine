@@ -212,6 +212,28 @@ add_subdirectory(
 
 add_subdirectory(src)
 
+include(CTest)
+
+if(SIGNUM_BUILD_EDITOR OR BUILD_TESTING)
+  add_library(
+    signum_editor_core
+    STATIC
+      editor/scene_view/scene_grid_geometry.cpp
+  )
+
+  target_link_libraries(
+    signum_editor_core
+    PUBLIC
+      signum_engine
+  )
+
+  target_include_directories(
+    signum_editor_core
+    PUBLIC
+      "${CMAKE_SOURCE_DIR}/editor"
+  )
+endif()
+
 if(SIGNUM_BUILD_PLAYGROUND)
   add_subdirectory(playground)
 endif()
@@ -226,8 +248,6 @@ if(SIGNUM_BUILD_SHADERS)
     "${CMAKE_BINARY_DIR}/cmake/shaders"
   )
 endif()
-
-include(CTest)
 
 if(BUILD_TESTING)
   add_subdirectory(tests)

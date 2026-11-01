@@ -69,4 +69,5 @@ target_link_libraries(
   PRIVATE
     signum_engine
     signum_editor_imgui
+    signum_editor_core
 )

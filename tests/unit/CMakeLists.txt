@@ -1,5 +1,6 @@
 add_executable(
   signum_unit_tests
+  editor/scene_view/scene_grid_geometry_tests.cpp
   core/error/engine_error_tests.cpp
   core/error/error_code_tests.cpp
   core/error/native_error_tests.cpp
@@ -78,6 +79,7 @@ target_link_libraries(
   signum_unit_tests
   PRIVATE
     signum_engine
+    signum_editor_core
     GTest::gtest_main
 )
 
