@@ -3,10 +3,12 @@
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
+#include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
+#include "engine/renderer/vulkan/geometry/vulkan_vertex_input.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_image.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_upload.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_address_mode.hpp"
@@ -25,7 +27,7 @@
 #include <span>
 #include <utility>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
     auto VulkanRenderer::createOffscreenSceneTargetResources(
@@ -163,7 +165,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         ++m_OffscreenSceneGeneration;
     }
 
-    auto VulkanRenderer::createMeshBufferResources(const MeshUploadData &mesh)
+    auto VulkanRenderer::createMeshBufferResources(
+        const MeshUploadData &mesh, const VertexLayoutDescription &layout)
         -> MeshBufferResources {
         const std::optional<std::uint32_t> mesh_indices_size =
             Core::Numeric::tryConvertToUint32(mesh.indices.size());
@@ -249,6 +252,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             .m_VertexBuffer = std::move(new_vertex_buffer),
             .m_IndexBuffer = std::move(new_index_buffer),
             .m_IndexCount = mesh_indices_size.value(),
+            .m_VertexStride = mesh.vertex_stride,
+            .m_VertexAttributes = std::vector<VertexAttributeDescription>(
+                layout.attributes.begin(), layout.attributes.end()),
         };
 
         return new_mesh_buffers;
@@ -272,7 +278,20 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "stride");
         }
 
-        MeshBufferResources resources = createMeshBufferResources(mesh);
+        const VertexLayoutDescription layout{
+            .attributes = m_MeshVertexAttributes,
+        };
+
+        return registerMesh(mesh, layout);
+    }
+
+    auto VulkanRenderer::registerMesh(const MeshUploadData &mesh,
+                                      const VertexLayoutDescription &layout)
+        -> GpuResourceHandle {
+        static_cast<void>(
+            makeVulkanVertexInputDescriptions(layout, mesh.vertex_stride));
+
+        MeshBufferResources resources = createMeshBufferResources(mesh, layout);
 
         GpuResourceHandle handle = m_MeshRegistry.insert(std::move(resources));
 
@@ -356,7 +375,12 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto VulkanRenderer::uploadMesh(const MeshUploadData &mesh) -> void {
 
-        MeshBufferResources new_mesh_buffers = createMeshBufferResources(mesh);
+        const VertexLayoutDescription vertex_layout_description{
+            .attributes = m_MeshVertexAttributes,
+        };
+
+        MeshBufferResources new_mesh_buffers =
+            createMeshBufferResources(mesh, vertex_layout_description);
 
         if (!m_ActiveMeshHandle.has_value()) {
             m_ActiveMeshHandle =

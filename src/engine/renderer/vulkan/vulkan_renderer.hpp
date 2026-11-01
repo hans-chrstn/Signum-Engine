@@ -7,6 +7,7 @@
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
+#include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_instance_description.hpp"
@@ -400,6 +401,14 @@ namespace SNE::Engine::Renderer::Vulkan {
 
             /** @brief Number of indices stored in the index buffer. */
             std::uint32_t m_IndexCount{};
+
+            /** @brief Byte stride of the vertex records stored in the GPU
+             * vertex buffer. */
+            std::uint32_t m_VertexStride{};
+
+            /** @brief Owned vertex attribute descriptions used to interpret the
+             * mesh's vertex buffer. */
+            std::vector<VertexAttributeDescription> m_VertexAttributes;
         };
 
         static_assert(
@@ -1287,12 +1296,16 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @param mesh Borrowed mesh geometry to upload.
          * @return Owned GPU mesh buffer resources.
+         * @param vertex_layout_description Borrowed vertex attribute layout
+         * copied into the resulting mesh resources.
          *
          * @throws Core::Error::EngineError if GPU allocation or upload fails.
          *
          * @note Invalid mesh data triggers precondition assertions.
          */
-        [[nodiscard]] auto createMeshBufferResources(const MeshUploadData &mesh)
+        [[nodiscard]] auto
+        createMeshBufferResources(const MeshUploadData &mesh,
+                                  const VertexLayoutDescription &layout)
             -> MeshBufferResources;
 
         /**
@@ -2700,6 +2713,51 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @note Invalid mesh descriptions trigger precondition assertions.
          */
         [[nodiscard]] auto registerMesh(const MeshUploadData &mesh)
+            -> GpuResourceHandle;
+
+        /**
+         * @brief Uploads and registers a GPU mesh with an explicit vertex
+         * layout.
+         *
+         * Creates vertex and index buffers and registers them with the
+         * renderer's mesh resource registry.
+         *
+         * Copies the supplied vertex attribute descriptions into the
+         * registered mesh resources, retaining them independently of the
+         * caller.
+         *
+         * Registration does not replace the active mesh or modify draw
+         * instances. The registered mesh remains owned by the renderer.
+         *
+         * @param mesh Borrowed vertex and index data to upload.
+         * @param layout Borrowed vertex attribute layout to copy into the mesh.
+         * @return Handle identifying the registered GPU mesh.
+         *
+         * @pre Mesh geometry must satisfy the upload requirements.
+         * @pre Vertex attributes must fit within the mesh's vertex stride.
+         * @pre Vertex attribute locations must be unique.
+         * @pre Registration must be serialized with rendering and other
+         * resource operations.
+         *
+         * @post On success, the returned handle resolves to the registered
+         * mesh.
+         * @post The registered mesh owns a copy of its vertex layout metadata.
+         * @post The active mesh selection and draw instances remain unchanged.
+         * @post On failure, no new mesh remains registered.
+         * @post Vertex and index uploads complete before the handle is
+         * returned.
+         *
+         * @note Uploads currently use synchronous immediate submission on the
+         * graphics queue.
+         *
+         * @throws Core::Error::EngineError if GPU allocation or upload fails.
+         * @throws std::bad_alloc if resource allocation or registration fails.
+         *
+         * @note Invalid mesh geometry or layout triggers precondition
+         * assertions.
+         */
+        [[nodiscard]] auto registerMesh(const MeshUploadData &mesh,
+                                        const VertexLayoutDescription &layout)
             -> GpuResourceHandle;
 
         /**

@@ -6,6 +6,7 @@
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
+#include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
@@ -1173,4 +1174,146 @@ TEST(VulkanRendererCameraIntegrationTests,
     ASSERT_DEATH(
         { renderer.setCameraViewMatrix(Math::identity()); },
         "requires an initialized camera");
+}
+
+TEST(VulkanRendererMeshReplacementIntegrationTests,
+     RegistersMeshesWithIndependentVertexLayouts) {
+    if (std::getenv("DISPLAY") == nullptr &&
+        std::getenv("WAYLAND_DISPLAY") == nullptr) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    Platform::GlfwContext glfw{};
+
+    const Platform::Window window{
+        kWindowSize,
+        "Signum Independent Vertex Layout Test",
+    };
+
+    Vulkan::VulkanInstance instance{
+        "Signum Independent Vertex Layout Test",
+        false,
+    };
+
+    Vulkan::VulkanSurface surface{
+        instance.nativeHandle(),
+        window.nativeHandle(),
+    };
+
+    const auto devices =
+        Vulkan::enumeratePhysicalDevices(instance.nativeHandle());
+
+    const auto discovered =
+        Vulkan::inspectPhysicalDevices(devices, surface.nativeHandle());
+
+    if (!Vulkan::selectPhysicalDevice(discovered).has_value()) {
+        GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+    }
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Independent Vertex Layout Test",
+        window,
+        Renderer::PresentationPreference::VSync,
+        false,
+    };
+
+    const Renderer::MeshUploadData colored_mesh{
+        .vertex_bytes = std::as_bytes(std::span{kTriangleVertices}),
+        .vertex_stride = kVertexStride,
+        .indices = kTriangleIndices,
+    };
+
+    const std::array position_vertices{
+        std::array{-0.5F, -0.5F, 0.0F},
+        std::array{0.5F, -0.5F, 0.0F},
+        std::array{0.0F, 0.5F, 0.0F},
+    };
+
+    const Renderer::MeshUploadData position_mesh{
+        .vertex_bytes = std::as_bytes(std::span{position_vertices}),
+        .vertex_stride =
+            static_cast<std::uint32_t>(sizeof(position_vertices[0])),
+        .indices = kTriangleIndices,
+    };
+
+    const std::array position_attributes{
+        Renderer::VertexAttributeDescription{
+            .location = 0U,
+            .format = Renderer::VertexFormat::Float32x3,
+            .offset = 0U,
+        },
+    };
+
+    const Renderer::VertexLayoutDescription colored_layout{
+        .attributes = kVertexAttributes,
+    };
+
+    const Renderer::VertexLayoutDescription position_layout{
+        .attributes = position_attributes,
+    };
+
+    ASSERT_NE(colored_mesh.vertex_stride, position_mesh.vertex_stride);
+
+    const auto colored_handle =
+        renderer.registerMesh(colored_mesh, colored_layout);
+
+    const auto position_handle =
+        renderer.registerMesh(position_mesh, position_layout);
+
+    EXPECT_NE(colored_handle, position_handle);
+
+    const std::array instances{
+        Renderer::MeshDrawInstance{
+            .mesh_handle = colored_handle,
+            .model_matrix = Math::identity(),
+            .material_handle = {},
+        },
+        Renderer::MeshDrawInstance{
+            .mesh_handle = position_handle,
+            .model_matrix = Math::identity(),
+            .material_handle = {},
+        },
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(instances));
+
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
+
+    const std::array duplicate_attributes{
+        position_attributes[0],
+        position_attributes[0],
+    };
+
+    const Renderer::VertexLayoutDescription duplicate_layout{
+        .attributes = duplicate_attributes,
+    };
+
+    ASSERT_DEATH(
+        {
+            static_cast<void>(
+                renderer.registerMesh(position_mesh, duplicate_layout));
+        },
+        "requires unique attribute locations");
+
+    const std::array invalid_offset_attributes{
+        Renderer::VertexAttributeDescription{
+            .location = 0U,
+            .format = Renderer::VertexFormat::Float32x3,
+            .offset = 4U,
+        },
+    };
+
+    const Renderer::VertexLayoutDescription invalid_offset_layout{
+        .attributes = invalid_offset_attributes,
+    };
+
+    ASSERT_DEATH(
+        {
+            static_cast<void>(
+                renderer.registerMesh(position_mesh, invalid_offset_layout));
+        },
+        "extends beyond vertex stride");
+
+    ASSERT_NO_THROW(renderer.unregisterMesh(colored_handle));
+    ASSERT_NO_THROW(renderer.unregisterMesh(position_handle));
 }
