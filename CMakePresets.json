@@ -27,6 +27,7 @@
         "SIGNUM_ENABLE_REFLECTION": false,
         "SIGNUM_ENABLE_CONTRACTS": false,
         "SIGNUM_BUILD_EDITOR": true,
+        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true,
         "SIGNUM_BUILD_PLAYGROUND": false
       }
     },
@@ -66,6 +67,7 @@
         "SIGNUM_ENABLE_CONTRACTS": false,
         "SIGNUM_BUILD_EDITOR": true,
         "SIGNUM_BUILD_PLAYGROUND": false,
+        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true,
         "SIGNUM_WARNINGS_AS_ERRORS": true
       }
     },
@@ -90,6 +92,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "SIGNUM_ENABLE_SANITIZERS": true,
         "SIGNUM_BUILD_EDITOR": true,
+        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true,
         "SIGNUM_BUILD_PLAYGROUND": false
       }
     },

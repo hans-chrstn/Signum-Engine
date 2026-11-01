@@ -22,12 +22,15 @@
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
+#include "engine/renderer/shader/shader_compilation_result.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
+#include "engine/renderer/shader/shader_source_compiler.hpp"
+#include "engine/renderer/shader/shader_source_description.hpp"
+#include "engine/renderer/shader/shader_source_language.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
 #include "engine/renderer/texture/image_loader.hpp"
 #include "engine/renderer/texture/rgba8_image.hpp"
 #include "engine/renderer/texture/texture_format.hpp"
-#include "engine/renderer/vulkan/pipeline/vulkan_spirv.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include "imgui/editor_imgui_context.hpp"
@@ -59,6 +62,7 @@ namespace Math = Core::Math;
 namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = Renderer::Vulkan;
 namespace Platform = SNE::Engine::Platform;
+namespace Shader = SNE::Engine::Renderer::Shader;
 
 namespace {
     constexpr std::uint32_t kMaterialDescriptorSet{0U};
@@ -310,27 +314,29 @@ auto main() -> int {
                     },
             };
 
+            const Shader::ShaderSourceDescription vertex_description{
+                .path = "shaders/slang/basic/textured.slang",
+                .language = Shader::ShaderSourceLanguage::Slang,
+                .stage = Shader::ShaderStage::Vertex,
+                .entry_point = "vertexMain",
+            };
+
+            Shader::ShaderCompilationResult vertex_result =
+                Shader::compileShaderSource(vertex_description);
+
+            const Shader::ShaderSourceDescription fragment_description{
+                .path = "shaders/slang/basic/earth.slang",
+                .language = Shader::ShaderSourceLanguage::Slang,
+                .stage = Shader::ShaderStage::Fragment,
+                .entry_point = "fragmentMain",
+            };
+
+            Shader::ShaderCompilationResult fragment_result =
+                Shader::compileShaderSource(fragment_description);
+
             Shader::GraphicsShaderData shaders{
-                .vertex =
-                    {
-                        .artifact = Vulkan::loadSpirv(
-                            "build/shaders/textured.vert.spv"),
-                        .selection =
-                            {
-                                .stage = Shader::ShaderStage::Vertex,
-                                .entry_point = "main",
-                            },
-                    },
-                .fragment =
-                    {
-                        .artifact =
-                            Vulkan::loadSpirv("build/shaders/earth.frag.spv"),
-                        .selection =
-                            {
-                                .stage = Shader::ShaderStage::Fragment,
-                                .entry_point = "main",
-                            },
-                    },
+                .vertex = std::move(vertex_result.stage_input),
+                .fragment = std::move(fragment_result.stage_input),
             };
 
             const Renderer::Rgba8Image day =

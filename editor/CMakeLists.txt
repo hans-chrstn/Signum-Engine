@@ -48,6 +48,13 @@ configure_file(
   COPYONLY
 )
 
+if(NOT TARGET signum_shader_compiler)
+  message(
+    FATAL_ERROR
+    "Signum Editor requires runtime Slang compilation"
+  )
+endif()
+
 add_executable(
   signum_editor
   main.cpp
@@ -70,4 +77,5 @@ target_link_libraries(
     signum_engine
     signum_editor_imgui
     signum_editor_core
+    signum_shader_compiler
 )
