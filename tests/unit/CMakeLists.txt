@@ -2,6 +2,7 @@ add_executable(
   signum_unit_tests
   editor/scene_view/scene_grid_geometry_tests.cpp
   editor/scene_view/scene_grid_mesh_tests.cpp
+  editor/scene_view/scene_grid_mesh_upload_tests.cpp
   core/error/engine_error_tests.cpp
   core/error/error_code_tests.cpp
   core/error/native_error_tests.cpp
