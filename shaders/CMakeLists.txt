@@ -33,11 +33,6 @@ set(
 )
 
 set(
-  SIGNUM_SLANG_EDITOR_SOURCE_DIR
-  "${CMAKE_CURRENT_SOURCE_DIR}/slang/editor"
-)
-
-set(
   SIGNUM_SHADER_OUTPUT_DIR
   "${PROJECT_SOURCE_DIR}/build/shaders"
 )
@@ -178,16 +173,6 @@ set(
   "${SIGNUM_SHADER_OUTPUT_DIR}/matrix_transform.comp.spv"
 )
 
-set(
-  SIGNUM_GRID_VERTEX_SPIRV
-  "${SIGNUM_SHADER_OUTPUT_DIR}/grid.vert.spv"
-)
-
-set(
-  SIGNUM_GRID_FRAGMENT_SPIRV
-  "${SIGNUM_SHADER_OUTPUT_DIR}/grid.frag.spv"
-)
-
 signum_compile_slang_shader(
   "${SIGNUM_EARTH_FRAGMENT_SPIRV}"
   "${SIGNUM_SHADER_SOURCE_DIR}/earth.slang"
@@ -242,20 +227,6 @@ signum_compile_slang_shader(
 signum_compile_slang_shader(
   "${SIGNUM_TRIANGLE_FRAGMENT_SPIRV}"
   "${SIGNUM_SHADER_SOURCE_DIR}/triangle.slang"
-  fragmentMain
-  fragment
-)
-
-signum_compile_slang_shader(
-  "${SIGNUM_GRID_VERTEX_SPIRV}"
-  "${SIGNUM_SLANG_EDITOR_SOURCE_DIR}/grid.slang"
-  vertexMain
-  vertex
-)
-
-signum_compile_slang_shader(
-  "${SIGNUM_GRID_FRAGMENT_SPIRV}"
-  "${SIGNUM_SLANG_EDITOR_SOURCE_DIR}/grid.slang"
   fragmentMain
   fragment
 )
@@ -338,6 +309,4 @@ add_custom_target(
     "${SIGNUM_MATERIAL_TWO_TEXTURES_FRAGMENT_SPIRV}"
     "${SIGNUM_MATRIX_TRANSFORM_COMPUTE_SPIRV}"
     "${SIGNUM_TRIANGLE_MATRIX_LAYOUT_STAMP}"
-    "${SIGNUM_GRID_VERTEX_SPIRV}"
-    "${SIGNUM_GRID_FRAGMENT_SPIRV}"
 )
