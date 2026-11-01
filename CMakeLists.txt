@@ -219,6 +219,7 @@ if(SIGNUM_BUILD_EDITOR OR BUILD_TESTING)
     signum_editor_core
     STATIC
       editor/scene_view/scene_grid_geometry.cpp
+      editor/scene_view/scene_grid_mesh.cpp
   )
 
   target_link_libraries(
