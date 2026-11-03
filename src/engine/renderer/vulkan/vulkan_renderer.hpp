@@ -1214,11 +1214,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          * descriptor-set layouts, and attachment formats.
          *
          * @param material Material configuration used to select the pipeline.
+         * @param mesh Registered mesh supplying the vertex layout and stride.
          * @param swapchain Swapchain providing the color attachment format.
          * @param depth_format Depth attachment format.
          *
-         * @pre An active mesh must exist and its vertex layout must be
-         * initialized.
+         * @pre The supplied mesh must have a valid vertex layout compatible
+         * with the selected material's vertex shader.
          *
          * @return Non-owning pointer to the selected graphics pipeline, owned
          * by m_GraphicsPipelineCache.
@@ -1226,11 +1227,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @throws Core::Error::EngineError if pipeline creation fails.
          * @throws std::bad_alloc if host resource allocation fails.
          */
-        [[nodiscard]] auto
-        getOrCreateGraphicsPipeline(const MaterialDescription &material,
-                                    const VulkanSwapchain &swapchain,
-                                    VkFormat depth_format)
-            -> const VulkanGraphicsPipeline *;
+        [[nodiscard]] auto getOrCreateGraphicsPipeline(
+            const MaterialDescription &material,
+            const MeshBufferResources &mesh, const VulkanSwapchain &swapchain,
+            VkFormat depth_format) -> const VulkanGraphicsPipeline *;
 
         /**
          * @brief Selects the graphics pipeline for a replacement swapchain.

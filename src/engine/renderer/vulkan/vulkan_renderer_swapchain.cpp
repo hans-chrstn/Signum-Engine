@@ -83,17 +83,18 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::getOrCreateGraphicsPipeline(
-        const MaterialDescription &material, const VulkanSwapchain &swapchain,
-        VkFormat depth_format) -> const VulkanGraphicsPipeline * {
+        const MaterialDescription &material, const MeshBufferResources &mesh,
+        const VulkanSwapchain &swapchain, VkFormat depth_format)
+        -> const VulkanGraphicsPipeline * {
         const Shader::GraphicsShaderData &graphics_data = material.shaders;
 
         const VertexLayoutDescription vertex_layout{
-            .attributes = m_MeshVertexAttributes,
+            .attributes = mesh.m_VertexAttributes,
         };
 
         const VulkanVertexInputDescriptions vertex_input_descriptions =
             makeVulkanVertexInputDescriptions(vertex_layout,
-                                              m_MeshVertexStride);
+                                              mesh.m_VertexStride);
 
         const std::array<VkVertexInputBindingDescription, 1> vertex_bindings{
             vertex_input_descriptions.binding,
@@ -176,8 +177,19 @@ namespace SNE::Engine::Renderer::Vulkan {
                     "when rendering a mesh");
             }
 
+            const MeshBufferResources *mesh =
+                m_MeshRegistry.find(m_ActiveMeshHandle.value());
+
+            if (mesh == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer active mesh handle does not resolve to a "
+                    "registered mesh during graphics pipeline selection");
+            }
+
             new_graphics_pipeline = getOrCreateGraphicsPipeline(
-                *m_Material, swapchain, depth_format);
+                *m_Material, *mesh, swapchain, depth_format);
 
             if (new_graphics_pipeline == nullptr) {
                 Core::Assertion::failAssertion(

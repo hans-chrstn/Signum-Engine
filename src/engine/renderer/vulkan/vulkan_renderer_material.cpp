@@ -820,9 +820,21 @@ namespace SNE::Engine::Renderer::Vulkan {
                 "Replace Vulkan Fragment Shader");
         }
 
-        const VulkanGraphicsPipeline *pipeline = getOrCreateGraphicsPipeline(
-            replacement_material, m_SwapchainResources->m_VulkanSwapchain,
-            m_SwapchainResources->m_DepthFormat);
+        const MeshBufferResources *mesh =
+            m_MeshRegistry.find(m_ActiveMeshHandle.value());
+
+        if (mesh == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer active mesh handle does not resolve to a "
+                "registered mesh during fragment shader replacement");
+        }
+
+        const VulkanGraphicsPipeline *pipeline =
+            getOrCreateGraphicsPipeline(replacement_material, *mesh,
+                                        m_SwapchainResources->m_VulkanSwapchain,
+                                        m_SwapchainResources->m_DepthFormat);
 
         if (pipeline == nullptr) {
             Core::Assertion::failAssertion(
