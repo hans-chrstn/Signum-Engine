@@ -5,6 +5,7 @@
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
@@ -364,6 +365,20 @@ namespace SNE::Engine::Renderer::Vulkan {
                         Core::Error::Subsystem::Vulkan,
                         "VulkanRenderer::setDrawInstances requires registered "
                         "material instance handles");
+                }
+            }
+
+            if (instance.material_configuration_handle.has_value()) {
+                const MaterialDescription *description =
+                    m_MaterialConfigurationRegistry.find(
+                        instance.material_configuration_handle.value());
+
+                if (description == nullptr) {
+                    Core::Assertion::failAssertion(
+                        Core::Assertion::AssertionType::Precondition,
+                        Core::Error::Subsystem::Vulkan,
+                        "VulkanRenderer::setDrawInstances requires registered "
+                        "material configuration handles");
                 }
             }
 

@@ -27,6 +27,23 @@ namespace SNE::Engine::Renderer {
          * References a renderer-registered material without owning it.
          * An empty value selects the renderer's default material.
          */
-        std::optional<GpuResourceHandle> material_handle;
+        std::optional<GpuResourceHandle> material_handle = std::nullopt;
+
+        /**
+         * @brief Optional handle selecting a graphics material configuration.
+         *
+         * Identifies the shaders and graphics pipeline state used to render
+         * this mesh instance.
+         *
+         * Does not select texture or buffer descriptor resources. Those
+         * remain associated with material_handle.
+         *
+         * An empty value selects the renderer's default material
+         * configuration.
+         *
+         * The referenced configuration remains owned by the renderer.
+         */
+        std::optional<GpuResourceHandle> material_configuration_handle =
+            std::nullopt;
     };
 } // namespace SNE::Engine::Renderer

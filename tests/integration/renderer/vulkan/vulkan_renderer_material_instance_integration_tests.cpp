@@ -6,6 +6,7 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
+#include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_instance_description.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
@@ -1359,4 +1360,120 @@ TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
     EXPECT_FALSE(hasUnexpectedMixedMaterialValidationOutput(validation_output))
         << "Unexpected Vulkan validation output:\n"
         << validation_output;
+}
+
+TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
+       AcceptsDefaultAndRegisteredMaterialConfigurations) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Material configuration test requires an initialized window";
+    }
+
+    const Renderer::InitialMeshData initial_mesh = makeInitialMesh();
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Material Configuration Validation Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        makeShaders("triangle.vert.spv"),
+    };
+
+    const Renderer::GpuResourceHandle mesh =
+        renderer.registerMesh(initial_mesh.mesh);
+
+    Renderer::MaterialDescription description{
+        .shaders = makeShaders("triangle.vert.spv"),
+        .pipeline_state = {},
+    };
+
+    const Renderer::GpuResourceHandle configuration =
+        renderer.registerMaterialConfiguration(std::move(description));
+
+    EXPECT_NE(configuration.registry_id, 0U);
+    EXPECT_NE(configuration.generation, 0U);
+
+    Renderer::MeshDrawInstance configured_instance = makeDrawInstance(mesh);
+
+    configured_instance.material_configuration_handle = configuration;
+
+    const std::array instances{
+        makeDrawInstance(mesh),
+        configured_instance,
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(instances));
+
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
+}
+
+TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
+       RejectsInvalidAndForeignDrawMaterialConfigurationHandles) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Material configuration test requires an initialized window";
+    }
+
+    const Renderer::InitialMeshData initial_mesh = makeInitialMesh();
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Invalid Material Configuration Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        makeShaders("triangle.vert.spv"),
+    };
+
+    const Renderer::GpuResourceHandle mesh =
+        renderer.registerMesh(initial_mesh.mesh);
+
+    Renderer::MeshDrawInstance invalid_instance = makeDrawInstance(mesh);
+
+    invalid_instance.material_configuration_handle =
+        Renderer::GpuResourceHandle{};
+
+    const std::array invalid_instances{
+        invalid_instance,
+    };
+
+    ASSERT_DEATH(
+        { renderer.setDrawInstances(invalid_instances); },
+        "requires registered material configuration handles");
+
+    Renderer::MaterialDescription description{
+        .shaders = makeShaders("triangle.vert.spv"),
+        .pipeline_state = {},
+    };
+
+    const Renderer::GpuResourceHandle configuration =
+        renderer.registerMaterialConfiguration(std::move(description));
+
+    EXPECT_NE(mesh.registry_id, configuration.registry_id);
+
+    Renderer::MeshDrawInstance foreign_instance = makeDrawInstance(mesh);
+
+    foreign_instance.material_configuration_handle = mesh;
+
+    const std::array foreign_instances{
+        foreign_instance,
+    };
+
+    ASSERT_DEATH(
+        { renderer.setDrawInstances(foreign_instances); },
+        "requires registered material configuration handles");
+
+    Renderer::MeshDrawInstance valid_instance = makeDrawInstance(mesh);
+
+    valid_instance.material_configuration_handle = configuration;
+
+    const std::array valid_instances{
+        valid_instance,
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(valid_instances));
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
 }

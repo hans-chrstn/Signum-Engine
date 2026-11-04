@@ -913,6 +913,25 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<MaterialDescription> m_Material;
 
         /**
+         * @brief Owns independently registered graphics material
+         * configurations.
+         *
+         * Stores shader bytecode, entry-point selections, and graphics pipeline
+         * states using generation-checked resource handles.
+         *
+         * Registered configurations are independent of the default material
+         * and do not own Vulkan graphics pipelines.
+         *
+         * Graphics pipelines remain owned by m_GraphicsPipelineCache.
+         *
+         * Configurations referenced by draw instances must remain registered
+         * until those references are removed.
+         */
+
+        GpuResourceRegistry<MaterialDescription>
+            m_MaterialConfigurationRegistry;
+
+        /**
          * @brief Optional swapchain-dependent renderer resources.
          *
          * Owns the presentation swapchain, synchronization objects,
@@ -2881,6 +2900,39 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto
         registerMaterialInstance(const MaterialInstanceDescription &description)
+            -> GpuResourceHandle;
+
+        /**
+         * @brief Registers an independent graphics material configuration.
+         *
+         * Stores shader bytecode, entry-point selections, and graphics pipeline
+         * state in the renderer's material configuration registry.
+         *
+         * Registration does not create a Vulkan graphics pipeline, modify the
+         * default material, or change existing draw instances.
+         *
+         * @param description Material configuration whose ownership is
+         * transferred into the registry.
+         * @return Handle identifying the registered material configuration.
+         *
+         * @pre The supplied configuration must contain valid graphics shader
+         * inputs and a supported graphics pipeline state.
+         * @pre Registration must be serialized with rendering and other
+         * renderer resource operations.
+         *
+         * @post On success, the returned handle identifies the registered
+         * configuration.
+         * @post Existing material configurations and draw instances remain
+         * unchanged.
+         *
+         * @throws std::bad_alloc if registry allocation fails.
+         *
+         * @note Graphics pipelines are created separately when required for
+         * rendering.
+         */
+
+        [[nodiscard]] auto
+        registerMaterialConfiguration(MaterialDescription description)
             -> GpuResourceHandle;
 
         /**

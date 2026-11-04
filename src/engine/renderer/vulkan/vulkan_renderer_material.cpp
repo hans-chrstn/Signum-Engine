@@ -1463,6 +1463,13 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
+    auto VulkanRenderer::registerMaterialConfiguration(
+        MaterialDescription description) -> GpuResourceHandle {
+        validateGraphicsShaderData(description.shaders);
+
+        return m_MaterialConfigurationRegistry.insert(std::move(description));
+    }
+
     auto VulkanRenderer::unregisterMaterialInstance(GpuResourceHandle handle)
         -> void {
         MaterialInstanceResources *resources =
