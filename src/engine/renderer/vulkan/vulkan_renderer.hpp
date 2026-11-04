@@ -2936,6 +2936,35 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> GpuResourceHandle;
 
         /**
+         * @brief Unregisters an independent graphics material configuration.
+         *
+         * Removes the registered configuration and invalidates its handle.
+         *
+         * The renderer's default material and other registered configurations
+         * remain unchanged.
+         *
+         * Graphics pipelines remain independently owned by the graphics
+         * pipeline cache and are not destroyed by this operation.
+         *
+         * @param handle Handle identifying the configuration to remove.
+         *
+         * @pre The handle must identify a registered material configuration.
+         * @pre No active draw instance may reference the configuration.
+         * @pre Removal must be serialized with rendering and other renderer
+         * resource operations.
+         *
+         * @post On success, the configuration handle becomes stale.
+         * @post Other configurations and existing draw instances remain
+         * unchanged.
+         * @post The default material and cached graphics pipelines remain
+         * unchanged.
+         *
+         * @note Invalid, stale, foreign, or referenced configuration handles
+         * trigger precondition assertions.
+         */
+        auto unregisterMaterialConfiguration(GpuResourceHandle handle) -> void;
+
+        /**
          * @brief Unregisters an independent material instance.
          *
          * Removes a registered material instance and retires its descriptor

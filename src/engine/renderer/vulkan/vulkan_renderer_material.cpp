@@ -6,6 +6,7 @@
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
 #include "engine/renderer/material/material_buffer_update_frequency.hpp"
+#include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_resource_binding_compatibility.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
@@ -1468,6 +1469,36 @@ namespace SNE::Engine::Renderer::Vulkan {
         validateGraphicsShaderData(description.shaders);
 
         return m_MaterialConfigurationRegistry.insert(std::move(description));
+    }
+
+    auto
+    VulkanRenderer::unregisterMaterialConfiguration(GpuResourceHandle handle)
+        -> void {
+        const MaterialDescription *description =
+            m_MaterialConfigurationRegistry.find(handle);
+        if (description == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::unregisterMaterialConfiguration requires a "
+                "registered material configuration handle");
+        }
+
+        const bool is_material_referenced = std::ranges::any_of(
+            m_DrawInstances,
+            [handle](const MeshDrawInstance &instance) -> bool {
+                return instance.material_configuration_handle == handle;
+            });
+
+        if (is_material_referenced) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer::unregisterMaterialConfiguration cannot remove "
+                "a referenced material configuration");
+        }
+
+        static_cast<void>(m_MaterialConfigurationRegistry.remove(handle));
     }
 
     auto VulkanRenderer::unregisterMaterialInstance(GpuResourceHandle handle)

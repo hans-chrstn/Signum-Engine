@@ -1477,3 +1477,190 @@ TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
     ASSERT_NO_THROW(renderer.setDrawInstances(valid_instances));
     ASSERT_NO_THROW(renderer.setDrawInstances({}));
 }
+
+TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
+       UnregistersMaterialConfigurationsAndRejectsStaleHandles) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Material configuration test requires an initialized window";
+    }
+
+    const Renderer::InitialMeshData initial_mesh = makeInitialMesh();
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Material Configuration Removal Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        makeShaders("triangle.vert.spv"),
+    };
+
+    const Renderer::GpuResourceHandle mesh =
+        renderer.registerMesh(initial_mesh.mesh);
+
+    Renderer::MaterialDescription first_description{
+        .shaders = makeShaders("triangle.vert.spv"),
+        .pipeline_state = {},
+    };
+
+    const Renderer::GpuResourceHandle old_configuration =
+        renderer.registerMaterialConfiguration(std::move(first_description));
+
+    ASSERT_NO_THROW(
+        renderer.unregisterMaterialConfiguration(old_configuration));
+
+    Renderer::MaterialDescription second_description{
+        .shaders = makeShaders("triangle.vert.spv"),
+        .pipeline_state = {},
+    };
+
+    const Renderer::GpuResourceHandle new_configuration =
+        renderer.registerMaterialConfiguration(std::move(second_description));
+
+    EXPECT_EQ(old_configuration.registry_id, new_configuration.registry_id);
+    EXPECT_EQ(old_configuration.index, new_configuration.index);
+    EXPECT_EQ(old_configuration.generation + 1U, new_configuration.generation);
+
+    ASSERT_DEATH(
+        { renderer.unregisterMaterialConfiguration(old_configuration); },
+        "requires a registered material configuration handle");
+
+    Renderer::MeshDrawInstance stale_instance = makeDrawInstance(mesh);
+    stale_instance.material_configuration_handle = old_configuration;
+
+    const std::array stale_instances{
+        stale_instance,
+    };
+
+    ASSERT_DEATH(
+        { renderer.setDrawInstances(stale_instances); },
+        "requires registered material configuration handles");
+
+    Renderer::MeshDrawInstance valid_instance = makeDrawInstance(mesh);
+    valid_instance.material_configuration_handle = new_configuration;
+
+    const std::array valid_instances{
+        makeDrawInstance(mesh),
+        valid_instance,
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(valid_instances));
+
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
+
+    ASSERT_NO_THROW(
+        renderer.unregisterMaterialConfiguration(new_configuration));
+
+    const std::array default_instances{
+        makeDrawInstance(mesh),
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(default_instances));
+}
+
+TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
+       RejectsRemovalOfReferencedMaterialConfiguration) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Material configuration test requires an initialized window";
+    }
+
+    const Renderer::InitialMeshData initial_mesh = makeInitialMesh();
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Referenced Material Configuration Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        makeShaders("triangle.vert.spv"),
+    };
+
+    const Renderer::GpuResourceHandle mesh =
+        renderer.registerMesh(initial_mesh.mesh);
+
+    Renderer::MaterialDescription description{
+        .shaders = makeShaders("triangle.vert.spv"),
+        .pipeline_state = {},
+    };
+
+    const Renderer::GpuResourceHandle configuration =
+        renderer.registerMaterialConfiguration(std::move(description));
+
+    Renderer::MeshDrawInstance instance = makeDrawInstance(mesh);
+    instance.material_configuration_handle = configuration;
+
+    const std::array instances{
+        instance,
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(instances));
+
+    ASSERT_DEATH(
+        { renderer.unregisterMaterialConfiguration(configuration); },
+        "cannot remove a referenced material configuration");
+
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
+
+    ASSERT_NO_THROW(renderer.unregisterMaterialConfiguration(configuration));
+}
+
+TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
+       RejectsInvalidAndForeignMaterialConfigurationRemoval) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Material configuration test requires an initialized window";
+    }
+
+    const Renderer::InitialMeshData initial_mesh = makeInitialMesh();
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Invalid Material Configuration Removal Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        makeShaders("triangle.vert.spv"),
+    };
+
+    const Renderer::GpuResourceHandle mesh =
+        renderer.registerMesh(initial_mesh.mesh);
+
+    Renderer::MaterialDescription description{
+        .shaders = makeShaders("triangle.vert.spv"),
+        .pipeline_state = {},
+    };
+
+    const Renderer::GpuResourceHandle configuration =
+        renderer.registerMaterialConfiguration(std::move(description));
+
+    ASSERT_DEATH(
+        {
+            renderer.unregisterMaterialConfiguration(
+                Renderer::GpuResourceHandle{});
+        },
+        "requires a registered material configuration handle");
+
+    EXPECT_NE(mesh.registry_id, configuration.registry_id);
+
+    ASSERT_DEATH(
+        { renderer.unregisterMaterialConfiguration(mesh); },
+        "requires a registered material configuration handle");
+
+    Renderer::MeshDrawInstance instance = makeDrawInstance(mesh);
+    instance.material_configuration_handle = configuration;
+
+    const std::array instances{
+        instance,
+    };
+
+    ASSERT_NO_THROW(renderer.setDrawInstances(instances));
+
+    ASSERT_NO_THROW(renderer.setDrawInstances({}));
+
+    ASSERT_NO_THROW(renderer.unregisterMaterialConfiguration(configuration));
+}
