@@ -8,7 +8,9 @@
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_instance_description.hpp"
+#include "engine/renderer/pipeline/primitive_topology.hpp"
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
 #include "engine/renderer/shader/shader_stage.hpp"
@@ -1663,4 +1665,139 @@ TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
     ASSERT_NO_THROW(renderer.setDrawInstances({}));
 
     ASSERT_NO_THROW(renderer.unregisterMaterialConfiguration(configuration));
+}
+
+TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
+       RendersDefaultAndExplicitPipelineConfigurationsAcrossFrames) {
+    ASSERT_TRUE(m_Window.has_value());
+
+    const Renderer::InitialMeshData initial_mesh = makeInitialMesh();
+
+    const auto [validation_output, operation_error] =
+        captureMixedMaterialValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Per-Draw Pipeline Integration Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+                initial_mesh,
+                std::nullopt,
+                std::nullopt,
+                makeShaders("triangle.vert.spv"),
+            };
+
+            const Renderer::GpuResourceHandle mesh =
+                renderer.registerMesh(initial_mesh.mesh);
+
+            Renderer::MaterialDescription line_material{
+                .shaders = makeShaders("triangle.vert.spv"),
+                .pipeline_state = {},
+            };
+
+            line_material.pipeline_state.topology =
+                Renderer::PrimitiveTopology::LineList;
+
+            const Renderer::GpuResourceHandle line_configuration =
+                renderer.registerMaterialConfiguration(
+                    std::move(line_material));
+
+            Renderer::MeshDrawInstance default_instance =
+                makeDrawInstance(mesh);
+
+            Renderer::MeshDrawInstance line_instance = makeDrawInstance(mesh);
+
+            line_instance.material_configuration_handle = line_configuration;
+
+            constexpr std::uint32_t width{320U};
+            constexpr std::uint32_t height{240U};
+
+            renderer.setSceneViewportExtent(Renderer::RenderTargetExtent{
+                .width = width,
+                .height = height,
+            });
+
+            const std::array instances{
+                default_instance,
+                line_instance,
+            };
+
+            renderer.setDrawInstances(instances);
+
+            for (std::size_t frame{}; frame < 3U; ++frame) {
+                renderer.renderFrame();
+            }
+
+            const std::array reordered_instances{
+                line_instance,
+                default_instance,
+            };
+
+            renderer.setDrawInstances(reordered_instances);
+
+            for (std::size_t frame{}; frame < 3U; ++frame) {
+                renderer.renderFrame();
+            }
+
+            renderer.setDrawInstances({});
+            renderer.unregisterMaterialConfiguration(line_configuration);
+
+            renderer.renderFrame();
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Per-draw pipeline rendering failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedMixedMaterialValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
+}
+
+TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
+       RendersExplicitPipelineConfigurationWithoutDefaultMaterial) {
+    ASSERT_TRUE(m_Window.has_value());
+
+    const Renderer::InitialMeshData mesh_data = makeInitialMesh();
+
+    const auto [validation_output, operation_error] =
+        captureMixedMaterialValidationOutput([&] -> void {
+            Vulkan::VulkanRenderer renderer{
+                "Signum Explicit-Only Pipeline Integration Test",
+                m_Window.value(),
+                Renderer::PresentationPreference::VSync,
+                true,
+            };
+
+            const Renderer::GpuResourceHandle mesh =
+                renderer.registerMesh(mesh_data.mesh, mesh_data.layout);
+
+            Renderer::MaterialDescription description{
+                .shaders = makeShaders("triangle.vert.spv"),
+                .pipeline_state = {},
+            };
+
+            const Renderer::GpuResourceHandle configuration =
+                renderer.registerMaterialConfiguration(std::move(description));
+
+            Renderer::MeshDrawInstance instance = makeDrawInstance(mesh);
+
+            instance.material_configuration_handle = configuration;
+
+            const std::array instances{instance};
+
+            renderer.setDrawInstances(instances);
+
+            for (std::size_t frame{}; frame < 3U; ++frame) {
+                renderer.renderFrame();
+            }
+
+            renderer.setDrawInstances({});
+            renderer.unregisterMaterialConfiguration(configuration);
+        });
+
+    EXPECT_TRUE(operation_error.empty())
+        << "Explicit-only pipeline rendering failed: " << operation_error;
+
+    EXPECT_FALSE(hasUnexpectedMixedMaterialValidationOutput(validation_output))
+        << "Unexpected Vulkan validation output:\n"
+        << validation_output;
 }

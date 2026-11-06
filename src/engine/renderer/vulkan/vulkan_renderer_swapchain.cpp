@@ -4,7 +4,9 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
+#include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/device/vulkan_depth_format.hpp"
 #include "engine/renderer/vulkan/geometry/vulkan_vertex_input.hpp"
@@ -80,6 +82,46 @@ namespace SNE::Engine::Renderer::Vulkan {
             });
         }
         return new_depth_attachments;
+    }
+
+    auto VulkanRenderer::prepareDrawPipelines(
+        const SwapchainResources &swapchain_resources)
+        -> std::vector<const VulkanGraphicsPipeline *> {
+        std::vector<const VulkanGraphicsPipeline *> pipelines;
+        pipelines.reserve(m_DrawInstances.size());
+
+        for (const MeshDrawInstance &instance : m_DrawInstances) {
+            const MeshBufferResources *mesh =
+                m_MeshRegistry.find(instance.mesh_handle);
+
+            if (mesh == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer draw instance mesh handle does not resolve "
+                    "to a registered mesh during pipeline preparation");
+            }
+
+            const MaterialDescription &description =
+                resolveMaterialConfiguration(instance);
+
+            const VulkanGraphicsPipeline *pipeline =
+                getOrCreateGraphicsPipeline(
+                    description, *mesh, swapchain_resources.m_VulkanSwapchain,
+                    swapchain_resources.m_DepthFormat);
+
+            if (pipeline == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer failed to prepare a graphics pipeline "
+                    "for a draw instance");
+            }
+
+            pipelines.push_back(pipeline);
+        }
+
+        return pipelines;
     }
 
     auto VulkanRenderer::getOrCreateGraphicsPipeline(

@@ -1227,6 +1227,48 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> void;
 
         /**
+         * @brief Prepares graphics pipelines for the current mesh draw
+         * instances.
+         *
+         * Resolves each draw instance's mesh and material configuration, then
+         * retrieves or creates a compatible graphics pipeline through the
+         * renderer's graphics pipeline cache.
+         *
+         * The returned pipelines correspond to m_DrawInstances in the same
+         * order. Each pointer borrows a pipeline owned by
+         * m_GraphicsPipelineCache.
+         *
+         * Pipeline preparation occurs before command-buffer recording.
+         * This function does not record commands or submit GPU work.
+         *
+         * @param swapchain_resources Current swapchain resources supplying
+         * the attachment formats required for pipeline compatibility.
+         *
+         * @return Borrowed graphics pipeline pointers, one per draw instance,
+         * in the same order as m_DrawInstances.
+         *
+         * @pre Swapchain resources must be initialized.
+         * @pre Draw instances must reference registered meshes and materials.
+         * @pre Preparation must be serialized with rendering and resource
+         * changes.
+         *
+         * @post On success, every returned pipeline is compatible with its
+         * corresponding draw instance and the current attachment formats.
+         * @post Graphics pipeline ownership remains with
+         * m_GraphicsPipelineCache.
+         *
+         * @throws Core::Error::EngineError if Vulkan pipeline creation fails.
+         * @throws std::bad_alloc if host allocation fails.
+         *
+         * @note Missing previously validated resources trigger invariant
+         * assertions.
+         * @note Existing cached pipelines remain owned by the renderer.
+         */
+        [[nodiscard]] auto
+        prepareDrawPipelines(const SwapchainResources &swapchain_resources)
+            -> std::vector<const VulkanGraphicsPipeline *>;
+
+        /**
          * @brief Finds or creates a graphics pipeline for a material.
          *
          * Uses the supplied material configuration and current mesh,
@@ -1401,6 +1443,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Records attachment layout transitions, dynamic rendering, mesh draws,
          * and the final transition to presentation layout.
          *
+         * Uses the prepared graphics pipelines for both offscreen scene
+         * rendering and swapchain rendering without creating or owning graphics
+         * pipelines.
+         *
          * @param command_buffer Command buffer to record into.
          * @param swapchain_resources Borrowed swapchain-dependent resources.
          * @param depth_attachment Depth attachment owned by the current frame
@@ -1410,12 +1456,20 @@ namespace SNE::Engine::Renderer::Vulkan {
          * additional graphics commands into the active command buffer after
          * mesh drawing and before dynamic rendering ends. An empty callback
          * skips external rendering.
+         * @param prepared_pipelines Borrowed graphics pipeline selections
+         * corresponding to the current draw instances in order.
          *
+         * @pre command_buffer must be valid and ready for recording.
+         * @pre image_index must reference an image in swapchain_resources.
+         * @pre prepared_pipelines.size() must equal m_DrawInstances.size().
+         * @pre Prepared pipelines must be compatible with the current rendering
+         * attachment formats and remain valid throughout recording.
          * @pre The callback must not end the active rendering scope, submit or
          * reset the command buffer, or retain it beyond the invocation.
          * @pre The callback must not throw exceptions.
-         * @pre command_buffer must be valid and ready for recording.
-         * @pre image_index must reference an image in swapchain_resources.
+         *
+         * @post On success, commands for the offscreen scene pass (when
+         * requested) and the swapchain rendering pass have been recorded.
          *
          * @throws Core::Error::EngineError if command buffer recording
          * initialization or completion fails.
@@ -1425,7 +1479,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             const SwapchainResources &swapchain_resources,
             const DepthAttachmentResources &depth_attachment,
             std::size_t image_index,
-            const VulkanFrameCommandRecorder &record_external_commands) -> void;
+            const VulkanFrameCommandRecorder &record_external_commands,
+            std::span<const VulkanGraphicsPipeline *const> prepared_pipelines)
+            -> void;
 
         /**
          * @brief Records a scene rendering pass into offscreen attachments.
@@ -1437,19 +1493,23 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Transitions the resulting color image into a shader-readable
          * layout for subsequent sampling.
          *
-         * Uses the existing graphics pipeline without creating or
-         * transferring ownership of Vulkan resources.
+         * Uses the prepared graphics pipelines without creating, destroying,
+         * or transferring ownership of Vulkan resources.
          *
          * @param command_buffer Command buffer currently recording commands.
-         * @param swapchain_resources Resources providing the graphics pipeline.
          * @param target Offscreen color and depth attachments to render into.
          * @param render_extent Pixel dimensions of the offscreen attachments.
+         * @param prepared_pipelines Borrowed graphics pipeline selections
+         * corresponding to the current draw instances in order.
          *
          * @pre command_buffer must be recording outside a rendering scope.
          * @pre render_extent must have nonzero dimensions and match the
          * supplied attachments.
-         * @pre The graphics pipeline must be compatible with the
-         * supplied attachment formats.
+         * @pre prepared_pipelines.size() must equal m_DrawInstances.size().
+         * @pre Every prepared pipeline must be compatible with the offscreen
+         * color and depth attachment formats.
+         * @pre Prepared pipeline resources must remain valid throughout
+         * recording.
          * @pre The target must not be in use by an incomplete GPU submission.
          *
          * @post The scene drawing commands have been recorded.
@@ -1460,9 +1520,10 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         auto
         recordOffscreenScenePass(VkCommandBuffer command_buffer,
-                                 const SwapchainResources &swapchain_resources,
                                  const OffscreenSceneTargetResources &target,
-                                 VkExtent2D render_extent) const -> void;
+                                 VkExtent2D render_extent,
+                                 std::span<const VulkanGraphicsPipeline *const>
+                                     prepared_pipelines) const -> void;
 
         /**
          * @brief Records indexed mesh drawing commands within active dynamic
@@ -1478,22 +1539,26 @@ namespace SNE::Engine::Renderer::Vulkan {
          *
          * @param command_buffer Command buffer currently recording graphics
          * commands.
-         * @param swapchain_resources Swapchain resources providing the graphics
-         * pipeline and current rendering extent.
          * @param render_extent Pixel dimensions of the active rendering
          * attachments, independent of the presentation swapchain.
+         * @param prepared_pipelines Borrowed pipeline selections corresponding
+         * to m_DrawInstances in the same order.
          *
          * @pre command_buffer must be valid and recording within an active
          * dynamic-rendering instance.
          * @pre The renderer must have an uploaded mesh available for drawing.
          * @pre render_extent.width and render_extent.height must be nonzero.
+         * @pre prepared_pipelines.size() must equal m_DrawInstances.size().
+         * @pre Every pipeline pointer must identify a valid cached graphics
+         * pipeline compatible with its corresponding draw instance.
          *
          * @note Missing required graphics resources trigger invariant
          * assertions.
          */
         auto recordMeshDraws(VkCommandBuffer command_buffer,
-                             const SwapchainResources &swapchain_resources,
-                             VkExtent2D render_extent) const -> void;
+                             VkExtent2D render_extent,
+                             std::span<const VulkanGraphicsPipeline *const>
+                                 prepared_pipelines) const -> void;
 
         /**
          * @brief Binds the renderer's default material descriptors.

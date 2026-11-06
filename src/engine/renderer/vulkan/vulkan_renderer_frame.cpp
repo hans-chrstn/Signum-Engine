@@ -11,6 +11,7 @@
 #include "engine/renderer/vulkan/command/vulkan_image_barrier.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include "engine/renderer/vulkan/pipeline/vulkan_draw_push_constants.hpp"
+#include "engine/renderer/vulkan/pipeline/vulkan_graphics_pipeline.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_swapchain_result_policy.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
 #include "vulkan_renderer.hpp"
@@ -23,7 +24,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <vulkan/vulkan_core.h>
 
 namespace Math = SNE::Engine::Core::Math;
 
@@ -124,22 +124,17 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::recordMeshDraws(
-        VkCommandBuffer command_buffer,
-        const SwapchainResources &swapchain_resources,
-        VkExtent2D render_extent) const -> void {
+        VkCommandBuffer command_buffer, VkExtent2D render_extent,
+        std::span<const VulkanGraphicsPipeline *const> prepared_pipelines) const
+        -> void {
 
-        if (swapchain_resources.m_VulkanGraphicsPipeline == nullptr) {
+        if (prepared_pipelines.size() != m_DrawInstances.size()) {
             Core::Assertion::failAssertion(
                 Core::Assertion::AssertionType::Invariant,
                 Core::Error::Subsystem::Vulkan,
-                "VulkanRenderer requires a graphics pipeline when drawing");
+                "VulkanRenderer prepared graphics pipeline count does not "
+                "match draw instance count");
         }
-
-        const VulkanGraphicsPipeline &graphics_pipeline =
-            *swapchain_resources.m_VulkanGraphicsPipeline;
-
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          graphics_pipeline.nativeHandle());
 
         VkViewport viewport{};
         viewport.x = 0.0F;
@@ -176,7 +171,19 @@ namespace SNE::Engine::Renderer::Vulkan {
                 Math::multiply(perspective, m_InitialCamera->view);
         }
 
-        for (const MeshDrawInstance &instance : m_DrawInstances) {
+        for (std::size_t i{}; i < m_DrawInstances.size(); ++i) {
+            const VulkanGraphicsPipeline *pipeline = prepared_pipelines[i];
+
+            if (pipeline == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer prepared graphics pipeline is null "
+                    "for a draw instance");
+            }
+
+            const MeshDrawInstance &instance = m_DrawInstances[i];
+
             const MeshBufferResources *mesh =
                 m_MeshRegistry.find(instance.mesh_handle);
 
@@ -188,8 +195,10 @@ namespace SNE::Engine::Renderer::Vulkan {
                     "to a registered mesh");
             }
 
-            bindMaterialDescriptors(command_buffer,
-                                    graphics_pipeline.layoutHandle(),
+            vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              pipeline->nativeHandle());
+
+            bindMaterialDescriptors(command_buffer, pipeline->layoutHandle(),
                                     instance.material_handle);
 
             const VkDeviceSize vertex_offset = 0U;
@@ -221,7 +230,7 @@ namespace SNE::Engine::Renderer::Vulkan {
             };
 
             vkCmdPushConstants(
-                command_buffer, graphics_pipeline.layoutHandle(),
+                command_buffer, pipeline->layoutHandle(),
                 VK_SHADER_STAGE_VERTEX_BIT, 0U,
                 static_cast<std::uint32_t>(sizeof(draw_push_constants)),
                 &draw_push_constants);
@@ -235,7 +244,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         const SwapchainResources &swapchain_resources,
         const DepthAttachmentResources &depth_attachment,
         std::size_t image_index,
-        const VulkanFrameCommandRecorder &record_external_commands) -> void {
+        const VulkanFrameCommandRecorder &record_external_commands,
+        std::span<const VulkanGraphicsPipeline *const> prepared_pipelines)
+        -> void {
         const VulkanSwapchain &swapchain =
             swapchain_resources.m_VulkanSwapchain;
         VkCommandBufferBeginInfo command_buffer_info{};
@@ -274,9 +285,9 @@ namespace SNE::Engine::Renderer::Vulkan {
             }
 
             recordOffscreenScenePass(
-                command_buffer, swapchain_resources,
+                command_buffer,
                 m_OffscreenSceneResources->m_FrameTargets[m_CurrentFrameIndex],
-                m_OffscreenSceneResources->m_Extent);
+                m_OffscreenSceneResources->m_Extent, prepared_pipelines);
         }
 
         const VkImage acquired_image = swapchain.images()[image_index];
@@ -396,8 +407,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         vkCmdBeginRendering(command_buffer, &render_info);
 
         if (!m_DrawInstances.empty()) {
-            recordMeshDraws(command_buffer, swapchain_resources,
-                            swapchain.extent());
+            recordMeshDraws(command_buffer, swapchain.extent(),
+                            prepared_pipelines);
         }
 
         if (record_external_commands) {
@@ -444,9 +455,9 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     auto VulkanRenderer::recordOffscreenScenePass(
         VkCommandBuffer command_buffer,
-        const SwapchainResources &swapchain_resources,
-        const OffscreenSceneTargetResources &target,
-        VkExtent2D render_extent) const -> void {
+        const OffscreenSceneTargetResources &target, VkExtent2D render_extent,
+        std::span<const VulkanGraphicsPipeline *const> prepared_pipelines) const
+        -> void {
 
         if (render_extent.width == 0U || render_extent.height == 0U) {
             Core::Assertion::failAssertion(
@@ -556,7 +567,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         vkCmdBeginRendering(command_buffer, &rendering_info);
 
         if (!m_DrawInstances.empty()) {
-            recordMeshDraws(command_buffer, swapchain_resources, render_extent);
+            recordMeshDraws(command_buffer, render_extent, prepared_pipelines);
         }
 
         vkCmdEndRendering(command_buffer);
@@ -718,6 +729,9 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         uploadFrequentMaterialBuffersForFrame(m_CurrentFrameIndex);
 
+        std::vector<const VulkanGraphicsPipeline *> prepared_pipelines =
+            prepareDrawPipelines(swapchain_resources);
+
         if (swapchain_resources.m_DepthAttachments.size() !=
             m_FrameResources.size()) {
             Core::Assertion::failAssertion(
@@ -808,7 +822,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         recordFrameCommands(command_buffer, swapchain_resources,
                             depth_attachment, acquired_image_index,
-                            record_external_commands);
+                            record_external_commands, prepared_pipelines);
 
         const VulkanSemaphore &render_finished_semaphore =
             semaphores[acquired_image_index];
