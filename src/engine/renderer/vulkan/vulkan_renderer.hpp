@@ -1252,6 +1252,29 @@ namespace SNE::Engine::Renderer::Vulkan {
             VkFormat depth_format) -> const VulkanGraphicsPipeline *;
 
         /**
+         * @brief Resolves the graphics material configuration for a draw
+         * instance.
+         *
+         * Returns the explicitly registered configuration when the draw
+         * instance supplies a material configuration handle. Otherwise, returns
+         * the renderer's default material configuration.
+         *
+         * Does not create Vulkan resources, modify the registry, or transfer
+         * ownership of the selected configuration.
+         *
+         * @param instance Draw instance whose configuration is resolved.
+         * @return Borrowed reference to the selected material configuration.
+         *
+         * @pre The draw instance must have been validated by the renderer.
+         * @pre Resource operations must be serialized with rendering.
+         *
+         * @note Missing configurations trigger invariant assertions.
+         */
+        [[nodiscard]] auto
+        resolveMaterialConfiguration(const MeshDrawInstance &instance) const
+            -> const MaterialDescription &;
+
+        /**
          * @brief Selects the graphics pipeline for a replacement swapchain.
          *
          * Creates or retrieves a compatible graphics pipeline when the

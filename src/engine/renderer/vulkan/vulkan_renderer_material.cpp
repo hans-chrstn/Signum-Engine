@@ -1471,6 +1471,36 @@ namespace SNE::Engine::Renderer::Vulkan {
         return m_MaterialConfigurationRegistry.insert(std::move(description));
     }
 
+    auto VulkanRenderer::resolveMaterialConfiguration(
+        const MeshDrawInstance &instance) const -> const MaterialDescription & {
+        if (instance.material_configuration_handle.has_value()) {
+            const MaterialDescription *description =
+                m_MaterialConfigurationRegistry.find(
+                    instance.material_configuration_handle.value());
+
+            if (description == nullptr) {
+                Core::Assertion::failAssertion(
+                    Core::Assertion::AssertionType::Invariant,
+                    Core::Error::Subsystem::Vulkan,
+                    "VulkanRenderer draw instance material configuration "
+                    "handle does not resolve to a registered configuration");
+            }
+
+            return *description;
+        }
+
+        if (!m_Material.has_value()) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Invariant,
+                Core::Error::Subsystem::Vulkan,
+                "VulkanRenderer requires an initialized default material "
+                "configuration when drawing without an explicit "
+                "configuration");
+        }
+
+        return m_Material.value();
+    }
+
     auto
     VulkanRenderer::unregisterMaterialConfiguration(GpuResourceHandle handle)
         -> void {
