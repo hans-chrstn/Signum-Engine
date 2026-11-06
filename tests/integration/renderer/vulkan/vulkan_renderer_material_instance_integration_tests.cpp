@@ -32,6 +32,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace Platform = SNE::Engine::Platform;
 namespace Renderer = SNE::Engine::Renderer;
@@ -1800,4 +1801,101 @@ TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
     EXPECT_FALSE(hasUnexpectedMixedMaterialValidationOutput(validation_output))
         << "Unexpected Vulkan validation output:\n"
         << validation_output;
+}
+
+TEST_F(VulkanRendererMaterialInstanceIntegrationTests,
+       ReturnsIndependentDrawInstanceSnapshots) {
+    if (!m_Window.has_value()) {
+        FAIL() << "Snapshot test requires an initialized window";
+        return;
+    }
+
+    constexpr std::size_t kInitialInstanceCount{1U};
+    constexpr std::size_t kConfiguredInstanceCount{2U};
+
+    constexpr float kConfiguredTranslationX{1.0F};
+    constexpr float kSnapshotTranslationX{5.0F};
+    constexpr float kZeroTranslation{0.0F};
+
+    const std::array model_matrices{
+        Math::identity(),
+    };
+
+    Renderer::InitialMeshData initial_mesh = makeInitialMesh();
+    initial_mesh.model_matrices = model_matrices;
+
+    Vulkan::VulkanRenderer renderer{
+        "Signum Draw Instance Snapshot Test",
+        m_Window.value(),
+        Renderer::PresentationPreference::VSync,
+        false,
+        initial_mesh,
+        std::nullopt,
+        std::nullopt,
+        makeShaders("triangle.vert.spv"),
+    };
+
+    const auto initial_snapshot = renderer.drawInstances();
+
+    ASSERT_EQ(initial_snapshot.size(), kInitialInstanceCount);
+
+    EXPECT_NE(initial_snapshot.front().mesh_handle.registry_id, 0U);
+
+    EXPECT_EQ(initial_snapshot.front().model_matrix.elements,
+              model_matrices.front().elements);
+
+    Renderer::MaterialDescription description{
+        .shaders = makeShaders("triangle.vert.spv"),
+        .pipeline_state = {},
+    };
+
+    const Renderer::GpuResourceHandle configuration =
+        renderer.registerMaterialConfiguration(std::move(description));
+
+    Renderer::MeshDrawInstance configured_instance = initial_snapshot.front();
+
+    configured_instance.model_matrix = Math::translate(
+        kConfiguredTranslationX, kZeroTranslation, kZeroTranslation);
+
+    configured_instance.material_configuration_handle = configuration;
+
+    const std::array instances{
+        initial_snapshot.front(),
+        configured_instance,
+    };
+
+    renderer.setDrawInstances(instances);
+
+    auto snapshot = renderer.drawInstances();
+
+    ASSERT_EQ(snapshot.size(), kConfiguredInstanceCount);
+
+    snapshot[0].model_matrix = Math::translate(
+        kSnapshotTranslationX, kZeroTranslation, kZeroTranslation);
+
+    snapshot[1].mesh_handle = {};
+    snapshot[1].material_configuration_handle.reset();
+
+    const auto unchanged = renderer.drawInstances();
+
+    ASSERT_EQ(unchanged.size(), kConfiguredInstanceCount);
+
+    EXPECT_EQ(unchanged[0].mesh_handle, initial_snapshot.front().mesh_handle);
+
+    EXPECT_EQ(unchanged[0].model_matrix.elements,
+              initial_snapshot.front().model_matrix.elements);
+
+    EXPECT_EQ(unchanged[1].mesh_handle, initial_snapshot.front().mesh_handle);
+
+    EXPECT_EQ(unchanged[1].model_matrix.elements,
+              configured_instance.model_matrix.elements);
+
+    EXPECT_EQ(unchanged[1].material_configuration_handle,
+              std::optional<Renderer::GpuResourceHandle>{configuration});
+
+    renderer.setDrawInstances({});
+
+    EXPECT_TRUE(renderer.drawInstances().empty());
+
+    renderer.unregisterMaterialConfiguration(configuration);
 }

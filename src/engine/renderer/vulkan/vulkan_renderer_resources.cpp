@@ -388,6 +388,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_DrawInstances.swap(draw_instances);
     }
 
+    auto VulkanRenderer::drawInstances() const
+        -> std::vector<MeshDrawInstance> {
+        return m_DrawInstances;
+    }
+
     auto VulkanRenderer::uploadMesh(const MeshUploadData &mesh) -> void {
 
         const VertexLayoutDescription vertex_layout_description{

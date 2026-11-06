@@ -22,6 +22,7 @@
 #include <functional>
 #include <optional>
 #include <span>
+#include <vector>
 
 namespace SNE::Engine::Core {
     /**
@@ -420,5 +421,37 @@ namespace SNE::Engine::Core {
         auto
         setDrawInstances(std::span<const Renderer::MeshDrawInstance> instances)
             -> void;
+
+        /**
+         * @brief Returns a snapshot of the application's renderer draw
+         * instances.
+         *
+         * Forwards the request to the renderer and returns an independent
+         * copy of its currently configured mesh draw instances.
+         *
+         * Each returned instance preserves its mesh handle, model
+         * transformation, optional material instance, and optional
+         * material configuration.
+         *
+         * Modifying the returned collection does not affect renderer state.
+         *
+         * @return Owned copy of the current draw instances, preserving
+         * their rendering order.
+         *
+         * @pre Access must be serialized with rendering and draw-instance
+         * modifications.
+         *
+         * @post The renderer's draw instances remain unchanged.
+         *
+         * @throws std::bad_alloc if snapshot allocation fails.
+         *
+         * @note Returned resource handles are non-owning references
+         * to renderer-managed resources.
+         * @note The snapshot may become outdated after subsequent
+         * renderer modifications.
+         * @note This operation does not allocate or modify GPU resources.
+         */
+        [[nodiscard]] auto drawInstances() const
+            -> std::vector<Renderer::MeshDrawInstance>;
     };
 } // namespace SNE::Engine::Core

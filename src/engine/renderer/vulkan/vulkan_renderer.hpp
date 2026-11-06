@@ -3145,6 +3145,36 @@ namespace SNE::Engine::Renderer::Vulkan {
             -> void;
 
         /**
+         * @brief Returns a snapshot of the current mesh draw instances.
+         *
+         * Copies the renderer's configured draw instances into an
+         * independent collection.
+         *
+         * Each returned instance retains its mesh handle, model
+         * transformation, optional material instance, and optional
+         * material configuration.
+         *
+         * Modifying the returned collection does not modify renderer state.
+         *
+         * @return Owned copy of the current draw instances, preserving
+         * their rendering order.
+         *
+         * @pre Access must be serialized with rendering and draw-instance
+         * modifications.
+         *
+         * @post The renderer's draw instances remain unchanged.
+         *
+         * @throws std::bad_alloc if snapshot allocation fails.
+         *
+         * @note Returned resource handles remain non-owning references
+         * to renderer-managed resources.
+         * @note The snapshot may become outdated after subsequent
+         * renderer modifications.
+         */
+        [[nodiscard]] auto drawInstances() const
+            -> std::vector<MeshDrawInstance>;
+
+        /**
          * @brief Replaces the currently active GPU mesh.
          *
          * Creates and uploads replacement vertex and index buffers before

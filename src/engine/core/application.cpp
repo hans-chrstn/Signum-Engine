@@ -122,4 +122,9 @@ namespace SNE::Engine::Core {
         std::span<const Renderer::MeshDrawInstance> instances) -> void {
         m_Renderer.setDrawInstances(instances);
     }
+
+    auto Application::drawInstances() const
+        -> std::vector<Renderer::MeshDrawInstance> {
+        return m_Renderer.drawInstances();
+    }
 } // namespace SNE::Engine::Core
