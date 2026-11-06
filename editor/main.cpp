@@ -13,14 +13,21 @@
 #include "engine/core/math/vector4.hpp"
 #include "engine/platform/input/cursor_position.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
+#include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/primitive_initial_mesh_data.hpp"
 #include "engine/renderer/geometry/uv_sphere_mesh.hpp"
+#include "engine/renderer/geometry/vertex_attribute_description.hpp"
+#include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/lighting/directional_light.hpp"
 #include "engine/renderer/lighting/directional_light_uniform_data.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/material/material_buffer_update_frequency.hpp"
+#include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_texture_binding_input.hpp"
+#include "engine/renderer/pipeline/primitive_topology.hpp"
 #include "engine/renderer/render_target_extent.hpp"
+#include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/graphics_shader_data.hpp"
 #include "engine/renderer/shader/shader_compilation_result.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
@@ -37,6 +44,9 @@
 #include "imgui/editor_imgui_style.hpp"
 #include "imgui/editor_imgui_vulkan_backend.hpp"
 #include "panels/scene_view_panel.hpp"
+#include "scene_view/scene_grid_geometry.hpp"
+#include "scene_view/scene_grid_mesh.hpp"
+#include "scene_view/scene_grid_mesh_upload.hpp"
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -52,6 +62,7 @@
 #include <optional>
 #include <span>
 #include <utility>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace Editor = SNE::Editor;
@@ -76,6 +87,9 @@ namespace {
     constexpr std::uint32_t kCloudUniformBinding{4U};
     constexpr std::uint32_t kEarthViewUniformBinding{6U};
     constexpr float kCameraRotationSensitivity{0.005F};
+    constexpr std::uint32_t kSceneGridHalfExtentCells{10U};
+    constexpr float kSceneGridSpacing{1.0F};
+
     struct SceneViewCameraState {
         bool is_dragging{};
         Platform::CursorPosition previous_cursor{};
@@ -284,6 +298,33 @@ auto main() -> int {
             const Renderer::UvSphereMesh reference_sphere =
                 Renderer::generateUvSphereMesh(sphere_parameters);
 
+            const Editor::SceneGridParameters grid_parameters{
+                .half_extent_cells = kSceneGridHalfExtentCells,
+                .grid_spacing = kSceneGridSpacing,
+            };
+
+            const std::vector<Editor::SceneGridLine> grid_lines =
+                Editor::generateSceneGridLines(grid_parameters);
+
+            const Editor::SceneGridMesh grid_mesh =
+                Editor::makeSceneGridMesh(grid_lines);
+
+            const std::array<Renderer::VertexAttributeDescription, 1>
+                grid_vertex_attributes{
+                    {
+                        {
+                            .location = 0U,
+                            .format = Renderer::VertexFormat::Float32x3,
+                            .offset = static_cast<std::uint32_t>(
+                                offsetof(Editor::SceneGridVertex, position)),
+                        },
+                    },
+            };
+
+            const Renderer::VertexLayoutDescription grid_vertex_layout{
+                .attributes = grid_vertex_attributes,
+            };
+
             const std::array<Math::Matrix4f, 1> reference_model_matrices = {
                 Math::identity(),
             };
@@ -472,6 +513,66 @@ auto main() -> int {
             configuration.initial_texture_bindings = initial_textures;
 
             Core::Application application{std::move(configuration)};
+
+            const Renderer::MeshUploadData grid_mesh_data =
+                Editor::makeSceneGridMeshUploadData(grid_mesh);
+
+            const Renderer::GpuResourceHandle grid_mesh_handle =
+                application.registerMesh(grid_mesh_data, grid_vertex_layout);
+
+            const Shader::ShaderSourceDescription grid_vertex_description{
+                .path = "shaders/slang/editor/grid.slang",
+                .language = Shader::ShaderSourceLanguage::Slang,
+                .stage = Shader::ShaderStage::Vertex,
+                .entry_point = "vertexMain",
+            };
+
+            const Shader::ShaderSourceDescription grid_fragment_description{
+                .path = "shaders/slang/editor/grid.slang",
+                .language = Shader::ShaderSourceLanguage::Slang,
+                .stage = Shader::ShaderStage::Fragment,
+                .entry_point = "fragmentMain",
+            };
+
+            Shader::ShaderCompilationResult grid_vertex_result =
+                Shader::compileShaderSource(grid_vertex_description);
+
+            Shader::ShaderCompilationResult grid_fragment_result =
+                Shader::compileShaderSource(grid_fragment_description);
+
+            Shader::GraphicsShaderData grid_shaders{
+                .vertex = std::move(grid_vertex_result.stage_input),
+                .fragment = std::move(grid_fragment_result.stage_input),
+            };
+
+            Renderer::MaterialDescription grid_material_description{
+                .shaders = std::move(grid_shaders),
+                .pipeline_state =
+                    {
+                        .depth_test_enabled = true,
+                        .depth_write_enabled = false,
+                        .topology = Renderer::PrimitiveTopology::LineList,
+                    },
+            };
+
+            const Renderer::GpuResourceHandle
+                grid_material_configuration_handle =
+                    application.registerMaterialConfiguration(
+                        std::move(grid_material_description));
+
+            std::vector<Renderer::MeshDrawInstance> draw_instances =
+                application.drawInstances();
+
+            const Renderer::MeshDrawInstance grid_draw_instance{
+                .mesh_handle = grid_mesh_handle,
+                .model_matrix = Math::identity(),
+                .material_configuration_handle =
+                    grid_material_configuration_handle,
+            };
+
+            draw_instances.push_back(grid_draw_instance);
+
+            application.setDrawInstances(draw_instances);
 
             float x_scale{};
             float y_scale{};
