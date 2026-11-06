@@ -104,4 +104,22 @@ namespace SNE::Engine::Core {
     auto Application::requestClose() -> void {
         m_Window.requestClose();
     }
+
+    auto
+    Application::registerMesh(const Renderer::MeshUploadData &mesh,
+                              const Renderer::VertexLayoutDescription &layout)
+        -> Renderer::GpuResourceHandle {
+        return m_Renderer.registerMesh(mesh, layout);
+    }
+
+    auto Application::registerMaterialConfiguration(
+        Renderer::MaterialDescription description)
+        -> Renderer::GpuResourceHandle {
+        return m_Renderer.registerMaterialConfiguration(std::move(description));
+    }
+
+    auto Application::setDrawInstances(
+        std::span<const Renderer::MeshDrawInstance> instances) -> void {
+        m_Renderer.setDrawInstances(instances);
+    }
 } // namespace SNE::Engine::Core

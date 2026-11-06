@@ -4,8 +4,13 @@
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
+#include "engine/renderer/geometry/mesh_upload_data.hpp"
+#include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/material/material_buffer_update_input.hpp"
+#include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/render_target_extent.hpp"
+#include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
@@ -16,6 +21,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 
 namespace SNE::Engine::Core {
     /**
@@ -314,5 +320,105 @@ namespace SNE::Engine::Core {
          * Normal resource cleanup occurs after the application loop exits.
          */
         auto requestClose() -> void;
+
+        /**
+         * @brief Registers mesh geometry with the application's renderer.
+         *
+         * Uploads the supplied mesh using its explicit vertex layout
+         * and returns a handle identifying the registered GPU resource.
+         *
+         * Mesh storage and ownership remain managed by the renderer.
+         *
+         * @param mesh Borrowed mesh vertex and index data to upload.
+         * @param layout Vertex attribute layout describing the mesh.
+         *
+         * @return Handle identifying the registered GPU mesh.
+         *
+         * @pre The mesh and vertex layout must satisfy the renderer's
+         * mesh registration requirements.
+         * @pre Resource registration must be serialized with rendering.
+         *
+         * @post On success, the mesh is available for renderer draw instances.
+         *
+         * @throws Error::EngineError if GPU resource allocation or
+         * upload fails.
+         * @throws std::bad_alloc if host allocation fails.
+         *
+         * @note The supplied CPU data must remain valid until
+         * registration completes.
+         */
+        [[nodiscard]] auto
+        registerMesh(const Renderer::MeshUploadData &mesh,
+                     const Renderer::VertexLayoutDescription &layout)
+            -> Renderer::GpuResourceHandle;
+
+        /**
+         * @brief Registers a graphics material configuration with the renderer.
+         *
+         * Stores the supplied shader selections and graphics pipeline state
+         * in the renderer's material configuration registry.
+         *
+         * The returned handle can be assigned to draw instances to select
+         * a graphics pipeline independently of the default material.
+         *
+         * Graphics pipeline creation is deferred until the configuration
+         * is required for rendering.
+         *
+         * @param description Material configuration to register.
+         *
+         * @return Handle identifying the registered material configuration.
+         *
+         * @pre Shader stage inputs must satisfy the renderer's validation
+         * requirements.
+         * @pre Registration must be serialized with rendering and other
+         * resource operations.
+         *
+         * @post On success, the configuration is available for draw instances.
+         * @post The renderer owns the registered configuration.
+         *
+         * @throws Error::EngineError if shader validation fails.
+         * @throws std::bad_alloc if registry allocation fails.
+         *
+         * @note Registration does not immediately create a graphics pipeline.
+         */
+        [[nodiscard]] auto
+        registerMaterialConfiguration(Renderer::MaterialDescription description)
+            -> Renderer::GpuResourceHandle;
+
+        /**
+         * @brief Replaces the application's renderer draw instances.
+         *
+         * Forwards a collection of mesh draw descriptions to the renderer,
+         * which validates their resource handles and stores an independent
+         * copy for subsequent frames.
+         *
+         * Each instance selects a registered mesh, model transformation,
+         * optional material instance, and optional material configuration.
+         *
+         * Passing an empty collection removes all draw instances.
+         *
+         * @param instances Borrowed draw descriptions to install.
+         *
+         * @pre Every mesh handle must identify a registered mesh.
+         * @pre Every supplied material instance handle must identify a
+         * registered material instance.
+         * @pre Every supplied material configuration handle must identify
+         * a registered material configuration.
+         * @pre Updates must be serialized with rendering and resource
+         * operations.
+         *
+         * @post On success, the renderer uses exactly the supplied draw
+         * instances.
+         * @post On allocation failure, the previous draw instances remain
+         * unchanged.
+         *
+         * @throws std::bad_alloc if copying the draw instances fails.
+         *
+         * @note Mesh and material resources remain owned by the renderer.
+         * @note This operation does not upload mesh data or create pipelines.
+         */
+        auto
+        setDrawInstances(std::span<const Renderer::MeshDrawInstance> instances)
+            -> void;
     };
 } // namespace SNE::Engine::Core
