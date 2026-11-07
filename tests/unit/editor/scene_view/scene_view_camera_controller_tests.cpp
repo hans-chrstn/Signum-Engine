@@ -1057,3 +1057,117 @@ TEST(SceneViewCameraControllerTests, RejectsOverflowingPanCursorMovement) {
                      {.x = kExtremeCoordinate, .y = 0.0}, kSensitivity)),
                  kExpectedMessage);
 }
+
+TEST(SceneViewCameraControllerTests, ZeroScrollDoesNotChangeCamera) {
+    Editor::SceneViewCameraController controller{};
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    EXPECT_FALSE(controller.zoom(0.0F));
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+}
+
+TEST(SceneViewCameraControllerTests, ZoomInAndOutAdjustOrbitDistance) {
+    constexpr float kScrollStep = 1.0F;
+    constexpr float kZoomFactor = 0.85F;
+
+    constexpr float kExpectedInDistance = kDefaultDistance * kZoomFactor;
+
+    constexpr float kExpectedOutDistance = kDefaultDistance / kZoomFactor;
+
+    Editor::SceneViewCameraController zoom_in_controller{};
+    Editor::SceneViewCameraController zoom_out_controller{};
+
+    ASSERT_TRUE(zoom_in_controller.zoom(kScrollStep));
+    ASSERT_TRUE(zoom_out_controller.zoom(-kScrollStep));
+
+    expectVectorsNear(zoom_in_controller.cameraWorldPosition(),
+                      {.z = kExpectedInDistance});
+
+    expectVectorsNear(zoom_out_controller.cameraWorldPosition(),
+                      {.z = kExpectedOutDistance});
+
+    expectMatricesNear(zoom_in_controller.viewMatrix(),
+                       Math::translate(0.0F, 0.0F, -kExpectedInDistance));
+
+    expectMatricesNear(zoom_out_controller.viewMatrix(),
+                       Math::translate(0.0F, 0.0F, -kExpectedOutDistance));
+}
+
+TEST(SceneViewCameraControllerTests, ZoomPreservesOrbitTargetAndOrientation) {
+    constexpr float kScrollStep = 1.0F;
+    constexpr float kZoomFactor = 0.85F;
+    constexpr float kExpectedDistance = kDefaultDistance * kZoomFactor;
+
+    constexpr Math::Vector3f kTargetOffset{
+        .x = 1.0F,
+        .y = 2.0F,
+        .z = 3.0F,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.orbit(kRightAngle, 0.0F);
+    controller.pan(kTargetOffset);
+
+    ASSERT_TRUE(controller.zoom(kScrollStep));
+
+    const Math::Vector3f expected_position{
+        .x = kTargetOffset.x + kExpectedDistance,
+        .y = kTargetOffset.y,
+        .z = kTargetOffset.z,
+    };
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+
+    const Math::Matrix4f expected_view = Math::multiply(
+        Math::translate(0.0F, 0.0F, -kExpectedDistance),
+        Math::multiply(Math::rotateY(-kRightAngle),
+                       Math::translate(-kTargetOffset.x, -kTargetOffset.y,
+                                       -kTargetOffset.z)));
+
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, ZoomClampsOrbitDistance) {
+    constexpr float kMinimumDistance = 0.25F;
+    constexpr float kMaximumDistance = 50.0F;
+    constexpr float kScrollStep = 1.0F;
+
+    constexpr float kExtremeScroll = std::numeric_limits<float>::max();
+
+    Editor::SceneViewCameraController controller{};
+
+    ASSERT_TRUE(controller.zoom(kExtremeScroll));
+
+    expectVectorsNear(controller.cameraWorldPosition(),
+                      {.z = kMinimumDistance});
+
+    EXPECT_FALSE(controller.zoom(kScrollStep));
+
+    ASSERT_TRUE(controller.zoom(-kExtremeScroll));
+
+    expectVectorsNear(controller.cameraWorldPosition(),
+                      {.z = kMaximumDistance});
+
+    EXPECT_FALSE(controller.zoom(-kScrollStep));
+}
+
+TEST(SceneViewCameraControllerTests, RejectsNonFiniteZoomScroll) {
+    constexpr auto kExpectedMessage =
+        "Scene View zoom scroll steps must be finite";
+
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+
+    Editor::SceneViewCameraController controller{};
+
+    ASSERT_DEATH(static_cast<void>(controller.zoom(infinity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.zoom(-infinity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.zoom(nan)), kExpectedMessage);
+}

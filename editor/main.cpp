@@ -192,6 +192,12 @@ namespace {
         const Editor::Panels::SceneViewPanelState &panel_state,
         Core::Application &application) -> std::optional<Math::Vector3f> {
 
+        bool zoom_changed{false};
+
+        if (panel_state.m_IsImageHovered) {
+            zoom_changed = controller.zoom(ImGui::GetIO().MouseWheel);
+        }
+
         const Editor::Platform::CursorPosition cursor_position =
             application.window().cursorPosition();
 
@@ -212,7 +218,7 @@ namespace {
         const bool pan_changed =
             controller.updatePanDrag(cursor_position, kCameraPanSensitivity);
 
-        if (!orbit_changed && !pan_changed) {
+        if (!orbit_changed && !pan_changed && !zoom_changed) {
             return std::nullopt;
         }
 

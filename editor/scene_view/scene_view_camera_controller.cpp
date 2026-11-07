@@ -7,6 +7,7 @@
 #include "engine/core/math/vector2.hpp"
 #include "engine/core/math/vector3.hpp"
 #include "engine/platform/input/cursor_position.hpp"
+#include <algorithm>
 #include <cmath>
 
 namespace SNE::Editor {
@@ -271,6 +272,40 @@ namespace SNE::Editor {
         panCameraPlane(camera_displacement);
 
         m_PreviousCursor = cursor_position;
+
+        return true;
+    }
+
+    auto SceneViewCameraController::zoom(float scroll_steps) -> bool {
+        if (!std::isfinite(scroll_steps)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View zoom scroll steps must be finite");
+        }
+
+        if (scroll_steps == 0.0F) {
+            return false;
+        }
+
+        const double zoom_multiplier =
+            std::pow(static_cast<double>(kZoomFactorPerScrollStep),
+                     static_cast<double>(scroll_steps));
+
+        const double proposed_distance =
+            static_cast<double>(m_OrbitDistance) * zoom_multiplier;
+
+        const double clamped_distance = std::clamp(
+            proposed_distance, static_cast<double>(kMinOrbitDistance),
+            static_cast<double>(kMaxOrbitDistance));
+
+        const auto new_distance = static_cast<float>(clamped_distance);
+
+        if (new_distance == m_OrbitDistance) {
+            return false;
+        }
+
+        m_OrbitDistance = new_distance;
 
         return true;
     }

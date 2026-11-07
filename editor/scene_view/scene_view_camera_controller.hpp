@@ -33,6 +33,34 @@ namespace SNE::Editor {
         static constexpr float kDefaultOrbitDistance = 3.0F;
 
         /**
+         * @brief Minimum allowed distance between the camera and its orbit
+         * target.
+         *
+         * Prevents zooming through or excessively close to the orbit target.
+         * Must remain greater than zero.
+         */
+        static constexpr float kMinOrbitDistance = 0.25F;
+
+        /**
+         * @brief Maximum allowed distance between the camera and its orbit
+         * target.
+         *
+         * Prevents the camera from zooming indefinitely away from the scene.
+         */
+        static constexpr float kMaxOrbitDistance = 50.0F;
+
+        /**
+         * @brief Multiplicative orbit-distance factor applied per scroll step.
+         *
+         * Values between zero and one make positive scroll movement zoom in
+         * and negative scroll movement zoom out.
+         *
+         * A value of 0.85 reduces the current distance by 15 percent
+         * for one positive scroll step.
+         */
+        static constexpr float kZoomFactorPerScrollStep = 0.85F;
+
+        /**
          * @brief Identifies the currently active Scene View camera drag
          * operation.
          */
@@ -291,5 +319,25 @@ namespace SNE::Editor {
         [[nodiscard]] auto
         updatePanDrag(Platform::CursorPosition cursor_position,
                       float world_units_per_cursor_unit) -> bool;
+
+        /**
+         * @brief Zooms the Scene View camera toward or away from its orbit
+         * target.
+         *
+         * Adjusts the orbit distance without changing camera orientation
+         * or the orbit target.
+         *
+         * Positive scroll steps move the camera closer to the target.
+         * Negative scroll steps move it farther away.
+         *
+         * Clamps the resulting distance to the supported orbit range.
+         *
+         * @param scroll_steps Signed scroll-wheel movement.
+         *
+         * @return true if the orbit distance changed; otherwise false.
+         *
+         * @pre Scroll steps must be finite.
+         */
+        [[nodiscard]] auto zoom(float scroll_steps) -> bool;
     };
 } // namespace SNE::Editor
