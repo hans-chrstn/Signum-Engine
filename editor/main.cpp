@@ -1,17 +1,12 @@
 #include "editor_workspace.hpp"
 #include "engine/core/application.hpp"
 #include "engine/core/application_configuration.hpp"
-#include "engine/core/assert/assertion_handler.hpp"
-#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_boundary.hpp"
 #include "engine/core/error/error_code.hpp"
-#include "engine/core/error/subsystem.hpp"
 #include "engine/core/math/matrix4.hpp"
-#include "engine/core/math/quaternion.hpp"
 #include "engine/core/math/vector3.hpp"
 #include "engine/core/math/vector4.hpp"
-#include "engine/platform/input/cursor_position.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
@@ -47,6 +42,7 @@
 #include "scene_view/scene_grid_geometry.hpp"
 #include "scene_view/scene_grid_mesh.hpp"
 #include "scene_view/scene_grid_mesh_upload.hpp"
+#include "scene_view/scene_view_camera_controller.hpp"
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -67,12 +63,10 @@
 
 namespace Editor = SNE::Editor;
 namespace Core = SNE::Engine::Core;
-namespace Assertion = Core::Assertion;
 namespace Error = Core::Error;
 namespace Math = Core::Math;
 namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = Renderer::Vulkan;
-namespace Platform = SNE::Engine::Platform;
 namespace Shader = SNE::Engine::Renderer::Shader;
 
 namespace {
@@ -89,12 +83,6 @@ namespace {
     constexpr float kCameraRotationSensitivity{0.005F};
     constexpr std::uint32_t kSceneGridHalfExtentCells{10U};
     constexpr float kSceneGridSpacing{1.0F};
-
-    struct SceneViewCameraState {
-        bool is_dragging{};
-        Platform::CursorPosition previous_cursor{};
-        Math::Quaternionf orientation{Math::quaternionIdentity()};
-    };
 
     struct CloudUniformData {
         Math::Vector4f uv_offset{};
@@ -198,82 +186,25 @@ namespace {
     }
 
     auto updateSceneViewCamera(
-        SceneViewCameraState &camera_state,
+        Editor::SceneViewCameraController &controller,
         const Editor::Panels::SceneViewPanelState &panel_state,
-        Core::Application &application, float camera_distance)
-        -> std::optional<Math::Vector3f> {
+        Core::Application &application) -> std::optional<Math::Vector3f> {
 
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-            camera_state.is_dragging = false;
+            controller.endOrbitDrag();
         } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
                    panel_state.m_IsImageHovered) {
-            camera_state.is_dragging = true;
-            camera_state.previous_cursor =
-                application.window().cursorPosition();
+            controller.beginOrbitDrag(application.window().cursorPosition());
         }
 
-        if (camera_state.is_dragging) {
-
-            const Platform::CursorPosition current_cursor_pos =
-                application.window().cursorPosition();
-
-            const double delta_x =
-                current_cursor_pos.x - camera_state.previous_cursor.x;
-            const double delta_y =
-                current_cursor_pos.y - camera_state.previous_cursor.y;
-
-            if (delta_x == 0.0 && delta_y == 0.0) {
-                return std::nullopt;
-            }
-
-            const auto yaw_delta =
-                static_cast<float>(delta_x) * kCameraRotationSensitivity;
-            const auto pitch_delta =
-                static_cast<float>(delta_y) * kCameraRotationSensitivity;
-
-            const Math::Quaternionf yaw_rotation = Math::fromAxisAngle(
-                {.x = 0.0F, .y = 1.0F, .z = 0.0F}, -yaw_delta);
-
-            const Math::Quaternionf pitch_rotation = Math::fromAxisAngle(
-                {.x = 1.0F, .y = 0.0F, .z = 0.0F}, -pitch_delta);
-
-            const Math::Quaternionf drag_rotation =
-                Math::multiply(yaw_rotation, pitch_rotation);
-
-            camera_state.orientation = Math::normalize(
-                Math::multiply(camera_state.orientation, drag_rotation));
-
-            camera_state.previous_cursor = current_cursor_pos;
-
-            const Math::Matrix4f camera_translation =
-                Math::translate(0.0F, 0.0F, camera_distance);
-
-            const Math::Matrix4f camera_rotation =
-                Math::toRotationMatrix(camera_state.orientation);
-
-            const Math::Matrix4f camera_world_matrix =
-                Math::multiply(camera_rotation, camera_translation);
-
-            const Math::Vector3f camera_world_position = Math::transformPoint(
-                camera_world_matrix, {.x = 0.0F, .y = 0.0F, .z = 0.0F});
-
-            const std::optional<Math::Matrix4f> inverted_matrix =
-                Math::tryInverse(camera_world_matrix);
-
-            if (!inverted_matrix.has_value()) {
-                Core::Assertion::failAssertion(
-                    Core::Assertion::AssertionType::Invariant,
-                    Core::Error::Subsystem::Editor,
-                    "Scene View camera world transform must be "
-                    "invertible");
-            }
-
-            application.setCameraViewMatrix(inverted_matrix.value());
-
-            return camera_world_position;
+        if (!controller.updateOrbitDrag(application.window().cursorPosition(),
+                                        kCameraRotationSensitivity)) {
+            return std::nullopt;
         }
 
-        return std::nullopt;
+        application.setCameraViewMatrix(controller.viewMatrix());
+
+        return controller.cameraWorldPosition();
     }
 } // namespace
 
@@ -608,11 +539,11 @@ auto main() -> int {
 
             std::optional<VkDescriptorSet> scene_descriptor_this_frame;
 
-            SceneViewCameraState camera_state{};
+            Editor::SceneViewCameraController camera_controller{};
 
             application.run(
                 [&active_rendering_info, &editor_backend, &workspace, &x_scale,
-                 &scene_descriptor_this_frame, &camera_state,
+                 &scene_descriptor_this_frame, &camera_controller,
                  &earth_data](Core::Application &app) -> void {
                     scene_descriptor_this_frame.reset();
 
@@ -696,10 +627,8 @@ auto main() -> int {
                         workspace.sceneViewPanelState();
 
                     const std::optional<Math::Vector3f>
-                        updated_camera_position =
-                            updateSceneViewCamera(camera_state, panel_state,
-                                                  app,
-                                                  kCameraDistanceFromOrigin);
+                        updated_camera_position = updateSceneViewCamera(
+                            camera_controller, panel_state, app);
 
                     if (updated_camera_position.has_value()) {
                         earth_data.camera_world_position.x =

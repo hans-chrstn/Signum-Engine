@@ -221,6 +221,7 @@ if(SIGNUM_BUILD_EDITOR OR BUILD_TESTING)
       editor/scene_view/scene_grid_geometry.cpp
       editor/scene_view/scene_grid_mesh.cpp
       editor/scene_view/scene_grid_mesh_upload.cpp
+      editor/scene_view/scene_view_camera_controller.cpp
   )
 
   target_link_libraries(
