@@ -1271,8 +1271,8 @@
 - [ ] Handle viewport image synchronization and resource lifetimes
 - [x] Preserve the existing non-editor rendering path
 - [x] Match the camera aspect ratio to the scene viewport
-- [ ] Support camera movement when the viewport has input focus
-- [ ] Prevent camera controls from interfering with editor UI interaction
+- [x] Support camera movement when the viewport has input focus
+- [x] Prevent camera controls from interfering with editor UI interaction
 - [x] Handle zero-sized and minimized viewports
 - [ ] Verify viewport rendering after window and swapchain resizing
 
