@@ -7,6 +7,7 @@
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/vector3.hpp"
 #include "engine/core/math/vector4.hpp"
+#include "engine/platform/input/cursor_position.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
@@ -81,6 +82,7 @@ namespace {
     constexpr std::uint32_t kCloudUniformBinding{4U};
     constexpr std::uint32_t kEarthViewUniformBinding{6U};
     constexpr float kCameraRotationSensitivity{0.005F};
+    constexpr float kCameraPanSensitivity{0.005F};
     constexpr std::uint32_t kSceneGridHalfExtentCells{10U};
     constexpr float kSceneGridSpacing{1.0F};
 
@@ -190,15 +192,27 @@ namespace {
         const Editor::Panels::SceneViewPanelState &panel_state,
         Core::Application &application) -> std::optional<Math::Vector3f> {
 
-        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        const Editor::Platform::CursorPosition cursor_position =
+            application.window().cursorPosition();
+
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Middle)) {
             controller.endOrbitDrag();
-        } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+            controller.endPanDrag();
+        } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle) &&
                    panel_state.m_IsImageHovered) {
-            controller.beginOrbitDrag(application.window().cursorPosition());
+            if (ImGui::GetIO().KeyShift) {
+                controller.beginPanDrag(cursor_position);
+            } else {
+                controller.beginOrbitDrag(cursor_position);
+            }
         }
 
-        if (!controller.updateOrbitDrag(application.window().cursorPosition(),
-                                        kCameraRotationSensitivity)) {
+        const bool orbit_changed = controller.updateOrbitDrag(
+            cursor_position, kCameraRotationSensitivity);
+        const bool pan_changed =
+            controller.updatePanDrag(cursor_position, kCameraPanSensitivity);
+
+        if (!orbit_changed && !pan_changed) {
             return std::nullopt;
         }
 

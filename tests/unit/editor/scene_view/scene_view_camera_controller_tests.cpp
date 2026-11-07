@@ -508,3 +508,552 @@ TEST(SceneViewCameraControllerTests, ViewMatrixMapsCameraPositionToOrigin) {
 
     expectVectorsNear(transformed_position, kCameraSpaceOrigin);
 }
+
+TEST(SceneViewCameraControllerTests, PanTranslatesCameraAndViewMatrix) {
+    constexpr Math::Vector3f kDisplacement{
+        .x = 1.0F,
+        .y = -2.0F,
+        .z = 0.5F,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.pan(kDisplacement);
+
+    const Math::Vector3f expected_position{
+        .x = kDisplacement.x,
+        .y = kDisplacement.y,
+        .z = kDefaultDistance + kDisplacement.z,
+    };
+
+    const Math::Matrix4f expected_view =
+        Math::translate(-kDisplacement.x, -kDisplacement.y,
+                        -(kDefaultDistance + kDisplacement.z));
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, PanPreservesCameraOrientation) {
+    constexpr Math::Vector3f kDisplacement{
+        .x = 1.5F,
+        .y = -0.75F,
+        .z = 2.0F,
+    };
+
+    Editor::SceneViewCameraController controller{};
+    controller.orbit(kRightAngle, 0.0F);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    controller.pan(kDisplacement);
+
+    const Math::Vector3f expected_position{
+        .x = kDefaultDistance + kDisplacement.x,
+        .y = kDisplacement.y,
+        .z = kDisplacement.z,
+    };
+
+    const Math::Matrix4f expected_view = Math::multiply(
+        original_view,
+        Math::translate(-kDisplacement.x, -kDisplacement.y, -kDisplacement.z));
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, RepeatedPanAccumulatesDisplacements) {
+    constexpr Math::Vector3f kFirstDisplacement{
+        .x = 0.5F,
+        .y = -1.0F,
+        .z = 2.0F,
+    };
+
+    constexpr Math::Vector3f kSecondDisplacement{
+        .x = -1.5F,
+        .y = 3.0F,
+        .z = -0.5F,
+    };
+
+    constexpr Math::Vector3f kZeroDisplacement{};
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.pan(kFirstDisplacement);
+    controller.pan(kSecondDisplacement);
+
+    const Math::Vector3f expected_position{
+        .x = -1.0F,
+        .y = 2.0F,
+        .z = kDefaultDistance + 1.5F,
+    };
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+
+    const Math::Matrix4f view_before_zero_pan = controller.viewMatrix();
+
+    controller.pan(kZeroDisplacement);
+
+    expectMatricesNear(controller.viewMatrix(), view_before_zero_pan);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsNonFinitePanDisplacement) {
+    constexpr auto kExpectedMessage =
+        "Scene View pan displacement must be finite";
+
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+
+    Editor::SceneViewCameraController controller{};
+
+    ASSERT_DEATH(controller.pan({.x = infinity}), kExpectedMessage);
+    ASSERT_DEATH(controller.pan({.y = infinity}), kExpectedMessage);
+    ASSERT_DEATH(controller.pan({.z = infinity}), kExpectedMessage);
+
+    ASSERT_DEATH(controller.pan({.x = nan}), kExpectedMessage);
+    ASSERT_DEATH(controller.pan({.y = nan}), kExpectedMessage);
+    ASSERT_DEATH(controller.pan({.z = nan}), kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsOverflowingPanTarget) {
+    constexpr auto kExpectedMessage =
+        "Scene View pan produces invalid orbit target";
+
+    constexpr float kMaximumCoordinate = std::numeric_limits<float>::max();
+
+    constexpr Math::Vector3f kLargeDisplacement{
+        .x = kMaximumCoordinate,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.pan(kLargeDisplacement);
+
+    ASSERT_DEATH(controller.pan(kLargeDisplacement), kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, CameraPlanePanUsesWorldAxesAtIdentity) {
+    constexpr Math::Vector2f kDisplacement{
+        .x = 2.0F,
+        .y = -1.0F,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.panCameraPlane(kDisplacement);
+
+    const Math::Vector3f expected_position{
+        .x = kDisplacement.x,
+        .y = kDisplacement.y,
+        .z = kDefaultDistance,
+    };
+
+    const Math::Matrix4f expected_view =
+        Math::translate(-kDisplacement.x, -kDisplacement.y, -kDefaultDistance);
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, CameraPlanePanUsesRotatedRightAxis) {
+    constexpr float kRightMovement = 2.0F;
+
+    constexpr Math::Vector2f kDisplacement{
+        .x = kRightMovement,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.orbit(kRightAngle, 0.0F);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    controller.panCameraPlane(kDisplacement);
+
+    const Math::Vector3f expected_position{
+        .x = kDefaultDistance,
+        .y = 0.0F,
+        .z = -kRightMovement,
+    };
+
+    const Math::Matrix4f expected_view = Math::multiply(
+        original_view, Math::translate(0.0F, 0.0F, kRightMovement));
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, CameraPlanePanUsesRotatedUpAxis) {
+    constexpr float kUpMovement = 2.0F;
+
+    constexpr Math::Vector2f kDisplacement{
+        .y = kUpMovement,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.orbit(0.0F, kRightAngle);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    controller.panCameraPlane(kDisplacement);
+
+    const Math::Vector3f expected_position{
+        .x = 0.0F,
+        .y = -kDefaultDistance,
+        .z = kUpMovement,
+    };
+
+    const Math::Matrix4f expected_view = Math::multiply(
+        original_view, Math::translate(0.0F, 0.0F, -kUpMovement));
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsNonFiniteCameraPlanePan) {
+    constexpr auto kExpectedMessage =
+        "Scene View camera-relative pan components must be finite";
+
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+
+    Editor::SceneViewCameraController controller{};
+
+    ASSERT_DEATH(controller.panCameraPlane({.x = infinity}), kExpectedMessage);
+
+    ASSERT_DEATH(controller.panCameraPlane({.y = infinity}), kExpectedMessage);
+
+    ASSERT_DEATH(controller.panCameraPlane({.x = nan}), kExpectedMessage);
+
+    ASSERT_DEATH(controller.panCameraPlane({.y = nan}), kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, PanDragLifecyclePreservesCameraTransform) {
+    constexpr float kYawRadians = 0.3F;
+    constexpr float kPitchRadians = -0.2F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kRestartCursor{
+        .x = 150.0,
+        .y = 250.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+    controller.orbit(kYawRadians, kPitchRadians);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+    const Math::Vector3f original_position = controller.cameraWorldPosition();
+
+    controller.beginPanDrag(kInitialCursor);
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+
+    controller.beginPanDrag(kRestartCursor);
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+
+    controller.endPanDrag();
+    controller.endPanDrag();
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+}
+
+TEST(SceneViewCameraControllerTests, PanModePreventsOrbitUpdates) {
+    constexpr float kSensitivity = 0.01F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kPanCursor{
+        .x = 150.0,
+        .y = 250.0,
+    };
+
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 180.0,
+        .y = 250.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.beginOrbitDrag(kInitialCursor);
+    controller.beginPanDrag(kPanCursor);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    EXPECT_FALSE(controller.updateOrbitDrag(kMovedCursor, kSensitivity));
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+
+    // Ending Orbit must not produce an Orbit update while Pan is active.
+    controller.endOrbitDrag();
+
+    EXPECT_FALSE(controller.updateOrbitDrag(kMovedCursor, kSensitivity));
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+}
+
+TEST(SceneViewCameraControllerTests, EndingPanDoesNotInterruptOrbit) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr float kExpectedYawRadians = -0.2F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 120.0,
+        .y = 200.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.beginOrbitDrag(kInitialCursor);
+    controller.endPanDrag();
+
+    ASSERT_TRUE(controller.updateOrbitDrag(kMovedCursor, kSensitivity));
+
+    const Math::Matrix4f expected =
+        Math::multiply(Math::translate(0.0F, 0.0F, -kDefaultDistance),
+                       Math::rotateY(-kExpectedYawRadians));
+
+    expectMatricesNear(controller.viewMatrix(), expected);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsNonFinitePanDragCursor) {
+    constexpr auto kExpectedMessage =
+        "Scene View pan cursor position must be finite";
+
+    const double infinity = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+
+    const Platform::CursorPosition infinite_x{.x = infinity};
+    const Platform::CursorPosition infinite_y{.y = infinity};
+    const Platform::CursorPosition nan_x{.x = nan};
+    const Platform::CursorPosition nan_y{.y = nan};
+
+    Editor::SceneViewCameraController controller{};
+
+    ASSERT_DEATH(controller.beginPanDrag(infinite_x), kExpectedMessage);
+    ASSERT_DEATH(controller.beginPanDrag(infinite_y), kExpectedMessage);
+    ASSERT_DEATH(controller.beginPanDrag(nan_x), kExpectedMessage);
+    ASSERT_DEATH(controller.beginPanDrag(nan_y), kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, InactivePanIgnoresCursorMovement) {
+    constexpr float kSensitivity = 0.01F;
+
+    constexpr Platform::CursorPosition kCursor{
+        .x = 120.0,
+        .y = 180.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    EXPECT_FALSE(controller.updatePanDrag(kCursor, kSensitivity));
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+}
+
+TEST(SceneViewCameraControllerTests, StationaryPanCursorDoesNotMoveCamera) {
+    constexpr float kSensitivity = 0.01F;
+
+    constexpr Platform::CursorPosition kCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+    controller.beginPanDrag(kCursor);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    EXPECT_FALSE(controller.updatePanDrag(kCursor, kSensitivity));
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+}
+
+TEST(SceneViewCameraControllerTests,
+     HorizontalAndVerticalPanWorkIndependently) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr float kExpectedHorizontalPan = -0.2F;
+    constexpr float kExpectedVerticalPan = 0.3F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kHorizontalCursor{
+        .x = 120.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kVerticalCursor{
+        .x = 120.0,
+        .y = 230.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+    controller.beginPanDrag(kInitialCursor);
+
+    ASSERT_TRUE(controller.updatePanDrag(kHorizontalCursor, kSensitivity));
+
+    expectVectorsNear(
+        controller.cameraWorldPosition(),
+        {.x = kExpectedHorizontalPan, .y = 0.0F, .z = kDefaultDistance});
+
+    ASSERT_TRUE(controller.updatePanDrag(kVerticalCursor, kSensitivity));
+
+    expectVectorsNear(controller.cameraWorldPosition(),
+                      {
+                          .x = kExpectedHorizontalPan,
+                          .y = kExpectedVerticalPan,
+                          .z = kDefaultDistance,
+                      });
+
+    const Math::Matrix4f expected_view = Math::translate(
+        -kExpectedHorizontalPan, -kExpectedVerticalPan, -kDefaultDistance);
+
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, RepeatedPanUsesPreviousCursor) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr float kExpectedPan = -0.3F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kFirstCursor{
+        .x = 110.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kSecondCursor{
+        .x = 130.0,
+        .y = 200.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+    controller.beginPanDrag(kInitialCursor);
+
+    ASSERT_TRUE(controller.updatePanDrag(kFirstCursor, kSensitivity));
+    ASSERT_TRUE(controller.updatePanDrag(kSecondCursor, kSensitivity));
+
+    expectVectorsNear(controller.cameraWorldPosition(),
+                      {.x = kExpectedPan, .y = 0.0F, .z = kDefaultDistance});
+}
+
+TEST(SceneViewCameraControllerTests, EndingOrbitDoesNotInterruptActivePan) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr float kExpectedPan = -0.2F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 120.0,
+        .y = 200.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.beginPanDrag(kInitialCursor);
+    controller.endOrbitDrag();
+
+    ASSERT_TRUE(controller.updatePanDrag(kMovedCursor, kSensitivity));
+
+    expectVectorsNear(controller.cameraWorldPosition(),
+                      {.x = kExpectedPan, .y = 0.0F, .z = kDefaultDistance});
+}
+
+TEST(SceneViewCameraControllerTests, RejectsInvalidPanDragSensitivity) {
+    constexpr Platform::CursorPosition kCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr auto kExpectedMessage =
+        "Scene View pan sensitivity must be finite and greater than zero";
+
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+
+    Editor::SceneViewCameraController controller{};
+    controller.beginPanDrag(kCursor);
+
+    ASSERT_DEATH(static_cast<void>(controller.updatePanDrag(kCursor, 0.0F)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.updatePanDrag(kCursor, -1.0F)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.updatePanDrag(kCursor, infinity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.updatePanDrag(kCursor, nan)),
+                 kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsNonFinitePanCursorUpdates) {
+    constexpr float kSensitivity = 0.01F;
+
+    constexpr auto kExpectedMessage =
+        "Scene View pan cursor position must be finite";
+
+    const double infinity = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+
+    Editor::SceneViewCameraController controller{};
+    controller.beginPanDrag({});
+
+    ASSERT_DEATH(static_cast<void>(
+                     controller.updatePanDrag({.x = infinity}, kSensitivity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(
+                     controller.updatePanDrag({.y = infinity}, kSensitivity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(
+        static_cast<void>(controller.updatePanDrag({.x = nan}, kSensitivity)),
+        kExpectedMessage);
+
+    ASSERT_DEATH(
+        static_cast<void>(controller.updatePanDrag({.y = nan}, kSensitivity)),
+        kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsOverflowingPanCursorMovement) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr double kExtremeCoordinate = std::numeric_limits<double>::max();
+
+    constexpr auto kExpectedMessage =
+        "Scene View pan cursor movement produces invalid displacement";
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.beginPanDrag({.x = -kExtremeCoordinate, .y = 0.0});
+
+    ASSERT_DEATH(static_cast<void>(controller.updatePanDrag(
+                     {.x = kExtremeCoordinate, .y = 0.0}, kSensitivity)),
+                 kExpectedMessage);
+}

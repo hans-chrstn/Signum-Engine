@@ -4,6 +4,7 @@
 #include "engine/core/error/subsystem.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/quaternion.hpp"
+#include "engine/core/math/vector2.hpp"
 #include "engine/core/math/vector3.hpp"
 #include "engine/platform/input/cursor_position.hpp"
 #include <cmath>
@@ -74,11 +75,13 @@ namespace SNE::Editor {
 
         m_PreviousCursor = cursor_position;
 
-        m_IsDragging = true;
+        m_DragMode = DragMode::Orbit;
     }
 
     auto SceneViewCameraController::endOrbitDrag() noexcept -> void {
-        m_IsDragging = false;
+        if (m_DragMode == DragMode::Orbit) {
+            m_DragMode = DragMode::None;
+        }
     }
 
     auto SceneViewCameraController::updateOrbitDrag(
@@ -99,7 +102,7 @@ namespace SNE::Editor {
                                      "finite and greater than zero");
         }
 
-        if (!m_IsDragging) {
+        if (m_DragMode != DragMode::Orbit) {
             return false;
         }
 
@@ -147,5 +150,128 @@ namespace SNE::Editor {
         };
 
         return Math::add(m_OrbitTarget, rotated_offset);
+    }
+
+    auto SceneViewCameraController::pan(Math::Vector3f displacement) -> void {
+        if (!std::isfinite(displacement.x) || !std::isfinite(displacement.y) ||
+            !std::isfinite(displacement.z)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View pan displacement must be finite");
+        }
+
+        const Math::Vector3f new_target =
+            Math::add(m_OrbitTarget, displacement);
+
+        if (!std::isfinite(new_target.x) || !std::isfinite(new_target.y) ||
+            !std::isfinite(new_target.z)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View pan produces invalid orbit target");
+        }
+
+        m_OrbitTarget = new_target;
+    }
+
+    auto SceneViewCameraController::panCameraPlane(Math::Vector2f displacement)
+        -> void {
+        if (!std::isfinite(displacement.x) || !std::isfinite(displacement.y)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View camera-relative pan components must be finite");
+        }
+
+        const Math::Vector3f local_displacement{
+            .x = displacement.x,
+            .y = displacement.y,
+            .z = 0.0F,
+        };
+
+        const Math::Matrix4f rotation_matrix{
+            Math::toRotationMatrix(m_Orientation),
+        };
+
+        const Math::Vector3f world_displacement =
+            Math::transformDirection(rotation_matrix, local_displacement);
+
+        pan(world_displacement);
+    }
+
+    auto SceneViewCameraController::beginPanDrag(
+        Platform::CursorPosition cursor_position) -> void {
+        if (!std::isfinite(cursor_position.x) ||
+            !std::isfinite(cursor_position.y)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View pan cursor position must be finite");
+        }
+
+        m_PreviousCursor = cursor_position;
+
+        m_DragMode = DragMode::Pan;
+    }
+
+    auto SceneViewCameraController::endPanDrag() noexcept -> void {
+        if (m_DragMode == DragMode::Pan) {
+            m_DragMode = DragMode::None;
+        }
+    }
+
+    auto SceneViewCameraController::updatePanDrag(
+        Platform::CursorPosition cursor_position,
+        float world_units_per_cursor_unit) -> bool {
+        if (!std::isfinite(cursor_position.x) ||
+            !std::isfinite(cursor_position.y)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View pan cursor position must be finite");
+        }
+
+        if (!std::isfinite(world_units_per_cursor_unit) ||
+            world_units_per_cursor_unit <= 0.0F) {
+            Assertion::failAssertion(Assertion::AssertionType::Precondition,
+                                     Error::Subsystem::Editor,
+                                     "Scene View pan sensitivity must be "
+                                     "finite and greater than zero");
+        }
+
+        if (m_DragMode != DragMode::Pan) {
+            return false;
+        }
+
+        const Platform::CursorPosition cursor_delta{
+            .x = cursor_position.x - m_PreviousCursor.x,
+            .y = cursor_position.y - m_PreviousCursor.y,
+        };
+
+        if (cursor_delta.x == 0.0 && cursor_delta.y == 0.0) {
+            return false;
+        }
+
+        const Math::Vector2f camera_displacement{
+            .x = static_cast<float>(-cursor_delta.x) *
+                 world_units_per_cursor_unit,
+            .y = static_cast<float>(cursor_delta.y) *
+                 world_units_per_cursor_unit,
+        };
+
+        if (!std::isfinite(camera_displacement.x) ||
+            !std::isfinite(camera_displacement.y)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View pan cursor movement produces invalid displacement");
+        }
+
+        panCameraPlane(camera_displacement);
+
+        m_PreviousCursor = cursor_position;
+
+        return true;
     }
 } // namespace SNE::Editor

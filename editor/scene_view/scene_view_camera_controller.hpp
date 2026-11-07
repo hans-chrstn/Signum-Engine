@@ -2,8 +2,10 @@
 
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/quaternion.hpp"
+#include "engine/core/math/vector2.hpp"
 #include "engine/core/math/vector3.hpp"
 #include "engine/platform/input/cursor_position.hpp"
+#include <cstdint>
 
 namespace SNE::Editor {
     namespace Platform = SNE::Engine::Platform;
@@ -31,9 +33,21 @@ namespace SNE::Editor {
         static constexpr float kDefaultOrbitDistance = 3.0F;
 
         /**
-         * @brief Whether an orbit drag interaction is currently active.
+         * @brief Identifies the currently active Scene View camera drag
+         * operation.
          */
-        bool m_IsDragging{false};
+        enum class DragMode : std::uint8_t {
+            None,
+            Orbit,
+            Pan,
+        };
+
+        /**
+         * @brief Active camera drag operation.
+         *
+         * Initialized to None so no navigation occurs until a drag begins.
+         */
+        DragMode m_DragMode{DragMode::None};
 
         /**
          * @brief Previous cursor position used to calculate drag movement.
@@ -193,5 +207,89 @@ namespace SNE::Editor {
          * @pre The orbit target and distance must contain finite values.
          */
         [[nodiscard]] auto cameraWorldPosition() const -> Math::Vector3f;
+
+        /**
+         * @brief Translates the Scene View camera and orbit target in world
+         * space.
+         *
+         * Moves the orbit target by the supplied world-space displacement.
+         * The camera moves by the same displacement, preserving its
+         * orientation and distance from the target.
+         *
+         * Does not modify rendering resources or drag interaction state.
+         *
+         * @param displacement World-space translation to apply.
+         *
+         * @pre All displacement components must be finite.
+         * @pre The resulting orbit target must remain finite.
+         */
+        auto pan(Math::Vector3f displacement) -> void;
+
+        /**
+         * @brief Pans the camera along its local right and up axes.
+         *
+         * Converts a camera-relative displacement into world-space
+         * displacement using the current camera orientation.
+         *
+         * Moves the camera and orbit target together without modifying
+         * orientation or orbit distance.
+         *
+         * @param displacement Camera-local displacement, where X is
+         * camera-right and Y is camera-up.
+         *
+         * @pre Both displacement components must be finite.
+         * @pre The resulting world-space displacement and orbit
+         * target must remain finite.
+         */
+        auto panCameraPlane(Math::Vector2f displacement) -> void;
+
+        /**
+         * @brief Begins a pan drag interaction.
+         *
+         * Records the initial cursor position and activates pan dragging.
+         * Replaces any previously active drag mode.
+         *
+         * Does not change the camera position or orientation.
+         *
+         * @param cursor_position Initial cursor position in logical
+         * window coordinates.
+         *
+         * @pre Both cursor coordinates must be finite.
+         */
+        auto beginPanDrag(Platform::CursorPosition cursor_position) -> void;
+
+        /**
+         * @brief Ends the current pan drag interaction.
+         *
+         * Deactivates pan dragging without modifying camera transforms.
+         * Does not interrupt an active orbit drag.
+         *
+         * Has no effect when pan dragging is inactive.
+         */
+        auto endPanDrag() noexcept -> void;
+
+        /**
+         * @brief Updates camera panning during an active pan drag.
+         *
+         * Converts cursor movement into camera-relative displacement
+         * and translates the orbit target accordingly.
+         *
+         * Does not modify camera state when pan dragging is inactive
+         * or when the cursor has not moved.
+         *
+         * @param cursor_position Current cursor position in logical
+         * window coordinates.
+         * @param world_units_per_cursor_unit Pan sensitivity in world
+         * units per logical cursor coordinate unit.
+         *
+         * @return true if the camera was translated; otherwise false.
+         *
+         * @pre Cursor coordinates must be finite.
+         * @pre Sensitivity must be finite and greater than zero.
+         * @pre Calculated displacement must be finite.
+         */
+        [[nodiscard]] auto
+        updatePanDrag(Platform::CursorPosition cursor_position,
+                      float world_units_per_cursor_unit) -> bool;
     };
 } // namespace SNE::Editor
