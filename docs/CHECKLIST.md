@@ -1185,21 +1185,21 @@
 
 ### Learn
 
-- [ ] log levels
-- [ ] categories
-- [ ] sinks
-- [ ] structured logging
+- [x] log levels
+- [x] categories
+- [x] sinks
+- [x] structured logging
 - [ ] thread-safe logging
 
 ### Implement
 
 - [ ] Add logging abstraction
-- [ ] Add trace level
-- [ ] Add debug level
-- [ ] Add info level
-- [ ] Add warning level
-- [ ] Add error level
-- [ ] Add fatal level
+- [x] Add trace level
+- [x] Add debug level
+- [x] Add info level
+- [x] Add warning level
+- [x] Add error level
+- [x] Add fatal level
 - [ ] Add subsystem categories
 - [ ] Add timestamps
 - [ ] Add terminal sink
@@ -1213,7 +1213,7 @@
 
 ### Test
 
-- [ ] Test level filtering
+- [x] Test level filtering
 - [ ] Test category filtering
 - [ ] Test terminal sink
 - [ ] Test file sink
@@ -1221,11 +1221,10 @@
 
 ### Architecture
 
-- [ ] Keep logging independent from editor
-- [ ] Keep logging implementation out of gameplay APIs
-- [ ] Keep log sinks replaceable and independently extensible
-- [ ] Keep structured log and diagnostic data independent from sink presentation
-
+- [x] Keep logging independent from editor
+- [x] Keep logging implementation out of gameplay APIs
+- [x] Keep log sinks replaceable and independently extensible
+- [x] Keep structured log and diagnostic data independent from sink presentation
 - [ ] Keep diagnostic event storage independent of eventual tracing and crash-reporting backends
 
 ---
