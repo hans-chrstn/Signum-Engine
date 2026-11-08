@@ -5,6 +5,7 @@ add_library(
     engine/core/logging/log_level.cpp
     engine/core/logging/log_formatter.cpp
     engine/core/logging/stream_log_sink.cpp
+    engine/core/logging/logger.cpp
     engine/core/error/engine_error.cpp
     engine/core/error/native_error.cpp
     engine/core/error/error_code.cpp
