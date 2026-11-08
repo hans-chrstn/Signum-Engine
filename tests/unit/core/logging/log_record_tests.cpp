@@ -1,5 +1,4 @@
 #include "engine/core/logging/log_record.hpp"
-
 #include <chrono>
 #include <gtest/gtest.h>
 

@@ -1,5 +1,4 @@
 #include "engine/core/logging/log_level_filter.hpp"
-
 #include <array>
 #include <cstddef>
 #include <gtest/gtest.h>

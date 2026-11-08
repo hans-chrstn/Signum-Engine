@@ -1,5 +1,4 @@
 #include "engine/core/logging/log_level.hpp"
-
 #include <cstdint>
 #include <gtest/gtest.h>
 
