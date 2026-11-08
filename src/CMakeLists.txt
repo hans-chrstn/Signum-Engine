@@ -2,6 +2,7 @@ add_library(
   signum_engine
   STATIC
     engine/core/application.cpp
+    engine/core/logging/log_level.cpp
     engine/core/error/engine_error.cpp
     engine/core/error/native_error.cpp
     engine/core/error/error_code.cpp
