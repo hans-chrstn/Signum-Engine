@@ -254,11 +254,13 @@ namespace SNE::Editor {
             return false;
         }
 
+        const float distance_scale = m_OrbitDistance / kDefaultOrbitDistance;
+        const float effective_sensitivity =
+            world_units_per_cursor_unit * distance_scale;
+
         const Math::Vector2f camera_displacement{
-            .x = static_cast<float>(-cursor_delta.x) *
-                 world_units_per_cursor_unit,
-            .y = static_cast<float>(cursor_delta.y) *
-                 world_units_per_cursor_unit,
+            .x = static_cast<float>(-cursor_delta.x) * effective_sensitivity,
+            .y = static_cast<float>(cursor_delta.y) * effective_sensitivity,
         };
 
         if (!std::isfinite(camera_displacement.x) ||
@@ -269,11 +271,20 @@ namespace SNE::Editor {
                 "Scene View pan cursor movement produces invalid displacement");
         }
 
+        if (camera_displacement.x == 0.0F && camera_displacement.y == 0.0F) {
+            m_PreviousCursor = cursor_position;
+            return false;
+        }
+
+        const Math::Vector3f previous_target = m_OrbitTarget;
+
         panCameraPlane(camera_displacement);
 
         m_PreviousCursor = cursor_position;
 
-        return true;
+        return m_OrbitTarget.x != previous_target.x ||
+               m_OrbitTarget.y != previous_target.y ||
+               m_OrbitTarget.z != previous_target.z;
     }
 
     auto SceneViewCameraController::zoom(float scroll_steps) -> bool {

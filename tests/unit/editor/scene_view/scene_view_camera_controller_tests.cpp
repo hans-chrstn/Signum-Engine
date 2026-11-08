@@ -1171,3 +1171,95 @@ TEST(SceneViewCameraControllerTests, RejectsNonFiniteZoomScroll) {
 
     ASSERT_DEATH(static_cast<void>(controller.zoom(nan)), kExpectedMessage);
 }
+
+TEST(SceneViewCameraControllerTests, PanDragScalesWithOrbitDistance) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr float kScrollStep = 1.0F;
+    constexpr float kZoomFactor = 0.85F;
+    constexpr float kDefaultPanDisplacement = -0.2F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 120.0,
+        .y = 200.0,
+    };
+
+    Editor::SceneViewCameraController close_controller{};
+    Editor::SceneViewCameraController far_controller{};
+
+    ASSERT_TRUE(close_controller.zoom(kScrollStep));
+    ASSERT_TRUE(far_controller.zoom(-kScrollStep));
+
+    close_controller.beginPanDrag(kInitialCursor);
+    far_controller.beginPanDrag(kInitialCursor);
+
+    ASSERT_TRUE(close_controller.updatePanDrag(kMovedCursor, kSensitivity));
+    ASSERT_TRUE(far_controller.updatePanDrag(kMovedCursor, kSensitivity));
+
+    const Math::Vector3f expected_close_position{
+        .x = kDefaultPanDisplacement * kZoomFactor,
+        .y = 0.0F,
+        .z = kDefaultDistance * kZoomFactor,
+    };
+
+    const Math::Vector3f expected_far_position{
+        .x = kDefaultPanDisplacement / kZoomFactor,
+        .y = 0.0F,
+        .z = kDefaultDistance / kZoomFactor,
+    };
+
+    expectVectorsNear(close_controller.cameraWorldPosition(),
+                      expected_close_position);
+
+    expectVectorsNear(far_controller.cameraWorldPosition(),
+                      expected_far_position);
+}
+
+TEST(SceneViewCameraControllerTests,
+     UnderflowingPanSensitivityDoesNotReportMovement) {
+    constexpr float kExtremeScroll = 1000.0F;
+    constexpr float kTinySensitivity = std::numeric_limits<float>::denorm_min();
+
+    constexpr Platform::CursorPosition kInitialCursor{};
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 100.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    ASSERT_TRUE(controller.zoom(kExtremeScroll));
+
+    controller.beginPanDrag(kInitialCursor);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    EXPECT_FALSE(controller.updatePanDrag(kMovedCursor, kTinySensitivity));
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+}
+
+TEST(SceneViewCameraControllerTests, PanDragDoesNotReportRoundedAwayMovement) {
+    constexpr float kLargeTargetX = 1'000'000.0F;
+    constexpr float kSensitivity = 0.005F;
+
+    constexpr Platform::CursorPosition kInitialCursor{};
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 1.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.pan({.x = kLargeTargetX});
+
+    const Math::Vector3f original_position = controller.cameraWorldPosition();
+
+    controller.beginPanDrag(kInitialCursor);
+
+    EXPECT_FALSE(controller.updatePanDrag(kMovedCursor, kSensitivity));
+
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+}

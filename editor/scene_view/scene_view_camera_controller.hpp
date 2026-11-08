@@ -307,8 +307,9 @@ namespace SNE::Editor {
          *
          * @param cursor_position Current cursor position in logical
          * window coordinates.
-         * @param world_units_per_cursor_unit Pan sensitivity in world
-         * units per logical cursor coordinate unit.
+         * @param world_units_per_cursor_unit Base pan sensitivity in world
+         * units per logical cursor coordinate unit at the default orbit
+         * distance. Scaled proportionally to the current orbit distance.
          *
          * @return true if the camera was translated; otherwise false.
          *
