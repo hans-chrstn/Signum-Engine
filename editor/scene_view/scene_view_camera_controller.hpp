@@ -68,6 +68,7 @@ namespace SNE::Editor {
             None,
             Orbit,
             Pan,
+            FlyLook,
         };
 
         /**
@@ -340,5 +341,78 @@ namespace SNE::Editor {
          * @pre Scroll steps must be finite.
          */
         [[nodiscard]] auto zoom(float scroll_steps) -> bool;
+
+        /**
+         * @brief Begins a fly-look drag interaction.
+         *
+         * Records the initial cursor position and activates fly-look dragging.
+         * Replaces any previously active drag mode.
+         *
+         * Does not modify the camera position, orientation, or orbit target.
+         *
+         * @param cursor_position Initial cursor position in logical
+         * window coordinates.
+         *
+         * @pre Both cursor coordinates must be finite.
+         */
+        auto beginFlyLookDrag(Platform::CursorPosition cursor_position) -> void;
+
+        /**
+         * @brief Ends the current fly-look drag interaction.
+         *
+         * Deactivates fly-look dragging without modifying camera
+         * position, orientation, or orbit target.
+         *
+         * Does not interrupt an active orbit or pan drag.
+         *
+         * Has no effect when fly-look dragging is inactive.
+         */
+        auto endFlyLookDrag() noexcept -> void;
+
+        /**
+         * @brief Rotates the Scene View camera in place.
+         *
+         * Applies yaw and pitch rotations while preserving the camera's
+         * world-space position and orbit distance.
+         *
+         * Adjusts the orbit target to compensate for the new orientation.
+         * Does not modify the active drag interaction.
+         *
+         * @param yaw_radians Horizontal rotation in radians.
+         * @param pitch_radians Vertical rotation in radians.
+         *
+         * @pre Both rotation angles must be finite.
+         * @pre The resulting orbit target must remain finite.
+         */
+        auto flyLook(float yaw_radians, float pitch_radians) -> void;
+
+        /**
+         * @brief Updates camera orientation during an active fly-look drag.
+         *
+         * Converts cursor movement into yaw and pitch rotations while
+         * preserving the camera's world-space position.
+         *
+         * Does not modify camera state when fly-look dragging is inactive
+         * or when the cursor has not moved.
+         *
+         * Updates the previous cursor position after successfully
+         * processing an active fly-look drag.
+         *
+         * @param cursor_position Current cursor position in logical
+         * window coordinates.
+         * @param radians_per_unit Rotation sensitivity in radians per
+         * logical cursor coordinate unit.
+         *
+         * @return true if the camera orientation was updated;
+         * otherwise false.
+         *
+         * @pre Cursor coordinates must be finite.
+         * @pre radians_per_unit must be finite and greater than zero.
+         * @pre Computed rotation angles must be finite.
+         * @pre The resulting orbit target must remain finite.
+         */
+        [[nodiscard]] auto
+        updateFlyLookDrag(Platform::CursorPosition cursor_position,
+                          float radians_per_unit) -> bool;
     };
 } // namespace SNE::Editor

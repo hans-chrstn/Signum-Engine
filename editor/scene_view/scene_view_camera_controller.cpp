@@ -320,4 +320,114 @@ namespace SNE::Editor {
 
         return true;
     }
+
+    auto SceneViewCameraController::beginFlyLookDrag(
+        Platform::CursorPosition cursor_position) -> void {
+        if (!std::isfinite(cursor_position.x) ||
+            !std::isfinite(cursor_position.y)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View fly-look cursor position must be finite");
+        }
+
+        m_PreviousCursor = cursor_position;
+
+        m_DragMode = DragMode::FlyLook;
+    }
+
+    auto SceneViewCameraController::endFlyLookDrag() noexcept -> void {
+        if (m_DragMode == DragMode::FlyLook) {
+            m_DragMode = DragMode::None;
+        }
+    }
+
+    auto SceneViewCameraController::flyLook(float yaw_radians,
+                                            float pitch_radians) -> void {
+        if (!std::isfinite(yaw_radians) || !std::isfinite(pitch_radians)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View camera orbit angles must be finite");
+        }
+
+        const Math::Vector3f original_position = cameraWorldPosition();
+
+        orbit(yaw_radians, pitch_radians);
+
+        const Math::Matrix4f rotated_matrix =
+            Math::toRotationMatrix(m_Orientation);
+
+        const Math::Vector3f local_offset{
+            .x = 0.0F,
+            .y = 0.0F,
+            .z = m_OrbitDistance,
+        };
+
+        const Math::Vector3f rotated_offset =
+            Math::transformDirection(rotated_matrix, local_offset);
+
+        const Math::Vector3f new_target =
+            Math::subtract(original_position, rotated_offset);
+
+        if (!std::isfinite(new_target.x) || !std::isfinite(new_target.y) ||
+            !std::isfinite(new_target.z)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View fly-look produces invalid orbit target");
+        }
+
+        m_OrbitTarget = new_target;
+    }
+
+    auto SceneViewCameraController::updateFlyLookDrag(
+        Platform::CursorPosition cursor_position, float radians_per_unit)
+        -> bool {
+        if (!std::isfinite(cursor_position.x) ||
+            !std::isfinite(cursor_position.y)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View fly-look cursor position must be finite");
+        }
+
+        if (!std::isfinite(radians_per_unit) || radians_per_unit <= 0.0F) {
+            Assertion::failAssertion(Assertion::AssertionType::Precondition,
+                                     Error::Subsystem::Editor,
+                                     "Scene View fly-look sensitivity must be "
+                                     "finite and greater than zero");
+        }
+
+        if (m_DragMode != DragMode::FlyLook) {
+            return false;
+        }
+
+        const Platform::CursorPosition cursor_delta{
+            .x = cursor_position.x - m_PreviousCursor.x,
+            .y = cursor_position.y - m_PreviousCursor.y,
+        };
+
+        if (cursor_delta.x == 0.0 && cursor_delta.y == 0.0) {
+            return false;
+        }
+
+        const auto yaw = static_cast<float>(-cursor_delta.x * radians_per_unit);
+
+        const auto pitch =
+            static_cast<float>(-cursor_delta.y * radians_per_unit);
+
+        if (!std::isfinite(yaw) || !std::isfinite(pitch)) {
+            Assertion::failAssertion(Assertion::AssertionType::Precondition,
+                                     Error::Subsystem::Editor,
+                                     "Scene View fly-look cursor movement "
+                                     "produces invalid rotation angles");
+        }
+
+        flyLook(yaw, pitch);
+
+        m_PreviousCursor = cursor_position;
+
+        return true;
+    }
 } // namespace SNE::Editor

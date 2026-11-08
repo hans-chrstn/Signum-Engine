@@ -1263,3 +1263,266 @@ TEST(SceneViewCameraControllerTests, PanDragDoesNotReportRoundedAwayMovement) {
 
     expectVectorsNear(controller.cameraWorldPosition(), original_position);
 }
+
+TEST(SceneViewCameraControllerTests,
+     FlyLookDragLifecyclePreservesCameraTransform) {
+    constexpr float kSensitivity = 0.01F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 120.0,
+        .y = 230.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+    const Math::Vector3f original_position = controller.cameraWorldPosition();
+
+    controller.beginFlyLookDrag(kInitialCursor);
+
+    EXPECT_FALSE(controller.updateOrbitDrag(kMovedCursor, kSensitivity));
+    EXPECT_FALSE(controller.updatePanDrag(kMovedCursor, kSensitivity));
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+
+    controller.endFlyLookDrag();
+
+    expectMatricesNear(controller.viewMatrix(), original_view);
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsNonFiniteFlyLookDragCursor) {
+    constexpr auto kExpectedMessage =
+        "Scene View fly-look cursor position must be finite";
+
+    const double infinity = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+
+    const Platform::CursorPosition infinite_x{.x = infinity};
+    const Platform::CursorPosition infinite_y{.y = infinity};
+    const Platform::CursorPosition nan_x{.x = nan};
+    const Platform::CursorPosition nan_y{.y = nan};
+
+    Editor::SceneViewCameraController controller{};
+
+    ASSERT_DEATH(controller.beginFlyLookDrag(infinite_x), kExpectedMessage);
+    ASSERT_DEATH(controller.beginFlyLookDrag(infinite_y), kExpectedMessage);
+    ASSERT_DEATH(controller.beginFlyLookDrag(nan_x), kExpectedMessage);
+    ASSERT_DEATH(controller.beginFlyLookDrag(nan_y), kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, FlyLookRotatesWithoutMovingCamera) {
+    constexpr float kYaw = 0.4F;
+
+    Editor::SceneViewCameraController controller{};
+
+    const Math::Vector3f original_position = controller.cameraWorldPosition();
+
+    controller.flyLook(kYaw, 0.0F);
+
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+
+    const Math::Matrix4f expected_view = Math::multiply(
+        Math::rotateY(-kYaw), Math::translate(0.0F, 0.0F, -kDefaultDistance));
+
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, FlyLookPreservesPositionAfterOrbitAndPan) {
+    constexpr float kInitialOrbitYaw = 0.4F;
+    constexpr float kInitialOrbitPitch = 0.2F;
+
+    constexpr float kFlyLookYaw = 0.25F;
+    constexpr float kFlyLookPitch = -0.15F;
+
+    constexpr Math::Vector3f kPanDisplacement{
+        .x = 1.5F,
+        .y = -0.75F,
+        .z = 2.0F,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.orbit(kInitialOrbitYaw, kInitialOrbitPitch);
+    controller.pan(kPanDisplacement);
+
+    const Math::Vector3f original_position = controller.cameraWorldPosition();
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    controller.flyLook(kFlyLookYaw, kFlyLookPitch);
+
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+
+    const Math::Matrix4f inverse_rotation = Math::multiply(
+        Math::rotateX(-kFlyLookPitch), Math::rotateY(-kFlyLookYaw));
+
+    const Math::Matrix4f expected_view =
+        Math::multiply(inverse_rotation, original_view);
+
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, FlyLookDragRotatesWithoutMovingCamera) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr float kExpectedYaw = -0.2F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 120.0,
+        .y = 200.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    const Math::Vector3f original_position = controller.cameraWorldPosition();
+
+    controller.beginFlyLookDrag(kInitialCursor);
+
+    EXPECT_FALSE(controller.updateFlyLookDrag(kInitialCursor, kSensitivity));
+
+    ASSERT_TRUE(controller.updateFlyLookDrag(kMovedCursor, kSensitivity));
+
+    expectVectorsNear(controller.cameraWorldPosition(), original_position);
+
+    const Math::Matrix4f expected_view =
+        Math::multiply(Math::rotateY(-kExpectedYaw),
+                       Math::translate(0.0F, 0.0F, -kDefaultDistance));
+
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, EndingFlyLookDragStopsCameraRotation) {
+    constexpr float kSensitivity = 0.01F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kMovedCursor{
+        .x = 120.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kReleasedCursor{
+        .x = 300.0,
+        .y = 400.0,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.beginFlyLookDrag(kInitialCursor);
+    ASSERT_TRUE(controller.updateFlyLookDrag(kMovedCursor, kSensitivity));
+
+    const Math::Matrix4f view_before_release = controller.viewMatrix();
+
+    controller.endFlyLookDrag();
+
+    EXPECT_FALSE(controller.updateFlyLookDrag(kReleasedCursor, kSensitivity));
+
+    expectMatricesNear(controller.viewMatrix(), view_before_release);
+
+    controller.beginFlyLookDrag(kReleasedCursor);
+
+    EXPECT_FALSE(controller.updateFlyLookDrag(kReleasedCursor, kSensitivity));
+
+    expectMatricesNear(controller.viewMatrix(), view_before_release);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsInvalidFlyLookDragSensitivity) {
+    constexpr float kZeroSensitivity = 0.0F;
+    constexpr float kNegativeSensitivity = -0.01F;
+
+    constexpr Platform::CursorPosition kInitialCursor{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr auto kExpectedMessage =
+        "Scene View fly-look sensitivity must be finite "
+        "and greater than zero";
+
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+
+    Editor::SceneViewCameraController controller{};
+    controller.beginFlyLookDrag(kInitialCursor);
+
+    ASSERT_DEATH(static_cast<void>(controller.updateFlyLookDrag(
+                     kInitialCursor, kZeroSensitivity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.updateFlyLookDrag(
+                     kInitialCursor, kNegativeSensitivity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(
+                     controller.updateFlyLookDrag(kInitialCursor, infinity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(
+        static_cast<void>(controller.updateFlyLookDrag(kInitialCursor, nan)),
+        kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsNonFiniteFlyLookCursorUpdates) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr double kValidCoordinate = 0.0;
+
+    constexpr auto kExpectedMessage =
+        "Scene View fly-look cursor position must be finite";
+
+    const double infinity = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+
+    Editor::SceneViewCameraController controller{};
+    controller.beginFlyLookDrag({});
+
+    ASSERT_DEATH(static_cast<void>(controller.updateFlyLookDrag(
+                     {.x = infinity, .y = kValidCoordinate}, kSensitivity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.updateFlyLookDrag(
+                     {.x = kValidCoordinate, .y = infinity}, kSensitivity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.updateFlyLookDrag(
+                     {.x = nan, .y = kValidCoordinate}, kSensitivity)),
+                 kExpectedMessage);
+
+    ASSERT_DEATH(static_cast<void>(controller.updateFlyLookDrag(
+                     {.x = kValidCoordinate, .y = nan}, kSensitivity)),
+                 kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsOverflowingFlyLookCursorMovement) {
+    constexpr float kSensitivity = 0.01F;
+    constexpr double kValidCoordinate = 0.0;
+
+    constexpr auto kExpectedMessage = "Scene View fly-look cursor movement "
+                                      "produces invalid rotation angles";
+
+    const double maximum = std::numeric_limits<double>::max();
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.beginFlyLookDrag({
+        .x = -maximum,
+        .y = kValidCoordinate,
+    });
+
+    ASSERT_DEATH(static_cast<void>(controller.updateFlyLookDrag(
+                     {.x = maximum, .y = kValidCoordinate}, kSensitivity)),
+                 kExpectedMessage);
+}

@@ -213,12 +213,22 @@ namespace {
             }
         }
 
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+            controller.endFlyLookDrag();
+        } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) &&
+                   panel_state.m_IsImageHovered) {
+            controller.beginFlyLookDrag(cursor_position);
+        }
+
         const bool orbit_changed = controller.updateOrbitDrag(
             cursor_position, kCameraRotationSensitivity);
         const bool pan_changed =
             controller.updatePanDrag(cursor_position, kCameraPanSensitivity);
+        const bool fly_look_changed = controller.updateFlyLookDrag(
+            cursor_position, kCameraRotationSensitivity);
 
-        if (!orbit_changed && !pan_changed && !zoom_changed) {
+        if (!orbit_changed && !pan_changed && !zoom_changed &&
+            !fly_look_changed) {
             return std::nullopt;
         }
 
