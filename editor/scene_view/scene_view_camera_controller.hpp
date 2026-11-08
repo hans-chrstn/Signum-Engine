@@ -414,5 +414,32 @@ namespace SNE::Editor {
         [[nodiscard]] auto
         updateFlyLookDrag(Platform::CursorPosition cursor_position,
                           float radians_per_unit) -> bool;
+
+        /**
+         * @brief Moves the Scene View camera in camera-local coordinates.
+         *
+         * Transforms the supplied displacement by the current camera
+         * orientation and translates the camera and orbit target together.
+         *
+         * Positive X moves right, positive Y moves up, and negative Z
+         * moves forward relative to the camera.
+         *
+         * Preserves camera orientation and orbit distance.
+         * Does not modify the active drag interaction.
+         *
+         * @param displacement Camera-local movement in world units.
+         *
+         * @pre All displacement components must be finite.
+         * @pre The resulting world-space displacement and orbit target
+         * must remain finite.
+         */
+        auto moveCameraLocal(Math::Vector3f displacement) -> void;
+
+        /**
+         * @brief Reports whether fly-look navigation is currently active.
+         *
+         * @return true while the controller is in fly-look drag mode.
+         */
+        [[nodiscard]] auto isFlyLookActive() const noexcept -> bool;
     };
 } // namespace SNE::Editor

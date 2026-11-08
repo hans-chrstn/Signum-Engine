@@ -1526,3 +1526,128 @@ TEST(SceneViewCameraControllerTests, RejectsOverflowingFlyLookCursorMovement) {
                      {.x = maximum, .y = kValidCoordinate}, kSensitivity)),
                  kExpectedMessage);
 }
+
+TEST(SceneViewCameraControllerTests,
+     CameraLocalForwardMovementPreservesOrientation) {
+    constexpr float kForwardDistance = 1.25F;
+
+    constexpr Math::Vector3f kLocalDisplacement{
+        .z = -kForwardDistance,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.moveCameraLocal(kLocalDisplacement);
+
+    const Math::Vector3f expected_position{
+        .z = kDefaultDistance - kForwardDistance,
+    };
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+
+    const Math::Matrix4f expected_view =
+        Math::translate(0.0F, 0.0F, -expected_position.z);
+
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests,
+     CameraLocalForwardMovementFollowsOrientation) {
+    constexpr float kForwardDistance = 1.25F;
+
+    constexpr Math::Vector3f kLocalForwardDisplacement{
+        .z = -kForwardDistance,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.orbit(kRightAngle, 0.0F);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    controller.moveCameraLocal(kLocalForwardDisplacement);
+
+    const Math::Vector3f expected_position{
+        .x = kDefaultDistance - kForwardDistance,
+        .y = 0.0F,
+        .z = 0.0F,
+    };
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+
+    const Math::Matrix4f expected_view = Math::multiply(
+        original_view, Math::translate(kForwardDistance, 0.0F, 0.0F));
+
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests,
+     CameraLocalRightAndUpMovementFollowsOrientation) {
+    constexpr float kRightDistance = 1.5F;
+    constexpr float kUpDistance = 0.75F;
+
+    constexpr Math::Vector3f kLocalDisplacement{
+        .x = kRightDistance,
+        .y = kUpDistance,
+    };
+
+    Editor::SceneViewCameraController controller{};
+
+    controller.orbit(kRightAngle, 0.0F);
+
+    const Math::Matrix4f original_view = controller.viewMatrix();
+
+    controller.moveCameraLocal(kLocalDisplacement);
+
+    const Math::Vector3f expected_position{
+        .x = kDefaultDistance,
+        .y = kUpDistance,
+        .z = -kRightDistance,
+    };
+
+    expectVectorsNear(controller.cameraWorldPosition(), expected_position);
+
+    const Math::Matrix4f expected_view = Math::multiply(
+        Math::translate(-kRightDistance, -kUpDistance, 0.0F), original_view);
+
+    expectMatricesNear(controller.viewMatrix(), expected_view);
+}
+
+TEST(SceneViewCameraControllerTests, RejectsNonFiniteCameraLocalMovement) {
+    constexpr auto kExpectedMessage =
+        "Scene View camera-local movement components must be finite";
+
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+
+    Editor::SceneViewCameraController controller{};
+
+    ASSERT_DEATH(controller.moveCameraLocal({.x = infinity}), kExpectedMessage);
+    ASSERT_DEATH(controller.moveCameraLocal({.y = infinity}), kExpectedMessage);
+    ASSERT_DEATH(controller.moveCameraLocal({.z = infinity}), kExpectedMessage);
+
+    ASSERT_DEATH(controller.moveCameraLocal({.x = nan}), kExpectedMessage);
+    ASSERT_DEATH(controller.moveCameraLocal({.y = nan}), kExpectedMessage);
+    ASSERT_DEATH(controller.moveCameraLocal({.z = nan}), kExpectedMessage);
+}
+
+TEST(SceneViewCameraControllerTests, FlyLookActiveStateTracksNavigationMode) {
+    Editor::SceneViewCameraController controller{};
+
+    EXPECT_FALSE(controller.isFlyLookActive());
+
+    controller.beginFlyLookDrag({});
+    EXPECT_TRUE(controller.isFlyLookActive());
+
+    controller.endFlyLookDrag();
+    EXPECT_FALSE(controller.isFlyLookActive());
+
+    controller.beginOrbitDrag({});
+    EXPECT_FALSE(controller.isFlyLookActive());
+
+    controller.beginFlyLookDrag({});
+    EXPECT_TRUE(controller.isFlyLookActive());
+
+    controller.beginPanDrag({});
+    EXPECT_FALSE(controller.isFlyLookActive());
+}

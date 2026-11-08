@@ -83,6 +83,7 @@ namespace {
     constexpr std::uint32_t kEarthViewUniformBinding{6U};
     constexpr float kCameraRotationSensitivity{0.005F};
     constexpr float kCameraPanSensitivity{0.005F};
+    constexpr float kCameraFlySpeedWorldUnitsPerSecond{5.0F};
     constexpr std::uint32_t kSceneGridHalfExtentCells{10U};
     constexpr float kSceneGridSpacing{1.0F};
 
@@ -102,15 +103,6 @@ namespace {
     static_assert(offsetof(EarthViewUniformData, sphere_center_radius) ==
                   sizeof(Math::Vector4f));
 
-    /**
-     * @brief Determines whether a supported editor attachment format uses sRGB
-     * encoding.
-     *
-     * @param format Vulkan color attachment format.
-     * @return true for supported sRGB formats; false for supported UNORM
-     * formats.
-     * @throws Core::Error::EngineError If the attachment format is unsupported.
-     */
     [[nodiscard]] auto isSrgbAttachmentFormat(VkFormat format) -> bool {
         switch (format) {
         case VK_FORMAT_B8G8R8A8_SRGB:
@@ -127,25 +119,6 @@ namespace {
         }
     }
 
-    /**
-     * @brief Converts the Scene View content size to framebuffer pixels.
-     *
-     * Scales the panel's available content dimensions to produce an
-     * integer render-target extent.
-     *
-     * Rounds positive dimensions upward to avoid allocating an image
-     * smaller than the requested drawable area.
-     *
-     * Returns no extent when the panel is not drawable or when the
-     * dimensions or framebuffer scale cannot produce a valid extent.
-     *
-     * This conversion does not allocate Vulkan resources.
-     *
-     * @param panel_state Scene View dimensions and visibility state.
-     * @param framebuffer_scale Horizontal and vertical framebuffer scale.
-     *
-     * @return Pixel extent when valid; otherwise std::nullopt.
-     */
     [[nodiscard]] auto tryMakeSceneViewportExtent(
         const Editor::Panels::SceneViewPanelState &panel_state,
         ImVec2 framebuffer_scale)
@@ -187,6 +160,67 @@ namespace {
         };
     }
 
+    [[nodiscard]] auto readFlyMovementDirection() -> Math::Vector3f {
+        Math::Vector3f local_direction{};
+        if (ImGui::IsKeyDown(ImGuiKey_W)) {
+            local_direction.z -= 1.0F;
+        }
+
+        if (ImGui::IsKeyDown(ImGuiKey_S)) {
+            local_direction.z += 1.0F;
+        }
+
+        if (ImGui::IsKeyDown(ImGuiKey_A)) {
+            local_direction.x -= 1.0F;
+        }
+
+        if (ImGui::IsKeyDown(ImGuiKey_D)) {
+            local_direction.x += 1.0F;
+        }
+
+        if (ImGui::IsKeyDown(ImGuiKey_Q)) {
+            local_direction.y -= 1.0F;
+        }
+
+        if (ImGui::IsKeyDown(ImGuiKey_E)) {
+            local_direction.y += 1.0F;
+        }
+
+        if (Math::lengthSquared(local_direction) > 0.0F) {
+            local_direction = Math::normalize(local_direction);
+        }
+
+        return local_direction;
+    }
+
+    [[nodiscard]] auto
+    updateFlyMovement(Editor::SceneViewCameraController &controller,
+                      float delta_time_seconds) -> bool {
+        if (!controller.isFlyLookActive() ||
+            !std::isfinite(delta_time_seconds) || delta_time_seconds <= 0.0F) {
+            return false;
+        }
+
+        const Math::Vector3f local_direction = readFlyMovementDirection();
+
+        if (Math::lengthSquared(local_direction) == 0.0F) {
+            return false;
+        }
+
+        const Math::Vector3f displacement =
+            Math::scale(local_direction, kCameraFlySpeedWorldUnitsPerSecond *
+                                             delta_time_seconds);
+
+        if (!std::isfinite(displacement.x) || !std::isfinite(displacement.y) ||
+            !std::isfinite(displacement.z)) {
+            return false;
+        }
+
+        controller.moveCameraLocal(displacement);
+
+        return true;
+    }
+
     auto updateSceneViewCamera(
         Editor::SceneViewCameraController &controller,
         const Editor::Panels::SceneViewPanelState &panel_state,
@@ -226,9 +260,11 @@ namespace {
             controller.updatePanDrag(cursor_position, kCameraPanSensitivity);
         const bool fly_look_changed = controller.updateFlyLookDrag(
             cursor_position, kCameraRotationSensitivity);
+        const bool fly_movement_changed =
+            updateFlyMovement(controller, ImGui::GetIO().DeltaTime);
 
         if (!orbit_changed && !pan_changed && !zoom_changed &&
-            !fly_look_changed) {
+            !fly_look_changed && !fly_movement_changed) {
             return std::nullopt;
         }
 

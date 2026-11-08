@@ -430,4 +430,29 @@ namespace SNE::Editor {
 
         return true;
     }
+
+    auto SceneViewCameraController::moveCameraLocal(Math::Vector3f displacement)
+        -> void {
+        if (!std::isfinite(displacement.x) || !std::isfinite(displacement.y) ||
+            !std::isfinite(displacement.z)) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition,
+                Error::Subsystem::Editor,
+                "Scene View camera-local movement components must be finite");
+        }
+
+        const Math::Matrix4f rotation_matrix{
+            Math::toRotationMatrix(m_Orientation),
+        };
+
+        const Math::Vector3f world_displacement{
+            Math::transformDirection(rotation_matrix, displacement),
+        };
+
+        pan(world_displacement);
+    }
+
+    auto SceneViewCameraController::isFlyLookActive() const noexcept -> bool {
+        return m_DragMode == DragMode::FlyLook;
+    }
 } // namespace SNE::Editor
