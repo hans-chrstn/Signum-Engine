@@ -144,6 +144,39 @@ namespace SNE::Engine::Core::Logging {
 
       public:
         /**
+         * @brief Constructs a logger without any registered output sinks.
+         *
+         * Initializes the logger with its default severity threshold
+         * and unrestricted category filtering.
+         *
+         * Output destinations may be registered later using addSink().
+         *
+         * @note Accepted log records are discarded after dispatch
+         * when no output sinks are registered.
+         */
+        Logger() = default;
+
+        /**
+         * @brief Constructs a logger with an initial output sink.
+         *
+         * Takes exclusive ownership of the supplied sink and registers
+         * it before the logger becomes available for diagnostic events.
+         *
+         * Allows dependent engine systems to emit diagnostics during
+         * their initialization without requiring separate sink registration.
+         *
+         * @param initial_sink Initial logging destination whose ownership
+         * is transferred to the logger.
+         *
+         * @throws std::invalid_argument if the supplied sink is null.
+         * @throws std::bad_alloc if sink registration requires allocation
+         * and the allocation fails.
+         *
+         * @note Additional output sinks may be registered using addSink().
+         */
+        explicit Logger(std::unique_ptr<LogSink> initial_sink);
+
+        /**
          * @brief Registers a logging sink and takes exclusive ownership of it.
          *
          * The registered sink receives accepted logging events until

@@ -1202,7 +1202,7 @@
 - [x] Add fatal level
 - [ ] Add subsystem categories
 - [x] Add timestamps
-- [ ] Add terminal sink
+- [x] Add terminal sink
 - [ ] Add file sink
 - [ ] Route Vulkan validation messages
 - [ ] Route GLFW diagnostics
@@ -1215,7 +1215,7 @@
 
 - [x] Test level filtering
 - [x] Test category filtering
-- [ ] Test terminal sink
+- [x] Test terminal sink
 - [ ] Test file sink
 - [ ] Test logging failures
 

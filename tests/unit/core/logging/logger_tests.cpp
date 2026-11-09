@@ -1,8 +1,10 @@
 #include "engine/core/logging/logger.hpp"
+#include "engine/core/logging/stream_log_sink.hpp"
 #include <barrier>
 #include <chrono>
 #include <gtest/gtest.h>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -527,4 +529,49 @@ TEST(LoggerTests, ConcurrentConfigurationChangesPreserveAcceptedRecords) {
     }
 
     EXPECT_EQ(unique_messages.size(), records.size());
+}
+
+TEST(LoggerTests, DispatchesToStreamSinkThroughLogger) {
+    std::ostringstream output;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<Logging::StreamLogSink>(output));
+
+    logger.log(Logging::LogLevel::Info, "Core", "Engine initialized");
+
+    const std::string formatted_output = output.str();
+
+    EXPECT_NE(formatted_output.find("[Info] [Core] Engine initialized\n"),
+              std::string::npos);
+}
+
+TEST(LoggerTests, ConstructorRejectsNullInitialSink) {
+    EXPECT_THROW(Logging::Logger(std::unique_ptr<Logging::LogSink>{}),
+                 std::invalid_argument);
+}
+
+TEST(LoggerTests, ConstructorRegistersInitialSink) {
+    std::vector<Logging::LogRecord> records;
+
+    Logging::Logger logger{std::make_unique<CapturingLoggerSink>(records)};
+
+    logger.log(Logging::LogLevel::Info, "Core", "Logger initialized");
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].level, Logging::LogLevel::Info);
+    EXPECT_EQ(records[0].category, "Core");
+    EXPECT_EQ(records[0].message, "Logger initialized");
+}
+
+TEST(LoggerTests, ConstructorTakesOwnershipOfInitialSink) {
+    int destruction_count = 0;
+
+    {
+        Logging::Logger logger{
+            std::make_unique<DestructionTrackingSink>(destruction_count)};
+
+        EXPECT_EQ(destruction_count, 0);
+    }
+
+    EXPECT_EQ(destruction_count, 1);
 }

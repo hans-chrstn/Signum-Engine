@@ -2,6 +2,7 @@
 #include "engine/core/logging/log_category_filter.hpp"
 #include "engine/core/logging/log_level_filter.hpp"
 #include "engine/core/logging/log_record.hpp"
+#include "engine/core/logging/log_sink.hpp"
 #include <algorithm>
 #include <chrono>
 #include <memory>
@@ -13,6 +14,10 @@
 #include <vector>
 
 namespace SNE::Engine::Core::Logging {
+    Logger::Logger(std::unique_ptr<LogSink> initial_sink) {
+        addSink(std::move(initial_sink));
+    }
+
     auto Logger::drainPendingRecords() -> void {
         try {
             while (true) {

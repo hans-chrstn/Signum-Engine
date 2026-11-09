@@ -1,14 +1,19 @@
 #include "application.hpp"
+#include "engine/core/logging/log_level.hpp"
+#include "engine/core/logging/stream_log_sink.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstdint>
+#include <iostream>
+#include <memory>
 #include <utility>
 
 namespace SNE::Engine::Core {
     Application::Application(ApplicationConfiguration configuration)
         : m_Configuration(std::move(configuration)),
+          m_Logger(std::make_unique<Logging::StreamLogSink>(std::clog)),
           m_Window(m_Configuration.initial_window_size,
                    m_Configuration.application_name),
           m_Renderer(m_Configuration.application_name, m_Window,
@@ -19,7 +24,10 @@ namespace SNE::Engine::Core {
                      m_Configuration.initial_camera,
                      std::move(m_Configuration.initial_graphics_shaders),
                      m_Configuration.initial_buffer_bindings,
-                     m_Configuration.initial_texture_bindings) {}
+                     m_Configuration.initial_texture_bindings) {
+        m_Logger.log(Logging::LogLevel::Info, "Core",
+                     "Application Initialized");
+    }
 
     auto Application::run(
         const std::function<void(Application &)> &on_update,

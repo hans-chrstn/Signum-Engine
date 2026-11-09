@@ -1,6 +1,7 @@
 #pragma once
 
 #include "application_configuration.hpp"
+#include "engine/core/logging/logger.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
@@ -38,9 +39,79 @@ namespace SNE::Engine::Core {
      */
     class Application {
       private:
+        /**
+         * @brief Owned configuration defining application initialization
+         * policy.
+         *
+         * Stores the application name, initial window dimensions,
+         * presentation preferences, and initial rendering resources.
+         *
+         * Constructed before other application subsystems so its
+         * configuration remains available during their initialization.
+         *
+         * @note Configuration values may contain borrowed resource views
+         * whose referenced storage must satisfy their documented lifetimes.
+         */
         ApplicationConfiguration m_Configuration;
+
+        /**
+         * @brief Application-owned engine diagnostic logger.
+         *
+         * Coordinates severity and category filtering, queued diagnostic
+         * dispatch, and delivery to registered logging sinks.
+         *
+         * Declared before platform and renderer resources so its lifetime
+         * extends beyond their destruction.
+         *
+         * @note Terminal and file output destinations are configured
+         * separately from the logger's ownership and lifetime.
+         */
+        Logging::Logger m_Logger;
+
+        /**
+         * @brief Owns the process-wide GLFW initialization lifetime.
+         *
+         * Initializes the GLFW library before creating platform windows
+         * and terminates it during application destruction.
+         *
+         * Declared before the window and renderer so GLFW remains
+         * initialized throughout their lifetimes.
+         *
+         * @note GLFW initialization failures are propagated through
+         * the platform's error-handling infrastructure.
+         */
         Platform::GlfwContext m_GlfwContext;
+
+        /**
+         * @brief Owns the application's primary platform window.
+         *
+         * Manages the underlying GLFW window and provides access to
+         * window state, input, and platform event handling.
+         *
+         * Created after GLFW initialization using the configured
+         * application name and initial window dimensions.
+         *
+         * Declared before the renderer so the native window remains
+         * valid throughout rendering resource initialization and
+         * destruction.
+         */
         Platform::Window m_Window;
+
+        /**
+         * @brief Owns the application's Vulkan rendering backend.
+         *
+         * Manages Vulkan rendering resources, frame execution,
+         * presentation, and renderer-specific resource lifetimes.
+         *
+         * Initialized using the application configuration and
+         * previously constructed platform window.
+         *
+         * Declared after its dependencies so Vulkan resources
+         * are destroyed before the window and GLFW context.
+         *
+         * @note Vulkan resource management and synchronization
+         * remain the responsibility of the rendering backend.
+         */
         Renderer::Vulkan::VulkanRenderer m_Renderer;
 
       public:
