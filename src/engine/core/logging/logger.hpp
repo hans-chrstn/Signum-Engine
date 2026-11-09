@@ -1,8 +1,11 @@
 #pragma once
 
 #include "engine/core/logging/log_level.hpp"
+#include "engine/core/logging/log_record.hpp"
 #include "engine/core/logging/log_sink.hpp"
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -24,11 +27,63 @@ namespace SNE::Engine::Core::Logging {
      * Logging remains independent of editor functionality and does
      * not control application termination.
      *
-     * @note Thread safety and logging failure handling will be
-     * established as the logging implementation develops.
+     * @note Shared logging operations are synchronized internally.
+     * Sink callbacks are serialized through a single active drainer.
+     *
+     * @warning The logger must outlive all concurrent operations
+     * that access it. Callers must stop logging and wait for active
+     * operations to finish before destroying the logger.
+     *
+     * @note Sink failures may leave pending records awaiting a
+     * subsequent draining attempt. Explicit flushing and shutdown
+     * failure policies are not yet implemented.
      */
     class Logger {
       private:
+        /**
+         * @brief Synchronizes access to the logger's shared state.
+         *
+         * Protects sink registration, severity configuration,
+         * category configuration, and log dispatch coordination.
+         *
+         * Mutable to permit synchronization within const
+         * member functions that read protected state.
+         *
+         * @note The locking strategy and reentrant logging policy
+         * are defined by the logger's member implementations.
+         */
+        mutable std::mutex m_Mutex;
+
+        /**
+         * @brief Pending diagnostic records awaiting sink dispatch.
+         *
+         * Stores accepted log records in FIFO order until the active
+         * draining thread delivers them to registered logging sinks.
+         *
+         * Records own their diagnostic data independently of callers.
+         * Multiple threads may enqueue records, but only one thread
+         * is permitted to drain the queue at a time.
+         *
+         * All queue operations must be synchronized using m_Mutex.
+         */
+        std::queue<LogRecord> m_PendingRecords;
+
+        /**
+         * @brief Indicates whether a thread is currently draining log records.
+         *
+         * Prevents multiple threads from concurrently dispatching records
+         * to sinks that are not guaranteed to be thread-safe.
+         *
+         * Defaults to false when no thread owns dispatch responsibility.
+         * Enqueuing threads may return while another thread is draining.
+         *
+         * Queue emptiness checks and changes to this flag must occur
+         * atomically under m_Mutex to prevent abandoned records.
+         *
+         * Sink callbacks must execute without holding m_Mutex.
+         */
+        bool m_IsDraining{false};
+
         /**
          * @brief Exclusively owned destinations for accepted log records.
          *
@@ -69,6 +124,24 @@ namespace SNE::Engine::Core::Logging {
          */
         std::vector<std::string> m_AllowedCategories;
 
+        /**
+         * @brief Delivers queued diagnostic records to registered sinks.
+         *
+         * Processes pending records in FIFO order while maintaining
+         * exclusive responsibility for sink dispatch.
+         *
+         * Queue access and draining state transitions are synchronized
+         * using m_Mutex. Sink callbacks execute without holding the
+         * logger mutex, allowing other threads to enqueue records.
+         *
+         * The caller must have established exclusive draining
+         * responsibility before invoking this function.
+         *
+         * @note Sink failure recovery must restore a valid draining
+         * state without abandoning pending records.
+         */
+        auto drainPendingRecords() -> void;
+
       public:
         /**
          * @brief Registers a logging sink and takes exclusive ownership of it.
@@ -98,7 +171,7 @@ namespace SNE::Engine::Core::Logging {
          *
          * @param level New minimum accepted log severity.
          */
-        auto setMinimumLevel(LogLevel level) noexcept -> void;
+        auto setMinimumLevel(LogLevel level) -> void;
 
         /**
          * @brief Returns the minimum severity accepted by the logger.
@@ -108,7 +181,7 @@ namespace SNE::Engine::Core::Logging {
          *
          * @return Currently configured minimum log severity.
          */
-        [[nodiscard]] auto minimumLevel() const noexcept -> LogLevel;
+        [[nodiscard]] auto minimumLevel() const -> LogLevel;
 
         /**
          * @brief Emits a structured diagnostic event to registered sinks.
@@ -128,8 +201,16 @@ namespace SNE::Engine::Core::Logging {
          * @throws Exceptions propagated from record construction
          * or registered logging sinks.
          *
-         * @note Concurrent logging and sink failure handling will be
-         * addressed separately.
+         * @note Concurrent calls are synchronized internally.
+         * Accepted records are queued and dispatched by a single
+         * active draining thread.
+         *
+         * A call may return before its record reaches a sink when
+         * another thread is already draining.
+         *
+         * Sink exceptions propagate to the active draining caller.
+         * Other queued records may remain pending until a subsequent
+         * logging operation resumes dispatch.
          */
         auto log(LogLevel level, std::string_view category,
                  std::string_view message) -> void;
@@ -150,7 +231,8 @@ namespace SNE::Engine::Core::Logging {
          *
          * @throws std::bad_alloc if category storage allocation fails.
          *
-         * @note Category configuration is not yet thread-safe.
+         * @note Category registration is synchronized using the
+         * logger mutex. Changes affect subsequent filter evaluations.
          */
         auto allowCategory(std::string_view category) -> void;
 
@@ -163,8 +245,9 @@ namespace SNE::Engine::Core::Logging {
          *
          * Previously registered category names are discarded.
          *
-         * @note This operation is not yet thread-safe.
+         * @note Category restrictions are modified under the logger
+         * mutex. Changes affect subsequent filter evaluations.
          */
-        auto clearAllowedCategories() noexcept -> void;
+        auto clearAllowedCategories() -> void;
     };
 } // namespace SNE::Engine::Core::Logging

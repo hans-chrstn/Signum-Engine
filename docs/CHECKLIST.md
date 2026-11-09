@@ -1189,7 +1189,7 @@
 - [x] categories
 - [x] sinks
 - [x] structured logging
-- [ ] thread-safe logging
+- [x] thread-safe logging
 
 ### Implement
 

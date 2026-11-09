@@ -1,9 +1,12 @@
 #include "engine/core/logging/logger.hpp"
+#include <barrier>
 #include <chrono>
 #include <gtest/gtest.h>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -36,6 +39,81 @@ namespace {
 
         auto write(const Logging::LogRecord &record) -> void override {
             m_Records.push_back(record);
+        }
+    };
+
+    class ReentrantLoggerSink final : public Logging::LogSink {
+      private:
+        Logging::Logger &m_Logger;
+        bool m_HasLoggedNested{false};
+
+      public:
+        explicit ReentrantLoggerSink(Logging::Logger &logger)
+            : m_Logger(logger) {}
+
+        auto write(const Logging::LogRecord &record) -> void override {
+            if (record.message == "Outer event" && !m_HasLoggedNested) {
+                m_HasLoggedNested = true;
+
+                m_Logger.log(Logging::LogLevel::Info, "Core", "Nested event");
+            }
+        }
+    };
+
+    class ThrowOnceLoggerSink final : public Logging::LogSink {
+      private:
+        bool m_ShouldThrow{true};
+
+      public:
+        auto write([[maybe_unused]] const Logging::LogRecord &record)
+            -> void override {
+            if (m_ShouldThrow) {
+                m_ShouldThrow = false;
+                throw std::runtime_error{"Simulated sink failure"};
+            }
+        }
+    };
+
+    class EnqueueThenThrowOnceSink final : public Logging::LogSink {
+      private:
+        Logging::Logger &m_Logger;
+        bool m_ShouldThrow{true};
+
+      public:
+        explicit EnqueueThenThrowOnceSink(Logging::Logger &logger)
+            : m_Logger(logger) {}
+
+        auto write([[maybe_unused]] const Logging::LogRecord &record)
+            -> void override {
+            if (m_ShouldThrow) {
+                m_ShouldThrow = false;
+
+                m_Logger.log(Logging::LogLevel::Info, "Core", "Pending event");
+
+                throw std::runtime_error{"Simulated dispatch failure"};
+            }
+        }
+    };
+
+    class RegisteringLoggerSink final : public Logging::LogSink {
+      private:
+        Logging::Logger &m_Logger;
+        std::vector<Logging::LogRecord> &m_NewSinkRecords;
+        bool m_HasRegistered{false};
+
+      public:
+        RegisteringLoggerSink(Logging::Logger &logger,
+                              std::vector<Logging::LogRecord> &new_sink_records)
+            : m_Logger(logger), m_NewSinkRecords(new_sink_records) {}
+
+        auto write([[maybe_unused]] const Logging::LogRecord &record)
+            -> void override {
+            if (!m_HasRegistered) {
+                m_HasRegistered = true;
+
+                m_Logger.addSink(
+                    std::make_unique<CapturingLoggerSink>(m_NewSinkRecords));
+            }
         }
     };
 } // namespace
@@ -288,4 +366,165 @@ TEST(LoggerTests, ClearingCategoriesPreservesSeverityFiltering) {
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].message, "Accepted");
+}
+
+TEST(LoggerTests, ReentrantLoggingQueuesNestedRecord) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+    logger.addSink(std::make_unique<ReentrantLoggerSink>(logger));
+
+    logger.log(Logging::LogLevel::Info, "Core", "Outer event");
+
+    ASSERT_EQ(records.size(), 2U);
+    EXPECT_EQ(records[0].message, "Outer event");
+    EXPECT_EQ(records[1].message, "Nested event");
+}
+
+TEST(LoggerTests, ConcurrentProducersDeliverEveryRecordExactlyOnce) {
+    constexpr int kThreadCount = 4;
+    constexpr int kRecordsPerThread = 100;
+
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    std::vector<std::jthread> workers;
+    workers.reserve(kThreadCount);
+
+    for (int thread_index = 0; thread_index < kThreadCount; ++thread_index) {
+        workers.emplace_back([&logger, thread_index] -> void {
+            for (int record_index = 0; record_index < kRecordsPerThread;
+                 ++record_index) {
+                const std::string message = std::to_string(thread_index) + ":" +
+                                            std::to_string(record_index);
+
+                logger.log(Logging::LogLevel::Info, "Concurrency", message);
+            }
+        });
+    }
+
+    for (auto &worker : workers) {
+        worker.join();
+    }
+
+    ASSERT_EQ(records.size(),
+              static_cast<std::size_t>(kThreadCount * kRecordsPerThread));
+
+    std::unordered_set<std::string> unique_messages;
+
+    for (const auto &record : records) {
+        EXPECT_EQ(record.category, "Concurrency");
+        EXPECT_TRUE(unique_messages.insert(record.message).second);
+    }
+
+    EXPECT_EQ(unique_messages.size(), records.size());
+}
+
+TEST(LoggerTests, SinkFailureDoesNotPermanentlyDisableLogging) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<ThrowOnceLoggerSink>());
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    EXPECT_THROW(logger.log(Logging::LogLevel::Info, "Core", "First event"),
+                 std::runtime_error);
+
+    EXPECT_NO_THROW(
+        logger.log(Logging::LogLevel::Info, "Core", "Second event"));
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].message, "Second event");
+}
+
+TEST(LoggerTests, PendingRecordsSurviveSinkFailure) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<EnqueueThenThrowOnceSink>(logger));
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    EXPECT_THROW(logger.log(Logging::LogLevel::Info, "Core", "First event"),
+                 std::runtime_error);
+
+    EXPECT_TRUE(records.empty());
+
+    EXPECT_NO_THROW(
+        logger.log(Logging::LogLevel::Info, "Core", "Recovery event"));
+
+    ASSERT_EQ(records.size(), 2U);
+    EXPECT_EQ(records[0].message, "Pending event");
+    EXPECT_EQ(records[1].message, "Recovery event");
+}
+
+TEST(LoggerTests, SinkRegistrationDuringDispatchAffectsSubsequentRecords) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<RegisteringLoggerSink>(logger, records));
+
+    logger.log(Logging::LogLevel::Info, "Core", "First event");
+
+    EXPECT_TRUE(records.empty());
+
+    logger.log(Logging::LogLevel::Info, "Core", "Second event");
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].message, "Second event");
+}
+
+TEST(LoggerTests, ConcurrentConfigurationChangesPreserveAcceptedRecords) {
+    constexpr int kRecordCount = 500;
+
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    std::barrier start{3};
+
+    {
+        std::jthread severity_worker{[&] -> void {
+            start.arrive_and_wait();
+
+            for (int i = 0; i < kRecordCount; ++i) {
+                logger.setMinimumLevel(i % 2 == 0 ? Logging::LogLevel::Info
+                                                  : Logging::LogLevel::Warning);
+
+                (void)logger.minimumLevel();
+            }
+        }};
+
+        std::jthread category_worker{[&] -> void {
+            start.arrive_and_wait();
+
+            for (int i = 0; i < kRecordCount; ++i) {
+                logger.allowCategory("Renderer");
+                logger.clearAllowedCategories();
+            }
+        }};
+
+        std::jthread producer{[&] -> void {
+            start.arrive_and_wait();
+
+            for (int i = 0; i < kRecordCount; ++i) {
+                logger.log(Logging::LogLevel::Warning, "Renderer",
+                           std::to_string(i));
+            }
+        }};
+    }
+
+    ASSERT_EQ(records.size(), static_cast<std::size_t>(kRecordCount));
+
+    std::unordered_set<std::string> unique_messages;
+
+    for (const auto &record : records) {
+        EXPECT_EQ(record.category, "Renderer");
+        EXPECT_TRUE(unique_messages.insert(record.message).second);
+    }
+
+    EXPECT_EQ(unique_messages.size(), records.size());
 }
