@@ -1,6 +1,7 @@
 add_executable(
   signum_integration_tests
   core/application_draw_instances_integration_tests.cpp
+  platform/glfw_context_logging_integration_tests.cpp
   platform/window_keyboard_integration_tests.cpp
   platform/window_close_integration_tests.cpp
   platform/window_cursor_capture_integration_tests.cpp

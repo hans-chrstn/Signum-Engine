@@ -14,6 +14,7 @@ namespace SNE::Engine::Core {
     Application::Application(ApplicationConfiguration configuration)
         : m_Configuration(std::move(configuration)),
           m_Logger(std::make_unique<Logging::StreamLogSink>(std::clog)),
+          m_GlfwContext(&m_Logger),
           m_Window(m_Configuration.initial_window_size,
                    m_Configuration.application_name),
           m_Renderer(m_Configuration.application_name, m_Window,
