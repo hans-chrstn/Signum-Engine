@@ -1193,7 +1193,7 @@
 
 ### Implement
 
-- [ ] Add logging abstraction
+- [x] Add logging abstraction
 - [x] Add trace level
 - [x] Add debug level
 - [x] Add info level
@@ -1201,7 +1201,7 @@
 - [x] Add error level
 - [x] Add fatal level
 - [ ] Add subsystem categories
-- [ ] Add timestamps
+- [x] Add timestamps
 - [ ] Add terminal sink
 - [ ] Add file sink
 - [ ] Route Vulkan validation messages
@@ -1214,7 +1214,7 @@
 ### Test
 
 - [x] Test level filtering
-- [ ] Test category filtering
+- [x] Test category filtering
 - [ ] Test terminal sink
 - [ ] Test file sink
 - [ ] Test logging failures

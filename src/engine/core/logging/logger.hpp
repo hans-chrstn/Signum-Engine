@@ -3,6 +3,7 @@
 #include "engine/core/logging/log_level.hpp"
 #include "engine/core/logging/log_sink.hpp"
 #include <memory>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -51,6 +52,22 @@ namespace SNE::Engine::Core::Logging {
          * termination or error recovery.
          */
         LogLevel m_MinimumLevel{LogLevel::Info};
+
+        /**
+         * @brief Owned category names permitted by the logger.
+         *
+         * An empty collection disables category filtering, allowing
+         * events from every category that passes severity filtering.
+         *
+         * When populated, only events whose category exactly matches
+         * a registered name remain eligible for sink dispatch.
+         *
+         * Category names are stored as owned strings so their
+         * lifetimes remain independent of callers.
+         *
+         * Matching is case-sensitive.
+         */
+        std::vector<std::string> m_AllowedCategories;
 
       public:
         /**
@@ -116,5 +133,38 @@ namespace SNE::Engine::Core::Logging {
          */
         auto log(LogLevel level, std::string_view category,
                  std::string_view message) -> void;
+
+        /**
+         * @brief Adds a category to the logger's allowlist.
+         *
+         * Events are accepted from every category while the allowlist
+         * is empty. Once a category is registered, only explicitly
+         * allowed categories pass category filtering.
+         *
+         * Registering a category that already exists has no effect.
+         * Category matching is exact and case-sensitive.
+         *
+         * The logger stores an owned copy of the supplied name.
+         *
+         * @param category Category name to permit.
+         *
+         * @throws std::bad_alloc if category storage allocation fails.
+         *
+         * @note Category configuration is not yet thread-safe.
+         */
+        auto allowCategory(std::string_view category) -> void;
+
+        /**
+         * @brief Removes all category restrictions from the logger.
+         *
+         * Clears the category allowlist, restoring the default behavior
+         * of accepting events from every category that satisfies
+         * severity filtering.
+         *
+         * Previously registered category names are discarded.
+         *
+         * @note This operation is not yet thread-safe.
+         */
+        auto clearAllowedCategories() noexcept -> void;
     };
 } // namespace SNE::Engine::Core::Logging

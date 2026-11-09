@@ -1,6 +1,8 @@
 #include "logger.hpp"
+#include "engine/core/logging/log_category_filter.hpp"
 #include "engine/core/logging/log_level_filter.hpp"
 #include "engine/core/logging/log_record.hpp"
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <stdexcept>
@@ -32,6 +34,10 @@ namespace SNE::Engine::Core::Logging {
             return;
         }
 
+        if (!passesCategoryFilter(category, m_AllowedCategories)) {
+            return;
+        }
+
         const LogRecord record{
             .level = level,
             .category = std::string{category},
@@ -44,4 +50,18 @@ namespace SNE::Engine::Core::Logging {
         }
     }
     // NOLINTEND(bugprone-easily-swappable-parameters)
+
+    auto Logger::allowCategory(std::string_view category) -> void {
+        const auto result = std::ranges::find(m_AllowedCategories, category);
+
+        if (result != m_AllowedCategories.end()) {
+            return;
+        }
+
+        m_AllowedCategories.emplace_back(category);
+    }
+
+    auto Logger::clearAllowedCategories() noexcept -> void {
+        m_AllowedCategories.clear();
+    }
 } // namespace SNE::Engine::Core::Logging

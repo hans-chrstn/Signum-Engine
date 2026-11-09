@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -102,8 +103,8 @@ TEST(LoggerTests, UpdatesMinimumLevel) {
 }
 
 TEST(LoggerTests, DispatchesAcceptedRecordToRegisteredSink) {
-    Logging::Logger logger;
     std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
 
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
 
@@ -124,8 +125,8 @@ TEST(LoggerTests, DispatchesAcceptedRecordToRegisteredSink) {
 }
 
 TEST(LoggerTests, RejectsEventsBelowMinimumLevel) {
-    Logging::Logger logger;
     std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
 
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
     logger.setMinimumLevel(Logging::LogLevel::Warning);
@@ -143,10 +144,9 @@ TEST(LoggerTests, RejectsEventsBelowMinimumLevel) {
 }
 
 TEST(LoggerTests, DispatchesSameEventToMultipleSinks) {
-    Logging::Logger logger;
-
     std::vector<Logging::LogRecord> first_records;
     std::vector<Logging::LogRecord> second_records;
+    Logging::Logger logger;
 
     logger.addSink(std::make_unique<CapturingLoggerSink>(first_records));
 
@@ -161,4 +161,131 @@ TEST(LoggerTests, DispatchesSameEventToMultipleSinks) {
     EXPECT_EQ(first_records[0].category, second_records[0].category);
     EXPECT_EQ(first_records[0].level, second_records[0].level);
     EXPECT_EQ(first_records[0].timestamp, second_records[0].timestamp);
+}
+
+TEST(LoggerTests, AllowsOnlyRegisteredCategories) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    logger.allowCategory("Renderer");
+    logger.allowCategory("Vulkan");
+
+    logger.log(Logging::LogLevel::Info, "Renderer", "Mesh uploaded");
+    logger.log(Logging::LogLevel::Info, "Editor", "Panel opened");
+    logger.log(Logging::LogLevel::Info, "Vulkan", "Device initialized");
+
+    ASSERT_EQ(records.size(), 2U);
+
+    EXPECT_EQ(records[0].category, "Renderer");
+    EXPECT_EQ(records[1].category, "Vulkan");
+}
+
+TEST(LoggerTests, CategoryAllowlistIsCaseSensitive) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+    logger.allowCategory("Renderer");
+
+    logger.log(Logging::LogLevel::Info, "renderer", "Lowercase");
+    logger.log(Logging::LogLevel::Info, "RENDERER", "Uppercase");
+    logger.log(Logging::LogLevel::Info, "Renderer", "Exact match");
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].message, "Exact match");
+}
+
+TEST(LoggerTests, CategoryRegistrationOwnsSourceString) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    std::string category = "Renderer";
+    logger.allowCategory(category);
+
+    category = "Editor";
+
+    logger.log(Logging::LogLevel::Info, "Renderer", "Original category");
+    logger.log(Logging::LogLevel::Info, "Editor", "Changed category");
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].category, "Renderer");
+    EXPECT_EQ(records[0].message, "Original category");
+}
+
+TEST(LoggerTests, RepeatedCategoryRegistrationPreservesFiltering) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    logger.allowCategory("Renderer");
+    logger.allowCategory("Renderer");
+    logger.allowCategory("Renderer");
+
+    logger.log(Logging::LogLevel::Info, "Renderer", "Accepted");
+    logger.log(Logging::LogLevel::Info, "Editor", "Rejected");
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].message, "Accepted");
+}
+
+TEST(LoggerTests, AppliesSeverityAndCategoryFiltersTogether) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    logger.setMinimumLevel(Logging::LogLevel::Warning);
+    logger.allowCategory("Renderer");
+
+    logger.log(Logging::LogLevel::Info, "Renderer", "Below threshold");
+    logger.log(Logging::LogLevel::Error, "Editor", "Wrong category");
+    logger.log(Logging::LogLevel::Error, "Renderer", "Accepted");
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].message, "Accepted");
+}
+
+TEST(LoggerTests, ClearingAllowedCategoriesRestoresAllCategories) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    logger.allowCategory("Renderer");
+
+    logger.log(Logging::LogLevel::Info, "Editor", "Before clearing");
+
+    EXPECT_TRUE(records.empty());
+
+    logger.clearAllowedCategories();
+
+    logger.log(Logging::LogLevel::Info, "Editor", "After clearing");
+    logger.log(Logging::LogLevel::Info, "Vulkan", "Device initialized");
+
+    ASSERT_EQ(records.size(), 2U);
+    EXPECT_EQ(records[0].message, "After clearing");
+    EXPECT_EQ(records[1].category, "Vulkan");
+}
+
+TEST(LoggerTests, ClearingCategoriesPreservesSeverityFiltering) {
+    std::vector<Logging::LogRecord> records;
+    Logging::Logger logger;
+
+    logger.addSink(std::make_unique<CapturingLoggerSink>(records));
+
+    logger.setMinimumLevel(Logging::LogLevel::Warning);
+    logger.allowCategory("Renderer");
+
+    logger.clearAllowedCategories();
+
+    logger.log(Logging::LogLevel::Info, "Editor", "Below severity");
+    logger.log(Logging::LogLevel::Error, "Editor", "Accepted");
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].message, "Accepted");
 }
