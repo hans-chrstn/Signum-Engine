@@ -108,22 +108,123 @@ TEST(GlfwContextLoggingIntegrationTests,
     } catch (const SNE::Engine::Core::Error::EngineError &error) {
         namespace Error = SNE::Engine::Core::Error;
 
+        ASSERT_EQ(records.size(), 2U);
+
         EXPECT_EQ(error.getCode(), Error::Code::GlfwInitializationFailed);
 
         ASSERT_TRUE(error.getNativeError().has_value());
 
         EXPECT_NE(error.getNativeError()->getNativeCode(), GLFW_NO_ERROR);
-
-        ASSERT_EQ(records.size(), 1U);
-
         EXPECT_EQ(records[0].level, Logging::LogLevel::Error);
         EXPECT_EQ(records[0].category, "Platform");
 
-        EXPECT_NE(records[0].message.find("GLFW initialization failed:"),
+        EXPECT_NE(records[0].message.find("GLFW error "), std::string::npos);
+
+        EXPECT_NE(records[0].message.find(
+                      std::to_string(error.getNativeError()->getNativeCode())),
                   std::string::npos);
 
         EXPECT_NE(records[0].message.find(
                       error.getNativeError()->getNativeDescription()),
                   std::string::npos);
+
+        EXPECT_EQ(records[1].level, Logging::LogLevel::Error);
+        EXPECT_EQ(records[1].category, "Platform");
+
+        EXPECT_NE(records[1].message.find("GLFW initialization failed:"),
+                  std::string::npos);
+
+        EXPECT_NE(records[1].message.find(
+                      error.getNativeError()->getNativeDescription()),
+                  std::string::npos);
     }
+}
+
+TEST(GlfwContextLoggingIntegrationTests, ReportsRuntimeGlfwErrorsToLogger) {
+    if (!hasDisplay()) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    std::vector<Logging::LogRecord> records;
+
+    Logging::Logger logger{std::make_unique<CapturingSink>(records)};
+
+    Platform::GlfwContext context{&logger};
+
+    ASSERT_EQ(records.size(), 1U);
+    EXPECT_EQ(records[0].message, "GLFW initialized");
+
+    ASSERT_EQ(glfwGetCurrentContext(), nullptr);
+
+    glfwSwapInterval(1);
+
+    EXPECT_EQ(glfwGetError(nullptr), GLFW_NO_CURRENT_CONTEXT);
+
+    ASSERT_EQ(records.size(), 2U);
+
+    EXPECT_EQ(records[1].level, Logging::LogLevel::Error);
+    EXPECT_EQ(records[1].category, "Platform");
+
+    const std::string expected_prefix =
+        "GLFW error " + std::to_string(GLFW_NO_CURRENT_CONTEXT) + ": ";
+
+    EXPECT_TRUE(records[1].message.starts_with(expected_prefix));
+}
+
+TEST(GlfwContextLoggingIntegrationTests,
+     ReinitializationUsesNewLoggerAndUnregistersCallback) {
+    if (!hasDisplay()) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    std::vector<Logging::LogRecord> first_records;
+    std::vector<Logging::LogRecord> second_records;
+
+    Logging::Logger first_logger{
+        std::make_unique<CapturingSink>(first_records)};
+
+    Logging::Logger second_logger{
+        std::make_unique<CapturingSink>(second_records)};
+
+    {
+        Platform::GlfwContext context{&first_logger};
+
+        ASSERT_EQ(first_records.size(), 1U);
+
+        ASSERT_EQ(glfwGetCurrentContext(), nullptr);
+
+        glfwSwapInterval(1);
+
+        EXPECT_EQ(glfwGetError(nullptr), GLFW_NO_CURRENT_CONTEXT);
+
+        ASSERT_EQ(first_records.size(), 2U);
+        EXPECT_EQ(first_records[1].level, Logging::LogLevel::Error);
+    }
+
+    EXPECT_EQ(glfwSetErrorCallback(nullptr), nullptr);
+
+    const std::size_t previous_count = first_records.size();
+
+    {
+        Platform::GlfwContext context{&second_logger};
+
+        ASSERT_EQ(second_records.size(), 1U);
+        EXPECT_EQ(second_records[0].message, "GLFW initialized");
+
+        ASSERT_EQ(glfwGetCurrentContext(), nullptr);
+
+        glfwSwapInterval(1);
+
+        EXPECT_EQ(glfwGetError(nullptr), GLFW_NO_CURRENT_CONTEXT);
+
+        ASSERT_EQ(second_records.size(), 2U);
+
+        EXPECT_EQ(second_records[1].level, Logging::LogLevel::Error);
+        EXPECT_EQ(second_records[1].category, "Platform");
+
+        EXPECT_EQ(first_records.size(), previous_count);
+    }
+
+    EXPECT_EQ(glfwSetErrorCallback(nullptr), nullptr);
+    EXPECT_EQ(first_records.size(), previous_count);
 }
