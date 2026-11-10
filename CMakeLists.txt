@@ -53,7 +53,7 @@ option(
 
 option(
   SIGNUM_BUILD_SHADERS
-  "Build the shaders"
+  "Build precompiled shader targets"
   OFF
 )
 
@@ -62,8 +62,6 @@ option(
   "Enable runtime shader source compilation"
   OFF
 )
-
-
 
 find_package(Vulkan REQUIRED)
 find_package(glfw3 3.4 REQUIRED)
@@ -196,7 +194,10 @@ set(
 )
 
 if(NOT EXISTS "${SPIRV_REFLECT_SOURCE_DIR}/spirv_reflect.c")
-  message(FATAL_ERROR "SPIRV-Reflect source directory is unavailable")
+  message(
+    FATAL_ERROR
+    "SPIRV-Reflect source directory is unavailable"
+  )
 endif()
 
 set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
@@ -237,19 +238,19 @@ if(SIGNUM_BUILD_EDITOR OR BUILD_TESTING)
   )
 endif()
 
+if(SIGNUM_BUILD_SHADERS)
+  add_subdirectory(
+    shaders
+    "${CMAKE_BINARY_DIR}/cmake/shaders"
+  )
+endif()
+
 if(SIGNUM_BUILD_PLAYGROUND)
   add_subdirectory(playground)
 endif()
 
 if(SIGNUM_BUILD_EDITOR)
   add_subdirectory(editor)
-endif()
-
-if(SIGNUM_BUILD_SHADERS)
-  add_subdirectory(
-    shaders
-    "${CMAKE_BINARY_DIR}/cmake/shaders"
-  )
 endif()
 
 if(BUILD_TESTING)
@@ -259,3 +260,4 @@ endif()
 if(SIGNUM_BUILD_BENCHMARKS)
   add_subdirectory(benchmarks)
 endif()
+

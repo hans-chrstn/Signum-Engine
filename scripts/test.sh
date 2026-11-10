@@ -2,21 +2,30 @@
 
 set -euo pipefail
 
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+project_root="$(cd -- "${script_dir}/.." && pwd)"
+
 preset="${1:-debug}"
 scope="${2:-all}"
 display_mode="${SIGNUM_TEST_DISPLAY:-headless}"
 
-"$(dirname "$0")/build.sh" "${preset}"
+cd "${project_root}"
 
 ctest_args=(--preset "${preset}")
 
 case "${scope}" in
     all)
+        build_targets=(
+            signum_unit_tests
+            signum_integration_tests
+        )
         ;;
     unit)
+        build_targets=(signum_unit_tests)
         ctest_args+=(-L "^unit$")
         ;;
     integration)
+        build_targets=(signum_integration_tests)
         ctest_args+=(-L "^integration$")
         ;;
     *)
@@ -35,6 +44,8 @@ case "${display_mode}" in
         exit 1
         ;;
 esac
+
+"${script_dir}/build.sh" "${preset}" "${build_targets[@]}"
 
 if [[ "${scope}" == "unit" || "${display_mode}" == "native" ]]; then
     exec ctest "${ctest_args[@]}"
@@ -114,3 +125,4 @@ env -u DISPLAY -u WAYLAND_SOCKET \
     WAYLAND_DISPLAY="${weston_socket}" \
     XDG_SESSION_TYPE=wayland \
     ctest "${ctest_args[@]}"
+

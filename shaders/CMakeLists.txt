@@ -187,6 +187,41 @@ signum_compile_slang_shader(
   vertex
 )
 
+signum_compile_slang_shader(
+  "${SIGNUM_TRIANGLE_VERTEX_SPIRV}"
+  "${SIGNUM_SHADER_SOURCE_DIR}/triangle.slang"
+  vertexMain
+  vertex
+)
+
+signum_compile_slang_shader(
+  "${SIGNUM_TRIANGLE_FRAGMENT_SPIRV}"
+  "${SIGNUM_SHADER_SOURCE_DIR}/triangle.slang"
+  fragmentMain
+  fragment
+)
+
+signum_compile_slang_shader(
+  "${SIGNUM_TEXTURED_FRAGMENT_SPIRV}"
+  "${SIGNUM_SHADER_SOURCE_DIR}/textured.slang"
+  fragmentMain
+  fragment
+)
+
+signum_compile_slang_shader(
+  "${SIGNUM_MATERIAL_TWO_TEXTURES_FRAGMENT_SPIRV}"
+  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/material_two_textures.slang"
+  fragmentMain
+  fragment
+)
+
+signum_compile_slang_shader(
+  "${SIGNUM_MATRIX_TRANSFORM_COMPUTE_SPIRV}"
+  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/matrix_transform.slang"
+  computeMain
+  compute
+)
+
 signum_compile_glsl_shader(
   "${SIGNUM_MATERIAL_UPDATE_VERTEX_SPIRV}"
   "${SIGNUM_GLSL_TEST_SOURCE_DIR}/material_update.vert"
@@ -217,46 +252,10 @@ signum_compile_glsl_shader(
   "${SIGNUM_GLSL_BASIC_SOURCE_DIR}/blackhole.frag"
 )
 
-signum_compile_slang_shader(
-  "${SIGNUM_TRIANGLE_VERTEX_SPIRV}"
-  "${SIGNUM_SHADER_SOURCE_DIR}/triangle.slang"
-  vertexMain
-  vertex
-)
-
-signum_compile_slang_shader(
-  "${SIGNUM_TRIANGLE_FRAGMENT_SPIRV}"
-  "${SIGNUM_SHADER_SOURCE_DIR}/triangle.slang"
-  fragmentMain
-  fragment
-)
-
-signum_compile_slang_shader(
-  "${SIGNUM_TEXTURED_FRAGMENT_SPIRV}"
-  "${SIGNUM_SHADER_SOURCE_DIR}/textured.slang"
-  fragmentMain
-  fragment
-)
-
 signum_compile_glsl_shader(
   "${SIGNUM_MATERIAL_INSTANCE_TEXTURED_FRAGMENT_SPIRV}"
   "${SIGNUM_GLSL_TEST_SOURCE_DIR}/material_instance_textured.frag"
 )
-
-signum_compile_slang_shader(
-  "${SIGNUM_MATERIAL_TWO_TEXTURES_FRAGMENT_SPIRV}"
-  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/material_two_textures.slang"
-  fragmentMain
-  fragment
-)
-
-signum_compile_slang_shader(
-  "${SIGNUM_MATRIX_TRANSFORM_COMPUTE_SPIRV}"
-  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/matrix_transform.slang"
-  computeMain
-  compute
-)
-
 
 set(
   SIGNUM_TRIANGLE_MATRIX_LAYOUT_STAMP
@@ -292,7 +291,6 @@ add_custom_command(
 
 add_custom_target(
   signum_shaders
-  ALL
   DEPENDS
     "${SIGNUM_EARTH_FRAGMENT_SPIRV}"
     "${SIGNUM_TEXTURED_VERTEX_SPIRV}"
@@ -310,3 +308,4 @@ add_custom_target(
     "${SIGNUM_MATRIX_TRANSFORM_COMPUTE_SPIRV}"
     "${SIGNUM_TRIANGLE_MATRIX_LAYOUT_STAMP}"
 )
+

@@ -30,6 +30,7 @@
 
     llvm = pkgs.llvmPackages_23;
     gccStdenv = pkgs.gcc16Stdenv;
+
     clangToolsBase = llvm.clang-tools.override {
       enableLibcxx = false;
     };
@@ -49,6 +50,7 @@
             ninja
             just
             pkg-config
+            jq
 
             # LLVM tooling
             clangTools
@@ -105,6 +107,7 @@
         shellHook = ''
           echo "Signum Engine dev shell"
           echo
+
           g++ --version | head -n 1
           clangd --version | head -n 1
           clang-tidy --version | head -n 1

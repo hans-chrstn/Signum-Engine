@@ -44,6 +44,18 @@ target_link_libraries(
     GTest::gtest_main
 )
 
+if(NOT TARGET signum_shaders)
+  message(
+    FATAL_ERROR
+    "Signum integration tests require precompiled shaders"
+  )
+endif()
+
+add_dependencies(
+  signum_integration_tests
+  signum_shaders
+)
+
 if(SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION)
   target_sources(
     signum_integration_tests

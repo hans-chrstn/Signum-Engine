@@ -6,25 +6,31 @@ default:
 doctor:
     ./scripts/doctor.sh
 
-docs:
-    ./scripts/docs.sh
-
-docs-open:
-    xdg-open build/docs/doxygen/html/index.html
-
-tidy:
-    ./scripts/build.sh debug
-    ./scripts/tidy.sh
-
-memcheck:
-    ./scripts/build.sh debug
-    ./scripts/memcheck.sh
-
 configure preset="debug":
     ./scripts/configure.sh "{{preset}}"
 
 build preset="debug":
     ./scripts/build.sh "{{preset}}"
+
+build-target preset target:
+    ./scripts/build.sh "{{preset}}" "{{target}}"
+
+release:
+    ./scripts/build.sh release
+
+run preset="debug":
+    ./scripts/run.sh "{{preset}}"
+
+editor preset="editor":
+    ./scripts/build.sh "{{preset}}" signum_editor
+    ./build/{{preset}}/editor/signum_editor
+
+playground preset="playground":
+    ./scripts/build.sh "{{preset}}" signum_playground
+    ./build/{{preset}}/playground/signum_playground
+
+shaders preset="debug":
+    ./scripts/build.sh "{{preset}}" signum_shaders
 
 test preset="debug":
     ./scripts/test.sh "{{preset}}" all
@@ -35,12 +41,16 @@ test-unit preset="debug":
 test-integration preset="debug":
     ./scripts/test.sh "{{preset}}" integration
 
-run preset="debug":
-    ./scripts/run.sh "{{preset}}"
+asan:
+    ./scripts/test.sh asan all
 
-shaders preset="debug":
-    ./scripts/configure.sh "{{preset}}"
-    cmake --build --preset "{{preset}}" --target signum_shaders
+memcheck:
+    ./scripts/build.sh debug signum_unit_tests
+    ./scripts/memcheck.sh
+
+tidy:
+    ./scripts/configure.sh debug
+    ./scripts/tidy.sh
 
 format:
     ./scripts/format.sh
@@ -48,25 +58,17 @@ format:
 check:
     ./scripts/check.sh
 
-asan:
-    ./scripts/test.sh asan all
+docs:
+    ./scripts/docs.sh
 
-release:
-    ./scripts/build.sh release
-
-clean:
-    ./scripts/clean.sh
+docs-open:
+    xdg-open build/docs/doxygen/html/index.html
 
 bench:
     ./scripts/bench.sh
 
-playground preset="playground":
-    just build {{preset}}
-    ./build/{{preset}}/playground/signum_playground
-
-editor preset="debug":
-    just build {{preset}}
-    ./build/{{preset}}/editor/signum_editor
+clean:
+    ./scripts/clean.sh
 
 all:
     ./scripts/clean.sh
@@ -75,3 +77,4 @@ all:
     ./scripts/test.sh warnings all
     ./scripts/test.sh asan all
     ./scripts/memcheck.sh
+

@@ -13,114 +13,101 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "BUILD_TESTING": false,
+        "SIGNUM_BUILD_SHADERS": false,
+        "SIGNUM_BUILD_EDITOR": false,
+        "SIGNUM_BUILD_PLAYGROUND": false,
+        "SIGNUM_BUILD_BENCHMARKS": false,
+        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": false,
+        "SIGNUM_ENABLE_SANITIZERS": false,
+        "SIGNUM_ENABLE_REFLECTION": false,
+        "SIGNUM_ENABLE_CONTRACTS": false,
+        "SIGNUM_WARNINGS_AS_ERRORS": false
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Full Development Workspace",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTING": true,
+        "SIGNUM_BUILD_SHADERS": true,
+        "SIGNUM_BUILD_EDITOR": true,
+        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true
+      }
+    },
+    {
+      "name": "editor",
+      "displayName": "Editor Development",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SIGNUM_BUILD_EDITOR": true,
+        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true
+      }
+    },
+    {
+      "name": "engine",
+      "displayName": "Engine Development and Tests",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
         "BUILD_TESTING": true,
         "SIGNUM_BUILD_SHADERS": true
       }
     },
     {
-      "name": "debug",
-      "displayName": "Debug",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SIGNUM_ENABLE_SANITIZERS": false,
-        "SIGNUM_ENABLE_REFLECTION": false,
-        "SIGNUM_ENABLE_CONTRACTS": false,
-        "SIGNUM_BUILD_EDITOR": true,
-        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true,
-        "SIGNUM_BUILD_PLAYGROUND": false
-      }
-    },
-    {
-      "name": "engine",
-      "displayName": "Engine (Debug)",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SIGNUM_ENABLE_SANITIZERS": false,
-        "SIGNUM_ENABLE_REFLECTION": false,
-        "SIGNUM_ENABLE_CONTRACTS": false,
-        "SIGNUM_BUILD_EDITOR": false,
-        "BUILD_TESTING": true,
-        "SIGNUM_BUILD_PLAYGROUND": false
-      }
-    },
-    {
       "name": "playground",
-      "displayName": "Playground",
-      "inherits": "debug",
+      "displayName": "Playground Development",
+      "inherits": "base",
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
         "SIGNUM_BUILD_PLAYGROUND": true,
-        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true,
-        "SIGNUM_BUILD_EDITOR": false,
-        "BUILD_TESTING": false
+        "SIGNUM_BUILD_SHADERS": true,
+        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true
       }
     },
     {
       "name": "warnings",
-      "displayName": "Debug with warnings as errors",
-      "inherits": "base",
+      "displayName": "Warnings as Errors",
+      "inherits": "debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SIGNUM_ENABLE_SANITIZERS": false,
-        "SIGNUM_ENABLE_REFLECTION": false,
-        "SIGNUM_ENABLE_CONTRACTS": false,
-        "SIGNUM_BUILD_EDITOR": true,
-        "SIGNUM_BUILD_PLAYGROUND": false,
-        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true,
         "SIGNUM_WARNINGS_AS_ERRORS": true
       }
     },
     {
       "name": "experimental",
-      "displayName": "Debug with C++26 experiments",
-      "inherits": "base",
+      "displayName": "Experimental C++26",
+      "inherits": "engine",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SIGNUM_ENABLE_SANITIZERS": false,
         "SIGNUM_ENABLE_REFLECTION": true,
-        "SIGNUM_ENABLE_CONTRACTS": true,
-        "SIGNUM_BUILD_EDITOR": false,
-        "SIGNUM_BUILD_PLAYGROUND": false
+        "SIGNUM_ENABLE_CONTRACTS": true
       }
     },
     {
       "name": "asan",
-      "displayName": "Debug with sanitizers",
-      "inherits": "base",
+      "displayName": "AddressSanitizer and UBSan",
+      "inherits": "debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SIGNUM_ENABLE_SANITIZERS": true,
-        "SIGNUM_BUILD_EDITOR": true,
-        "SIGNUM_ENABLE_RUNTIME_SHADER_COMPILATION": true,
-        "SIGNUM_BUILD_PLAYGROUND": false
+        "SIGNUM_ENABLE_SANITIZERS": true
       }
     },
     {
       "name": "release",
-      "displayName": "Release",
+      "displayName": "Production Release",
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": false,
-        "SIGNUM_ENABLE_SANITIZERS": false,
-        "SIGNUM_BUILD_EDITOR": false,
-        "SIGNUM_BUILD_PLAYGROUND": false
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
     {
       "name": "bench",
-      "displayName": "Optimized Mathematics Benchmarks",
+      "displayName": "Optimized Benchmarks",
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": false,
-        "SIGNUM_BUILD_BENCHMARKS": true,
-        "SIGNUM_ENABLE_SANITIZERS": false,
-        "SIGNUM_ENABLE_REFLECTION": false,
-        "SIGNUM_ENABLE_CONTRACTS": false,
-        "SIGNUM_BUILD_EDITOR": false,
-        "SIGNUM_BUILD_PLAYGROUND": false
+        "SIGNUM_BUILD_BENCHMARKS": true
       }
     }
   ],
@@ -128,6 +115,10 @@
     {
       "name": "debug",
       "configurePreset": "debug"
+    },
+    {
+      "name": "editor",
+      "configurePreset": "editor"
     },
     {
       "name": "engine",

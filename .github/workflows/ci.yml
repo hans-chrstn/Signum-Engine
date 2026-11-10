@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   quality:
-    name: Build, Unit Tests, Static Analysis, and Docs
+    name: Build, Tests, Static Analysis, and Docs
     runs-on: ubuntu-26.04
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Check out repository
@@ -36,6 +36,7 @@ jobs:
             cmake --version
             ninja --version
             just --version
+            jq --version
           '
 
       - name: Verify development environment
@@ -44,34 +45,48 @@ jobs:
       - name: Check formatting
         run: nix develop --command ./scripts/format-check.sh
 
-      - name: Clean Debug build
-        run: |
-          nix develop --command just clean
-          nix develop --command just build debug
+      - name: Build Editor
+        run: nix develop --command just build-target editor signum_editor
+
+      - name: Build Playground
+        run: nix develop --command just build-target playground signum_playground
+
+      - name: Build and run unit tests
+        run: nix develop --command just test-unit debug
 
       - name: Build with warnings as errors
         run: nix develop --command just build warnings
 
-      - name: Run unit tests
-        run: nix develop --command just test-unit debug
-
       - name: Run warnings-as-errors unit tests
-        run: nix develop --command ctest --preset warnings -L "^unit$"
+        run: nix develop --command just test-unit warnings
 
       - name: Run Clang-Tidy
         run: nix develop --command just tidy
 
-      - name: Build experimental C++26 configuration
-        run: nix develop --command just build experimental
-
-      - name: Test experimental C++26 configuration
-        run: nix develop --command ctest --preset experimental -L "^unit$"
-
-      - name: Build with AddressSanitizer and UndefinedBehaviorSanitizer
-        run: nix develop --command just build asan
+      - name: Build and test experimental C++26
+        run: nix develop --command just test-unit experimental
 
       - name: Run sanitized unit tests
-        run: nix develop --command ctest --preset asan -L "^unit$"
+        run: nix develop --command just test-unit asan
 
       - name: Generate Doxygen documentation
         run: nix develop --command just docs
+
+  package:
+    name: Nix Production Package
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v22
+
+      - name: Evaluate flake outputs
+        run: nix flake show --no-write-lock-file
+
+      - name: Build production package
+        run: nix build .#default --no-link --print-build-logs
+

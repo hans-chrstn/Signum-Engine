@@ -30,11 +30,18 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v22
 
+      - name: Prepare Wayland runtime directory
+        run: |
+          runtime_dir="${RUNNER_TEMP}/signum-wayland-runtime"
+          install -d -m 0700 "${runtime_dir}"
+          echo "XDG_RUNTIME_DIR=${runtime_dir}" >> "${GITHUB_ENV}"
+
       - name: Verify Vulkan software driver
         run: nix develop .#ci --command vulkaninfo --summary
 
       - name: Verify development environment
         run: nix develop .#ci --command just doctor
 
-      - name: Run Vulkan integration tests
-        run: nix develop .#ci --command just test-integration debug
+      - name: Build and run Vulkan integration tests
+        run: nix develop .#ci --command just test-integration engine
+
