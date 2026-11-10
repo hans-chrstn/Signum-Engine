@@ -10,6 +10,7 @@ add_executable(
   core/logging/log_sink_tests.cpp
   core/logging/log_formatter_tests.cpp
   core/logging/stream_log_sink_tests.cpp
+  core/logging/file_log_sink_tests.cpp
   core/logging/logger_tests.cpp
   core/logging/log_category_filter_tests.cpp
   core/error/engine_error_tests.cpp

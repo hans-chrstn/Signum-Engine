@@ -1203,11 +1203,10 @@
 - [ ] Add subsystem categories
 - [x] Add timestamps
 - [x] Add terminal sink
-- [ ] Add file sink
+- [x] Add file sink
 - [x] Route Vulkan validation messages
 - [x] Route GLFW diagnostics
 - [ ] Support logging without editor
-
 - [ ] Capture device capability and feature-selection diagnostics for renderer troubleshooting
 - [ ] Correlate resource, shader, and submission failures with named engine operations where possible
 
@@ -1216,8 +1215,8 @@
 - [x] Test level filtering
 - [x] Test category filtering
 - [x] Test terminal sink
-- [ ] Test file sink
-- [ ] Test logging failures
+- [x] Test file sink
+- [x] Test logging failures
 
 ### Architecture
 
