@@ -1,19 +1,17 @@
 #include "application.hpp"
 #include "engine/core/logging/log_level.hpp"
-#include "engine/core/logging/stream_log_sink.hpp"
+#include "engine/core/logging/logger_factory.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstdint>
-#include <iostream>
-#include <memory>
 #include <utility>
 
 namespace SNE::Engine::Core {
     Application::Application(ApplicationConfiguration configuration)
         : m_Configuration(std::move(configuration)),
-          m_Logger(std::make_unique<Logging::StreamLogSink>(std::clog)),
+          m_Logger(Logging::makeLogger(m_Configuration.logging)),
           m_GlfwContext(&m_Logger),
           m_Window(m_Configuration.initial_window_size,
                    m_Configuration.application_name),

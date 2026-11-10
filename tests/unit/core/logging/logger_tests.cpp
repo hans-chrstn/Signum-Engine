@@ -575,3 +575,102 @@ TEST(LoggerTests, ConstructorTakesOwnershipOfInitialSink) {
 
     EXPECT_EQ(destruction_count, 1);
 }
+
+TEST(LoggerTests, MultipleSinkConstructorAcceptsEmptyCollection) {
+    std::vector<std::unique_ptr<Logging::LogSink>> sinks;
+
+    Logging::Logger logger{std::move(sinks), Logging::LogLevel::Warning};
+
+    EXPECT_EQ(logger.minimumLevel(), Logging::LogLevel::Warning);
+
+    EXPECT_NO_THROW(
+        logger.log(Logging::LogLevel::Warning, "Core", "No destinations"));
+}
+
+TEST(LoggerTests, MultipleSinkConstructorDispatchesToAllSinks) {
+    std::vector<Logging::LogRecord> first_records;
+    std::vector<Logging::LogRecord> second_records;
+
+    std::vector<std::unique_ptr<Logging::LogSink>> sinks;
+
+    sinks.push_back(std::make_unique<CapturingLoggerSink>(first_records));
+
+    sinks.push_back(std::make_unique<CapturingLoggerSink>(second_records));
+
+    Logging::Logger logger{std::move(sinks), Logging::LogLevel::Info};
+
+    logger.log(Logging::LogLevel::Info, "Core", "Engine initialized");
+
+    ASSERT_EQ(first_records.size(), 1U);
+    ASSERT_EQ(second_records.size(), 1U);
+
+    EXPECT_EQ(first_records[0].message, "Engine initialized");
+    EXPECT_EQ(second_records[0].message, "Engine initialized");
+
+    EXPECT_EQ(first_records[0].category, second_records[0].category);
+    EXPECT_EQ(first_records[0].level, second_records[0].level);
+    EXPECT_EQ(first_records[0].timestamp, second_records[0].timestamp);
+}
+
+TEST(LoggerTests, MultipleSinkConstructorAppliesInitialSeverity) {
+    std::vector<Logging::LogRecord> records;
+
+    std::vector<std::unique_ptr<Logging::LogSink>> sinks;
+
+    sinks.push_back(std::make_unique<CapturingLoggerSink>(records));
+
+    Logging::Logger logger{std::move(sinks), Logging::LogLevel::Error};
+
+    EXPECT_EQ(logger.minimumLevel(), Logging::LogLevel::Error);
+
+    logger.log(Logging::LogLevel::Info, "Core", "Ignored");
+    logger.log(Logging::LogLevel::Warning, "Core", "Ignored");
+    logger.log(Logging::LogLevel::Error, "Core", "Accepted");
+
+    ASSERT_EQ(records.size(), 1U);
+
+    EXPECT_EQ(records[0].level, Logging::LogLevel::Error);
+    EXPECT_EQ(records[0].message, "Accepted");
+}
+
+TEST(LoggerTests, MultipleSinkConstructorRejectsNullSink) {
+    int destruction_count = 0;
+
+    std::vector<std::unique_ptr<Logging::LogSink>> sinks;
+
+    sinks.push_back(
+        std::make_unique<DestructionTrackingSink>(destruction_count));
+
+    sinks.push_back(nullptr);
+
+    sinks.push_back(
+        std::make_unique<DestructionTrackingSink>(destruction_count));
+
+    const auto construct_logger = [&sinks] -> void {
+        Logging::Logger logger{std::move(sinks), Logging::LogLevel::Info};
+    };
+
+    EXPECT_THROW(construct_logger(), std::invalid_argument);
+
+    EXPECT_EQ(destruction_count, 2);
+}
+
+TEST(LoggerTests, MultipleSinkConstructorOwnsAllSinks) {
+    int destruction_count = 0;
+
+    {
+        std::vector<std::unique_ptr<Logging::LogSink>> sinks;
+
+        sinks.push_back(
+            std::make_unique<DestructionTrackingSink>(destruction_count));
+
+        sinks.push_back(
+            std::make_unique<DestructionTrackingSink>(destruction_count));
+
+        Logging::Logger logger{std::move(sinks), Logging::LogLevel::Info};
+
+        EXPECT_EQ(destruction_count, 0);
+    }
+
+    EXPECT_EQ(destruction_count, 2);
+}

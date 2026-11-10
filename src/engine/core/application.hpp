@@ -57,14 +57,19 @@ namespace SNE::Engine::Core {
         /**
          * @brief Application-owned engine diagnostic logger.
          *
-         * Coordinates severity and category filtering, queued diagnostic
-         * dispatch, and delivery to registered logging sinks.
+         * Owns the logging destinations configured through
+         * ApplicationConfiguration and coordinates severity filtering,
+         * category filtering, and diagnostic dispatch.
          *
-         * Declared before platform and renderer resources so its lifetime
-         * extends beyond their destruction.
+         * Initialized after m_Configuration but before the platform
+         * context, window, and renderer, allowing these subsystems
+         * to emit diagnostics during initialization.
          *
-         * @note Terminal and file output destinations are configured
-         * separately from the logger's ownership and lifetime.
+         * The logger remains alive until all dependent application
+         * subsystems have been destroyed.
+         *
+         * @note Logging destinations and severity are established
+         * before platform or renderer initialization begins.
          */
         Logging::Logger m_Logger;
 
@@ -118,17 +123,26 @@ namespace SNE::Engine::Core {
         /**
          * @brief Constructs the application and its engine-wide systems.
          *
-         * Stores the supplied application configuration, initializes the
-         * platform context, creates the primary application window, and
-         * initializes the renderer for that window using the configured
-         * presentation and diagnostic policies.
+         * Stores the supplied application configuration, initializes
+         * the configured logging destinations, creates the platform
+         * context and window, and initializes the renderer.
          *
-         * @param configuration Top-level configuration controlling application
-         * startup policy. The default value uses Signum's standard application
-         * settings.
+         * Logging destinations are initialized before GLFW and Vulkan
+         * so diagnostic events emitted during startup can be captured.
          *
-         * @throws Error::EngineError if a required platform, window, or
-         * rendering resource cannot be initialized.
+         * @param configuration Top-level configuration controlling
+         * application initialization. The default value uses
+         * Signum's standard application settings.
+         *
+         * @throws std::invalid_argument if the logging configuration
+         * contains an invalid file rotation policy.
+         * @throws Error::EngineError if a logging destination,
+         * platform resource, window, or renderer resource cannot
+         * be initialized.
+         * @throws std::bad_alloc if host allocation fails.
+         *
+         * @note Logging configuration remains independent from
+         * development diagnostics such as Vulkan validation.
          */
         explicit Application(ApplicationConfiguration configuration = {});
 

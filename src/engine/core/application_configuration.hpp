@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/core/logging/logging_configuration.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
@@ -66,6 +67,25 @@ namespace SNE::Engine::Core {
          * not required.
          */
         bool development_diagnostics_enabled = true;
+
+        /**
+         * @brief Configures application-wide diagnostic logging.
+         *
+         * Defines enabled logging destinations, persistent file output,
+         * rotation policy, and the minimum accepted severity.
+         *
+         * The application consumes this configuration when initializing
+         * its owned logger, before platform and renderer initialization.
+         *
+         * Logging configuration remains independent from development
+         * diagnostics such as Vulkan validation layers.
+         *
+         * Defaults to terminal logging at Info severity, with file
+         * logging disabled.
+         *
+         * @note The configuration does not own logging sinks or open files.
+         */
+        Logging::LoggingConfiguration logging{};
 
         /**
          * @brief Optional initial geometry supplied to the renderer.

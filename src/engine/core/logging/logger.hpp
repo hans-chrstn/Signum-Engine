@@ -177,6 +177,32 @@ namespace SNE::Engine::Core::Logging {
         explicit Logger(std::unique_ptr<LogSink> initial_sink);
 
         /**
+         * @brief Constructs a logger with multiple initial output sinks.
+         *
+         * Takes exclusive ownership of the supplied sinks and configures
+         * the minimum accepted logging severity.
+         *
+         * All initial sinks are registered before the logger becomes
+         * available to dependent application subsystems.
+         *
+         * An empty collection is permitted and results in a logger
+         * without output destinations.
+         *
+         * @param initial_sinks Logging destinations whose ownership
+         * is transferred to the logger.
+         * @param minimum_level Minimum severity accepted by the logger.
+         *
+         * @throws std::invalid_argument if any supplied sink is null.
+         *
+         * @note Sink construction and configuration remain the
+         * responsibility of the caller.
+         *
+         * @note No diagnostic records are emitted during construction.
+         */
+        Logger(std::vector<std::unique_ptr<LogSink>> initial_sinks,
+               LogLevel minimum_level);
+
+        /**
          * @brief Registers a logging sink and takes exclusive ownership of it.
          *
          * The registered sink receives accepted logging events until

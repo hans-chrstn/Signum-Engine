@@ -8,6 +8,7 @@ add_library(
     engine/core/logging/logger.cpp
     engine/core/logging/log_category_filter.cpp
     engine/core/logging/file_log_sink.cpp
+    engine/core/logging/logger_factory.cpp
     engine/core/error/engine_error.cpp
     engine/core/error/native_error.cpp
     engine/core/error/error_code.cpp

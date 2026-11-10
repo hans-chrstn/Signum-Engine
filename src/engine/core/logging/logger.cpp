@@ -18,6 +18,17 @@ namespace SNE::Engine::Core::Logging {
         addSink(std::move(initial_sink));
     }
 
+    Logger::Logger(std::vector<std::unique_ptr<LogSink>> initial_sinks,
+                   LogLevel minimum_level)
+        : m_Sinks(std::move(initial_sinks)), m_MinimumLevel(minimum_level) {
+        for (const auto &sink : m_Sinks) {
+            if (sink == nullptr) {
+                throw std::invalid_argument(
+                    "Logger: initial_sinks must not contain null sinks");
+            }
+        }
+    }
+
     auto Logger::drainPendingRecords() -> void {
         try {
             while (true) {
