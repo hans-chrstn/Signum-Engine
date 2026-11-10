@@ -1,7 +1,13 @@
 #include "error_metadata.hpp"
+#include "engine/core/config/compiler_features.hpp"
+#include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include <array>
 #include <cstddef>
+
+#if SNE_HAS_CPP26_REFLECTION
+    #include <meta>
+#endif
 
 namespace SNE::Engine::Core::Error {
     namespace {
@@ -343,15 +349,52 @@ namespace SNE::Engine::Core::Error {
                     .name = "ImageLoadFailed",
                     .subsystem = Subsystem::Renderer,
                 },
+                ErrorMetadata{
+                    .code = Code::FileLogOpenFailed,
+                    .name = "FileLogOpenFailed",
+                    .subsystem = Subsystem::Core,
+                },
+                ErrorMetadata{
+
+                    .code = Code::FileLogWriteFailed,
+                    .name = "FileLogWriteFailed",
+                    .subsystem = Subsystem::Core,
+                },
+                ErrorMetadata{
+
+                    .code = Code::FileLogRotationFailed,
+                    .name = "FileLogRotationFailed",
+                    .subsystem = Subsystem::Core,
+                },
         };
 
         constexpr auto validateErrorMetadata() -> bool {
             for (std::size_t i{}; i < error_metadata.size(); ++i) {
                 const Code code = static_cast<Code>(i);
+
                 if (error_metadata[i].code != code) {
                     return false;
                 }
             }
+
+#if SNE_HAS_CPP26_REFLECTION
+            template for (constexpr auto enumerator : std::define_static_array(
+                              std::meta::enumerators_of(^^Code))) {
+
+                if constexpr ([:enumerator:] != Code::Count) {
+                    constexpr Code code = [:enumerator:];
+
+                    constexpr std::size_t index =
+                        static_cast<std::size_t>(code);
+
+                    if (index >= error_metadata.size() ||
+                        error_metadata[index].name !=
+                            std::meta::identifier_of(enumerator)) {
+                        return false;
+                    }
+                }
+            }
+#endif
 
             return true;
         }
@@ -362,6 +405,7 @@ namespace SNE::Engine::Core::Error {
     } // namespace
 
     auto findErrorMetadata(Code code) noexcept -> const ErrorMetadata * {
+
         const auto index = static_cast<std::size_t>(code);
 
         if (index >= error_metadata.size()) {

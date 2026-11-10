@@ -376,6 +376,22 @@ INSTANTIATE_TEST_SUITE_P(
             Error::Code::ImageLoadFailed,
             "ImageLoadFailed",
             Error::Subsystem::Renderer,
+        },
+        ErrorCodeTestCase{
+            Error::Code::FileLogOpenFailed,
+            "FileLogOpenFailed",
+            Error::Subsystem::Core,
+        },
+        ErrorCodeTestCase{
+
+            Error::Code::FileLogWriteFailed,
+            "FileLogWriteFailed",
+            Error::Subsystem::Core,
+        },
+        ErrorCodeTestCase{
+            Error::Code::FileLogRotationFailed,
+            "FileLogRotationFailed",
+            Error::Subsystem::Core,
         }));
 
 TEST(ErrorCodeFallbackTests, CountSentinelHasFallbackName) {

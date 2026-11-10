@@ -153,6 +153,12 @@ namespace SNE::Engine::Core::Error {
         ShaderSourceCompilationFailed,
         /** Loading or decoding an image file failed. */
         ImageLoadFailed,
+        /** Opening the active log file failed. */
+        FileLogOpenFailed,
+        /** Writing to the active log file failed. */
+        FileLogWriteFailed,
+        /** Rotating or managing archived log files failed. */
+        FileLogRotationFailed,
         /**
          * @brief Sentinel representing the number of valid engine error codes.
          *
