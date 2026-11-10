@@ -5,11 +5,13 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/logging/logger.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
 #include "engine/renderer/vulkan/common/vulkan_extension_support.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
 #include <GLFW/glfw3.h>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <optional>
@@ -24,11 +26,10 @@ namespace SNE::Engine::Renderer::Vulkan {
      */
     constexpr const char *kValidationLayerName = "VK_LAYER_KHRONOS_validation";
 
-    // Instance creation succeeds before debug-messenger creation. If the latter
-    // fails, release the already-created Vulkan instance before propagating the
-    // exception so construction remains leak-free.
     VulkanInstance::VulkanInstance(const std::string &application_name,
-                                   bool development_diagnostics_enabled) {
+                                   bool development_diagnostics_enabled,
+                                   Core::Logging::Logger *logger)
+        : m_Logger(logger) {
         createInstance(application_name, development_diagnostics_enabled);
 
         try {
@@ -84,7 +85,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
 
         const VkDebugUtilsMessengerCreateInfoEXT debug_create_info =
-            makeDebugMessengerCreateInfo();
+            makeDebugMessengerCreateInfo(m_Logger);
 
         VkInstanceCreateInfo instance_create_info{};
         instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -270,7 +271,8 @@ namespace SNE::Engine::Renderer::Vulkan {
         return hasRequiredExtensions(required_extensions, available_extensions);
     }
 
-    auto VulkanInstance::makeDebugMessengerCreateInfo()
+    auto
+    VulkanInstance::makeDebugMessengerCreateInfo(Core::Logging::Logger *logger)
         -> VkDebugUtilsMessengerCreateInfoEXT {
         VkDebugUtilsMessengerCreateInfoEXT create_info{};
 
@@ -289,14 +291,14 @@ namespace SNE::Engine::Renderer::Vulkan {
             static_cast<VkDebugUtilsMessageTypeFlagsEXT>(
                 VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT);
         create_info.pfnUserCallback = debugCallback;
-        create_info.pUserData = nullptr;
+        create_info.pUserData = logger;
 
         return create_info;
     }
 
     auto VulkanInstance::setupDebugMessenger() -> void {
         const VkDebugUtilsMessengerCreateInfoEXT create_info =
-            makeDebugMessengerCreateInfo();
+            makeDebugMessengerCreateInfo(m_Logger);
 
         const auto create_debug_messenger =
             reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
@@ -335,13 +337,33 @@ namespace SNE::Engine::Renderer::Vulkan {
 
     // NOLINTNEXTLINE(modernize-use-trailing-return-type)
     VKAPI_ATTR VkBool32 VKAPI_CALL VulkanInstance::debugCallback(
-        [[maybe_unused]] VkDebugUtilsMessageSeverityFlagBitsEXT
-            message_severity,
+        VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
         [[maybe_unused]] VkDebugUtilsMessageTypeFlagsEXT message_type,
         const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
-        [[maybe_unused]] void *user_data) {
+        void *user_data) {
 
-        std::cerr << "Vulkan validation: " << callback_data->pMessage << '\n';
+        auto *logger = static_cast<Core::Logging::Logger *>(user_data);
+
+        const Core::Logging::LogLevel level =
+            message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT
+                ? Core::Logging::LogLevel::Error
+                : Core::Logging::LogLevel::Warning;
+
+        const char *message =
+            callback_data->pMessage != nullptr ? callback_data->pMessage : "";
+
+        if (logger != nullptr) {
+            try {
+                logger->log(level, "Vulkan", message);
+            } catch (...) {
+                std::fputs("Warning: Failed to log Vulkan diagnostic.\n",
+                           stderr);
+            }
+        } else {
+            std::fputs("Vulkan validation: ", stderr);
+            std::fputs(message, stderr);
+            std::fputc('\n', stderr);
+        }
 
         return VK_FALSE;
     }

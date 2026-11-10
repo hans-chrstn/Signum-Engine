@@ -1204,8 +1204,8 @@
 - [x] Add timestamps
 - [x] Add terminal sink
 - [ ] Add file sink
-- [ ] Route Vulkan validation messages
-- [ ] Route GLFW diagnostics
+- [x] Route Vulkan validation messages
+- [x] Route GLFW diagnostics
 - [ ] Support logging without editor
 
 - [ ] Capture device capability and feature-selection diagnostics for renderer troubleshooting

@@ -56,6 +56,10 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+namespace SNE::Engine::Core::Logging {
+    class Logger;
+}
+
 namespace SNE::Engine::Renderer::Vulkan {
     /**
      * @brief Owns and coordinates the Vulkan renderer runtime.
@@ -518,6 +522,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * entire lifetime of this VulkanRenderer.
          */
         const Platform::Window *m_Window{nullptr};
+
         /**
          * @brief Vulkan instance owned by the renderer.
          *
@@ -525,6 +530,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Vulkan resources and outlives every resource created from it.
          */
         VulkanInstance m_Instance;
+
         /**
          * @brief Presentation surface owned by the renderer.
          *
@@ -532,6 +538,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * valid for the lifetime of presentation-dependent renderer resources.
          */
         VulkanSurface m_Surface;
+
         /**
          * @brief Selected physical-device state used by the renderer.
          *
@@ -2749,6 +2756,12 @@ namespace SNE::Engine::Renderer::Vulkan {
          * must support transfer-source operations for framebuffer readback. The
          * requirement is preserved across swapchain recreation. Defaults to
          * false.
+         * @param logger Optional borrowed logger forwarded to the Vulkan
+         * instance for diagnostic reporting. A null pointer disables
+         * engine-backed Vulkan diagnostic forwarding.
+         *
+         * @pre A non-null logger must outlive the renderer and all
+         * diagnostic callback invocations that access it.
          *
          * @throws Core::Error::EngineError if a required Vulkan resource or
          * capability cannot be initialized.
@@ -2766,7 +2779,8 @@ namespace SNE::Engine::Renderer::Vulkan {
                 initial_buffer_bindings = {},
             std::span<const MaterialTextureBindingInput>
                 initial_texture_bindings = {},
-            bool require_swapchain_transfer_source = false);
+            bool require_swapchain_transfer_source = false,
+            Core::Logging::Logger *logger = nullptr);
 
         /**
          * @brief Releases the Vulkan renderer runtime.

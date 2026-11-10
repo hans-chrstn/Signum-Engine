@@ -13,6 +13,7 @@ add_executable(
   renderer/vulkan/vulkan_renderer_material_update_integration_tests.cpp
   renderer/vulkan/vulkan_frame_command_recorder_integration_tests.cpp
   renderer/vulkan/vulkan_external_rendering_info_integration_tests.cpp
+  renderer/vulkan/vulkan_instance_logging_integration_tests.cpp
   renderer/vulkan/command/vulkan_immediate_submission_integration_tests.cpp
   renderer/vulkan/command/vulkan_transfer_commands_integration_tests.cpp
   renderer/vulkan/compute/vulkan_matrix_transform_integration_tests.cpp

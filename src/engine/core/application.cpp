@@ -17,15 +17,15 @@ namespace SNE::Engine::Core {
           m_GlfwContext(&m_Logger),
           m_Window(m_Configuration.initial_window_size,
                    m_Configuration.application_name),
-          m_Renderer(m_Configuration.application_name, m_Window,
-                     m_Configuration.presentation_preference,
-                     m_Configuration.development_diagnostics_enabled,
-                     m_Configuration.initial_mesh,
-                     m_Configuration.initial_texture,
-                     m_Configuration.initial_camera,
-                     std::move(m_Configuration.initial_graphics_shaders),
-                     m_Configuration.initial_buffer_bindings,
-                     m_Configuration.initial_texture_bindings) {
+          m_Renderer(
+              m_Configuration.application_name, m_Window,
+              m_Configuration.presentation_preference,
+              m_Configuration.development_diagnostics_enabled,
+              m_Configuration.initial_mesh, m_Configuration.initial_texture,
+              m_Configuration.initial_camera,
+              std::move(m_Configuration.initial_graphics_shaders),
+              m_Configuration.initial_buffer_bindings,
+              m_Configuration.initial_texture_bindings, false, &m_Logger) {
         m_Logger.log(Logging::LogLevel::Info, "Core",
                      "Application Initialized");
     }

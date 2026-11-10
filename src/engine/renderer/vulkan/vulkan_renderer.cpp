@@ -3,6 +3,7 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/logging/logger.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
@@ -141,9 +142,9 @@ namespace SNE::Engine::Renderer::Vulkan {
         std::optional<Shader::GraphicsShaderData> initial_graphics_shaders,
         std::span<const MaterialBufferBindingInput> initial_buffer_bindings,
         std::span<const MaterialTextureBindingInput> initial_texture_bindings,
-        bool require_swapchain_transfer_source)
+        bool require_swapchain_transfer_source, Core::Logging::Logger *logger)
         : m_Window(&window),
-          m_Instance(application_name, development_diagnostics_enabled),
+          m_Instance(application_name, development_diagnostics_enabled, logger),
           m_Surface(m_Instance.nativeHandle(), window.nativeHandle()),
           m_PhysicalDevice(selectRequiredPhysicalDevice(
               m_Instance.nativeHandle(), m_Surface.nativeHandle())),
