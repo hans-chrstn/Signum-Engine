@@ -19,6 +19,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <format>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -647,7 +648,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             m_SubmissionFailed = true;
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanQueueSubmissionFailed,
-                "Failed to submit Vulkan queue work",
+                std::format(
+                    "Failed to submit Vulkan queue work (frame_slot={})",
+                    m_CurrentFrameIndex)
+                    .c_str(),
                 Core::Error::NativeError(
                     static_cast<int>(queue_submit_result),
                     std::string(toString(queue_submit_result))),
@@ -782,7 +786,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         case SwapchainAcquireAction::Failure:
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanSwapchainImageAcquisitionFailed,
-                "Failed to acquire Vulkan swapchain image",
+                std::format(
+                    "Failed to acquire Vulkan swapchain image (frame_slot={})",
+                    m_CurrentFrameIndex)
+                    .c_str(),
                 Core::Error::NativeError(static_cast<int>(image_result),
                                          std::string(toString(image_result))),
                 "Acquire Vulkan Swapchain Image");
@@ -867,7 +874,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         case SwapchainPresentAction::Failure:
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanQueuePresentationFailed,
-                "Failed to present Vulkan swapchain image",
+                std::format("Failed to present Vulkan swapchain image "
+                            "(frame_slot={}, image_index={})",
+                            m_CurrentFrameIndex, image_index)
+                    .c_str(),
                 Core::Error::NativeError(
                     static_cast<int>(queue_present_result),
                     std::string(toString(queue_present_result))),

@@ -1208,7 +1208,7 @@
 - [x] Route GLFW diagnostics
 - [x] Support logging without editor
 - [x] Capture device capability and feature-selection diagnostics for renderer troubleshooting
-- [ ] Correlate resource, shader, and submission failures with named engine operations where possible
+- [x] Correlate resource, shader, and submission failures with named engine operations where possible
 
 ### Test
 
@@ -1224,7 +1224,7 @@
 - [x] Keep logging implementation out of gameplay APIs
 - [x] Keep log sinks replaceable and independently extensible
 - [x] Keep structured log and diagnostic data independent from sink presentation
-- [ ] Keep diagnostic event storage independent of eventual tracing and crash-reporting backends
+- [x] Keep diagnostic event storage independent of eventual tracing and crash-reporting backends
 
 ---
 
