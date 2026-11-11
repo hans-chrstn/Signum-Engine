@@ -1206,8 +1206,8 @@
 - [x] Add file sink
 - [x] Route Vulkan validation messages
 - [x] Route GLFW diagnostics
-- [ ] Support logging without editor
-- [ ] Capture device capability and feature-selection diagnostics for renderer troubleshooting
+- [x] Support logging without editor
+- [x] Capture device capability and feature-selection diagnostics for renderer troubleshooting
 - [ ] Correlate resource, shader, and submission failures with named engine operations where possible
 
 ### Test

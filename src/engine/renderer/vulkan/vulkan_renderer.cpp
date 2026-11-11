@@ -3,6 +3,8 @@
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/logging/log_categories.hpp"
+#include "engine/core/logging/log_level.hpp"
 #include "engine/core/logging/logger.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/window.hpp"
@@ -26,11 +28,14 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <format>
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
+#include <vulkan/vulkan.h>
 
 namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = Renderer::Vulkan;
@@ -128,6 +133,104 @@ namespace {
         }
     }
 
+    [[nodiscard]] constexpr auto supportStatus(bool supported) noexcept
+        -> std::string_view {
+        return supported ? "supported" : "unsupported";
+    }
+
+    [[nodiscard]] constexpr auto enabledStatus(bool enabled) noexcept
+        -> std::string_view {
+        return enabled ? "enabled" : "disabled";
+    }
+
+    auto logSelectedDeviceDiagnostics(
+        Core::Logging::Logger *logger,
+        const Vulkan::SelectedPhysicalDevice &physical_device,
+        const Vulkan::LogicalDeviceFeatureConfiguration &feature_configuration)
+        -> void {
+        if (logger == nullptr) {
+            return;
+        }
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format("Selected GPU: {}",
+                        physical_device.capabilities.properties.deviceName));
+
+        const std::uint32_t api_version =
+            physical_device.capabilities.properties.apiVersion;
+
+        logger->log(Core::Logging::LogLevel::Info,
+                    Core::Logging::Categories::Vulkan,
+                    std::format("GPU Vulkan API: {}.{}.{}",
+                                VK_API_VERSION_MAJOR(api_version),
+                                VK_API_VERSION_MINOR(api_version),
+                                VK_API_VERSION_PATCH(api_version)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "Dynamic Rendering: {}",
+                supportStatus(physical_device.capabilities.required_capabilities
+                                  .dynamic_rendering_supported)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "Synchronization2: {}",
+                supportStatus(physical_device.capabilities.required_capabilities
+                                  .synchronization2_supported)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "FIFO latest-ready: {}",
+                enabledStatus(feature_configuration.fifo_latest_ready_feature
+                                  .presentModeFifoLatestReady == VK_TRUE)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "Ray tracing pipeline: {}",
+                supportStatus(physical_device.capabilities.optional_capabilities
+                                  .ray_tracing_pipeline_supported)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "Acceleration structures: {}",
+                supportStatus(physical_device.capabilities.optional_capabilities
+                                  .acceleration_structures_supported)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "FIFO latest-ready extension: {}",
+                supportStatus(physical_device.capabilities.optional_capabilities
+                                  .fifo_latest_ready_extension_supported)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "FIFO latest-ready feature: {}",
+                supportStatus(physical_device.capabilities.optional_capabilities
+                                  .fifo_latest_ready_feature_supported)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "Memory budget extension: {}",
+                supportStatus(physical_device.capabilities.optional_capabilities
+                                  .memory_budget_extension_supported)));
+
+        logger->log(
+            Core::Logging::LogLevel::Info, Core::Logging::Categories::Vulkan,
+            std::format(
+                "Ray query: {}",
+                supportStatus(physical_device.capabilities.optional_capabilities
+                                  .ray_query_supported)));
+    }
+
     constexpr std::size_t kFramesInFlight = 2;
 } // namespace
 
@@ -168,6 +271,9 @@ namespace SNE::Engine::Renderer::Vulkan {
                                 .memory_budget_extension_supported),
           m_InitialCamera(initial_camera),
           m_GraphicsSubmissionState(kFramesInFlight) {
+
+        logSelectedDeviceDiagnostics(logger, m_PhysicalDevice,
+                                     m_LogicalDeviceFeatureConfiguration);
 
         validateInitialMaterialBindingLocations(initial_texture.has_value(),
                                                 initial_texture_bindings,
