@@ -5,6 +5,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/logging/log_categories.hpp"
 #include "engine/core/logging/log_level.hpp"
 #include "engine/core/logging/logger.hpp"
 #include "error/glfw_error.hpp"
@@ -102,7 +103,8 @@ namespace SNE::Engine::Platform {
 
                 auto &logger = lease->logger();
 
-                logger.log(Core::Logging::LogLevel::Error, "Platform",
+                logger.log(Core::Logging::LogLevel::Error,
+                           Core::Logging::Categories::Platform,
                            std::format("GLFW error {}: {}", error_code,
                                        description != nullptr
                                            ? description
@@ -180,7 +182,8 @@ namespace SNE::Engine::Platform {
                 if (logger != nullptr) {
                     try {
                         logger->log(
-                            Core::Logging::LogLevel::Error, "Platform",
+                            Core::Logging::LogLevel::Error,
+                            Core::Logging::Categories::Platform,
                             std::format("GLFW initialization failed: {}",
                                         native_error.getNativeDescription()));
                     } catch (...) {
@@ -200,7 +203,8 @@ namespace SNE::Engine::Platform {
             }
 
             try {
-                logger->log(Core::Logging::LogLevel::Info, "Platform",
+                logger->log(Core::Logging::LogLevel::Info,
+                            Core::Logging::Categories::Platform,
                             "GLFW initialized");
             } catch (...) {
                 std::fputs(

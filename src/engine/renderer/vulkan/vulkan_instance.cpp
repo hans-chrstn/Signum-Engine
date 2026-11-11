@@ -5,6 +5,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/logging/log_categories.hpp"
 #include "engine/core/logging/logger.hpp"
 #include "engine/core/numeric/checked_conversion.hpp"
 #include "engine/renderer/vulkan/common/vulkan_api_version.hpp"
@@ -13,7 +14,6 @@
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include <cstring>
-#include <iostream>
 #include <optional>
 #include <span>
 #include <string>
@@ -354,7 +354,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         if (logger != nullptr) {
             try {
-                logger->log(level, "Vulkan", message);
+                logger->log(level, Core::Logging::Categories::Vulkan, message);
             } catch (...) {
                 std::fputs("Warning: Failed to log Vulkan diagnostic.\n",
                            stderr);

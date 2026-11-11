@@ -1,4 +1,5 @@
 #include "application.hpp"
+#include "engine/core/logging/log_categories.hpp"
 #include "engine/core/logging/log_level.hpp"
 #include "engine/core/logging/logger_factory.hpp"
 #include "engine/platform/window.hpp"
@@ -24,7 +25,7 @@ namespace SNE::Engine::Core {
               std::move(m_Configuration.initial_graphics_shaders),
               m_Configuration.initial_buffer_bindings,
               m_Configuration.initial_texture_bindings, false, &m_Logger) {
-        m_Logger.log(Logging::LogLevel::Info, "Core",
+        m_Logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
                      "Application Initialized");
     }
 

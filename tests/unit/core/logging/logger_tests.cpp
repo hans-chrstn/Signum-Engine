@@ -1,3 +1,4 @@
+#include "engine/core/logging/log_categories.hpp"
 #include "engine/core/logging/logger.hpp"
 #include "engine/core/logging/stream_log_sink.hpp"
 #include <barrier>
@@ -57,7 +58,8 @@ namespace {
             if (record.message == "Outer event" && !m_HasLoggedNested) {
                 m_HasLoggedNested = true;
 
-                m_Logger.log(Logging::LogLevel::Info, "Core", "Nested event");
+                m_Logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+                             "Nested event");
             }
         }
     };
@@ -90,7 +92,8 @@ namespace {
             if (m_ShouldThrow) {
                 m_ShouldThrow = false;
 
-                m_Logger.log(Logging::LogLevel::Info, "Core", "Pending event");
+                m_Logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+                             "Pending event");
 
                 throw std::runtime_error{"Simulated dispatch failure"};
             }
@@ -190,7 +193,7 @@ TEST(LoggerTests, DispatchesAcceptedRecordToRegisteredSink) {
 
     const auto before = std::chrono::system_clock::now();
 
-    logger.log(Logging::LogLevel::Warning, "Renderer",
+    logger.log(Logging::LogLevel::Warning, Logging::Categories::Renderer,
                "Pipeline creation failed");
 
     const auto after = std::chrono::system_clock::now();
@@ -211,13 +214,17 @@ TEST(LoggerTests, RejectsEventsBelowMinimumLevel) {
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
     logger.setMinimumLevel(Logging::LogLevel::Warning);
 
-    logger.log(Logging::LogLevel::Trace, "Core", "Trace message");
-    logger.log(Logging::LogLevel::Debug, "Core", "Debug message");
-    logger.log(Logging::LogLevel::Info, "Core", "Info message");
+    logger.log(Logging::LogLevel::Trace, Logging::Categories::Core,
+               "Trace message");
+    logger.log(Logging::LogLevel::Debug, Logging::Categories::Core,
+               "Debug message");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+               "Info message");
 
     EXPECT_TRUE(records.empty());
 
-    logger.log(Logging::LogLevel::Warning, "Core", "Warning message");
+    logger.log(Logging::LogLevel::Warning, Logging::Categories::Core,
+               "Warning message");
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].message, "Warning message");
@@ -232,7 +239,8 @@ TEST(LoggerTests, DispatchesSameEventToMultipleSinks) {
 
     logger.addSink(std::make_unique<CapturingLoggerSink>(second_records));
 
-    logger.log(Logging::LogLevel::Error, "Vulkan", "Device operation failed");
+    logger.log(Logging::LogLevel::Error, Logging::Categories::Vulkan,
+               "Device operation failed");
 
     ASSERT_EQ(first_records.size(), 1U);
     ASSERT_EQ(second_records.size(), 1U);
@@ -249,12 +257,15 @@ TEST(LoggerTests, AllowsOnlyRegisteredCategories) {
 
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
 
-    logger.allowCategory("Renderer");
-    logger.allowCategory("Vulkan");
+    logger.allowCategory(Logging::Categories::Renderer);
+    logger.allowCategory(Logging::Categories::Vulkan);
 
-    logger.log(Logging::LogLevel::Info, "Renderer", "Mesh uploaded");
-    logger.log(Logging::LogLevel::Info, "Editor", "Panel opened");
-    logger.log(Logging::LogLevel::Info, "Vulkan", "Device initialized");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Renderer,
+               "Mesh uploaded");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Editor,
+               "Panel opened");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Vulkan,
+               "Device initialized");
 
     ASSERT_EQ(records.size(), 2U);
 
@@ -267,11 +278,12 @@ TEST(LoggerTests, CategoryAllowlistIsCaseSensitive) {
     Logging::Logger logger;
 
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
-    logger.allowCategory("Renderer");
+    logger.allowCategory(Logging::Categories::Renderer);
 
     logger.log(Logging::LogLevel::Info, "renderer", "Lowercase");
     logger.log(Logging::LogLevel::Info, "RENDERER", "Uppercase");
-    logger.log(Logging::LogLevel::Info, "Renderer", "Exact match");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Renderer,
+               "Exact match");
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].message, "Exact match");
@@ -288,8 +300,10 @@ TEST(LoggerTests, CategoryRegistrationOwnsSourceString) {
 
     category = "Editor";
 
-    logger.log(Logging::LogLevel::Info, "Renderer", "Original category");
-    logger.log(Logging::LogLevel::Info, "Editor", "Changed category");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Renderer,
+               "Original category");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Editor,
+               "Changed category");
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].category, "Renderer");
@@ -302,12 +316,14 @@ TEST(LoggerTests, RepeatedCategoryRegistrationPreservesFiltering) {
 
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
 
-    logger.allowCategory("Renderer");
-    logger.allowCategory("Renderer");
-    logger.allowCategory("Renderer");
+    logger.allowCategory(Logging::Categories::Renderer);
+    logger.allowCategory(Logging::Categories::Renderer);
+    logger.allowCategory(Logging::Categories::Renderer);
 
-    logger.log(Logging::LogLevel::Info, "Renderer", "Accepted");
-    logger.log(Logging::LogLevel::Info, "Editor", "Rejected");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Renderer,
+               "Accepted");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Editor,
+               "Rejected");
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].message, "Accepted");
@@ -320,11 +336,14 @@ TEST(LoggerTests, AppliesSeverityAndCategoryFiltersTogether) {
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
 
     logger.setMinimumLevel(Logging::LogLevel::Warning);
-    logger.allowCategory("Renderer");
+    logger.allowCategory(Logging::Categories::Renderer);
 
-    logger.log(Logging::LogLevel::Info, "Renderer", "Below threshold");
-    logger.log(Logging::LogLevel::Error, "Editor", "Wrong category");
-    logger.log(Logging::LogLevel::Error, "Renderer", "Accepted");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Renderer,
+               "Below threshold");
+    logger.log(Logging::LogLevel::Error, Logging::Categories::Editor,
+               "Wrong category");
+    logger.log(Logging::LogLevel::Error, Logging::Categories::Renderer,
+               "Accepted");
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].message, "Accepted");
@@ -336,16 +355,19 @@ TEST(LoggerTests, ClearingAllowedCategoriesRestoresAllCategories) {
 
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
 
-    logger.allowCategory("Renderer");
+    logger.allowCategory(Logging::Categories::Renderer);
 
-    logger.log(Logging::LogLevel::Info, "Editor", "Before clearing");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Editor,
+               "Before clearing");
 
     EXPECT_TRUE(records.empty());
 
     logger.clearAllowedCategories();
 
-    logger.log(Logging::LogLevel::Info, "Editor", "After clearing");
-    logger.log(Logging::LogLevel::Info, "Vulkan", "Device initialized");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Editor,
+               "After clearing");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Vulkan,
+               "Device initialized");
 
     ASSERT_EQ(records.size(), 2U);
     EXPECT_EQ(records[0].message, "After clearing");
@@ -359,12 +381,14 @@ TEST(LoggerTests, ClearingCategoriesPreservesSeverityFiltering) {
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
 
     logger.setMinimumLevel(Logging::LogLevel::Warning);
-    logger.allowCategory("Renderer");
+    logger.allowCategory(Logging::Categories::Renderer);
 
     logger.clearAllowedCategories();
 
-    logger.log(Logging::LogLevel::Info, "Editor", "Below severity");
-    logger.log(Logging::LogLevel::Error, "Editor", "Accepted");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Editor,
+               "Below severity");
+    logger.log(Logging::LogLevel::Error, Logging::Categories::Editor,
+               "Accepted");
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].message, "Accepted");
@@ -377,7 +401,8 @@ TEST(LoggerTests, ReentrantLoggingQueuesNestedRecord) {
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
     logger.addSink(std::make_unique<ReentrantLoggerSink>(logger));
 
-    logger.log(Logging::LogLevel::Info, "Core", "Outer event");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+               "Outer event");
 
     ASSERT_EQ(records.size(), 2U);
     EXPECT_EQ(records[0].message, "Outer event");
@@ -432,11 +457,12 @@ TEST(LoggerTests, SinkFailureDoesNotPermanentlyDisableLogging) {
     logger.addSink(std::make_unique<ThrowOnceLoggerSink>());
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
 
-    EXPECT_THROW(logger.log(Logging::LogLevel::Info, "Core", "First event"),
+    EXPECT_THROW(logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+                            "First event"),
                  std::runtime_error);
 
-    EXPECT_NO_THROW(
-        logger.log(Logging::LogLevel::Info, "Core", "Second event"));
+    EXPECT_NO_THROW(logger.log(Logging::LogLevel::Info,
+                               Logging::Categories::Core, "Second event"));
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].message, "Second event");
@@ -449,13 +475,14 @@ TEST(LoggerTests, PendingRecordsSurviveSinkFailure) {
     logger.addSink(std::make_unique<EnqueueThenThrowOnceSink>(logger));
     logger.addSink(std::make_unique<CapturingLoggerSink>(records));
 
-    EXPECT_THROW(logger.log(Logging::LogLevel::Info, "Core", "First event"),
+    EXPECT_THROW(logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+                            "First event"),
                  std::runtime_error);
 
     EXPECT_TRUE(records.empty());
 
-    EXPECT_NO_THROW(
-        logger.log(Logging::LogLevel::Info, "Core", "Recovery event"));
+    EXPECT_NO_THROW(logger.log(Logging::LogLevel::Info,
+                               Logging::Categories::Core, "Recovery event"));
 
     ASSERT_EQ(records.size(), 2U);
     EXPECT_EQ(records[0].message, "Pending event");
@@ -468,11 +495,13 @@ TEST(LoggerTests, SinkRegistrationDuringDispatchAffectsSubsequentRecords) {
 
     logger.addSink(std::make_unique<RegisteringLoggerSink>(logger, records));
 
-    logger.log(Logging::LogLevel::Info, "Core", "First event");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+               "First event");
 
     EXPECT_TRUE(records.empty());
 
-    logger.log(Logging::LogLevel::Info, "Core", "Second event");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+               "Second event");
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].message, "Second event");
@@ -504,7 +533,7 @@ TEST(LoggerTests, ConcurrentConfigurationChangesPreserveAcceptedRecords) {
             start.arrive_and_wait();
 
             for (int i = 0; i < kRecordCount; ++i) {
-                logger.allowCategory("Renderer");
+                logger.allowCategory(Logging::Categories::Renderer);
                 logger.clearAllowedCategories();
             }
         }};
@@ -513,8 +542,8 @@ TEST(LoggerTests, ConcurrentConfigurationChangesPreserveAcceptedRecords) {
             start.arrive_and_wait();
 
             for (int i = 0; i < kRecordCount; ++i) {
-                logger.log(Logging::LogLevel::Warning, "Renderer",
-                           std::to_string(i));
+                logger.log(Logging::LogLevel::Warning,
+                           Logging::Categories::Renderer, std::to_string(i));
             }
         }};
     }
@@ -537,7 +566,8 @@ TEST(LoggerTests, DispatchesToStreamSinkThroughLogger) {
 
     logger.addSink(std::make_unique<Logging::StreamLogSink>(output));
 
-    logger.log(Logging::LogLevel::Info, "Core", "Engine initialized");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+               "Engine initialized");
 
     const std::string formatted_output = output.str();
 
@@ -555,7 +585,8 @@ TEST(LoggerTests, ConstructorRegistersInitialSink) {
 
     Logging::Logger logger{std::make_unique<CapturingLoggerSink>(records)};
 
-    logger.log(Logging::LogLevel::Info, "Core", "Logger initialized");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+               "Logger initialized");
 
     ASSERT_EQ(records.size(), 1U);
     EXPECT_EQ(records[0].level, Logging::LogLevel::Info);
@@ -583,8 +614,8 @@ TEST(LoggerTests, MultipleSinkConstructorAcceptsEmptyCollection) {
 
     EXPECT_EQ(logger.minimumLevel(), Logging::LogLevel::Warning);
 
-    EXPECT_NO_THROW(
-        logger.log(Logging::LogLevel::Warning, "Core", "No destinations"));
+    EXPECT_NO_THROW(logger.log(Logging::LogLevel::Warning,
+                               Logging::Categories::Core, "No destinations"));
 }
 
 TEST(LoggerTests, MultipleSinkConstructorDispatchesToAllSinks) {
@@ -599,7 +630,8 @@ TEST(LoggerTests, MultipleSinkConstructorDispatchesToAllSinks) {
 
     Logging::Logger logger{std::move(sinks), Logging::LogLevel::Info};
 
-    logger.log(Logging::LogLevel::Info, "Core", "Engine initialized");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+               "Engine initialized");
 
     ASSERT_EQ(first_records.size(), 1U);
     ASSERT_EQ(second_records.size(), 1U);
@@ -623,9 +655,10 @@ TEST(LoggerTests, MultipleSinkConstructorAppliesInitialSeverity) {
 
     EXPECT_EQ(logger.minimumLevel(), Logging::LogLevel::Error);
 
-    logger.log(Logging::LogLevel::Info, "Core", "Ignored");
-    logger.log(Logging::LogLevel::Warning, "Core", "Ignored");
-    logger.log(Logging::LogLevel::Error, "Core", "Accepted");
+    logger.log(Logging::LogLevel::Info, Logging::Categories::Core, "Ignored");
+    logger.log(Logging::LogLevel::Warning, Logging::Categories::Core,
+               "Ignored");
+    logger.log(Logging::LogLevel::Error, Logging::Categories::Core, "Accepted");
 
     ASSERT_EQ(records.size(), 1U);
 

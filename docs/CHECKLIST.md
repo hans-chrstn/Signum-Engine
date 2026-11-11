@@ -1200,7 +1200,7 @@
 - [x] Add warning level
 - [x] Add error level
 - [x] Add fatal level
-- [ ] Add subsystem categories
+- [x] Add subsystem categories
 - [x] Add timestamps
 - [x] Add terminal sink
 - [x] Add file sink

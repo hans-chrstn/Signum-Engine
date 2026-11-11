@@ -1,5 +1,6 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "engine/core/logging/log_categories.hpp"
 #include "engine/core/logging/logger_factory.hpp"
 #include <chrono>
 #include <filesystem>
@@ -81,8 +82,8 @@ TEST_F(LoggerFactoryTests, AcceptsConfigurationWithoutDestinations) {
 
     EXPECT_EQ(logger.minimumLevel(), Logging::LogLevel::Warning);
 
-    EXPECT_NO_THROW(
-        logger.log(Logging::LogLevel::Warning, "Core", "No destination"));
+    EXPECT_NO_THROW(logger.log(Logging::LogLevel::Warning,
+                               Logging::Categories::Core, "No destination"));
 
     EXPECT_FALSE(std::filesystem::exists(m_Path));
 }
@@ -96,7 +97,8 @@ TEST_F(LoggerFactoryTests, DefaultConfigurationWritesToTerminal) {
 
         EXPECT_EQ(logger.minimumLevel(), Logging::LogLevel::Info);
 
-        logger.log(Logging::LogLevel::Info, "Core", "Terminal message");
+        logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+                   "Terminal message");
     }
 
     EXPECT_NE(capture.text().find("[Info] [Core] Terminal message\n"),
@@ -110,7 +112,8 @@ TEST_F(LoggerFactoryTests, FileOnlyConfigurationWritesToFile) {
 
     {
         auto logger = Logging::makeLogger(configuration);
-        logger.log(Logging::LogLevel::Info, "Core", "File-only message");
+        logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+                   "File-only message");
     }
 
     ASSERT_TRUE(std::filesystem::exists(m_Path));
@@ -128,7 +131,8 @@ TEST_F(LoggerFactoryTests, BothDestinationsReceiveSameMessage) {
     {
         auto logger = Logging::makeLogger(configuration);
 
-        logger.log(Logging::LogLevel::Error, "Renderer", "Both destinations");
+        logger.log(Logging::LogLevel::Error, Logging::Categories::Renderer,
+                   "Both destinations");
     }
 
     const std::string expected = "[Error] [Renderer] Both destinations\n";
@@ -150,8 +154,10 @@ TEST_F(LoggerFactoryTests, AppliesConfiguredMinimumLevel) {
 
         EXPECT_EQ(logger.minimumLevel(), Logging::LogLevel::Warning);
 
-        logger.log(Logging::LogLevel::Info, "Core", "Filtered message");
-        logger.log(Logging::LogLevel::Warning, "Core", "Accepted message");
+        logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+                   "Filtered message");
+        logger.log(Logging::LogLevel::Warning, Logging::Categories::Core,
+                   "Accepted message");
     }
 
     const std::string content = readFile(m_Path);
@@ -173,8 +179,9 @@ TEST_F(LoggerFactoryTests, AppliesConfiguredFileRotationPolicy) {
     {
         auto logger = Logging::makeLogger(configuration);
 
-        logger.log(Logging::LogLevel::Info, "Core", "First");
-        logger.log(Logging::LogLevel::Info, "Core", "Second");
+        logger.log(Logging::LogLevel::Info, Logging::Categories::Core, "First");
+        logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
+                   "Second");
     }
 
     auto archive_path = m_Path;

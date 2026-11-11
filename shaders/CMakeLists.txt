@@ -11,12 +11,6 @@ find_program(
 )
 
 find_program(
-  SIGNUM_GLSLC_EXECUTABLE
-  NAMES glslc
-  REQUIRED
-)
-
-find_program(
   SIGNUM_SPIRV_DIS_EXECUTABLE
   NAMES spirv-dis
   REQUIRED
@@ -35,16 +29,6 @@ set(
 set(
   SIGNUM_SHADER_OUTPUT_DIR
   "${PROJECT_SOURCE_DIR}/build/shaders"
-)
-
-set(
-  SIGNUM_GLSL_BASIC_SOURCE_DIR
-  "${CMAKE_CURRENT_SOURCE_DIR}/glsl/basic"
-)
-
-set(
-  SIGNUM_GLSL_TEST_SOURCE_DIR
-  "${CMAKE_CURRENT_SOURCE_DIR}/glsl/tests"
 )
 
 function(signum_compile_slang_shader output_path source_file entry_point stage)
@@ -72,32 +56,6 @@ function(signum_compile_slang_shader output_path source_file entry_point stage)
       "${source_file}"
 
     COMMENT "Compiling and validating ${entry_point} (${stage})"
-
-    VERBATIM
-  )
-endfunction()
-
-function(signum_compile_glsl_shader output_path source_file)
-  add_custom_command(
-    OUTPUT "${output_path}"
-
-    COMMAND
-      "${CMAKE_COMMAND}" -E make_directory
-      "${SIGNUM_SHADER_OUTPUT_DIR}"
-
-    COMMAND
-      "${SIGNUM_GLSLC_EXECUTABLE}"
-      "${source_file}"
-      -o "${output_path}"
-
-    COMMAND
-      "${SIGNUM_SPIRV_VAL_EXECUTABLE}"
-      "${output_path}"
-
-    DEPENDS
-      "${source_file}"
-
-    COMMENT "Compiling and validating GLSL shader"
 
     VERBATIM
   )
@@ -131,16 +89,6 @@ set(
 set(
   SIGNUM_MATERIAL_MIXED_FRAGMENT_SPIRV
   "${SIGNUM_SHADER_OUTPUT_DIR}/material_mixed.frag.spv"
-)
-
-set(
-  SIGNUM_BLACKHOLE_VERTEX_SPIRV
-  "${SIGNUM_SHADER_OUTPUT_DIR}/blackhole.vert.spv"
-)
-
-set(
-  SIGNUM_BLACKHOLE_FRAGMENT_SPIRV
-  "${SIGNUM_SHADER_OUTPUT_DIR}/blackhole.frag.spv"
 )
 
 set(
@@ -188,6 +136,13 @@ signum_compile_slang_shader(
 )
 
 signum_compile_slang_shader(
+  "${SIGNUM_TEXTURED_FRAGMENT_SPIRV}"
+  "${SIGNUM_SHADER_SOURCE_DIR}/textured.slang"
+  fragmentMain
+  fragment
+)
+
+signum_compile_slang_shader(
   "${SIGNUM_TRIANGLE_VERTEX_SPIRV}"
   "${SIGNUM_SHADER_SOURCE_DIR}/triangle.slang"
   vertexMain
@@ -202,8 +157,36 @@ signum_compile_slang_shader(
 )
 
 signum_compile_slang_shader(
-  "${SIGNUM_TEXTURED_FRAGMENT_SPIRV}"
-  "${SIGNUM_SHADER_SOURCE_DIR}/textured.slang"
+  "${SIGNUM_MATERIAL_UPDATE_VERTEX_SPIRV}"
+  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/material_update.slang"
+  vertexMain
+  vertex
+)
+
+signum_compile_slang_shader(
+  "${SIGNUM_MATERIAL_STORAGE_VERTEX_SPIRV}"
+  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/material_storage.slang"
+  vertexMain
+  vertex
+)
+
+signum_compile_slang_shader(
+  "${SIGNUM_MATERIAL_TEXTURED_VERTEX_SPIRV}"
+  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/material_textured.slang"
+  vertexMain
+  vertex
+)
+
+signum_compile_slang_shader(
+  "${SIGNUM_MATERIAL_MIXED_FRAGMENT_SPIRV}"
+  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/material_mixed.slang"
+  fragmentMain
+  fragment
+)
+
+signum_compile_slang_shader(
+  "${SIGNUM_MATERIAL_INSTANCE_TEXTURED_FRAGMENT_SPIRV}"
+  "${SIGNUM_SLANG_TEST_SOURCE_DIR}/material_instance_textured.slang"
   fragmentMain
   fragment
 )
@@ -220,41 +203,6 @@ signum_compile_slang_shader(
   "${SIGNUM_SLANG_TEST_SOURCE_DIR}/matrix_transform.slang"
   computeMain
   compute
-)
-
-signum_compile_glsl_shader(
-  "${SIGNUM_MATERIAL_UPDATE_VERTEX_SPIRV}"
-  "${SIGNUM_GLSL_TEST_SOURCE_DIR}/material_update.vert"
-)
-
-signum_compile_glsl_shader(
-  "${SIGNUM_MATERIAL_STORAGE_VERTEX_SPIRV}"
-  "${SIGNUM_GLSL_TEST_SOURCE_DIR}/material_storage.vert"
-)
-
-signum_compile_glsl_shader(
-  "${SIGNUM_MATERIAL_TEXTURED_VERTEX_SPIRV}"
-  "${SIGNUM_GLSL_TEST_SOURCE_DIR}/material_textured.vert"
-)
-
-signum_compile_glsl_shader(
-  "${SIGNUM_MATERIAL_MIXED_FRAGMENT_SPIRV}"
-  "${SIGNUM_GLSL_TEST_SOURCE_DIR}/material_mixed.frag"
-)
-
-signum_compile_glsl_shader(
-  "${SIGNUM_BLACKHOLE_VERTEX_SPIRV}"
-  "${SIGNUM_GLSL_BASIC_SOURCE_DIR}/blackhole.vert"
-)
-
-signum_compile_glsl_shader(
-  "${SIGNUM_BLACKHOLE_FRAGMENT_SPIRV}"
-  "${SIGNUM_GLSL_BASIC_SOURCE_DIR}/blackhole.frag"
-)
-
-signum_compile_glsl_shader(
-  "${SIGNUM_MATERIAL_INSTANCE_TEXTURED_FRAGMENT_SPIRV}"
-  "${SIGNUM_GLSL_TEST_SOURCE_DIR}/material_instance_textured.frag"
 )
 
 set(
@@ -298,8 +246,6 @@ add_custom_target(
     "${SIGNUM_MATERIAL_STORAGE_VERTEX_SPIRV}"
     "${SIGNUM_MATERIAL_TEXTURED_VERTEX_SPIRV}"
     "${SIGNUM_MATERIAL_MIXED_FRAGMENT_SPIRV}"
-    "${SIGNUM_BLACKHOLE_VERTEX_SPIRV}"
-    "${SIGNUM_BLACKHOLE_FRAGMENT_SPIRV}"
     "${SIGNUM_TRIANGLE_VERTEX_SPIRV}"
     "${SIGNUM_TRIANGLE_FRAGMENT_SPIRV}"
     "${SIGNUM_TEXTURED_FRAGMENT_SPIRV}"
