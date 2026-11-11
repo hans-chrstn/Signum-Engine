@@ -36,6 +36,8 @@ add_executable(
   core/math/vector4_tests.cpp
   core/math/vector4d_tests.cpp
   core/math/quaternion_tests.cpp
+  platform/platform_event_tests.cpp
+  platform/platform_event_queue_tests.cpp
   renderer/camera/camera_relative_position_tests.cpp
   renderer/geometry/uv_sphere_mesh_tests.cpp
   renderer/geometry/vertex_format_tests.cpp

@@ -3,6 +3,7 @@
 #include "application_configuration.hpp"
 #include "engine/core/logging/logger.hpp"
 #include "engine/core/math/matrix4.hpp"
+#include "engine/platform/event/platform_event.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
@@ -165,6 +166,10 @@ namespace SNE::Engine::Core {
          * @param on_graphics_submission Optional callback invoked when
          * a new graphics submission is recorded and frame rendering
          * returns successfully.
+         * @param on_platform_events Optional callback invoked after event
+         * polling when pending platform events exist. Receives the application
+         * and a read-only event span valid only for the duration of the
+         * callback.
          *
          * @pre The external recording callback must not end the active
          * rendering scope, reset or submit the command buffer, or retain it
@@ -175,11 +180,15 @@ namespace SNE::Engine::Core {
          * @note A recorded submission is not necessarily complete.
          * Its GPU completion must be checked separately.
          */
-        auto run(const std::function<void(Application &)> &on_update = {},
-                 const Renderer::Vulkan::VulkanFrameCommandRecorder
-                     &record_external_commands = {},
-                 const std::function<void(std::uint64_t)>
-                     &on_graphics_submission = {}) -> void;
+        auto
+        run(const std::function<void(Application &)> &on_update = {},
+            const Renderer::Vulkan::VulkanFrameCommandRecorder
+                &record_external_commands = {},
+            const std::function<void(std::uint64_t)> &on_graphics_submission =
+                {},
+            const std::function<void(Application &,
+                                     std::span<const Platform::PlatformEvent>)>
+                &on_platform_events = {}) -> void;
 
         /**
          * @brief Provides read-only access to the application's primary window.

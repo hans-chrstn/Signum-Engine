@@ -40,3 +40,6 @@ Makefile
 
 # Editor
 /imgui.ini
+
+# Local files
+.local/

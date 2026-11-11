@@ -1,9 +1,13 @@
 #pragma once
+#include "engine/platform/event/platform_event.hpp"
+#include "engine/platform/event/platform_event_queue.hpp"
 #include "engine/platform/input/cursor_position.hpp"
 #include "engine/platform/input/key.hpp"
 #include "engine/platform/input/mouse_button.hpp"
 #include <GLFW/glfw3.h>
+#include <exception>
 #include <string>
+#include <vector>
 
 namespace SNE::Engine::Platform {
     /**
@@ -43,9 +47,134 @@ namespace SNE::Engine::Platform {
      */
     class Window {
       private:
+        /**
+         * @brief Initial logical dimensions requested for the window.
+         *
+         * Stores the dimensions supplied during window construction.
+         *
+         * These values do not automatically reflect subsequent window
+         * resizing. Current dimensions must be queried separately.
+         */
         WindowSize m_Size;
+
+        /**
+         * @brief Title assigned to the platform window.
+         *
+         * Owns the title string supplied during construction and
+         * used when creating the native GLFW window.
+         */
         std::string m_Title;
+
+        /**
+         * @brief Owned native GLFW window handle.
+         *
+         * Created during window construction and destroyed by the
+         * Window destructor.
+         *
+         * The handle remains valid throughout the window's lifetime
+         * and must not be destroyed by external callers.
+         *
+         * GLFW must remain initialized while this handle exists.
+         */
         GLFWwindow *m_Window = nullptr;
+
+        /**
+         * @brief Stores pending platform events received by this window.
+         *
+         * Owns the backend-independent events translated from native
+         * GLFW callbacks.
+         *
+         * Events remain queued in arrival order until retrieved
+         * through takeEvents().
+         *
+         * Each Window maintains its own independent event queue.
+         */
+        PlatformEventQueue m_EventQueue{};
+
+        /**
+         * @brief Retains the first exception raised during event callbacks.
+         *
+         * GLFW callbacks must not propagate C++ exceptions across the
+         * native callback boundary.
+         *
+         * Exceptions raised during event processing are captured here
+         * and rethrown through takeEvents() on the normal C++ call path.
+         *
+         * The stored exception is cleared when retrieved.
+         */
+        std::exception_ptr m_CallbackException{};
+
+        /**
+         * @brief Receives scrolling notifications from GLFW.
+         *
+         * Translates native scroll offsets into a backend-independent
+         * ScrollEvent and appends it to the owning window's event queue.
+         *
+         * Exceptions are captured for later propagation through the
+         * normal C++ application path.
+         *
+         * @param window Native GLFW window receiving the event.
+         * @param x_offset Horizontal scrolling offset.
+         * @param y_offset Vertical scrolling offset.
+         *
+         * @note Exceptions must not escape this callback.
+         */
+        static auto scrollCallback(GLFWwindow *window, double x_offset,
+                                   double y_offset) noexcept -> void;
+
+        /**
+         * @brief Receives keyboard input notifications from GLFW.
+         *
+         * Translates supported native key actions into KeyEvent
+         * instances and appends them to the owning window's event queue.
+         *
+         * Unsupported keys and actions are ignored. Exceptions are
+         * captured for later propagation through takeEvents().
+         *
+         * @param window Native GLFW window receiving the event.
+         * @param key Native GLFW key identifier.
+         * @param scancode Platform-specific key scancode.
+         * @param action Native key press, release, or repeat action.
+         * @param modifiers Native keyboard modifier flags.
+         *
+         * @note Exceptions must not escape this callback.
+         * @note Scancodes and modifier flags are currently unused.
+         */
+        static auto keyCallback(GLFWwindow *window, int key, int scancode,
+                                int action, int modifiers) noexcept -> void;
+
+        /**
+         * @brief Receives mouse-button notifications from GLFW.
+         *
+         * Translates supported native mouse buttons and actions into
+         * MouseButtonEvent instances for the owning window.
+         *
+         * @param window Native GLFW window receiving the event.
+         * @param button Native GLFW mouse-button identifier.
+         * @param action Native mouse-button press or release action.
+         * @param modifiers Native modifier flags, currently unused.
+         *
+         * @note Exceptions are captured and must not escape this callback.
+         */
+        static auto mouseButtonCallback(GLFWwindow *window, int button,
+                                        int action, int modifiers) noexcept
+            -> void;
+
+        /**
+         * @brief Receives cursor position notifications from GLFW.
+         *
+         * Records absolute cursor positions in logical window units
+         * as backend-independent CursorMovedEvent instances.
+         *
+         * @param window Native GLFW window receiving the event.
+         * @param x_position Horizontal cursor position.
+         * @param y_position Vertical cursor position.
+         *
+         * @note Exceptions are captured and must not escape this callback.
+         */
+        static auto cursorPositionCallback(GLFWwindow *window,
+                                           double x_position,
+                                           double y_position) noexcept -> void;
 
       public:
         /**
@@ -172,5 +301,27 @@ namespace SNE::Engine::Platform {
          * through its normal shutdown path.
          */
         auto requestClose() -> void;
+
+        /**
+         * @brief Retrieves and removes pending events for this window.
+         *
+         * Returns all queued platform events in their original arrival
+         * order and leaves the event queue empty and reusable.
+         *
+         * If a GLFW callback previously captured an exception, that
+         * exception is cleared and rethrown before draining the queue.
+         *
+         * @return Vector containing the pending platform events,
+         * or an empty vector when no events are queued.
+         *
+         * @throws Rethrows an exception previously captured during
+         * native callback processing.
+         *
+         * @post On successful return, the event queue is empty.
+         *
+         * @note Call after platform event polling to retrieve newly
+         * delivered events.
+         */
+        [[nodiscard]] auto takeEvents() -> std::vector<PlatformEvent>;
     };
 } // namespace SNE::Engine::Platform

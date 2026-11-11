@@ -2,10 +2,13 @@ add_executable(
   signum_integration_tests
   core/application_draw_instances_integration_tests.cpp
   core/application_logging_integration_tests.cpp
+  core/application_platform_events_integration_tests.cpp
   platform/glfw_context_logging_integration_tests.cpp
   platform/window_keyboard_integration_tests.cpp
   platform/window_close_integration_tests.cpp
   platform/window_cursor_capture_integration_tests.cpp
+  platform/window_scroll_integration_tests.cpp
+  platform/window_mouse_events_integration_tests.cpp
   renderer/vulkan/vulkan_integration_test_fixture.cpp
   renderer/vulkan/vulkan_renderer_mesh_replacement_integration_tests.cpp
   renderer/vulkan/vulkan_renderer_texture_replacement_integration_tests.cpp

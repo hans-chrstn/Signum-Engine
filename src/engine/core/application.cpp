@@ -7,7 +7,9 @@
 #include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstdint>
+#include <span>
 #include <utility>
+#include <vector>
 
 namespace SNE::Engine::Core {
     Application::Application(ApplicationConfiguration configuration)
@@ -33,10 +35,19 @@ namespace SNE::Engine::Core {
         const std::function<void(Application &)> &on_update,
         const Renderer::Vulkan::VulkanFrameCommandRecorder
             &record_external_commands,
-        const std::function<void(std::uint64_t)> &on_graphics_submission)
-        -> void {
+        const std::function<void(std::uint64_t)> &on_graphics_submission,
+        const std::function<void(Application &,
+                                 std::span<const Platform::PlatformEvent>)>
+            &on_platform_events) -> void {
         while (!m_Window.shouldClose()) {
             Platform::Window::pollEvents();
+
+            std::vector<Platform::PlatformEvent> events = m_Window.takeEvents();
+
+            if (on_platform_events && !events.empty()) {
+                on_platform_events(
+                    *this, std::span<const Platform::PlatformEvent>{events});
+            }
 
             if (on_update) {
                 on_update(*this);
