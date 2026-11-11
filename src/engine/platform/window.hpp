@@ -176,6 +176,67 @@ namespace SNE::Engine::Platform {
                                            double x_position,
                                            double y_position) noexcept -> void;
 
+        /**
+         * @brief Receives logical window size changes from GLFW.
+         *
+         * Translates the updated window dimensions into a
+         * WindowResizedEvent and appends it to the owning window's
+         * event queue.
+         *
+         * @param window Native GLFW window receiving the event.
+         * @param width Updated width in logical window units.
+         * @param height Updated height in logical window units.
+         *
+         * @note Exceptions are captured and must not escape this callback.
+         */
+        static auto windowSizeCallback(GLFWwindow *window, int width,
+                                       int height) noexcept -> void;
+
+        /**
+         * @brief Receives framebuffer size changes from GLFW.
+         *
+         * Records the updated framebuffer dimensions in physical pixels
+         * as a backend-independent FramebufferResizedEvent.
+         *
+         * @param window Native GLFW window receiving the event.
+         * @param width Updated framebuffer width in pixels.
+         * @param height Updated framebuffer height in pixels.
+         *
+         * @note Zero dimensions are valid when the framebuffer is unavailable.
+         * @note Exceptions are captured and must not escape this callback.
+         */
+        static auto framebufferSizeCallback(GLFWwindow *window, int width,
+                                            int height) noexcept -> void;
+
+        /**
+         * @brief Receives window input-focus changes from GLFW.
+         *
+         * Translates the native focus state into a WindowFocusEvent
+         * indicating whether the window gained or lost input focus.
+         *
+         * @param window Native GLFW window receiving the event.
+         * @param focused GLFW focus state (GLFW_TRUE or GLFW_FALSE).
+         *
+         * @note Exceptions are captured and must not escape this callback.
+         */
+        static auto windowFocusCallback(GLFWwindow *window,
+                                        int focused) noexcept -> void;
+
+        /**
+         * @brief Receives native window close requests from GLFW.
+         *
+         * Appends a WindowCloseRequestedEvent to the owning window's
+         * event queue without destroying the window or modifying its
+         * close flag.
+         *
+         * @param window Native GLFW window receiving the close request.
+         *
+         * @note GLFW already sets the window's close flag before invoking
+         * this callback.
+         * @note Exceptions are captured and must not escape this callback.
+         */
+        static auto windowCloseCallback(GLFWwindow *window) noexcept -> void;
+
       public:
         /**
          * @brief Creates a platform window.

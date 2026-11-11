@@ -110,6 +110,15 @@ namespace SNE::Engine::Platform {
         glfwSetMouseButtonCallback(m_Window, Window::mouseButtonCallback);
 
         glfwSetCursorPosCallback(m_Window, Window::cursorPositionCallback);
+
+        glfwSetWindowSizeCallback(m_Window, Window::windowSizeCallback);
+
+        glfwSetFramebufferSizeCallback(m_Window,
+                                       Window::framebufferSizeCallback);
+
+        glfwSetWindowFocusCallback(m_Window, Window::windowFocusCallback);
+
+        glfwSetWindowCloseCallback(m_Window, Window::windowCloseCallback);
     }
 
     Window::~Window() {
@@ -224,6 +233,7 @@ namespace SNE::Engine::Platform {
         if (window_ptr == nullptr) {
             return;
         }
+
         try {
             const CursorMovedEvent event{
                 .position =
@@ -232,6 +242,103 @@ namespace SNE::Engine::Platform {
                         .y = y_position,
                     },
             };
+
+            window_ptr->m_EventQueue.push(event);
+        } catch (...) {
+            if (window_ptr->m_CallbackException == nullptr) {
+                window_ptr->m_CallbackException = std::current_exception();
+            }
+
+            return;
+        }
+    }
+
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+    auto Window::windowSizeCallback(GLFWwindow *window, int width,
+                                    int height) noexcept -> void {
+        auto *window_ptr =
+            static_cast<Window *>(glfwGetWindowUserPointer(window));
+
+        if (window_ptr == nullptr) {
+            return;
+        }
+
+        try {
+            const WindowResizedEvent event{
+                .width = width,
+                .height = height,
+            };
+
+            window_ptr->m_EventQueue.push(event);
+        } catch (...) {
+            if (window_ptr->m_CallbackException == nullptr) {
+                window_ptr->m_CallbackException = std::current_exception();
+            }
+
+            return;
+        }
+    }
+
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+    auto Window::framebufferSizeCallback(GLFWwindow *window, int width,
+                                         int height) noexcept -> void {
+        auto *window_ptr =
+            static_cast<Window *>(glfwGetWindowUserPointer(window));
+
+        if (window_ptr == nullptr) {
+            return;
+        }
+
+        try {
+            const FramebufferResizedEvent event{
+                .width = width,
+                .height = height,
+            };
+
+            window_ptr->m_EventQueue.push(event);
+        } catch (...) {
+            if (window_ptr->m_CallbackException == nullptr) {
+                window_ptr->m_CallbackException = std::current_exception();
+            }
+
+            return;
+        }
+    }
+
+    auto Window::windowFocusCallback(GLFWwindow *window, int focused) noexcept
+        -> void {
+        auto *window_ptr =
+            static_cast<Window *>(glfwGetWindowUserPointer(window));
+
+        if (window_ptr == nullptr) {
+            return;
+        }
+
+        try {
+            const WindowFocusEvent event{
+                .focused = focused == GLFW_TRUE,
+            };
+
+            window_ptr->m_EventQueue.push(event);
+        } catch (...) {
+            if (window_ptr->m_CallbackException == nullptr) {
+                window_ptr->m_CallbackException = std::current_exception();
+            }
+
+            return;
+        }
+    }
+
+    auto Window::windowCloseCallback(GLFWwindow *window) noexcept -> void {
+        auto *window_ptr =
+            static_cast<Window *>(glfwGetWindowUserPointer(window));
+
+        if (window_ptr == nullptr) {
+            return;
+        }
+
+        try {
+            const WindowCloseRequestedEvent event{};
 
             window_ptr->m_EventQueue.push(event);
         } catch (...) {

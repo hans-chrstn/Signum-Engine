@@ -1,5 +1,6 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "engine/platform/event/platform_event.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/window.hpp"
 #include "imgui/editor_imgui_context.hpp"
@@ -8,6 +9,7 @@
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <imgui.h>
+#include <variant>
 
 namespace Editor = SNE::Editor;
 namespace Platform = SNE::Engine::Platform;
@@ -129,4 +131,47 @@ TEST(EditorImGuiContextIntegrationTests, MissingFontThrowsAndDestroysContext) {
     }
 
     EXPECT_EQ(ImGui::GetCurrentContext(), nullptr);
+}
+
+TEST(EditorImGuiContextIntegrationTests,
+     PreservesWindowFocusEventsThroughImGuiCallbackChain) {
+    if (!hasDisplay()) {
+        GTEST_SKIP() << "Requires a window-system display";
+    }
+
+    Platform::GlfwContext glfw_context{};
+
+    Platform::Window window{
+        {.width = kWidth, .height = kHeight},
+        "Signum ImGui Focus Callback Chaining Test",
+    };
+
+    Editor::EditorImGuiContext context{
+        window.nativeHandle(),
+        SIGNUM_TEST_EDITOR_FONT_PATH,
+    };
+
+    const GLFWwindowfocusfun callback =
+        glfwSetWindowFocusCallback(window.nativeHandle(), nullptr);
+
+    glfwSetWindowFocusCallback(window.nativeHandle(), callback);
+
+    ASSERT_NE(callback, nullptr);
+
+    callback(window.nativeHandle(), GLFW_FALSE);
+    callback(window.nativeHandle(), GLFW_TRUE);
+
+    const auto events = window.takeEvents();
+
+    ASSERT_EQ(events.size(), 2U);
+
+    const auto *lost = std::get_if<Platform::WindowFocusEvent>(events.data());
+
+    const auto *gained = std::get_if<Platform::WindowFocusEvent>(&events.at(1));
+
+    ASSERT_NE(lost, nullptr);
+    ASSERT_NE(gained, nullptr);
+
+    EXPECT_FALSE(lost->focused);
+    EXPECT_TRUE(gained->focused);
 }

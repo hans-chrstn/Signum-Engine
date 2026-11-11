@@ -1472,10 +1472,10 @@
 
 - [x] Add keyboard input
 - [x] Add mouse input
-- [ ] Add scrolling
-- [ ] Add resize events
-- [ ] Add focus events
-- [ ] Add close events
+- [x] Add scrolling
+- [x] Add resize events
+- [x] Add focus events
+- [x] Add close events
 - [ ] Separate input from GLFW callbacks
 - [ ] Add monotonic timing
 - [ ] Add frame delta
@@ -1485,13 +1485,12 @@
 
 - [ ] Test key press/release
 - [ ] Test mouse state
-- [ ] Test scroll input
+- [x] Test scroll input
 - [ ] Test timing utilities
 - [ ] Test long-running ticks, pause/resume, time scaling, and large catch-up intervals.
-- [ ] Test event translation
+- [x] Test event translation
 - [ ] Navigate the current 3D reference workload with test-side camera controls built from engine input and timing APIs
 - [ ] Test rapid camera movement, focus changes, resizing, and long-running movement against the reference workload
-
 - [ ] Verify a fixed input sequence can reproduce the same deterministic reference updates within the supported configuration
 
 ### Architecture
@@ -1500,7 +1499,6 @@
 - [x] Keep actions such as Jump/Shoot project-defined
 - [ ] Keep input-device/backend translation replaceable without changing gameplay-facing action/state contracts
 - [ ] Avoid assuming one window, keyboard/mouse-only input, or one platform event source in engine-facing APIs
-
 - [ ] Keep input recording/replay optional and independent from a particular entity storage model
 
 ---
