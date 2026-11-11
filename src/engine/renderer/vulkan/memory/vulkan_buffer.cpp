@@ -11,6 +11,7 @@
 #include "vulkan_memory_policy.hpp"
 #include <cstddef>
 #include <cstring>
+#include <format>
 #include <string>
 #include <utility>
 
@@ -57,7 +58,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (buffer_result != VK_SUCCESS) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanBufferCreationFailed,
-                "Failed to create Vulkan buffer",
+                std::format("Failed to create Vulkan buffer (size={} bytes, "
+                            "usage={:#x})",
+                            create_info.size, create_info.usage)
+                    .c_str(),
                 Core::Error::NativeError(static_cast<int>(buffer_result),
                                          std::string(toString(buffer_result))),
                 "Create Vulkan Buffer");
@@ -164,7 +168,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (map_result != VK_SUCCESS) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanBufferMappingFailed,
-                "Failed to map Vulkan buffer allocation",
+                std::format("Failed to map Vulkan buffer allocation "
+                            "(offset={} bytes, size={} bytes)",
+                            offset, bytes_size)
+                    .c_str(),
                 Core::Error::NativeError(static_cast<int>(map_result),
                                          std::string(toString(map_result))),
                 "Map Vulkan Buffer Allocation");
@@ -186,7 +193,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (flush_result != VK_SUCCESS) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanBufferFlushFailed,
-                "Failed to flush Vulkan buffer allocation",
+                std::format("Failed to flush Vulkan buffer allocation "
+                            "(offset={} bytes, size={} bytes)",
+                            offset, bytes_size)
+                    .c_str(),
                 Core::Error::NativeError(static_cast<int>(flush_result),
                                          std::string(toString(flush_result))),
                 "Flush Vulkan Buffer Allocation");
@@ -238,7 +248,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (map_result != VK_SUCCESS) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanBufferMappingFailed,
-                "Failed to map Vulkan buffer allocation",
+                std::format("Failed to map Vulkan buffer allocation "
+                            "(offset={} bytes, size={} bytes)",
+                            offset, output_size)
+                    .c_str(),
                 Core::Error::NativeError(static_cast<int>(map_result),
                                          std::string(toString(map_result))),
                 "Map Vulkan Buffer Allocation");
@@ -251,7 +264,10 @@ namespace SNE::Engine::Renderer::Vulkan {
             vmaUnmapMemory(m_Allocator, m_Allocation);
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanBufferInvalidationFailed,
-                "Failed to invalidate Vulkan buffer allocation",
+                std::format("Failed to invalidate Vulkan buffer allocation "
+                            "(offset={} bytes, size={} bytes)",
+                            offset, output_size)
+                    .c_str(),
                 Core::Error::NativeError(
                     static_cast<int>(invalidate_result),
                     std::string(toString(invalidate_result))),

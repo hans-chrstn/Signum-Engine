@@ -10,6 +10,7 @@
 #include "vulkan_memory_policy.hpp"
 #include <algorithm>
 #include <bit>
+#include <format>
 #include <string>
 #include <utility>
 
@@ -238,7 +239,12 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (image_format_properties_result == VK_ERROR_FORMAT_NOT_SUPPORTED) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanImageFormatUnsupported,
-                "Requested Vulkan image format configuration is unsupported",
+                std::format("Requested Vulkan image format configuration is "
+                            "unsupported (format={}, type={}, usage={:#x})",
+                            static_cast<int>(create_info.format),
+                            static_cast<int>(create_info.image_type),
+                            create_info.usage)
+                    .c_str(),
                 Core::Error::NativeError(
                     static_cast<int>(image_format_properties_result),
                     std::string(toString(image_format_properties_result))),
@@ -248,7 +254,12 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (image_format_properties_result != VK_SUCCESS) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanImageFormatQueryFailed,
-                "Failed to query Vulkan image format capabilities",
+                std::format("Failed to query Vulkan image format capabilities "
+                            "(format={}, type={}, usage={:#x})",
+                            static_cast<int>(create_info.format),
+                            static_cast<int>(create_info.image_type),
+                            create_info.usage)
+                    .c_str(),
                 Core::Error::NativeError(
                     static_cast<int>(image_format_properties_result),
                     std::string(toString(image_format_properties_result))),
@@ -258,16 +269,22 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (create_info.mip_levels > image_format_properties.maxMipLevels) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanImageFormatUnsupported,
-                "Requested Vulkan image mip level count exceeds device "
-                "capabilities",
+                std::format("Requested Vulkan image mip levels ({}) exceed "
+                            "device maximum ({})",
+                            create_info.mip_levels,
+                            image_format_properties.maxMipLevels)
+                    .c_str(),
                 "Validate Vulkan Image Mip Level Support");
         }
 
         if (create_info.array_layers > image_format_properties.maxArrayLayers) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanImageFormatUnsupported,
-                "Requested Vulkan image array layer count exceeds device "
-                "capabilities",
+                std::format("Requested Vulkan image array layers ({}) exceed "
+                            "device maximum ({})",
+                            create_info.array_layers,
+                            image_format_properties.maxArrayLayers)
+                    .c_str(),
                 "Validate Vulkan Image Array Layer Support");
         }
 
@@ -279,7 +296,14 @@ namespace SNE::Engine::Renderer::Vulkan {
                 image_format_properties.maxExtent.depth) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanImageFormatUnsupported,
-                "Requested Vulkan image extent exceeds device capabilities",
+                std::format("Requested Vulkan image extent ({}x{}x{}) exceeds "
+                            "device maximum ({}x{}x{})",
+                            create_info.extent.width, create_info.extent.height,
+                            create_info.extent.depth,
+                            image_format_properties.maxExtent.width,
+                            image_format_properties.maxExtent.height,
+                            image_format_properties.maxExtent.depth)
+                    .c_str(),
                 "Validate Vulkan Image Extent Support");
         }
 
@@ -288,8 +312,12 @@ namespace SNE::Engine::Renderer::Vulkan {
             0U) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanImageFormatUnsupported,
-                "Requested Vulkan image sample count exceeds device "
-                "capabilities",
+                std::format(
+                    "Requested Vulkan image sample count ({}) is unsupported "
+                    "(supported mask={:#x})",
+                    static_cast<std::uint32_t>(create_info.samples),
+                    image_format_properties.sampleCounts)
+                    .c_str(),
                 "Validate Vulkan Image Sample Count Support");
         }
 
@@ -300,7 +328,14 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (result != VK_SUCCESS) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanImageCreationFailed,
-                "Failed to create Vulkan image",
+                std::format(
+                    "Failed to create Vulkan image "
+                    "(format={}, extent={}x{}x{}, usage={:#x}, mip_levels={})",
+                    static_cast<int>(create_info.format),
+                    create_info.extent.width, create_info.extent.height,
+                    create_info.extent.depth, create_info.usage,
+                    create_info.mip_levels)
+                    .c_str(),
                 Core::Error::NativeError(static_cast<int>(result),
                                          std::string(toString(result))),
                 "Create Vulkan Image");

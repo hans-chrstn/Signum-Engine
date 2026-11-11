@@ -1,9 +1,14 @@
 #include "../vulkan_integration_test_fixture.hpp"
+#include "engine/core/error/engine_error.hpp"
+#include "engine/core/error/error_code.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_image.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_image_view.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_memory_allocator.hpp"
 #include <cstdint>
+#include <format>
 #include <gtest/gtest.h>
+#include <limits>
+#include <string_view>
 #include <utility>
 #include <vulkan/vulkan.h>
 
@@ -586,4 +591,72 @@ TEST_F(VulkanIntegrationTest, MoveAssignmentReplacesImageCreationProperties) {
     EXPECT_EQ(destination.createInfo().array_layers, source_info.array_layers);
     EXPECT_EQ(destination.createInfo().format, source_info.format);
     EXPECT_EQ(destination.usage(), source_info.usage);
+}
+
+TEST_F(VulkanIntegrationTest, ReportsUnsupportedImageFormatConfiguration) {
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+
+    create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+    try {
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info});
+
+        FAIL() << "Expected image format configuration to be unsupported";
+    } catch (const SNE::Engine::Core::Error::EngineError &error) {
+        EXPECT_EQ(error.getCode(),
+                  SNE::Engine::Core::Error::Code::VulkanImageFormatUnsupported);
+
+        EXPECT_EQ(error.getOperation(), "Query Vulkan Image Format Support");
+
+        ASSERT_TRUE(error.getNativeError().has_value());
+
+        const std::string_view message{error.what()};
+
+        EXPECT_NE(message.find(std::format(
+                      "format={}", static_cast<int>(create_info.format))),
+                  std::string_view::npos);
+
+        EXPECT_NE(message.find(std::format("usage={:#x}", create_info.usage)),
+                  std::string_view::npos);
+    }
+}
+
+TEST_F(VulkanIntegrationTest, ReportsImageArrayLayerLimit) {
+    Vulkan::VulkanImageCreateInfo create_info = makeTestImageCreateInfo();
+
+    VkImageFormatProperties properties{};
+
+    const VkResult query_result = vkGetPhysicalDeviceImageFormatProperties(
+        m_PhysicalDevice, create_info.format, create_info.image_type,
+        VK_IMAGE_TILING_OPTIMAL, create_info.usage, create_info.flags,
+        &properties);
+
+    ASSERT_EQ(query_result, VK_SUCCESS);
+
+    ASSERT_LT(properties.maxArrayLayers,
+              std::numeric_limits<std::uint32_t>::max());
+
+    create_info.array_layers = properties.maxArrayLayers + 1U;
+
+    try {
+        static_cast<void>(Vulkan::VulkanImage{memoryAllocator(), create_info});
+
+        FAIL() << "Expected image array-layer limit failure";
+    } catch (const SNE::Engine::Core::Error::EngineError &error) {
+        EXPECT_EQ(error.getCode(),
+                  SNE::Engine::Core::Error::Code::VulkanImageFormatUnsupported);
+
+        EXPECT_EQ(error.getOperation(),
+                  "Validate Vulkan Image Array Layer Support");
+
+        const std::string_view message{error.what()};
+
+        EXPECT_NE(message.find(std::format("array layers ({})",
+                                           create_info.array_layers)),
+                  std::string_view::npos);
+
+        EXPECT_NE(message.find(std::format("device maximum ({})",
+                                           properties.maxArrayLayers)),
+                  std::string_view::npos);
+    }
 }

@@ -6,6 +6,7 @@
 #include "engine/core/error/native_error.hpp"
 #include "engine/core/error/subsystem.hpp"
 #include "engine/renderer/vulkan/common/vulkan_result.hpp"
+#include <format>
 #include <string>
 #include <utility>
 
@@ -55,7 +56,15 @@ namespace SNE::Engine::Renderer::Vulkan {
         if (result != VK_SUCCESS) {
             throw Core::Error::EngineError(
                 Core::Error::Code::VulkanImageViewCreationFailed,
-                "Failed to create Vulkan image view",
+                std::format("Failed to create Vulkan image view "
+                            "(format={}, base_mip={}, mip_count={}, "
+                            "base_layer={}, layer_count={})",
+                            static_cast<int>(create_info.format),
+                            create_info.subresourceRange.baseMipLevel,
+                            create_info.subresourceRange.levelCount,
+                            create_info.subresourceRange.baseArrayLayer,
+                            create_info.subresourceRange.layerCount)
+                    .c_str(),
                 Core::Error::NativeError(static_cast<int>(result),
                                          std::string(toString(result))),
                 "Create Vulkan Image View");
