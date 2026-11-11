@@ -3,6 +3,7 @@
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/native_error.hpp"
 #include "engine/renderer/shader/shader_artifact.hpp"
+#include "engine/renderer/shader/shader_source_description.hpp"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -44,22 +45,29 @@ namespace {
         if (source.entry_point.empty()) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceInvalid,
-                "Shader source entry point must not be empty",
+                std::format("Shader source entry point must not be empty: {}",
+                            source.path.string())
+                    .c_str(),
                 "Validate Shader Source");
         }
 
         if (source.entry_point.contains('\0')) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceInvalid,
-                "Shader source entry point contains an embedded null character",
+                std::format("Shader source entry point contains an embedded "
+                            "null character: {}",
+                            source.path.string())
+                    .c_str(),
                 "Validate Shader Source");
         }
 
         if (source.language != Shader::ShaderSourceLanguage::Slang) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceInvalid,
-                "Shader source language is not supported by the current "
-                "compiler",
+                std::format("Shader source language is not supported by the "
+                            "current compiler: {}",
+                            source.path.string())
+                    .c_str(),
                 "Validate Shader Source Language");
         }
     }
@@ -83,7 +91,9 @@ namespace {
         if (end_position == std::streampos{-1}) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceLoadFailed,
-                "Failed to determine shader source file size",
+                std::format("Failed to determine shader source file size: {}",
+                            path.string())
+                    .c_str(),
                 "Determine Shader Source Size");
         }
 
@@ -92,14 +102,18 @@ namespace {
         if (byte_size < 0) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceLoadFailed,
-                "Shader source file has an invalid size",
+                std::format("Shader source file has an invalid size: {}",
+                            path.string())
+                    .c_str(),
                 "Validate Shader Source Size");
         }
 
         if (byte_size > std::numeric_limits<std::streamsize>::max()) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceLoadFailed,
-                "Shader source file exceeds supported size",
+                std::format("Shader source file exceeds supported size: {}",
+                            path.string())
+                    .c_str(),
                 "Validate Shader Source Size");
         }
 
@@ -108,7 +122,9 @@ namespace {
         if (std::cmp_greater(byte_size, source_text.max_size())) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceLoadFailed,
-                "Shader source file exceeds supported size",
+                std::format("Shader source file exceeds supported size: {}",
+                            path.string())
+                    .c_str(),
                 "Validate Shader Source Size");
         }
 
@@ -119,7 +135,10 @@ namespace {
         if (!file) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceLoadFailed,
-                "Failed to seek to beginning of shader source file",
+                std::format(
+                    "Failed to seek to beginning of shader source file: {}",
+                    path.string())
+                    .c_str(),
                 "Seek Shader Source");
         }
 
@@ -128,14 +147,19 @@ namespace {
         if (!file) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceLoadFailed,
-                "Failed to read shader source file completely",
+                std::format("Failed to read shader source file completely: {}",
+                            path.string())
+                    .c_str(),
                 "Read Shader Source");
         }
 
         if (source_text.contains('\0')) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceInvalid,
-                "Shader source contains an embedded null character",
+                std::format(
+                    "Shader source contains an embedded null character: {}",
+                    path.string())
+                    .c_str(),
                 "Validate Shader Source Text");
         }
 
@@ -296,7 +320,10 @@ namespace {
         if (module == nullptr) {
             throwShaderCompilationFailure(
                 {
-                    .message = "Failed to load Slang shader module",
+                    .message =
+                        std::format("Failed to load Slang shader module: {}",
+                                    source.path.string())
+                            .c_str(),
                     .operation = "Load Slang Shader Module",
                 },
                 diagnostics);
@@ -305,19 +332,23 @@ namespace {
         return module;
     }
 
-    [[nodiscard]] auto findSlangEntryPoint(slang::IModule *module,
-                                           const std::string &entry_point_name)
+    [[nodiscard]] auto
+    findSlangEntryPoint(slang::IModule *module,
+                        const Shader::ShaderSourceDescription &source)
         -> Slang::ComPtr<slang::IEntryPoint> {
 
         Slang::ComPtr<slang::IEntryPoint> entry_point;
 
         const SlangResult result = module->findEntryPointByName(
-            entry_point_name.c_str(), entry_point.writeRef());
+            source.entry_point.c_str(), entry_point.writeRef());
 
         if (SLANG_FAILED(result)) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceCompilationFailed,
-                "Failed to find Slang shader entry point",
+                std::format(
+                    "Failed to find Slang shader entry point '{}' in {}",
+                    source.entry_point, source.path.string())
+                    .c_str(),
                 Core::Error::NativeError(
                     static_cast<int>(result),
                     "Slang shader entry-point lookup failed"),
@@ -327,7 +358,10 @@ namespace {
         if (entry_point == nullptr) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceCompilationFailed,
-                "Slang compiler returned a null shader entry point",
+                std::format("Slang compiler returned a null shader entry point "
+                            "'{}' in {}",
+                            source.entry_point, source.path.string())
+                    .c_str(),
                 "Find Slang Shader Entry Point");
         }
 
@@ -430,8 +464,10 @@ namespace {
         }
     }
 
-    auto validateSlangEntryPointStage(slang::IComponentType *linked_program,
-                                      Shader::ShaderStage stage) -> void {
+    auto
+    validateSlangEntryPointStage(slang::IComponentType *linked_program,
+                                 const Shader::ShaderSourceDescription &source)
+        -> void {
 
         slang::ProgramLayout *layout = linked_program->getLayout(0);
 
@@ -460,13 +496,14 @@ namespace {
         }
 
         const SlangStage actual_stage = entry_layout->getStage();
-        const SlangStage expected_stage = toSlangStage(stage);
+        const SlangStage expected_stage = toSlangStage(source.stage);
 
         if (actual_stage != expected_stage) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceInvalid,
-                "Requested shader stage does not match Slang "
-                "entry-point stage",
+                std::format("Shader stage mismatch for entry point '{}' in {}",
+                            source.entry_point, source.path.string())
+                    .c_str(),
                 "Validate Shader Stage");
         }
     }
@@ -553,7 +590,7 @@ namespace SNE::Engine::Renderer::Shader {
             loadSlangModule(session.get(), source, source_text, diagnostics);
 
         Slang::ComPtr<slang::IEntryPoint> entry_point =
-            findSlangEntryPoint(module.get(), source.entry_point);
+            findSlangEntryPoint(module.get(), source);
 
         Slang::ComPtr<slang::IComponentType> composed_program =
             composeSlangProgram(session.get(), module.get(), entry_point.get(),
@@ -562,7 +599,7 @@ namespace SNE::Engine::Renderer::Shader {
         Slang::ComPtr<slang::IComponentType> linked_program =
             linkSlangProgram(composed_program.get(), diagnostics);
 
-        validateSlangEntryPointStage(linked_program.get(), source.stage);
+        validateSlangEntryPointStage(linked_program.get(), source);
 
         ShaderArtifact artifact =
             generateSlangSpirv(linked_program.get(), diagnostics);

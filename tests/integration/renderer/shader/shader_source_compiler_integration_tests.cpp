@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <initializer_list>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -40,9 +41,11 @@ namespace {
         };
     }
 
-    auto expectCompilationFailure(const Shader::ShaderSourceDescription &source,
-                                  Core::Error::Code expected_code,
-                                  std::string_view expected_operation) -> void {
+    auto expectCompilationFailure(
+        const Shader::ShaderSourceDescription &source,
+        Core::Error::Code expected_code, std::string_view expected_operation,
+        std::initializer_list<std::string_view> expected_fragments = {})
+        -> void {
 
         try {
             static_cast<void>(Shader::compileShaderSource(source));
@@ -50,7 +53,15 @@ namespace {
         } catch (const Core::Error::EngineError &error) {
             EXPECT_EQ(error.getCode(), expected_code);
             EXPECT_EQ(error.getOperation(), expected_operation);
-            EXPECT_FALSE(std::string_view{error.what()}.empty());
+
+            const std::string_view message{error.what()};
+
+            EXPECT_FALSE(message.empty());
+
+            for (const std::string_view fragment : expected_fragments) {
+                EXPECT_NE(message.find(fragment), std::string_view::npos)
+                    << "Missing diagnostic fragment: " << fragment;
+            }
         }
     }
 
@@ -107,7 +118,7 @@ TEST(ShaderSourceCompilerIntegrationTests, RejectsEmptyEntryPoint) {
     source.entry_point.clear();
 
     expectCompilationFailure(source, Core::Error::Code::ShaderSourceInvalid,
-                             "Validate Shader Source");
+                             "Validate Shader Source", {source.path.string()});
 }
 
 TEST(ShaderSourceCompilerIntegrationTests, RejectsUnsupportedSourceLanguage) {
@@ -117,7 +128,8 @@ TEST(ShaderSourceCompilerIntegrationTests, RejectsUnsupportedSourceLanguage) {
     source.language = Shader::ShaderSourceLanguage::Hlsl;
 
     expectCompilationFailure(source, Core::Error::Code::ShaderSourceInvalid,
-                             "Validate Shader Source Language");
+                             "Validate Shader Source Language",
+                             {source.path.string()});
 }
 
 TEST(ShaderSourceCompilerIntegrationTests, RejectsMissingSourceFile) {
@@ -159,7 +171,8 @@ TEST(ShaderSourceCompilerIntegrationTests, RejectsMismatchedShaderStage) {
         makeShaderSource(Shader::ShaderStage::Vertex, "fragmentMain");
 
     expectCompilationFailure(source, Core::Error::Code::ShaderSourceInvalid,
-                             "Validate Shader Stage");
+                             "Validate Shader Stage",
+                             {source.path.string(), source.entry_point});
 }
 
 TEST(ShaderSourceCompilerIntegrationTests, ReportsMalformedSourceDiagnostics) {
@@ -235,7 +248,7 @@ TEST(ShaderSourceCompilerIntegrationTests,
     source.entry_point.append("unexpected");
 
     expectCompilationFailure(source, Core::Error::Code::ShaderSourceInvalid,
-                             "Validate Shader Source");
+                             "Validate Shader Source", {source.path.string()});
 }
 
 TEST(ShaderSourceCompilerIntegrationTests,
@@ -290,5 +303,6 @@ TEST(ShaderSourceCompilerIntegrationTests,
     source.path = temporary_file.path;
 
     expectCompilationFailure(source, Core::Error::Code::ShaderSourceInvalid,
-                             "Validate Shader Source Text");
+                             "Validate Shader Source Text",
+                             {source.path.string()});
 }
