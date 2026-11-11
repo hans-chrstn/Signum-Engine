@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <limits>
 #include <slang-com-ptr.h>
@@ -71,7 +72,10 @@ namespace {
         if (!file.is_open()) {
             throw Core::Error::EngineError(
                 Core::Error::Code::ShaderSourceLoadFailed,
-                "Failed to open shader source file", "Load Shader Source");
+                std::format("Failed to open shader source file: {}",
+                            path.string())
+                    .c_str(),
+                "Load Shader Source");
         }
 
         const std::streampos end_position = file.tellg();

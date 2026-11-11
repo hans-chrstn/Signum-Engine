@@ -128,8 +128,21 @@ TEST(ShaderSourceCompilerIntegrationTests, RejectsMissingSourceFile) {
 
     ASSERT_FALSE(std::filesystem::exists(source.path));
 
-    expectCompilationFailure(source, Core::Error::Code::ShaderSourceLoadFailed,
-                             "Load Shader Source");
+    try {
+        static_cast<void>(Shader::compileShaderSource(source));
+        FAIL() << "Expected shader source compilation to fail";
+    } catch (const Core::Error::EngineError &error) {
+        EXPECT_EQ(error.getCode(), Core::Error::Code::ShaderSourceLoadFailed);
+
+        EXPECT_EQ(error.getOperation(), "Load Shader Source");
+
+        const std::string_view message{error.what()};
+
+        EXPECT_NE(message.find("Failed to open shader source file"),
+                  std::string_view::npos);
+
+        EXPECT_NE(message.find(source.path.string()), std::string_view::npos);
+    }
 }
 
 TEST(ShaderSourceCompilerIntegrationTests, RejectsMissingEntryPoint) {
