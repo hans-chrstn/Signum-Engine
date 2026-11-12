@@ -50,4 +50,8 @@ namespace SNE::Engine::Core::Time {
 
         return true;
     }
+
+    auto FixedStepScheduler::fixedStep() const noexcept -> Duration {
+        return m_FixedStep;
+    }
 } // namespace SNE::Engine::Core::Time

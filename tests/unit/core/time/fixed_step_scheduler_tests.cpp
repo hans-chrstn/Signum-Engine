@@ -168,3 +168,22 @@ TEST(FixedStepSchedulerTests, FailedConsumptionPreservesAccumulatedTime) {
     EXPECT_FALSE(scheduler.tryConsumeStep());
     EXPECT_EQ(scheduler.accumulatedTime(), remaining);
 }
+
+TEST(FixedStepSchedulerTests, ReturnsConfiguredFixedStep) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    EXPECT_EQ(scheduler.fixedStep(), kConsumptionStep);
+}
+
+TEST(FixedStepSchedulerTests, FixedStepRemainsConstantAfterConsumption) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kTwoAndHalfSteps);
+
+    EXPECT_EQ(scheduler.fixedStep(), kConsumptionStep);
+
+    ASSERT_TRUE(scheduler.tryConsumeStep());
+
+    EXPECT_EQ(scheduler.fixedStep(), kConsumptionStep);
+    EXPECT_EQ(scheduler.accumulatedTime(), kOneAndHalfSteps);
+}

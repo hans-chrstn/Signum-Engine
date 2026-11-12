@@ -85,5 +85,15 @@ namespace SNE::Engine::Core::Time {
          * @return True if one fixed step was consumed; otherwise false.
          */
         [[nodiscard]] auto tryConsumeStep() noexcept -> bool;
+
+        /**
+         * @brief Returns the configured fixed simulation timestep.
+         *
+         * This duration represents the amount of simulation time
+         * advanced by each successfully consumed fixed step.
+         *
+         * @return Finite, strictly positive fixed-step duration.
+         */
+        [[nodiscard]] auto fixedStep() const noexcept -> Duration;
     };
 } // namespace SNE::Engine::Core::Time

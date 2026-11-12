@@ -38,6 +38,7 @@ add_executable(
   core/math/quaternion_tests.cpp
   core/time/frame_clock_tests.cpp
   core/time/fixed_step_scheduler_tests.cpp
+  core/time/fixed_update_runner_tests.cpp
   platform/platform_event_tests.cpp
   platform/platform_event_queue_tests.cpp
   platform/input_state_tests.cpp
