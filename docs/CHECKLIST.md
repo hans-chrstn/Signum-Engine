@@ -1453,8 +1453,8 @@
 
 ### Learn
 
-- [ ] event-driven input
-- [ ] input state
+- [x] event-driven input
+- [x] input state
 - [ ] frame timing
 - [ ] variable timestep
 - [ ] fixed timestep
@@ -1476,15 +1476,15 @@
 - [x] Add resize events
 - [x] Add focus events
 - [x] Add close events
-- [ ] Separate input from GLFW callbacks
+- [x] Separate input from GLFW callbacks
 - [ ] Add monotonic timing
 - [ ] Add frame delta
 - [ ] Add fixed-update support
 
 ### Test
 
-- [ ] Test key press/release
-- [ ] Test mouse state
+- [x] Test key press/release
+- [x] Test mouse state
 - [x] Test scroll input
 - [ ] Test timing utilities
 - [ ] Test long-running ticks, pause/resume, time scaling, and large catch-up intervals.

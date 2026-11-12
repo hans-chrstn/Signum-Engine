@@ -8,6 +8,7 @@
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
 #include <GLFW/glfw3.h>
+#include <cstddef>
 #include <cstdlib>
 #include <gtest/gtest.h>
 #include <span>
@@ -26,6 +27,9 @@ namespace {
 
     constexpr double kHorizontalOffset = 0.5;
     constexpr double kVerticalOffset = -1.25;
+
+    constexpr int kUnusedScancode = 0;
+    constexpr int kNoModifiers = 0;
 
     [[nodiscard]] auto hasDisplay() -> bool {
         return std::getenv("DISPLAY") != nullptr ||
@@ -119,4 +123,151 @@ TEST(ApplicationPlatformEventsIntegrationTests,
 
     EXPECT_TRUE(event_received);
     EXPECT_TRUE(update_observed_event);
+}
+
+TEST(ApplicationPlatformEventsIntegrationTests,
+     UpdatesInputStateBeforeApplicationCallbacks) {
+    if (!hasDisplay()) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    {
+        Platform::GlfwContext glfw_context{};
+        Platform::Window window{
+            kWindowSize,
+            "Signum Application Input State Integration Test",
+        };
+
+        if (!hasSuitableDevice(window)) {
+            GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+        }
+    }
+
+    Core::ApplicationConfiguration configuration{};
+    configuration.application_name =
+        "Signum Application Input State Integration Test";
+    configuration.initial_window_size = kWindowSize;
+    configuration.development_diagnostics_enabled = false;
+    configuration.logging.terminal_enabled = false;
+
+    Core::Application application{std::move(configuration)};
+
+    GLFWwindow *native_window = application.window().nativeHandle();
+
+    GLFWkeyfun key_callback = glfwSetKeyCallback(native_window, nullptr);
+    glfwSetKeyCallback(native_window, key_callback);
+
+    ASSERT_NE(key_callback, nullptr);
+
+    key_callback(native_window, GLFW_KEY_W, kUnusedScancode, GLFW_PRESS,
+                 kNoModifiers);
+
+    bool event_callback_observed_press{false};
+    bool update_observed_press{false};
+
+    application.run(
+        [&](Core::Application &app) -> void {
+            update_observed_press =
+                event_callback_observed_press &&
+                app.inputState().isKeyDown(Platform::Key::W) &&
+                app.inputState().wasKeyPressed(Platform::Key::W);
+
+            app.requestClose();
+        },
+        {}, {},
+        [&](Core::Application &app,
+            std::span<const Platform::PlatformEvent> events) -> void {
+            for (const Platform::PlatformEvent &event : events) {
+                const auto *key_event = std::get_if<Platform::KeyEvent>(&event);
+
+                if (key_event != nullptr &&
+                    key_event->key == Platform::Key::W &&
+                    key_event->action == Platform::KeyAction::Press) {
+                    event_callback_observed_press =
+                        app.inputState().isKeyDown(Platform::Key::W) &&
+                        app.inputState().wasKeyPressed(Platform::Key::W);
+                }
+            }
+        });
+
+    EXPECT_TRUE(event_callback_observed_press);
+    EXPECT_TRUE(update_observed_press);
+}
+
+TEST(ApplicationPlatformEventsIntegrationTests,
+     MaintainsInputStateWithoutPlatformEventCallback) {
+    if (!hasDisplay()) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    {
+        Platform::GlfwContext glfw_context{};
+        Platform::Window window{
+            kWindowSize,
+            "Signum Application Input Frame Integration Test",
+        };
+
+        if (!hasSuitableDevice(window)) {
+            GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+        }
+    }
+
+    Core::ApplicationConfiguration configuration{};
+    configuration.application_name =
+        "Signum Application Input Frame Integration Test";
+    configuration.initial_window_size = kWindowSize;
+    configuration.development_diagnostics_enabled = false;
+    configuration.logging.terminal_enabled = false;
+
+    Core::Application application{std::move(configuration)};
+
+    GLFWwindow *native_window = application.window().nativeHandle();
+
+    GLFWkeyfun key_callback = glfwSetKeyCallback(native_window, nullptr);
+    glfwSetKeyCallback(native_window, key_callback);
+
+    ASSERT_NE(key_callback, nullptr);
+
+    key_callback(native_window, GLFW_KEY_W, kUnusedScancode, GLFW_PRESS,
+                 kNoModifiers);
+
+    std::size_t frame_index{0U};
+
+    application.run([&](Core::Application &app) -> void {
+        const Platform::InputState &input = app.inputState();
+
+        switch (frame_index) {
+        case 0U:
+            EXPECT_TRUE(input.isKeyDown(Platform::Key::W));
+            EXPECT_TRUE(input.wasKeyPressed(Platform::Key::W));
+            EXPECT_FALSE(input.wasKeyReleased(Platform::Key::W));
+            break;
+
+        case 1U:
+            EXPECT_TRUE(input.isKeyDown(Platform::Key::W));
+            EXPECT_FALSE(input.wasKeyPressed(Platform::Key::W));
+            EXPECT_FALSE(input.wasKeyReleased(Platform::Key::W));
+
+            key_callback(native_window, GLFW_KEY_W, kUnusedScancode,
+                         GLFW_RELEASE, kNoModifiers);
+            break;
+
+        case 2U:
+            EXPECT_FALSE(input.isKeyDown(Platform::Key::W));
+            EXPECT_FALSE(input.wasKeyPressed(Platform::Key::W));
+            EXPECT_TRUE(input.wasKeyReleased(Platform::Key::W));
+
+            app.requestClose();
+            break;
+
+        default:
+            ADD_FAILURE() << "Unexpected additional application frame";
+            app.requestClose();
+            break;
+        }
+
+        ++frame_index;
+    });
+
+    EXPECT_EQ(frame_index, 3U);
 }

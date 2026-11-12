@@ -40,9 +40,13 @@ namespace SNE::Engine::Core {
                                  std::span<const Platform::PlatformEvent>)>
             &on_platform_events) -> void {
         while (!m_Window.shouldClose()) {
+            m_InputState.beginFrame();
             Platform::Window::pollEvents();
 
             std::vector<Platform::PlatformEvent> events = m_Window.takeEvents();
+
+            m_InputState.applyEvents(
+                std::span<const Platform::PlatformEvent>{events});
 
             if (on_platform_events && !events.empty()) {
                 on_platform_events(
@@ -145,5 +149,10 @@ namespace SNE::Engine::Core {
     auto Application::drawInstances() const
         -> std::vector<Renderer::MeshDrawInstance> {
         return m_Renderer.drawInstances();
+    }
+
+    auto Application::inputState() const noexcept
+        -> const Platform::InputState & {
+        return m_InputState;
     }
 } // namespace SNE::Engine::Core

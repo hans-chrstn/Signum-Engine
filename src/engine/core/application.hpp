@@ -5,6 +5,7 @@
 #include "engine/core/math/matrix4.hpp"
 #include "engine/platform/event/platform_event.hpp"
 #include "engine/platform/glfw_context.hpp"
+#include "engine/platform/input/input_state.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
@@ -104,6 +105,17 @@ namespace SNE::Engine::Core {
         Platform::Window m_Window;
 
         /**
+         * @brief Tracks input state for the application's primary window.
+         *
+         * Maintains backend-independent keyboard and mouse-button held
+         * states and frame-local transitions from queued platform events.
+         *
+         * Updated once per application frame before application callbacks
+         * and rendering.
+         */
+        Platform::InputState m_InputState{};
+
+        /**
          * @brief Owns the application's Vulkan rendering backend.
          *
          * Manages Vulkan rendering resources, frame execution,
@@ -157,6 +169,13 @@ namespace SNE::Engine::Core {
          * The update callback runs after event polling and before
          * rendering, allowing application state to change before
          * the current frame is recorded.
+         *
+         * Begins each input frame by clearing transient input transitions,
+         * then polls and applies platform events to the application-owned
+         * input state before invoking application callbacks.
+         *
+         * Input state is updated even when no platform-event callback
+         * is registered.
          *
          * @param on_update Optional callback invoked once per frame.
          * Receives a reference to the running application.
@@ -547,5 +566,20 @@ namespace SNE::Engine::Core {
          */
         [[nodiscard]] auto drawInstances() const
             -> std::vector<Renderer::MeshDrawInstance>;
+
+        /**
+         * @brief Provides read-only access to the current input state.
+         *
+         * Allows application systems to query keyboard and mouse-button
+         * held states and frame-local transitions without directly
+         * querying the platform backend.
+         *
+         * @return Reference to the application-owned input state.
+         *
+         * @note The reference remains valid only while the Application
+         * object is alive.
+         */
+        [[nodiscard]] auto inputState() const noexcept
+            -> const Platform::InputState &;
     };
 } // namespace SNE::Engine::Core

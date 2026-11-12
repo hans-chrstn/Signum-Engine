@@ -30,6 +30,7 @@ add_library(
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp
     engine/platform/event/platform_event_queue.cpp
+    engine/platform/input/input_state.cpp
     engine/renderer/camera/camera_relative_position.cpp
     engine/renderer/geometry/uv_sphere_mesh.cpp
     engine/renderer/geometry/vertex_format.cpp
