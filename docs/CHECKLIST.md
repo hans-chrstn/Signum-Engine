@@ -1455,7 +1455,7 @@
 
 - [x] event-driven input
 - [x] input state
-- [ ] frame timing
+- [x] frame timing
 - [ ] variable timestep
 - [ ] fixed timestep
 - [ ] Learn the difference between wall time, frame time, simulation ticks, and simulation time.
@@ -1467,6 +1467,15 @@
 - [ ] Define input sampling and frame numbering without assuming networking or rollback
 - [ ] Define simulation tick IDs and time units separately from rendering frames.
 - [ ] Allow spatial transforms to use simulation time. Keep orbital mechanics out of the timing system.
+- [ ] Define an extensible fixed-step scheduling policy contract.
+- [ ] Support built-in Preserve and DiscardExcess backlog policies.
+- [ ] Support safe runtime policy changes at scheduling boundaries.
+- [ ] Preserve simulation state and account for discarded time during transitions.
+- [ ] Expose pending time, executed ticks, and overload diagnostics.
+- [ ] Keep fixed timestep configuration independent of backlog policies.
+- [ ] Allow optional workload-driven policy selection without coupling
+      the scheduler to CPU/GPU monitoring.
+- [ ] Define deterministic policy-transition and replay behavior.
 
 ### Implement
 
@@ -1477,8 +1486,8 @@
 - [x] Add focus events
 - [x] Add close events
 - [x] Separate input from GLFW callbacks
-- [ ] Add monotonic timing
-- [ ] Add frame delta
+- [x] Add monotonic timing
+- [x] Add frame delta
 - [ ] Add fixed-update support
 
 ### Test
@@ -1486,12 +1495,15 @@
 - [x] Test key press/release
 - [x] Test mouse state
 - [x] Test scroll input
-- [ ] Test timing utilities
+- [x] Test timing utilities
 - [ ] Test long-running ticks, pause/resume, time scaling, and large catch-up intervals.
 - [x] Test event translation
 - [ ] Navigate the current 3D reference workload with test-side camera controls built from engine input and timing APIs
 - [ ] Test rapid camera movement, focus changes, resizing, and long-running movement against the reference workload
 - [ ] Verify a fixed input sequence can reproduce the same deterministic reference updates within the supported configuration
+- [ ] Test Preserve and DiscardExcess backlog policies.
+- [ ] Test runtime policy transitions without resetting simulation state.
+- [ ] Test custom policy decisions, invalid outputs, and deterministic replay.
 
 ### Architecture
 
