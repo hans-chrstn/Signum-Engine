@@ -9,6 +9,37 @@
 namespace Platform = SNE::Engine::Platform;
 
 namespace {
+    constexpr double kZeroScroll = 0.0;
+    constexpr double kQuarterScroll = 0.25;
+    constexpr double kHalfScroll = 0.5;
+    constexpr double kThreeQuarterScroll = 0.75;
+    constexpr double kOneScroll = 1.0;
+    constexpr double kOneAndQuarterScroll = 1.25;
+    constexpr double kTwoScroll = 2.0;
+
+    constexpr Platform::CursorPosition kCursorOrigin{};
+
+    constexpr Platform::CursorPosition kInitialCursorPosition{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kSecondCursorPosition{
+        .x = 110.0,
+        .y = 190.0,
+    };
+
+    constexpr Platform::CursorPosition kThirdCursorPosition{
+        .x = 125.0,
+        .y = 195.0,
+    };
+
+    constexpr double kExpectedTotalCursorDeltaX = 25.0;
+    constexpr double kExpectedTotalCursorDeltaY = -5.0;
+
+    constexpr double kExpectedLastCursorDeltaX = 15.0;
+    constexpr double kExpectedLastCursorDeltaY = 5.0;
+
     auto deliverEvent(Platform::InputState &state,
                       const Platform::PlatformEvent &event) -> void {
         state.applyEvents(std::span<const Platform::PlatformEvent>{&event, 1U});
@@ -290,14 +321,7 @@ TEST(InputStateTests, IgnoresUnrelatedPlatformEvents) {
                             .action = Platform::KeyAction::Press,
                         });
 
-    constexpr std::array<Platform::PlatformEvent, 5> events{
-        Platform::CursorMovedEvent{
-            .position = {.x = 100.0, .y = 200.0},
-        },
-        Platform::ScrollEvent{
-            .x_offset = 1.0,
-            .y_offset = -2.0,
-        },
+    constexpr std::array<Platform::PlatformEvent, 3> events{
         Platform::WindowResizedEvent{
             .width = 800,
             .height = 600,
@@ -377,4 +401,299 @@ TEST(InputStateTests, InvalidInputEventsFailFast) {
 
     EXPECT_DEATH(deliverEvent(state, invalid_button_event),
                  "InputState requires a supported MouseButton value");
+}
+
+TEST(InputStateTests, StartsWithZeroScrollDelta) {
+    Platform::InputState state;
+
+    const auto delta = state.scrollDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, kZeroScroll);
+    EXPECT_DOUBLE_EQ(delta.y, kZeroScroll);
+}
+
+TEST(InputStateTests, TracksVerticalOnlyScroll) {
+    Platform::InputState state;
+
+    deliverEvent(state, Platform::ScrollEvent{
+                            .x_offset = kZeroScroll,
+                            .y_offset = kOneAndQuarterScroll,
+                        });
+
+    const auto delta = state.scrollDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, kZeroScroll);
+    EXPECT_DOUBLE_EQ(delta.y, kOneAndQuarterScroll);
+}
+
+TEST(InputStateTests, TracksHorizontalOnlyScroll) {
+    Platform::InputState state;
+
+    deliverEvent(state, Platform::ScrollEvent{
+                            .x_offset = -kThreeQuarterScroll,
+                            .y_offset = kZeroScroll,
+                        });
+
+    const auto delta = state.scrollDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, -kThreeQuarterScroll);
+    EXPECT_DOUBLE_EQ(delta.y, kZeroScroll);
+}
+
+TEST(InputStateTests, AccumulatesMultipleScrollEventsWithinFrame) {
+    Platform::InputState state;
+
+    constexpr std::array<Platform::PlatformEvent, 3> events{
+        Platform::ScrollEvent{
+            .x_offset = kZeroScroll,
+            .y_offset = kOneScroll,
+        },
+        Platform::ScrollEvent{
+            .x_offset = kHalfScroll,
+            .y_offset = kQuarterScroll,
+        },
+        Platform::ScrollEvent{
+            .x_offset = -kQuarterScroll,
+            .y_offset = -kHalfScroll,
+        },
+    };
+
+    state.applyEvents(events);
+
+    const auto delta = state.scrollDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, kQuarterScroll);
+    EXPECT_DOUBLE_EQ(delta.y, kThreeQuarterScroll);
+}
+
+TEST(InputStateTests, BeginFrameClearsScrollButPreservesHeldKeys) {
+    Platform::InputState state;
+
+    deliverEvent(state, Platform::KeyEvent{
+                            .key = Platform::Key::W,
+                            .action = Platform::KeyAction::Press,
+                        });
+
+    deliverEvent(state, Platform::ScrollEvent{
+                            .x_offset = kHalfScroll,
+                            .y_offset = kTwoScroll,
+                        });
+
+    state.beginFrame();
+
+    const auto delta = state.scrollDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, kZeroScroll);
+    EXPECT_DOUBLE_EQ(delta.y, kZeroScroll);
+
+    EXPECT_TRUE(state.isKeyDown(Platform::Key::W));
+    EXPECT_FALSE(state.wasKeyPressed(Platform::Key::W));
+
+    deliverEvent(state, Platform::ScrollEvent{
+                            .x_offset = kZeroScroll,
+                            .y_offset = -kOneScroll,
+                        });
+
+    EXPECT_DOUBLE_EQ(state.scrollDelta().y, -kOneScroll);
+}
+
+TEST(InputStateTests, FocusLossClearsAccumulatedScroll) {
+    Platform::InputState state;
+
+    deliverEvent(state, Platform::ScrollEvent{
+                            .x_offset = kOneScroll,
+                            .y_offset = kTwoScroll,
+                        });
+
+    deliverEvent(state, Platform::WindowFocusEvent{
+                            .focused = false,
+                        });
+
+    const auto delta = state.scrollDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, kZeroScroll);
+    EXPECT_DOUBLE_EQ(delta.y, kZeroScroll);
+}
+
+TEST(InputStateTests, PreservesScrollEventOrderAroundFocusLoss) {
+    Platform::InputState state;
+
+    constexpr std::array<Platform::PlatformEvent, 3> events{
+        Platform::ScrollEvent{
+            .x_offset = kOneScroll,
+            .y_offset = kTwoScroll,
+        },
+        Platform::WindowFocusEvent{
+            .focused = false,
+        },
+        Platform::ScrollEvent{
+            .x_offset = -kQuarterScroll,
+            .y_offset = kHalfScroll,
+        },
+    };
+
+    state.applyEvents(events);
+
+    const auto delta = state.scrollDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, -kQuarterScroll);
+    EXPECT_DOUBLE_EQ(delta.y, kHalfScroll);
+}
+
+TEST(InputStateTests, FirstCursorEventEstablishesPositionWithoutMovement) {
+    Platform::InputState state;
+
+    EXPECT_FALSE(state.cursorPosition().has_value());
+    EXPECT_DOUBLE_EQ(state.cursorDelta().x, kCursorOrigin.x);
+    EXPECT_DOUBLE_EQ(state.cursorDelta().y, kCursorOrigin.y);
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kInitialCursorPosition,
+                        });
+
+    const auto position = state.cursorPosition();
+    ASSERT_TRUE(position.has_value());
+
+    const Platform::CursorPosition actual_position =
+        position.value_or(kCursorOrigin);
+
+    EXPECT_DOUBLE_EQ(actual_position.x, kInitialCursorPosition.x);
+    EXPECT_DOUBLE_EQ(actual_position.y, kInitialCursorPosition.y);
+
+    EXPECT_DOUBLE_EQ(state.cursorDelta().x, kCursorOrigin.x);
+    EXPECT_DOUBLE_EQ(state.cursorDelta().y, kCursorOrigin.y);
+}
+
+TEST(InputStateTests, AccumulatesCursorMovementWithinFrame) {
+    Platform::InputState state;
+
+    constexpr std::array<Platform::PlatformEvent, 3> events{
+        Platform::CursorMovedEvent{
+            .position = kInitialCursorPosition,
+        },
+        Platform::CursorMovedEvent{
+            .position = kSecondCursorPosition,
+        },
+        Platform::CursorMovedEvent{
+            .position = kThirdCursorPosition,
+        },
+    };
+
+    state.applyEvents(events);
+
+    const auto position = state.cursorPosition();
+    ASSERT_TRUE(position.has_value());
+
+    const Platform::CursorPosition actual_position =
+        position.value_or(kCursorOrigin);
+
+    EXPECT_DOUBLE_EQ(actual_position.x, kThirdCursorPosition.x);
+    EXPECT_DOUBLE_EQ(actual_position.y, kThirdCursorPosition.y);
+
+    const auto delta = state.cursorDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, kExpectedTotalCursorDeltaX);
+    EXPECT_DOUBLE_EQ(delta.y, kExpectedTotalCursorDeltaY);
+}
+
+TEST(InputStateTests, AcceptsCursorMovementToOrigin) {
+    Platform::InputState state;
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kInitialCursorPosition,
+                        });
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kCursorOrigin,
+                        });
+
+    const auto position = state.cursorPosition();
+    ASSERT_TRUE(position.has_value());
+
+    const Platform::CursorPosition actual_position =
+        position.value_or(kCursorOrigin);
+
+    EXPECT_DOUBLE_EQ(actual_position.x, kCursorOrigin.x);
+    EXPECT_DOUBLE_EQ(actual_position.y, kCursorOrigin.y);
+
+    const auto delta = state.cursorDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, -kInitialCursorPosition.x);
+    EXPECT_DOUBLE_EQ(delta.y, -kInitialCursorPosition.y);
+}
+
+TEST(InputStateTests, BeginFramePreservesPositionButClearsCursorDelta) {
+    Platform::InputState state;
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kInitialCursorPosition,
+                        });
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kSecondCursorPosition,
+                        });
+
+    state.beginFrame();
+
+    const auto position = state.cursorPosition();
+    ASSERT_TRUE(position.has_value());
+
+    const Platform::CursorPosition actual_position =
+        position.value_or(kCursorOrigin);
+
+    EXPECT_DOUBLE_EQ(actual_position.x, kSecondCursorPosition.x);
+    EXPECT_DOUBLE_EQ(actual_position.y, kSecondCursorPosition.y);
+
+    EXPECT_DOUBLE_EQ(state.cursorDelta().x, kCursorOrigin.x);
+    EXPECT_DOUBLE_EQ(state.cursorDelta().y, kCursorOrigin.y);
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kThirdCursorPosition,
+                        });
+
+    const auto delta = state.cursorDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, kExpectedLastCursorDeltaX);
+    EXPECT_DOUBLE_EQ(delta.y, kExpectedLastCursorDeltaY);
+}
+
+TEST(InputStateTests, FocusLossInvalidatesCursorAndRebasesMovement) {
+    Platform::InputState state;
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kInitialCursorPosition,
+                        });
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kSecondCursorPosition,
+                        });
+
+    deliverEvent(state, Platform::WindowFocusEvent{
+                            .focused = false,
+                        });
+
+    EXPECT_FALSE(state.cursorPosition().has_value());
+    EXPECT_DOUBLE_EQ(state.cursorDelta().x, kCursorOrigin.x);
+    EXPECT_DOUBLE_EQ(state.cursorDelta().y, kCursorOrigin.y);
+
+    deliverEvent(state, Platform::WindowFocusEvent{
+                            .focused = true,
+                        });
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kSecondCursorPosition,
+                        });
+
+    EXPECT_TRUE(state.cursorPosition().has_value());
+    EXPECT_DOUBLE_EQ(state.cursorDelta().x, kCursorOrigin.x);
+    EXPECT_DOUBLE_EQ(state.cursorDelta().y, kCursorOrigin.y);
+
+    deliverEvent(state, Platform::CursorMovedEvent{
+                            .position = kThirdCursorPosition,
+                        });
+
+    const auto delta = state.cursorDelta();
+
+    EXPECT_DOUBLE_EQ(delta.x, kExpectedLastCursorDeltaX);
+    EXPECT_DOUBLE_EQ(delta.y, kExpectedLastCursorDeltaY);
 }

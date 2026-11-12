@@ -2,9 +2,9 @@
 #include "engine/core/assert/assertion_handler.hpp"
 #include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/core/math/vector2d.hpp"
 #include "engine/platform/event/platform_event.hpp"
 #include <cstddef>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -75,7 +75,32 @@ namespace SNE::Engine::Platform {
         }
     }
 
+    auto InputState::applyScrollEvent(const ScrollEvent &event) noexcept
+        -> void {
+        if (event.x_offset == 0.0 && event.y_offset == 0.0) {
+            return;
+        }
+
+        m_ScrollDelta.x += event.x_offset;
+        m_ScrollDelta.y += event.y_offset;
+    }
+
+    auto
+    InputState::applyCursorMovedEvent(const CursorMovedEvent &event) noexcept
+        -> void {
+        if (m_CursorPosition) {
+            m_CursorDelta.x += event.position.x - m_CursorPosition->x;
+            m_CursorDelta.y += event.position.y - m_CursorPosition->y;
+        }
+
+        m_CursorPosition = event.position;
+    }
+
     auto InputState::clearAll() noexcept -> void {
+        m_ScrollDelta = Core::Math::Vector2d{};
+        m_CursorDelta = Core::Math::Vector2d{};
+        m_CursorPosition.reset();
+
         for (ButtonState &state : m_KeyStates) {
             state = ButtonState{};
         }
@@ -86,6 +111,9 @@ namespace SNE::Engine::Platform {
     }
 
     auto InputState::beginFrame() noexcept -> void {
+        m_ScrollDelta = Core::Math::Vector2d{};
+        m_CursorDelta = Core::Math::Vector2d{};
+
         for (ButtonState &state : m_KeyStates) {
             state.pressed = false;
             state.released = false;
@@ -105,6 +133,14 @@ namespace SNE::Engine::Platform {
             } else if (const auto *button_event =
                            std::get_if<MouseButtonEvent>(&event)) {
                 applyMouseButtonEvent(*button_event);
+            } else if (const auto *scroll_event =
+                           std::get_if<ScrollEvent>(&event)) {
+                applyScrollEvent(*scroll_event);
+
+            } else if (const auto *cursor_event =
+                           std::get_if<CursorMovedEvent>(&event)) {
+                applyCursorMovedEvent(*cursor_event);
+
             } else if (const auto *window_event =
                            std::get_if<WindowFocusEvent>(&event);
                        window_event != nullptr && !window_event->focused) {
@@ -192,5 +228,18 @@ namespace SNE::Engine::Platform {
         }
 
         return m_MouseButtonStates[button_index].released;
+    }
+
+    auto InputState::scrollDelta() const noexcept -> Core::Math::Vector2d {
+        return m_ScrollDelta;
+    }
+
+    auto InputState::cursorPosition() const noexcept
+        -> std::optional<CursorPosition> {
+        return m_CursorPosition;
+    }
+
+    auto InputState::cursorDelta() const noexcept -> Core::Math::Vector2d {
+        return m_CursorDelta;
     }
 } // namespace SNE::Engine::Platform

@@ -1,10 +1,13 @@
 #pragma once
 
+#include "engine/core/math/vector2d.hpp"
 #include "engine/platform/event/platform_event.hpp"
+#include "engine/platform/input/cursor_position.hpp"
 #include "engine/platform/input/key.hpp"
 #include "engine/platform/input/mouse_button.hpp"
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <span>
 #include <utility>
 
@@ -93,6 +96,31 @@ namespace SNE::Engine::Platform {
         std::array<ButtonState, kMouseButtonCount> m_MouseButtonStates{};
 
         /**
+         * @brief Accumulated horizontal and vertical scroll movement this
+         * frame.
+         *
+         * Reset at frame boundaries and when window focus is lost.
+         * Preserves fractional scroll offsets.
+         */
+        Core::Math::Vector2d m_ScrollDelta{};
+
+        /**
+         * @brief Most recently observed cursor position.
+         *
+         * Remains unavailable until a cursor movement event establishes
+         * a position. Invalidated when window focus is lost.
+         */
+        std::optional<CursorPosition> m_CursorPosition = std::nullopt;
+
+        /**
+         * @brief Accumulated cursor displacement during the current frame.
+         *
+         * Reset at frame boundaries and when window focus is lost.
+         * Measured in logical window coordinate units.
+         */
+        Core::Math::Vector2d m_CursorDelta{};
+
+        /**
          * @brief Applies a keyboard event to the tracked key states.
          *
          * Validates the key identifier and updates its held state and
@@ -113,6 +141,31 @@ namespace SNE::Engine::Platform {
          * @pre The event must identify a supported mouse button.
          */
         auto applyMouseButtonEvent(const MouseButtonEvent &event) noexcept
+            -> void;
+
+        /**
+         * @brief Accumulates scrolling movement from a platform event.
+         *
+         * Adds the event's horizontal and vertical offsets to the
+         * current frame's accumulated scroll movement.
+         *
+         * @param event Scroll event to process.
+         */
+        auto applyScrollEvent(const ScrollEvent &event) noexcept -> void;
+
+        /**
+         * @brief Updates cursor position and accumulated movement.
+         *
+         * Computes displacement relative to the previously observed
+         * cursor position when available, accumulating movement for
+         * the current frame.
+         *
+         * The first cursor event establishes the initial position
+         * without generating displacement.
+         *
+         * @param event Cursor movement event to process.
+         */
+        auto applyCursorMovedEvent(const CursorMovedEvent &event) noexcept
             -> void;
 
         /**
@@ -223,5 +276,34 @@ namespace SNE::Engine::Platform {
          */
         [[nodiscard]] auto
         wasMouseButtonReleased(MouseButton button) const noexcept -> bool;
+
+        /**
+         * @brief Returns accumulated scroll movement for the current frame.
+         *
+         * @return Horizontal and vertical scroll offsets accumulated
+         * from all processed scroll events during this frame.
+         *
+         * @note Scroll movement is reset by beginFrame().
+         */
+        [[nodiscard]] auto scrollDelta() const noexcept -> Core::Math::Vector2d;
+
+        /**
+         * @brief Returns the most recently observed cursor position.
+         *
+         * @return Cursor position in logical window coordinates, or
+         * std::nullopt if no valid position has been established.
+         */
+        [[nodiscard]] auto cursorPosition() const noexcept
+            -> std::optional<CursorPosition>;
+
+        /**
+         * @brief Returns accumulated cursor movement for the current frame.
+         *
+         * @return Horizontal and vertical cursor displacement in logical
+         * window coordinate units.
+         *
+         * @note The displacement resets at the beginning of each input frame.
+         */
+        [[nodiscard]] auto cursorDelta() const noexcept -> Core::Math::Vector2d;
     };
 } // namespace SNE::Engine::Platform

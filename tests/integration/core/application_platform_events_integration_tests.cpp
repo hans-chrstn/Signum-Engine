@@ -31,6 +31,19 @@ namespace {
     constexpr int kUnusedScancode = 0;
     constexpr int kNoModifiers = 0;
 
+    constexpr Platform::CursorPosition kCursorStart{
+        .x = 100.0,
+        .y = 200.0,
+    };
+
+    constexpr Platform::CursorPosition kCursorEnd{
+        .x = 125.0,
+        .y = 195.0,
+    };
+
+    constexpr double kExpectedCursorDeltaX = 25.0;
+    constexpr double kExpectedCursorDeltaY = -5.0;
+
     [[nodiscard]] auto hasDisplay() -> bool {
         return std::getenv("DISPLAY") != nullptr ||
                std::getenv("WAYLAND_DISPLAY") != nullptr;
@@ -103,6 +116,12 @@ TEST(ApplicationPlatformEventsIntegrationTests,
     application.run(
         [&](Core::Application &app) -> void {
             update_observed_event = event_received;
+
+            const auto scroll_delta = app.inputState().scrollDelta();
+
+            EXPECT_DOUBLE_EQ(scroll_delta.x, kHorizontalOffset);
+            EXPECT_DOUBLE_EQ(scroll_delta.y, kVerticalOffset);
+
             app.requestClose();
         },
         {}, {},
@@ -117,6 +136,11 @@ TEST(ApplicationPlatformEventsIntegrationTests,
             ASSERT_NE(scroll, nullptr);
             EXPECT_DOUBLE_EQ(scroll->x_offset, kHorizontalOffset);
             EXPECT_DOUBLE_EQ(scroll->y_offset, kVerticalOffset);
+
+            const auto scroll_delta = app.inputState().scrollDelta();
+
+            EXPECT_DOUBLE_EQ(scroll_delta.x, kHorizontalOffset);
+            EXPECT_DOUBLE_EQ(scroll_delta.y, kVerticalOffset);
 
             event_received = true;
         });
@@ -270,4 +294,110 @@ TEST(ApplicationPlatformEventsIntegrationTests,
     });
 
     EXPECT_EQ(frame_index, 3U);
+}
+
+TEST(ApplicationPlatformEventsIntegrationTests,
+     UpdatesCursorStateBeforeApplicationCallbacks) {
+    if (!hasDisplay()) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    {
+        Platform::GlfwContext glfw_context{};
+
+        Platform::Window window{
+            kWindowSize,
+            "Signum Application Cursor Integration Test",
+        };
+
+        if (!hasSuitableDevice(window)) {
+            GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+        }
+    }
+
+    Core::ApplicationConfiguration configuration{};
+    configuration.application_name =
+        "Signum Application Cursor Integration Test";
+    configuration.initial_window_size = kWindowSize;
+    configuration.development_diagnostics_enabled = false;
+    configuration.logging.terminal_enabled = false;
+
+    Core::Application application{std::move(configuration)};
+
+    GLFWwindow *native_window = application.window().nativeHandle();
+
+    GLFWcursorposfun cursor_callback =
+        glfwSetCursorPosCallback(native_window, nullptr);
+
+    glfwSetCursorPosCallback(native_window, cursor_callback);
+
+    ASSERT_NE(cursor_callback, nullptr);
+
+    cursor_callback(native_window, kCursorStart.x, kCursorStart.y);
+    cursor_callback(native_window, kCursorEnd.x, kCursorEnd.y);
+
+    bool event_callback_observed_cursor{false};
+    bool update_observed_cursor{false};
+
+    application.run(
+        [&](Core::Application &app) -> void {
+            const auto position = app.inputState().cursorPosition();
+
+            ASSERT_TRUE(position.has_value());
+
+            const Platform::CursorPosition actual_position =
+                position.value_or(Platform::CursorPosition{});
+
+            const auto delta = app.inputState().cursorDelta();
+
+            EXPECT_DOUBLE_EQ(actual_position.x, kCursorEnd.x);
+            EXPECT_DOUBLE_EQ(actual_position.y, kCursorEnd.y);
+            EXPECT_DOUBLE_EQ(delta.x, kExpectedCursorDeltaX);
+            EXPECT_DOUBLE_EQ(delta.y, kExpectedCursorDeltaY);
+
+            update_observed_cursor = event_callback_observed_cursor;
+
+            app.requestClose();
+        },
+        {}, {},
+        [&](Core::Application &app,
+            std::span<const Platform::PlatformEvent> events) -> void {
+            EXPECT_EQ(&app, &application);
+
+            ASSERT_EQ(events.size(), 2U);
+
+            const auto *first_cursor =
+                std::get_if<Platform::CursorMovedEvent>(events.data());
+
+            const auto *second_cursor =
+                std::get_if<Platform::CursorMovedEvent>(events.data() + 1);
+
+            ASSERT_NE(first_cursor, nullptr);
+            ASSERT_NE(second_cursor, nullptr);
+
+            EXPECT_DOUBLE_EQ(first_cursor->position.x, kCursorStart.x);
+            EXPECT_DOUBLE_EQ(first_cursor->position.y, kCursorStart.y);
+
+            EXPECT_DOUBLE_EQ(second_cursor->position.x, kCursorEnd.x);
+            EXPECT_DOUBLE_EQ(second_cursor->position.y, kCursorEnd.y);
+
+            const auto position = app.inputState().cursorPosition();
+
+            ASSERT_TRUE(position.has_value());
+
+            const Platform::CursorPosition actual_position =
+                position.value_or(Platform::CursorPosition{});
+
+            const auto delta = app.inputState().cursorDelta();
+
+            EXPECT_DOUBLE_EQ(actual_position.x, kCursorEnd.x);
+            EXPECT_DOUBLE_EQ(actual_position.y, kCursorEnd.y);
+            EXPECT_DOUBLE_EQ(delta.x, kExpectedCursorDeltaX);
+            EXPECT_DOUBLE_EQ(delta.y, kExpectedCursorDeltaY);
+
+            event_callback_observed_cursor = true;
+        });
+
+    EXPECT_TRUE(event_callback_observed_cursor);
+    EXPECT_TRUE(update_observed_cursor);
 }
