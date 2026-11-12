@@ -1,4 +1,5 @@
 #include "engine/core/time/fixed_step_scheduler.hpp"
+#include "engine/core/time/frame_clock.hpp"
 #include <chrono>
 #include <gtest/gtest.h>
 #include <limits>
@@ -25,6 +26,7 @@ namespace {
     constexpr Time::Duration kHalfStep{0.0625};
     constexpr Time::Duration kOneAndHalfSteps{0.1875};
     constexpr Time::Duration kTwoAndHalfSteps{0.3125};
+    constexpr Time::Duration kTwoSteps{0.25};
 } // namespace
 
 TEST(FixedStepSchedulerTests, AcceptsValidFixedStep) {
@@ -186,4 +188,74 @@ TEST(FixedStepSchedulerTests, FixedStepRemainsConstantAfterConsumption) {
 
     EXPECT_EQ(scheduler.fixedStep(), kConsumptionStep);
     EXPECT_EQ(scheduler.accumulatedTime(), kOneAndHalfSteps);
+}
+
+TEST(FixedStepSchedulerTests, DiscardAccumulatedTimeRemovesRequestedDuration) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kTwoAndHalfSteps);
+    scheduler.discardAccumulatedTime(kHalfStep);
+
+    EXPECT_EQ(scheduler.accumulatedTime(), kTwoSteps);
+}
+
+TEST(FixedStepSchedulerTests, DiscardAccumulatedTimeAllowsZeroDiscard) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kOneAndHalfSteps);
+    scheduler.discardAccumulatedTime(Time::Duration::zero());
+
+    EXPECT_EQ(scheduler.accumulatedTime(), kOneAndHalfSteps);
+}
+
+TEST(FixedStepSchedulerTests,
+     DiscardAccumulatedTimeCanRemoveAllAccumulatedTime) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kOneAndHalfSteps);
+    scheduler.discardAccumulatedTime(kOneAndHalfSteps);
+
+    EXPECT_EQ(scheduler.accumulatedTime(), Time::Duration::zero());
+}
+
+TEST(FixedStepSchedulerTests, DiscardAccumulatedTimeFailsForNegativeDuration) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kConsumptionStep);
+
+    EXPECT_DEATH(scheduler.discardAccumulatedTime(-kHalfStep),
+                 "FixedStepScheduler requires discarded time to be finite, "
+                 "nonnegative, and no greater than accumulated time");
+}
+
+TEST(FixedStepSchedulerTests, DiscardAccumulatedTimeFailsForExcessDiscard) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kConsumptionStep);
+
+    EXPECT_DEATH(scheduler.discardAccumulatedTime(kTwoSteps),
+                 "FixedStepScheduler requires discarded time to be finite, "
+                 "nonnegative, and no greater than accumulated time");
+}
+
+TEST(FixedStepSchedulerTests, DiscardAccumulatedTimeFailsForNonFiniteDuration) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kConsumptionStep);
+
+    EXPECT_DEATH(scheduler.discardAccumulatedTime(
+                     Time::Duration{std::numeric_limits<double>::infinity()}),
+                 "FixedStepScheduler requires discarded time to be finite, "
+                 "nonnegative, and no greater than accumulated time");
+}
+
+TEST(FixedStepSchedulerTests, DiscardAccumulatedTimeRejectsNaN) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kConsumptionStep);
+
+    ASSERT_DEATH(scheduler.discardAccumulatedTime(
+                     Time::Duration{std::numeric_limits<double>::quiet_NaN()}),
+                 "FixedStepScheduler requires discarded time to be finite, "
+                 "nonnegative, and no greater than accumulated time");
 }

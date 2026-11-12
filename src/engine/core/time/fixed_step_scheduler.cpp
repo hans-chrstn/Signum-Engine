@@ -54,4 +54,16 @@ namespace SNE::Engine::Core::Time {
     auto FixedStepScheduler::fixedStep() const noexcept -> Duration {
         return m_FixedStep;
     }
+
+    auto FixedStepScheduler::discardAccumulatedTime(Duration amount) -> void {
+        if (amount < Duration::zero() || !std::isfinite(amount.count()) ||
+            amount > m_AccumulatedTime) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition, Error::Subsystem::Core,
+                "FixedStepScheduler requires discarded time to be finite, "
+                "nonnegative, and no greater than accumulated time");
+        }
+
+        m_AccumulatedTime -= amount;
+    }
 } // namespace SNE::Engine::Core::Time

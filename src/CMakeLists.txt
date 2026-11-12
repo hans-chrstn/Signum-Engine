@@ -28,6 +28,7 @@ add_library(
     engine/core/math/quaternion.cpp
     engine/core/time/frame_clock.cpp
     engine/core/time/fixed_step_scheduler.cpp
+    engine/core/time/backlog_policy.cpp
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp

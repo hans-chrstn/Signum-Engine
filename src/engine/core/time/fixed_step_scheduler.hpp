@@ -95,5 +95,21 @@ namespace SNE::Engine::Core::Time {
          * @return Finite, strictly positive fixed-step duration.
          */
         [[nodiscard]] auto fixedStep() const noexcept -> Duration;
+
+        /**
+         * @brief Discards a specified amount of pending simulation time.
+         *
+         * Removes the requested duration from the accumulated time without
+         * executing simulation updates or modifying the fixed timestep.
+         *
+         * Intended for validated backlog handling and explicit time
+         * management decisions.
+         *
+         * @param amount Duration to discard from the accumulator.
+         *
+         * @pre amount must be finite and nonnegative.
+         * @pre amount must not exceed the currently accumulated time.
+         */
+        auto discardAccumulatedTime(Duration amount) -> void;
     };
 } // namespace SNE::Engine::Core::Time
