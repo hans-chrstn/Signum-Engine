@@ -26,6 +26,7 @@ add_library(
     engine/core/math/matrix4.cpp
     engine/core/math/matrix4d.cpp
     engine/core/math/quaternion.cpp
+    engine/core/time/frame_clock.cpp
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp

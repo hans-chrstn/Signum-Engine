@@ -3,6 +3,7 @@
 #include "application_configuration.hpp"
 #include "engine/core/logging/logger.hpp"
 #include "engine/core/math/matrix4.hpp"
+#include "engine/core/time/frame_clock.hpp"
 #include "engine/platform/event/platform_event.hpp"
 #include "engine/platform/glfw_context.hpp"
 #include "engine/platform/input/input_state.hpp"
@@ -116,6 +117,21 @@ namespace SNE::Engine::Core {
         Platform::InputState m_InputState{};
 
         /**
+         * @brief Measures elapsed time between consecutive application frames.
+         *
+         * Uses a monotonic clock independently of platform input and rendering.
+         */
+        Time::FrameClock m_FrameClock{};
+
+        /**
+         * @brief Elapsed duration measured for the current application frame.
+         *
+         * Updated before application callbacks and remains unchanged
+         * throughout the frame. Initially zero.
+         */
+        Time::Duration m_FrameDelta{};
+
+        /**
          * @brief Owns the application's Vulkan rendering backend.
          *
          * Manages Vulkan rendering resources, frame execution,
@@ -176,6 +192,12 @@ namespace SNE::Engine::Core {
          *
          * Input state is updated even when no platform-event callback
          * is registered.
+         *
+         * Samples the monotonic frame clock at the beginning of each frame,
+         * before processing input or invoking application callbacks.
+         *
+         * The measured duration remains unchanged throughout the frame
+         * and is exposed through frameDelta().
          *
          * @param on_update Optional callback invoked once per frame.
          * Receives a reference to the running application.
@@ -581,5 +603,17 @@ namespace SNE::Engine::Core {
          */
         [[nodiscard]] auto inputState() const noexcept
             -> const Platform::InputState &;
+
+        /**
+         * @brief Returns the elapsed duration of the current application frame.
+         *
+         * Reports the raw, unclamped duration measured between frame starts.
+         * The first frame reports zero because no previous sample exists.
+         *
+         * @return Current frame duration expressed in seconds.
+         *
+         * @note Consumers are responsible for any clamping or time scaling.
+         */
+        [[nodiscard]] auto frameDelta() const noexcept -> Time::Duration;
     };
 } // namespace SNE::Engine::Core

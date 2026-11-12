@@ -401,3 +401,101 @@ TEST(ApplicationPlatformEventsIntegrationTests,
     EXPECT_TRUE(event_callback_observed_cursor);
     EXPECT_TRUE(update_observed_cursor);
 }
+
+TEST(ApplicationPlatformEventsIntegrationTests,
+     ProvidesConsistentFrameTimingAcrossCallbacks) {
+    if (!hasDisplay()) {
+        GTEST_SKIP() << "Requires an available window-system display";
+    }
+
+    {
+        Platform::GlfwContext glfw_context{};
+
+        Platform::Window window{
+            kWindowSize,
+            "Signum Application Frame Timing Integration Test",
+        };
+
+        if (!hasSuitableDevice(window)) {
+            GTEST_SKIP() << "No suitable presentation-capable Vulkan device";
+        }
+    }
+
+    Core::ApplicationConfiguration configuration{};
+    configuration.application_name =
+        "Signum Application Frame Timing Integration Test";
+    configuration.initial_window_size = kWindowSize;
+    configuration.development_diagnostics_enabled = false;
+    configuration.logging.terminal_enabled = false;
+
+    Core::Application application{std::move(configuration)};
+
+    GLFWwindow *native_window = application.window().nativeHandle();
+
+    GLFWkeyfun key_callback = glfwSetKeyCallback(native_window, nullptr);
+
+    glfwSetKeyCallback(native_window, key_callback);
+
+    ASSERT_NE(key_callback, nullptr);
+
+    key_callback(native_window, GLFW_KEY_W, kUnusedScancode, GLFW_PRESS,
+                 kNoModifiers);
+
+    constexpr std::size_t kExpectedFrameCount = 2U;
+
+    std::size_t frame_index{0U};
+    bool matching_event_received{false};
+    Core::Time::Duration event_callback_delta{};
+
+    application.run(
+        [&](Core::Application &app) -> void {
+            const Core::Time::Duration delta = app.frameDelta();
+
+            EXPECT_TRUE(matching_event_received);
+            EXPECT_DOUBLE_EQ(delta.count(), event_callback_delta.count());
+
+            EXPECT_GE(delta.count(), Core::Time::Duration::zero().count());
+
+            switch (frame_index) {
+            case 0U:
+                EXPECT_DOUBLE_EQ(delta.count(),
+                                 Core::Time::Duration::zero().count());
+
+                key_callback(native_window, GLFW_KEY_W, kUnusedScancode,
+                             GLFW_RELEASE, kNoModifiers);
+                break;
+
+            case 1U:
+                app.requestClose();
+                break;
+
+            default:
+                ADD_FAILURE() << "Unexpected additional application frame";
+                app.requestClose();
+                break;
+            }
+
+            matching_event_received = false;
+            ++frame_index;
+        },
+        {}, {},
+        [&](Core::Application &app,
+            std::span<const Platform::PlatformEvent> events) -> void {
+            const Platform::KeyAction expected_action =
+                frame_index == 0U ? Platform::KeyAction::Press
+                                  : Platform::KeyAction::Release;
+
+            for (const Platform::PlatformEvent &event : events) {
+                const auto *key_event = std::get_if<Platform::KeyEvent>(&event);
+
+                if (key_event != nullptr &&
+                    key_event->key == Platform::Key::W &&
+                    key_event->action == expected_action) {
+                    matching_event_received = true;
+                    event_callback_delta = app.frameDelta();
+                }
+            }
+        });
+
+    EXPECT_EQ(frame_index, kExpectedFrameCount);
+}

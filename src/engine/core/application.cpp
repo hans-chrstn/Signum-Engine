@@ -2,6 +2,7 @@
 #include "engine/core/logging/log_categories.hpp"
 #include "engine/core/logging/log_level.hpp"
 #include "engine/core/logging/logger_factory.hpp"
+#include "engine/core/time/frame_clock.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
@@ -40,6 +41,7 @@ namespace SNE::Engine::Core {
                                  std::span<const Platform::PlatformEvent>)>
             &on_platform_events) -> void {
         while (!m_Window.shouldClose()) {
+            m_FrameDelta = m_FrameClock.sample(Time::Clock::now());
             m_InputState.beginFrame();
             Platform::Window::pollEvents();
 
@@ -154,5 +156,9 @@ namespace SNE::Engine::Core {
     auto Application::inputState() const noexcept
         -> const Platform::InputState & {
         return m_InputState;
+    }
+
+    auto Application::frameDelta() const noexcept -> Time::Duration {
+        return m_FrameDelta;
     }
 } // namespace SNE::Engine::Core
