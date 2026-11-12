@@ -40,4 +40,14 @@ namespace SNE::Engine::Core::Time {
     auto FixedStepScheduler::accumulatedTime() const noexcept -> Duration {
         return m_AccumulatedTime;
     }
+
+    auto FixedStepScheduler::tryConsumeStep() noexcept -> bool {
+        if (m_AccumulatedTime < m_FixedStep) {
+            return false;
+        }
+
+        m_AccumulatedTime -= m_FixedStep;
+
+        return true;
+    }
 } // namespace SNE::Engine::Core::Time

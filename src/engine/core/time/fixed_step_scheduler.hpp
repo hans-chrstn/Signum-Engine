@@ -70,5 +70,20 @@ namespace SNE::Engine::Core::Time {
          * @return Currently accumulated, unconsumed elapsed duration.
          */
         [[nodiscard]] auto accumulatedTime() const noexcept -> Duration;
+
+        /**
+         * @brief Attempts to consume one fixed simulation timestep.
+         *
+         * Subtracts the configured fixed-step duration from accumulated
+         * time when sufficient time is available.
+         *
+         * Leaves accumulated time unchanged when less than one complete
+         * fixed timestep remains.
+         *
+         * Does not execute simulation logic or apply backlog policies.
+         *
+         * @return True if one fixed step was consumed; otherwise false.
+         */
+        [[nodiscard]] auto tryConsumeStep() noexcept -> bool;
     };
 } // namespace SNE::Engine::Core::Time

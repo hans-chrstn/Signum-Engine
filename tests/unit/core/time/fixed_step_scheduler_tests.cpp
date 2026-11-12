@@ -20,6 +20,11 @@ namespace {
     constexpr std::chrono::milliseconds kSecondElapsed{8};
 
     constexpr Time::Duration kAccumulatorStep{kFixedStep};
+
+    constexpr Time::Duration kConsumptionStep{0.125};
+    constexpr Time::Duration kHalfStep{0.0625};
+    constexpr Time::Duration kOneAndHalfSteps{0.1875};
+    constexpr Time::Duration kTwoAndHalfSteps{0.3125};
 } // namespace
 
 TEST(FixedStepSchedulerTests, AcceptsValidFixedStep) {
@@ -110,4 +115,56 @@ TEST(FixedStepSchedulerTests, RejectsAccumulationOverflow) {
 
     ASSERT_DEATH(scheduler.accumulate(maximum),
                  "accumulated duration exceeds its finite range");
+}
+
+TEST(FixedStepSchedulerTests, CannotConsumeInsufficientTime) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kHalfStep);
+
+    EXPECT_FALSE(scheduler.tryConsumeStep());
+    EXPECT_EQ(scheduler.accumulatedTime(), kHalfStep);
+}
+
+TEST(FixedStepSchedulerTests, ConsumesExactlyOneFixedStep) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kConsumptionStep);
+
+    EXPECT_TRUE(scheduler.tryConsumeStep());
+    EXPECT_EQ(scheduler.accumulatedTime(), Time::Duration::zero());
+}
+
+TEST(FixedStepSchedulerTests, PreservesRemainderAfterConsumption) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kOneAndHalfSteps);
+
+    EXPECT_TRUE(scheduler.tryConsumeStep());
+    EXPECT_EQ(scheduler.accumulatedTime(), kHalfStep);
+}
+
+TEST(FixedStepSchedulerTests, ConsumesMultipleAvailableSteps) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kTwoAndHalfSteps);
+
+    EXPECT_TRUE(scheduler.tryConsumeStep());
+    EXPECT_TRUE(scheduler.tryConsumeStep());
+    EXPECT_FALSE(scheduler.tryConsumeStep());
+
+    EXPECT_EQ(scheduler.accumulatedTime(), kHalfStep);
+}
+
+TEST(FixedStepSchedulerTests, FailedConsumptionPreservesAccumulatedTime) {
+    Time::FixedStepScheduler scheduler{kConsumptionStep};
+
+    scheduler.accumulate(kOneAndHalfSteps);
+
+    ASSERT_TRUE(scheduler.tryConsumeStep());
+
+    const Time::Duration remaining = scheduler.accumulatedTime();
+
+    EXPECT_FALSE(scheduler.tryConsumeStep());
+    EXPECT_EQ(scheduler.accumulatedTime(), remaining);
 }
