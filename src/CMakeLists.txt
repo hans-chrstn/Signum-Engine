@@ -29,6 +29,7 @@ add_library(
     engine/core/time/frame_clock.cpp
     engine/core/time/fixed_step_scheduler.cpp
     engine/core/time/backlog_policy.cpp
+    engine/core/time/backlog_policy_controller.cpp
     engine/platform/error/glfw_error.cpp
     engine/platform/glfw_context.cpp
     engine/platform/window.cpp

@@ -42,6 +42,8 @@ add_executable(
   core/time/backlog_policy_tests.cpp
   core/time/backlog_policy_application_tests.cpp
   core/time/fixed_update_cycle_tests.cpp
+  core/time/backlog_policy_controller_tests.cpp
+  core/time/controlled_fixed_update_cycle_tests.cpp
   platform/platform_event_tests.cpp
   platform/platform_event_queue_tests.cpp
   platform/input_state_tests.cpp

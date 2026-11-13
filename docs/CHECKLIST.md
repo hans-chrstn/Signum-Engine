@@ -1457,22 +1457,22 @@
 - [x] input state
 - [x] frame timing
 - [ ] variable timestep
-- [ ] fixed timestep
+- [x] fixed timestep
 - [ ] Learn the difference between wall time, frame time, simulation ticks, and simulation time.
 - [ ] Learn clock precision, pause/resume, time scaling, and errors in long-running simulations.
 
 ### Design
 
-- [ ] Define a fixed-step simulation boundary separate from variable-rate rendering
+- [x] Define a fixed-step simulation boundary separate from variable-rate rendering
 - [ ] Define input sampling and frame numbering without assuming networking or rollback
 - [ ] Define simulation tick IDs and time units separately from rendering frames.
 - [ ] Allow spatial transforms to use simulation time. Keep orbital mechanics out of the timing system.
-- [ ] Define an extensible fixed-step scheduling policy contract.
-- [ ] Support built-in Preserve and DiscardExcess backlog policies.
+- [x] Define an extensible fixed-step scheduling policy contract.
+- [x] Support built-in Preserve and DiscardExcess backlog policies.
 - [ ] Support safe runtime policy changes at scheduling boundaries.
 - [ ] Preserve simulation state and account for discarded time during transitions.
 - [ ] Expose pending time, executed ticks, and overload diagnostics.
-- [ ] Keep fixed timestep configuration independent of backlog policies.
+- [x] Keep fixed timestep configuration independent of backlog policies.
 - [ ] Allow optional workload-driven policy selection without coupling
       the scheduler to CPU/GPU monitoring.
 - [ ] Define deterministic policy-transition and replay behavior.
@@ -1501,7 +1501,7 @@
 - [ ] Navigate the current 3D reference workload with test-side camera controls built from engine input and timing APIs
 - [ ] Test rapid camera movement, focus changes, resizing, and long-running movement against the reference workload
 - [ ] Verify a fixed input sequence can reproduce the same deterministic reference updates within the supported configuration
-- [ ] Test Preserve and DiscardExcess backlog policies.
+- [x] Test Preserve and DiscardExcess backlog policies.
 - [ ] Test runtime policy transitions without resetting simulation state.
 - [ ] Test custom policy decisions, invalid outputs, and deterministic replay.
 

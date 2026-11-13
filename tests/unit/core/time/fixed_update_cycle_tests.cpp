@@ -147,3 +147,35 @@ TEST(FixedUpdateCycleTests, PolicyFailurePreservesRemainingTime) {
     EXPECT_EQ(scheduler.accumulatedTime(), kOneAndHalfSteps);
     EXPECT_EQ(scheduler.fixedStep(), kFixedStep);
 }
+
+TEST(FixedUpdateCycleTests,
+     SwitchingFromPreserveToDiscardExcessRetainsSchedulerState) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+    scheduler.accumulate(kFourAndHalfSteps);
+
+    std::size_t total_updates{};
+
+    const auto on_fixed_update = [&](Time::Duration step) -> void {
+        EXPECT_EQ(step, kFixedStep);
+        ++total_updates;
+    };
+
+    const Time::FixedUpdateCycleResult first_cycle = Time::runFixedUpdateCycle(
+        scheduler, kTwoUpdates, on_fixed_update, Time::preserveBacklog);
+
+    EXPECT_EQ(first_cycle.updates_executed, kTwoUpdates);
+    EXPECT_EQ(first_cycle.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(first_cycle.remaining_time, kTwoAndHalfSteps);
+    EXPECT_EQ(scheduler.accumulatedTime(), kTwoAndHalfSteps);
+
+    const Time::FixedUpdateCycleResult second_cycle = Time::runFixedUpdateCycle(
+        scheduler, 1U, on_fixed_update, Time::discardExcessBacklog);
+
+    EXPECT_EQ(second_cycle.updates_executed, 1U);
+    EXPECT_EQ(second_cycle.time_discarded, kFixedStep);
+    EXPECT_EQ(second_cycle.remaining_time, kHalfStep);
+
+    EXPECT_EQ(total_updates, 3U);
+    EXPECT_EQ(scheduler.accumulatedTime(), kHalfStep);
+    EXPECT_EQ(scheduler.fixedStep(), kFixedStep);
+}
