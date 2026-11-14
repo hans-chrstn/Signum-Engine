@@ -1473,7 +1473,7 @@
 - [x] Preserve simulation state and account for discarded time during transitions.
 - [x] Expose pending time, executed ticks, and overload diagnostics.
 - [x] Keep fixed timestep configuration independent of backlog policies.
-- [ ] Allow optional workload-driven policy selection without coupling
+- [x] Allow optional workload-driven policy selection without coupling
       the scheduler to CPU/GPU monitoring.
 - [x] Define deterministic policy-transition and replay behavior.
 
