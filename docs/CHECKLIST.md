@@ -1503,7 +1503,7 @@
 - [ ] Verify a fixed input sequence can reproduce the same deterministic reference updates within the supported configuration
 - [x] Test Preserve and DiscardExcess backlog policies.
 - [x] Test runtime policy transitions without resetting simulation state.
-- [ ] Test custom policy decisions, invalid outputs, and deterministic replay.
+- [x] Test custom policy decisions, invalid outputs, and deterministic replay.
 
 ### Architecture
 

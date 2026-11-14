@@ -465,3 +465,62 @@ TEST(ControlledFixedUpdateCycleTests,
     EXPECT_TRUE(preserve_last.following.overloaded);
     EXPECT_FALSE(discard_last.following.overloaded);
 }
+
+TEST(ControlledFixedUpdateCycleTests,
+     CustomPolicyTransitionPreservesOverloadDiagnostics) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+    Time::BacklogPolicyController controller{Time::preserveBacklog};
+
+    scheduler.accumulate(kFourAndHalfSteps);
+
+    std::size_t policy_calls{};
+
+    controller.requestPolicy(
+        [&](const Time::BacklogContext &context) -> Time::BacklogDecision {
+            ++policy_calls;
+
+            EXPECT_EQ(context.fixed_step, kFixedStep);
+            EXPECT_EQ(context.remaining_time, kTwoAndHalfSteps);
+            EXPECT_EQ(context.update_budget, kTwoUpdates);
+            EXPECT_EQ(context.updates_executed, kTwoUpdates);
+
+            return Time::BacklogDecision{
+                .time_to_discard = kFixedStep,
+            };
+        });
+
+    const auto result = Time::runControlledFixedUpdateCycle(
+        scheduler, kTwoUpdates, [](Time::Duration) -> void {}, controller);
+
+    EXPECT_EQ(policy_calls, 1U);
+    EXPECT_EQ(result.updates_executed, kTwoUpdates);
+    EXPECT_EQ(result.time_discarded, kFixedStep);
+    EXPECT_EQ(result.remaining_time, kOneAndHalfSteps);
+    EXPECT_TRUE(result.overloaded);
+
+    EXPECT_EQ(scheduler.accumulatedTime(), kOneAndHalfSteps);
+    EXPECT_EQ(scheduler.fixedStep(), kFixedStep);
+}
+
+TEST(ControlledFixedUpdateCycleTests,
+     RejectsInvalidCustomDecisionThroughController) {
+    const auto run_invalid_cycle = [] -> void {
+        Time::FixedStepScheduler scheduler{kFixedStep};
+
+        Time::BacklogPolicyController controller{
+            [](const Time::BacklogContext &) -> Time::BacklogDecision {
+                return Time::BacklogDecision{
+                    .time_to_discard = -kHalfStep,
+                };
+            }};
+
+        scheduler.accumulate(kTwoAndHalfSteps);
+
+        static_cast<void>(Time::runControlledFixedUpdateCycle(
+            scheduler, 0U, [](Time::Duration) -> void {}, controller));
+    };
+
+    ASSERT_DEATH(run_invalid_cycle(),
+                 "FixedStepScheduler requires discarded time to be finite, "
+                 "nonnegative, and no greater than accumulated time");
+}
