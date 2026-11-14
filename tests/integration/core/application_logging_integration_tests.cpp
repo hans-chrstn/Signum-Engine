@@ -8,11 +8,14 @@
 #include "engine/renderer/vulkan/device/vulkan_device_selection.hpp"
 #include "engine/renderer/vulkan/presentation/vulkan_surface.hpp"
 #include "engine/renderer/vulkan/vulkan_instance.hpp"
+#include <bit>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -26,6 +29,9 @@ namespace Platform = SNE::Engine::Platform;
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 namespace {
+    constexpr std::uint8_t kUnrecognizedBackendValue =
+        std::numeric_limits<std::uint8_t>::max();
+
     constexpr Platform::WindowSize kWindowSize{
         .width = 640,
         .height = 480,
@@ -176,4 +182,23 @@ TEST_F(ApplicationLoggingIntegrationTests,
                  std::invalid_argument);
 
     EXPECT_FALSE(std::filesystem::exists(m_Path));
+}
+
+TEST(ApplicationBackendSelectionIntegrationTests, DefaultsToVulkan) {
+    const Core::ApplicationConfiguration configuration{};
+
+    EXPECT_EQ(configuration.graphics_backend,
+              SNE::Engine::Renderer::GraphicsBackend::Vulkan);
+}
+
+TEST(ApplicationBackendSelectionIntegrationTests,
+     RejectsUnrecognizedBackendBeforePlatformInitialization) {
+    Core::ApplicationConfiguration configuration{};
+
+    configuration.graphics_backend =
+        std::bit_cast<SNE::Engine::Renderer::GraphicsBackend>(
+            kUnrecognizedBackendValue);
+
+    ASSERT_DEATH(static_cast<void>(Core::Application{std::move(configuration)}),
+                 "Application requires a recognized graphics backend");
 }

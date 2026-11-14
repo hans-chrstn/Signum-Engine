@@ -163,6 +163,9 @@ namespace SNE::Engine::Core {
          * application initialization. The default value uses
          * Signum's standard application settings.
          *
+         * @pre The requested graphics backend must identify a recognized
+         * GraphicsBackend enumerator.
+         *
          * @throws std::invalid_argument if the logging configuration
          * contains an invalid file rotation policy.
          * @throws Error::EngineError if a logging destination,
@@ -172,6 +175,12 @@ namespace SNE::Engine::Core {
          *
          * @note Logging configuration remains independent from
          * development diagnostics such as Vulkan validation.
+         *
+         * @note Graphics backend selection is validated before platform,
+         * window, and renderer initialization.
+         *
+         * @note Vulkan is currently the only recognized graphics backend.
+         * Backend selection is fixed for the application's lifetime.
          */
         explicit Application(ApplicationConfiguration configuration = {});
 

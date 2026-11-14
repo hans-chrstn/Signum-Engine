@@ -4,6 +4,7 @@
 #include "engine/platform/window.hpp"
 #include "engine/renderer/camera/initial_camera_data.hpp"
 #include "engine/renderer/geometry/initial_mesh_data.hpp"
+#include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
@@ -56,6 +57,28 @@ namespace SNE::Engine::Core {
          */
         Renderer::PresentationPreference presentation_preference{
             Renderer::PresentationPreference::VSync,
+        };
+
+        /**
+         * @brief Selects the graphics backend used by the application.
+         *
+         * Identifies the rendering API implementation requested during
+         * application initialization.
+         *
+         * The selected backend determines how rendering devices and
+         * backend-specific GPU resources are created and managed.
+         *
+         * Defaults to Vulkan, the only currently implemented backend.
+         *
+         * @note Backend selection occurs during initialization. Changing
+         * this configuration after initialization does not switch the
+         * active rendering backend.
+         *
+         * @note Unsupported backend selections must produce an explicit
+         * initialization error rather than silently falling back.
+         */
+        Renderer::GraphicsBackend graphics_backend{
+            Renderer::GraphicsBackend::Vulkan,
         };
 
         /**

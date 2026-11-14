@@ -1,9 +1,14 @@
 #include "application.hpp"
+#include "engine/core/application_configuration.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/core/logging/log_categories.hpp"
 #include "engine/core/logging/log_level.hpp"
 #include "engine/core/logging/logger_factory.hpp"
 #include "engine/core/time/frame_clock.hpp"
 #include "engine/platform/window.hpp"
+#include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
@@ -13,8 +18,25 @@
 #include <vector>
 
 namespace SNE::Engine::Core {
+    namespace {
+        [[nodiscard]] auto
+        validateApplicationConfiguration(ApplicationConfiguration configuration)
+            -> ApplicationConfiguration {
+            if (configuration.graphics_backend !=
+                Renderer::GraphicsBackend::Vulkan) {
+                Assertion::failAssertion(
+                    Assertion::AssertionType::Precondition,
+                    Error::Subsystem::Renderer,
+                    "Application requires a recognized graphics backend");
+            }
+
+            return configuration;
+        }
+    } // namespace
+
     Application::Application(ApplicationConfiguration configuration)
-        : m_Configuration(std::move(configuration)),
+        : m_Configuration(
+              validateApplicationConfiguration(std::move(configuration))),
           m_Logger(Logging::makeLogger(m_Configuration.logging)),
           m_GlfwContext(&m_Logger),
           m_Window(m_Configuration.initial_window_size,
