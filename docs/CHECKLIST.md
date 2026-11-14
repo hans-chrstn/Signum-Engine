@@ -1470,7 +1470,7 @@
 - [x] Define an extensible fixed-step scheduling policy contract.
 - [x] Support built-in Preserve and DiscardExcess backlog policies.
 - [x] Support safe runtime policy changes at scheduling boundaries.
-- [ ] Preserve simulation state and account for discarded time during transitions.
+- [x] Preserve simulation state and account for discarded time during transitions.
 - [ ] Expose pending time, executed ticks, and overload diagnostics.
 - [x] Keep fixed timestep configuration independent of backlog policies.
 - [ ] Allow optional workload-driven policy selection without coupling
@@ -1502,7 +1502,7 @@
 - [ ] Test rapid camera movement, focus changes, resizing, and long-running movement against the reference workload
 - [ ] Verify a fixed input sequence can reproduce the same deterministic reference updates within the supported configuration
 - [x] Test Preserve and DiscardExcess backlog policies.
-- [ ] Test runtime policy transitions without resetting simulation state.
+- [x] Test runtime policy transitions without resetting simulation state.
 - [ ] Test custom policy decisions, invalid outputs, and deterministic replay.
 
 ### Architecture

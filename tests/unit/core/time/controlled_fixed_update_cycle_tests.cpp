@@ -252,3 +252,61 @@ TEST(ControlledFixedUpdateCycleTests, PolicyExceptionReleasesCycleGuard) {
     EXPECT_EQ(result.time_discarded, Time::Duration::zero());
     EXPECT_EQ(result.remaining_time, kHalfStep);
 }
+
+TEST(ControlledFixedUpdateCycleTests,
+     PolicyTransitionPreservesSimulationStateAndAccountsForDiscardedTime) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+    Time::BacklogPolicyController controller{Time::preserveBacklog};
+
+    std::size_t position{};
+    std::size_t simulated_ticks{};
+    Time::Duration simulation_time{};
+
+    const auto update = [&](Time::Duration step) -> void {
+        EXPECT_EQ(step, kFixedStep);
+        ++position;
+        ++simulated_ticks;
+        simulation_time += step;
+    };
+
+    scheduler.accumulate(kFourAndHalfSteps);
+    controller.requestPolicy(Time::discardExcessBacklog);
+
+    const auto first = Time::runControlledFixedUpdateCycle(
+        scheduler, kTwoUpdates, update, controller);
+
+    EXPECT_EQ(first.updates_executed, kTwoUpdates);
+    EXPECT_EQ(first.time_discarded, kTwoSteps);
+    EXPECT_EQ(first.remaining_time, kHalfStep);
+    EXPECT_EQ(position, 2U);
+    EXPECT_EQ(simulated_ticks, 2U);
+    EXPECT_EQ(simulation_time, kTwoSteps);
+
+    controller.requestPolicy(Time::preserveBacklog);
+
+    const auto transition =
+        Time::runControlledFixedUpdateCycle(scheduler, 0U, update, controller);
+
+    EXPECT_EQ(transition.updates_executed, 0U);
+    EXPECT_EQ(transition.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(transition.remaining_time, kHalfStep);
+    EXPECT_EQ(position, 2U);
+    EXPECT_EQ(simulated_ticks, 2U);
+
+    scheduler.accumulate(kHalfStep);
+
+    const auto next = Time::runControlledFixedUpdateCycle(scheduler, kOneUpdate,
+                                                          update, controller);
+
+    EXPECT_EQ(next.updates_executed, kOneUpdate);
+    EXPECT_EQ(next.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(next.remaining_time, Time::Duration::zero());
+
+    EXPECT_EQ(position, 3U);
+    EXPECT_EQ(simulated_ticks, 3U);
+    EXPECT_EQ(simulation_time, Time::Duration{0.375});
+
+    EXPECT_EQ(simulation_time + first.time_discarded +
+                  scheduler.accumulatedTime(),
+              kFourAndHalfSteps + kHalfStep);
+}
