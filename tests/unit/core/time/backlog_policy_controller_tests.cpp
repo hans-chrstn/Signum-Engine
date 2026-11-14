@@ -12,7 +12,6 @@ namespace {
 
     constexpr Time::Duration kFixedStep{0.125};
     constexpr Time::Duration kTwoAndHalfSteps{0.3125};
-    constexpr Time::Duration kTwoSteps{0.25};
 
     constexpr Time::BacklogContext kPolicyContext{
         .fixed_step = kFixedStep,
@@ -87,50 +86,6 @@ TEST(BacklogPolicyControllerTests, RejectsEmptyRequestedPolicy) {
                  "BacklogPolicyController requires a valid requested policy");
 }
 
-TEST(BacklogPolicyControllerTests, CommitWithoutPendingPolicyReturnsFalse) {
-    Time::BacklogPolicyController controller{Time::preserveBacklog};
-
-    EXPECT_FALSE(controller.commitPendingPolicy());
-}
-
-TEST(BacklogPolicyControllerTests, CommitActivatesPendingPolicyOnlyOnce) {
-    Time::BacklogPolicyController controller{Time::preserveBacklog};
-
-    controller.requestPolicy(Time::discardExcessBacklog);
-
-    EXPECT_TRUE(controller.commitPendingPolicy());
-    EXPECT_FALSE(controller.commitPendingPolicy());
-}
-
-TEST(BacklogPolicyControllerTests, SupportsSuccessivePolicyCommits) {
-    Time::BacklogPolicyController controller{Time::preserveBacklog};
-
-    controller.requestPolicy(Time::discardExcessBacklog);
-
-    EXPECT_TRUE(controller.commitPendingPolicy());
-    EXPECT_FALSE(controller.commitPendingPolicy());
-
-    controller.requestPolicy(Time::preserveBacklog);
-
-    EXPECT_TRUE(controller.commitPendingPolicy());
-    EXPECT_FALSE(controller.commitPendingPolicy());
-}
-
-TEST(BacklogPolicyControllerTests, CommitDoesNotExecutePendingPolicy) {
-    Time::BacklogPolicyController controller{Time::preserveBacklog};
-
-    std::size_t invocation_count{};
-
-    controller.requestPolicy(
-        [&](const Time::BacklogContext &) -> Time::BacklogDecision {
-            ++invocation_count;
-            return Time::BacklogDecision{};
-        });
-
-    EXPECT_TRUE(controller.commitPendingPolicy());
-    EXPECT_EQ(invocation_count, 0U);
-}
-
 TEST(BacklogPolicyControllerTests, ExposesInitialActivePolicy) {
     const Time::BacklogPolicyController controller{Time::preserveBacklog};
 
@@ -149,50 +104,4 @@ TEST(BacklogPolicyControllerTests, RequestDoesNotChangeActivePolicy) {
         controller.activePolicy()(kPolicyContext);
 
     EXPECT_EQ(decision.time_to_discard, Time::Duration::zero());
-}
-
-TEST(BacklogPolicyControllerTests, CommitChangesActivePolicy) {
-    Time::BacklogPolicyController controller{Time::preserveBacklog};
-
-    controller.requestPolicy(Time::discardExcessBacklog);
-
-    ASSERT_TRUE(controller.commitPendingPolicy());
-
-    const Time::BacklogDecision decision =
-        controller.activePolicy()(kPolicyContext);
-
-    EXPECT_EQ(decision.time_to_discard, kTwoSteps);
-
-    EXPECT_FALSE(controller.commitPendingPolicy());
-
-    EXPECT_EQ(controller.activePolicy()(kPolicyContext).time_to_discard,
-              kTwoSteps);
-}
-
-TEST(BacklogPolicyControllerTests, LatestPendingRequestWins) {
-    Time::BacklogPolicyController controller{Time::preserveBacklog};
-
-    controller.requestPolicy(Time::discardExcessBacklog);
-    controller.requestPolicy(Time::preserveBacklog);
-
-    ASSERT_TRUE(controller.commitPendingPolicy());
-
-    EXPECT_EQ(controller.activePolicy()(kPolicyContext).time_to_discard,
-              Time::Duration::zero());
-}
-
-TEST(BacklogPolicyControllerTests, SupportsMultipleActivePolicyTransitions) {
-    Time::BacklogPolicyController controller{Time::preserveBacklog};
-
-    controller.requestPolicy(Time::discardExcessBacklog);
-    ASSERT_TRUE(controller.commitPendingPolicy());
-
-    EXPECT_EQ(controller.activePolicy()(kPolicyContext).time_to_discard,
-              kTwoSteps);
-
-    controller.requestPolicy(Time::preserveBacklog);
-    ASSERT_TRUE(controller.commitPendingPolicy());
-
-    EXPECT_EQ(controller.activePolicy()(kPolicyContext).time_to_discard,
-              Time::Duration::zero());
 }

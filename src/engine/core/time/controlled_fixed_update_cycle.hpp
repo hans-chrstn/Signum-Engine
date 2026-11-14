@@ -1,5 +1,8 @@
 #pragma once
 
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/core/time/backlog_policy_controller.hpp"
 #include "engine/core/time/fixed_step_scheduler.hpp"
 #include "engine/core/time/fixed_update_cycle.hpp"
@@ -21,6 +24,11 @@ namespace SNE::Engine::Core::Time {
      * @param controller Controller managing active and pending policies.
      * @return Completed fixed-update cycle results.
      *
+     * @pre The controller must not already be executing a controlled cycle.
+     *
+     * @note Reentrant calls using the same controller fail a precondition
+     * assertion. The execution guard is cleared on normal or exceptional exit.
+     *
      * @note The selected policy is copied before simulation updates begin.
      * Copying the policy may throw without consuming simulation time.
      *
@@ -32,6 +40,25 @@ namespace SNE::Engine::Core::Time {
         FixedStepScheduler &scheduler, std::size_t max_updates,
         UpdateFn &&on_fixed_update, BacklogPolicyController &controller)
         -> FixedUpdateCycleResult {
+        if (controller.m_CycleInProgress) {
+            Assertion::failAssertion(Assertion::AssertionType::Precondition,
+                                     Error::Subsystem::Core,
+                                     "Controlled fixed-update cycle requires "
+                                     "no cycle to be in progress");
+        }
+
+        struct CycleCompletionGuard {
+            bool &in_progress;
+
+            ~CycleCompletionGuard() noexcept {
+                in_progress = false;
+            }
+        };
+
+        controller.m_CycleInProgress = true;
+
+        CycleCompletionGuard guard{controller.m_CycleInProgress};
+
         static_cast<void>(controller.commitPendingPolicy());
 
         const BacklogPolicy policy{controller.activePolicy()};

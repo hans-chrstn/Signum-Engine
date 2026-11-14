@@ -1469,7 +1469,7 @@
 - [ ] Allow spatial transforms to use simulation time. Keep orbital mechanics out of the timing system.
 - [x] Define an extensible fixed-step scheduling policy contract.
 - [x] Support built-in Preserve and DiscardExcess backlog policies.
-- [ ] Support safe runtime policy changes at scheduling boundaries.
+- [x] Support safe runtime policy changes at scheduling boundaries.
 - [ ] Preserve simulation state and account for discarded time during transitions.
 - [ ] Expose pending time, executed ticks, and overload diagnostics.
 - [x] Keep fixed timestep configuration independent of backlog policies.

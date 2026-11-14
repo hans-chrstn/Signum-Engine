@@ -60,7 +60,6 @@ TEST(ControlledFixedUpdateCycleTests,
     EXPECT_EQ(result.time_discarded, kTwoSteps);
     EXPECT_EQ(result.remaining_time, kHalfStep);
     EXPECT_EQ(scheduler.accumulatedTime(), kHalfStep);
-    EXPECT_FALSE(controller.commitPendingPolicy());
 }
 
 TEST(ControlledFixedUpdateCycleTests,
@@ -101,36 +100,6 @@ TEST(ControlledFixedUpdateCycleTests,
 }
 
 TEST(ControlledFixedUpdateCycleTests,
-     PolicySnapshotSurvivesCommitDuringUpdateCallback) {
-    Time::FixedStepScheduler scheduler{kFixedStep};
-    Time::BacklogPolicyController controller{Time::preserveBacklog};
-
-    scheduler.accumulate(kFourAndHalfSteps);
-
-    std::size_t callback_count{};
-
-    const Time::FixedUpdateCycleResult result =
-        Time::runControlledFixedUpdateCycle(
-            scheduler, kTwoUpdates,
-            [&](Time::Duration) -> void {
-                ++callback_count;
-
-                if (callback_count == kOneUpdate) {
-                    controller.requestPolicy(Time::discardExcessBacklog);
-                    EXPECT_TRUE(controller.commitPendingPolicy());
-                }
-            },
-            controller);
-
-    EXPECT_EQ(result.updates_executed, kTwoUpdates);
-    EXPECT_EQ(result.time_discarded, Time::Duration::zero());
-    EXPECT_EQ(result.remaining_time, kTwoAndHalfSteps);
-
-    EXPECT_EQ(callback_count, kTwoUpdates);
-    EXPECT_EQ(scheduler.accumulatedTime(), kTwoAndHalfSteps);
-}
-
-TEST(ControlledFixedUpdateCycleTests,
      FailedUpdateLeavesRequestedPolicyPending) {
     Time::FixedStepScheduler scheduler{kFixedStep};
     Time::BacklogPolicyController controller{Time::preserveBacklog};
@@ -155,4 +124,131 @@ TEST(ControlledFixedUpdateCycleTests,
     EXPECT_EQ(next.updates_executed, kOneUpdate);
     EXPECT_EQ(next.time_discarded, kFixedStep);
     EXPECT_EQ(next.remaining_time, kHalfStep);
+}
+
+TEST(ControlledFixedUpdateCycleTests,
+     RepeatedCyclesWithoutNewRequestRetainActivePolicy) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+    Time::BacklogPolicyController controller{Time::preserveBacklog};
+
+    scheduler.accumulate(kFourAndHalfSteps);
+    controller.requestPolicy(Time::discardExcessBacklog);
+
+    const auto first = Time::runControlledFixedUpdateCycle(
+        scheduler, kTwoUpdates, [](Time::Duration) -> void {}, controller);
+
+    EXPECT_EQ(first.time_discarded, kTwoSteps);
+    EXPECT_EQ(first.remaining_time, kHalfStep);
+
+    scheduler.accumulate(kTwoSteps);
+
+    const auto second = Time::runControlledFixedUpdateCycle(
+        scheduler, kOneUpdate, [](Time::Duration) -> void {}, controller);
+
+    EXPECT_EQ(second.updates_executed, kOneUpdate);
+    EXPECT_EQ(second.time_discarded, kFixedStep);
+    EXPECT_EQ(second.remaining_time, kHalfStep);
+}
+
+TEST(ControlledFixedUpdateCycleTests,
+     LatestPendingRequestWinsAtSchedulingBoundary) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+    Time::BacklogPolicyController controller{Time::preserveBacklog};
+
+    scheduler.accumulate(kFourAndHalfSteps);
+
+    controller.requestPolicy(Time::discardExcessBacklog);
+    controller.requestPolicy(Time::preserveBacklog);
+
+    const auto result = Time::runControlledFixedUpdateCycle(
+        scheduler, kTwoUpdates, [](Time::Duration) -> void {}, controller);
+
+    EXPECT_EQ(result.updates_executed, kTwoUpdates);
+    EXPECT_EQ(result.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(result.remaining_time, kTwoAndHalfSteps);
+}
+
+TEST(ControlledFixedUpdateCycleTests,
+     SupportsSuccessiveTransitionsWithoutResettingScheduler) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+    Time::BacklogPolicyController controller{Time::preserveBacklog};
+
+    scheduler.accumulate(kFourAndHalfSteps);
+    controller.requestPolicy(Time::discardExcessBacklog);
+
+    const auto first = Time::runControlledFixedUpdateCycle(
+        scheduler, kTwoUpdates, [](Time::Duration) -> void {}, controller);
+
+    EXPECT_EQ(first.time_discarded, kTwoSteps);
+    EXPECT_EQ(first.remaining_time, kHalfStep);
+
+    controller.requestPolicy(Time::preserveBacklog);
+    scheduler.accumulate(kTwoSteps);
+
+    const auto second = Time::runControlledFixedUpdateCycle(
+        scheduler, kOneUpdate, [](Time::Duration) -> void {}, controller);
+
+    EXPECT_EQ(second.updates_executed, kOneUpdate);
+    EXPECT_EQ(second.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(second.remaining_time, kOneAndHalfSteps);
+    EXPECT_EQ(scheduler.fixedStep(), kFixedStep);
+}
+
+TEST(ControlledFixedUpdateCycleTests,
+     RejectsNestedCycleAndPreservesPendingRequest) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+    Time::BacklogPolicyController controller{Time::preserveBacklog};
+
+    scheduler.accumulate(kTwoAndHalfSteps);
+
+    const auto first = Time::runControlledFixedUpdateCycle(
+        scheduler, kOneUpdate,
+        [&](Time::Duration) -> void {
+            controller.requestPolicy(Time::discardExcessBacklog);
+
+            EXPECT_DEATH(
+                static_cast<void>(Time::runControlledFixedUpdateCycle(
+                    scheduler, 0U, [](Time::Duration) -> void {}, controller)),
+                "Controlled fixed-update cycle requires no cycle to be in "
+                "progress");
+        },
+        controller);
+
+    EXPECT_EQ(first.updates_executed, kOneUpdate);
+    EXPECT_EQ(first.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(first.remaining_time, kOneAndHalfSteps);
+
+    const auto second = Time::runControlledFixedUpdateCycle(
+        scheduler, 0U, [](Time::Duration) -> void {}, controller);
+
+    EXPECT_EQ(second.updates_executed, 0U);
+    EXPECT_EQ(second.time_discarded, kFixedStep);
+    EXPECT_EQ(second.remaining_time, kHalfStep);
+}
+
+TEST(ControlledFixedUpdateCycleTests, PolicyExceptionReleasesCycleGuard) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+
+    Time::BacklogPolicyController controller{
+        [](const Time::BacklogContext &) -> Time::BacklogDecision {
+            throw std::runtime_error{"Backlog policy failed"};
+        }};
+
+    scheduler.accumulate(kOneAndHalfSteps);
+
+    EXPECT_THROW(
+        static_cast<void>(Time::runControlledFixedUpdateCycle(
+            scheduler, kOneUpdate, [](Time::Duration) -> void {}, controller)),
+        std::runtime_error);
+
+    EXPECT_EQ(scheduler.accumulatedTime(), kHalfStep);
+
+    controller.requestPolicy(Time::preserveBacklog);
+
+    const auto result = Time::runControlledFixedUpdateCycle(
+        scheduler, 0U, [](Time::Duration) -> void {}, controller);
+
+    EXPECT_EQ(result.updates_executed, 0U);
+    EXPECT_EQ(result.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(result.remaining_time, kHalfStep);
 }

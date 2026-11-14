@@ -1,9 +1,21 @@
 #pragma once
 
 #include "engine/core/time/backlog_policy.hpp"
+#include <cstddef>
 #include <functional>
 #include <optional>
+
 namespace SNE::Engine::Core::Time {
+    class FixedStepScheduler;
+    struct FixedUpdateCycleResult;
+    class BacklogPolicyController;
+
+    template <typename UpdateFn>
+    [[nodiscard]] auto runControlledFixedUpdateCycle(
+        FixedStepScheduler &scheduler, std::size_t max_updates,
+        UpdateFn &&on_fixed_update, BacklogPolicyController &controller)
+        -> FixedUpdateCycleResult;
+
     using BacklogPolicy =
         std::function<BacklogDecision(const BacklogContext &)>;
 
@@ -35,6 +47,39 @@ namespace SNE::Engine::Core::Time {
          */
         std::optional<BacklogPolicy> m_Pending = std::nullopt;
 
+        /**
+         * @brief Indicates whether a controlled scheduling cycle is executing.
+         *
+         * Prevents nested controlled cycles from activating pending policies
+         * while the current cycle is still executing.
+         *
+         * Must be reset when the cycle finishes, including on exceptions.
+         */
+        bool m_CycleInProgress = false;
+
+        template <typename UpdateFn>
+        friend auto runControlledFixedUpdateCycle(
+            FixedStepScheduler &scheduler, std::size_t max_updates,
+            UpdateFn &&on_fixed_update, BacklogPolicyController &controller)
+            -> FixedUpdateCycleResult;
+
+        /**
+         * @brief Activates a pending backlog policy replacement.
+         *
+         * Replaces the active policy with the pending policy when a
+         * replacement is available, then clears the pending request.
+         *
+         * Leaves the active policy unchanged when no replacement is pending.
+         *
+         * Does not modify accumulated simulation time or execute updates.
+         *
+         * @return True if a pending policy was activated; otherwise false.
+         *
+         * @note Must be called at a safe scheduling boundary, not while
+         * the active policy is being evaluated.
+         */
+        [[nodiscard]] auto commitPendingPolicy() noexcept -> bool;
+
       public:
         /**
          * @brief Constructs a controller with an initial active backlog policy.
@@ -65,23 +110,6 @@ namespace SNE::Engine::Core::Time {
          * @pre policy must contain a valid callable.
          */
         auto requestPolicy(BacklogPolicy policy) -> void;
-
-        /**
-         * @brief Activates a pending backlog policy replacement.
-         *
-         * Replaces the active policy with the pending policy when a
-         * replacement is available, then clears the pending request.
-         *
-         * Leaves the active policy unchanged when no replacement is pending.
-         *
-         * Does not modify accumulated simulation time or execute updates.
-         *
-         * @return True if a pending policy was activated; otherwise false.
-         *
-         * @note Must be called at a safe scheduling boundary, not while
-         * the active policy is being evaluated.
-         */
-        [[nodiscard]] auto commitPendingPolicy() noexcept -> bool;
 
         /**
          * @brief Returns the currently active backlog policy.

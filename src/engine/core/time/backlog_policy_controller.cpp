@@ -15,16 +15,6 @@ namespace SNE::Engine::Core::Time {
         }
     }
 
-    auto BacklogPolicyController::requestPolicy(BacklogPolicy policy) -> void {
-        if (!policy) {
-            Assertion::failAssertion(
-                Assertion::AssertionType::Precondition, Error::Subsystem::Core,
-                "BacklogPolicyController requires a valid requested policy");
-        }
-
-        m_Pending.emplace(std::move(policy));
-    }
-
     auto BacklogPolicyController::commitPendingPolicy() noexcept -> bool {
         if (!m_Pending.has_value()) {
             return false;
@@ -35,6 +25,16 @@ namespace SNE::Engine::Core::Time {
         m_Pending.reset();
 
         return true;
+    }
+
+    auto BacklogPolicyController::requestPolicy(BacklogPolicy policy) -> void {
+        if (!policy) {
+            Assertion::failAssertion(
+                Assertion::AssertionType::Precondition, Error::Subsystem::Core,
+                "BacklogPolicyController requires a valid requested policy");
+        }
+
+        m_Pending.emplace(std::move(policy));
     }
 
     auto BacklogPolicyController::activePolicy() const noexcept
