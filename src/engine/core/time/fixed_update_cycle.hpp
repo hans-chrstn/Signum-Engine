@@ -9,9 +9,12 @@ namespace SNE::Engine::Core::Time {
     /**
      * @brief Describes the outcome of a fixed-update scheduling cycle.
      *
-     * Reports the number of completed simulation updates, the amount of
-     * accumulated time discarded by the selected backlog policy, and
-     * the simulation time retained for subsequent scheduling cycles.
+     * Reports completed simulation updates, accumulated time discarded
+     * by the selected backlog policy, time retained for subsequent cycles,
+     * and whether scheduling overload occurred.
+     *
+     * Overload is detected before backlog policy application, so discarding
+     * excess time does not erase the diagnostic.
      *
      * Does not own simulation state or modify scheduler behavior.
      */
@@ -30,6 +33,19 @@ namespace SNE::Engine::Core::Time {
          * @brief Unconsumed simulation time retained after policy application.
          */
         Duration remaining_time{};
+
+        /**
+         * @brief Indicates whether a complete simulation tick remained
+         * unprocessed.
+         *
+         * True when at least one complete fixed timestep remains accumulated
+         * after executing the permitted updates, but before applying the
+         * selected backlog policy.
+         *
+         * Reports scheduling overload even when the policy subsequently
+         * discards the excess accumulated time.
+         */
+        bool overloaded{};
     };
 
     /**
@@ -39,8 +55,9 @@ namespace SNE::Engine::Core::Time {
      * then evaluates and applies the selected backlog policy.
      *
      * Returns the number of successfully completed updates, the amount
-     * of accumulated time discarded, and the time retained for future
-     * scheduling cycles.
+     * of accumulated time discarded, the time retained for future
+     * scheduling cycles, and whether a complete simulation tick remained
+     * unprocessed before backlog policy application.
      *
      * Does not measure elapsed time, own simulation state, or perform
      * rendering operations.
@@ -52,7 +69,7 @@ namespace SNE::Engine::Core::Time {
      * @param policy Callable accepting a BacklogContext and returning
      * a BacklogDecision.
      * @return Scheduling results containing executed updates, discarded
-     * time, and remaining accumulated time.
+     * time, remaining accumulated time, and overload status.
      *
      * @note Fixed updates complete before the backlog policy is evaluated.
      * If an update callback throws, the exception propagates and the
@@ -69,6 +86,9 @@ namespace SNE::Engine::Core::Time {
         const std::size_t updates =
             runFixedUpdates(scheduler, max_updates, on_fixed_update);
 
+        const bool overloaded =
+            scheduler.accumulatedTime() >= scheduler.fixedStep();
+
         const Duration discarded_time =
             applyBacklogPolicy(scheduler, max_updates, updates, policy);
 
@@ -78,6 +98,7 @@ namespace SNE::Engine::Core::Time {
             .updates_executed = updates,
             .time_discarded = discarded_time,
             .remaining_time = remaining_time,
+            .overloaded = overloaded,
         };
     }
 } // namespace SNE::Engine::Core::Time

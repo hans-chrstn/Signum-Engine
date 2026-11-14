@@ -1471,7 +1471,7 @@
 - [x] Support built-in Preserve and DiscardExcess backlog policies.
 - [x] Support safe runtime policy changes at scheduling boundaries.
 - [x] Preserve simulation state and account for discarded time during transitions.
-- [ ] Expose pending time, executed ticks, and overload diagnostics.
+- [x] Expose pending time, executed ticks, and overload diagnostics.
 - [x] Keep fixed timestep configuration independent of backlog policies.
 - [ ] Allow optional workload-driven policy selection without coupling
       the scheduler to CPU/GPU monitoring.

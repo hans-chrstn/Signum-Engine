@@ -37,6 +37,7 @@ TEST(FixedUpdateCycleTests, PreservePolicyRetainsBacklog) {
     EXPECT_EQ(result.updates_executed, kTwoUpdates);
     EXPECT_EQ(result.time_discarded, Time::Duration::zero());
     EXPECT_EQ(result.remaining_time, kOneAndHalfSteps);
+    EXPECT_TRUE(result.overloaded);
     EXPECT_EQ(scheduler.accumulatedTime(), kOneAndHalfSteps);
     EXPECT_EQ(callback_count, kTwoUpdates);
 }
@@ -55,6 +56,7 @@ TEST(FixedUpdateCycleTests, DiscardExcessPreservesFractionalBacklog) {
     EXPECT_EQ(result.updates_executed, kTwoUpdates);
     EXPECT_EQ(result.time_discarded, kTwoSteps);
     EXPECT_EQ(result.remaining_time, kHalfStep);
+    EXPECT_TRUE(result.overloaded);
     EXPECT_EQ(scheduler.accumulatedTime(), kHalfStep);
     EXPECT_EQ(callback_count, kTwoUpdates);
 }
@@ -73,6 +75,7 @@ TEST(FixedUpdateCycleTests, ZeroBudgetPreservesBacklogWithPreservePolicy) {
     EXPECT_EQ(result.updates_executed, kZeroUpdates);
     EXPECT_EQ(result.time_discarded, Time::Duration::zero());
     EXPECT_EQ(result.remaining_time, kTwoAndHalfSteps);
+    EXPECT_TRUE(result.overloaded);
     EXPECT_EQ(callback_count, kZeroUpdates);
 }
 
@@ -99,6 +102,7 @@ TEST(FixedUpdateCycleTests, CustomPolicyReceivesActualExecutedCount) {
     EXPECT_EQ(result.updates_executed, kTwoUpdates);
     EXPECT_EQ(result.time_discarded, Time::Duration::zero());
     EXPECT_EQ(result.remaining_time, kHalfStep);
+    EXPECT_FALSE(result.overloaded);
 }
 
 TEST(FixedUpdateCycleTests, CallbackFailureSkipsBacklogPolicy) {
@@ -178,4 +182,26 @@ TEST(FixedUpdateCycleTests,
     EXPECT_EQ(total_updates, 3U);
     EXPECT_EQ(scheduler.accumulatedTime(), kHalfStep);
     EXPECT_EQ(scheduler.fixedStep(), kFixedStep);
+}
+
+TEST(FixedUpdateCycleTests, DetectsOverloadAtExactlyOnePendingStep) {
+    Time::FixedStepScheduler scheduler{kFixedStep};
+    scheduler.accumulate(kTwoSteps);
+
+    std::size_t callback_count{};
+
+    const Time::FixedUpdateCycleResult result = Time::runFixedUpdateCycle(
+        scheduler, 1U,
+        [&](Time::Duration step) -> void {
+            EXPECT_EQ(step, kFixedStep);
+            ++callback_count;
+        },
+        Time::preserveBacklog);
+
+    EXPECT_EQ(result.updates_executed, 1U);
+    EXPECT_EQ(result.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(result.remaining_time, kFixedStep);
+    EXPECT_TRUE(result.overloaded);
+    EXPECT_EQ(callback_count, 1U);
+    EXPECT_EQ(scheduler.accumulatedTime(), kFixedStep);
 }
