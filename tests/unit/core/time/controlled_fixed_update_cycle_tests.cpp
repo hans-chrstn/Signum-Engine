@@ -1,6 +1,7 @@
 #include "engine/core/time/backlog_policy.hpp"
 #include "engine/core/time/backlog_policy_controller.hpp"
 #include "engine/core/time/controlled_fixed_update_cycle.hpp"
+#include <array>
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <stdexcept>
@@ -309,4 +310,158 @@ TEST(ControlledFixedUpdateCycleTests,
     EXPECT_EQ(simulation_time + first.time_discarded +
                   scheduler.accumulatedTime(),
               kFourAndHalfSteps + kHalfStep);
+}
+
+TEST(ControlledFixedUpdateCycleTests,
+     IdenticalPolicyTransitionsProduceDeterministicReplay) {
+    struct ReplayTrace {
+        std::array<Time::FixedUpdateCycleResult, 4> results{};
+        std::array<std::size_t, 4> positions{};
+        std::size_t ticks{};
+        Time::Duration remaining{};
+    };
+
+    const auto run_sequence = [] -> ReplayTrace {
+        Time::FixedStepScheduler scheduler{kFixedStep};
+        Time::BacklogPolicyController controller{Time::preserveBacklog};
+
+        constexpr std::array<Time::Duration, 4> elapsed{
+            kFourAndHalfSteps,
+            Time::Duration::zero(),
+            kTwoSteps,
+            kHalfStep,
+        };
+
+        constexpr std::array<std::size_t, 4> budgets{
+            kTwoUpdates,
+            kOneUpdate,
+            kOneUpdate,
+            kOneUpdate,
+        };
+
+        ReplayTrace trace{};
+        std::size_t position{};
+
+        for (std::size_t i{}; i < elapsed.size(); ++i) {
+            scheduler.accumulate(elapsed[i]);
+
+            trace.results[i] = Time::runControlledFixedUpdateCycle(
+                scheduler, budgets[i],
+                [&](Time::Duration step) -> void {
+                    EXPECT_EQ(step, kFixedStep);
+
+                    ++trace.ticks;
+                    ++position;
+
+                    if (trace.ticks == 1U || trace.ticks == 3U) {
+                        controller.requestPolicy(Time::discardExcessBacklog);
+                    } else if (trace.ticks == 2U) {
+                        controller.requestPolicy(Time::preserveBacklog);
+                    }
+                },
+                controller);
+
+            trace.positions[i] = position;
+        }
+
+        trace.remaining = scheduler.accumulatedTime();
+        return trace;
+    };
+
+    const ReplayTrace original = run_sequence();
+    const ReplayTrace replay = run_sequence();
+
+    for (std::size_t i{}; i < original.results.size(); ++i) {
+        EXPECT_EQ(original.results[i].updates_executed,
+                  replay.results[i].updates_executed);
+        EXPECT_EQ(original.results[i].time_discarded,
+                  replay.results[i].time_discarded);
+        EXPECT_EQ(original.results[i].remaining_time,
+                  replay.results[i].remaining_time);
+        EXPECT_EQ(original.results[i].overloaded, replay.results[i].overloaded);
+        EXPECT_EQ(original.positions[i], replay.positions[i]);
+    }
+
+    EXPECT_EQ(original.ticks, 5U);
+    EXPECT_EQ(original.positions[0], 2U);
+    EXPECT_EQ(original.positions[1], 3U);
+    EXPECT_EQ(original.positions[2], 4U);
+    EXPECT_EQ(original.positions[3], 5U);
+
+    EXPECT_EQ(original.results[0].time_discarded, Time::Duration::zero());
+    EXPECT_EQ(original.results[1].time_discarded, Time::Duration::zero());
+    EXPECT_EQ(original.results[2].time_discarded, kTwoSteps);
+    EXPECT_TRUE(original.results[2].overloaded);
+
+    EXPECT_EQ(original.ticks, replay.ticks);
+    EXPECT_EQ(original.remaining, replay.remaining);
+    EXPECT_EQ(original.remaining, Time::Duration::zero());
+}
+
+TEST(ControlledFixedUpdateCycleTests,
+     DifferentPolicyRequestOrderCanProduceDifferentResults) {
+    struct Outcome {
+        Time::FixedUpdateCycleResult transition{};
+        Time::FixedUpdateCycleResult following{};
+        std::size_t ticks{};
+    };
+
+    const auto run_sequence = [](bool last_request_discards) -> Outcome {
+        Time::FixedStepScheduler scheduler{kFixedStep};
+        Time::BacklogPolicyController controller{Time::preserveBacklog};
+
+        std::size_t ticks{};
+        scheduler.accumulate(kFourAndHalfSteps);
+
+        static_cast<void>(Time::runControlledFixedUpdateCycle(
+            scheduler, kTwoUpdates,
+            [&](Time::Duration step) -> void {
+                EXPECT_EQ(step, kFixedStep);
+                ++ticks;
+
+                if (ticks == 1U) {
+                    controller.requestPolicy(last_request_discards
+                                                 ? Time::preserveBacklog
+                                                 : Time::discardExcessBacklog);
+                } else if (ticks == 2U) {
+                    controller.requestPolicy(last_request_discards
+                                                 ? Time::discardExcessBacklog
+                                                 : Time::preserveBacklog);
+                }
+            },
+            controller));
+
+        const auto transition = Time::runControlledFixedUpdateCycle(
+            scheduler, 0U, [](Time::Duration) -> void {}, controller);
+
+        scheduler.accumulate(kHalfStep);
+
+        const auto following = Time::runControlledFixedUpdateCycle(
+            scheduler, kTwoUpdates, [&](Time::Duration) -> void { ++ticks; },
+            controller);
+
+        return {
+            .transition = transition,
+            .following = following,
+            .ticks = ticks,
+        };
+    };
+
+    const Outcome preserve_last = run_sequence(false);
+    const Outcome discard_last = run_sequence(true);
+
+    EXPECT_EQ(preserve_last.transition.time_discarded, Time::Duration::zero());
+    EXPECT_EQ(preserve_last.transition.remaining_time, kTwoAndHalfSteps);
+
+    EXPECT_EQ(discard_last.transition.time_discarded, kTwoSteps);
+    EXPECT_EQ(discard_last.transition.remaining_time, kHalfStep);
+
+    EXPECT_EQ(preserve_last.following.updates_executed, kTwoUpdates);
+    EXPECT_EQ(discard_last.following.updates_executed, kOneUpdate);
+
+    EXPECT_EQ(preserve_last.ticks, 4U);
+    EXPECT_EQ(discard_last.ticks, 3U);
+
+    EXPECT_TRUE(preserve_last.following.overloaded);
+    EXPECT_FALSE(discard_last.following.overloaded);
 }

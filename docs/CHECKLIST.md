@@ -1475,7 +1475,7 @@
 - [x] Keep fixed timestep configuration independent of backlog policies.
 - [ ] Allow optional workload-driven policy selection without coupling
       the scheduler to CPU/GPU monitoring.
-- [ ] Define deterministic policy-transition and replay behavior.
+- [x] Define deterministic policy-transition and replay behavior.
 
 ### Implement
 
