@@ -3206,7 +3206,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * renderer modifications.
          */
         [[nodiscard]] auto drawInstances() const
-            -> std::vector<MeshDrawInstance>;
+            -> std::vector<MeshDrawInstance> override;
 
         /**
          * @brief Replaces the currently active GPU mesh.
