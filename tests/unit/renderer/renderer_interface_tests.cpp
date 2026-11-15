@@ -2,6 +2,7 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/graphics_backend.hpp"
+#include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/pipeline/cull_mode.hpp"
 #include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
@@ -68,6 +69,7 @@ namespace {
         bool material_configuration_registered{false};
         bool material_configuration_unregistered{false};
         bool mesh_unregistered{false};
+        bool submission_progress_queried{false};
 
         std::size_t received_instance_count{0};
         std::size_t received_instance_index{0};
@@ -87,6 +89,8 @@ namespace {
 
         Math::Matrix4f received_camera_view{};
         Math::Matrix4f received_model_matrix{};
+
+        Renderer::GraphicsSubmissionProgress submission_progress{};
 
         std::optional<Renderer::RenderTargetExtent> received_viewport_extent =
             std::nullopt;
@@ -128,6 +132,12 @@ namespace {
             -> Renderer::GraphicsBackend override {
             m_State.queried = true;
             return Renderer::GraphicsBackend::Vulkan;
+        }
+
+        [[nodiscard]] auto graphicsSubmissionProgress() const noexcept
+            -> Renderer::GraphicsSubmissionProgress override {
+            m_State.submission_progress_queried = true;
+            return m_State.submission_progress;
         }
 
         auto
@@ -243,6 +253,16 @@ namespace {
 
     static_assert(
         std::is_same_v<decltype(std::declval<const Renderer::IRenderer &>()
+                                    .graphicsSubmissionProgress()),
+                       Renderer::GraphicsSubmissionProgress>);
+
+    static_assert(
+        std::is_same_v<decltype(std::declval<const Vulkan::VulkanRenderer &>()
+                                    .graphicsSubmissionProgress()),
+                       Renderer::GraphicsSubmissionProgress>);
+
+    static_assert(
+        std::is_same_v<decltype(std::declval<const Renderer::IRenderer &>()
                                     .drawInstances()),
                        std::vector<Renderer::MeshDrawInstance>>);
 
@@ -271,6 +291,12 @@ namespace {
 
     static_assert(noexcept(
         std::declval<const Vulkan::VulkanRenderer &>().graphicsBackend()));
+
+    static_assert(noexcept(std::declval<const Renderer::IRenderer &>()
+                               .graphicsSubmissionProgress()));
+
+    static_assert(noexcept(std::declval<const Vulkan::VulkanRenderer &>()
+                               .graphicsSubmissionProgress()));
 } // namespace
 
 TEST(RendererInterfaceTests, DispatchesBackendQueryThroughBaseReference) {
@@ -544,6 +570,56 @@ TEST(RendererInterfaceTests, DispatchesMeshRemovalThroughBaseReference) {
 
     EXPECT_TRUE(state.mesh_unregistered);
     EXPECT_EQ(state.unregistered_mesh_handle, kTestRegisteredMeshHandle);
+}
+
+TEST(RendererInterfaceTests,
+     ReturnsInitialGraphicsSubmissionProgressThroughBaseReference) {
+    TestRendererState state{};
+
+    TestRenderer concrete_renderer{state};
+    const Renderer::IRenderer &renderer = concrete_renderer;
+
+    const Renderer::GraphicsSubmissionProgress progress =
+        renderer.graphicsSubmissionProgress();
+
+    EXPECT_TRUE(state.submission_progress_queried);
+    EXPECT_EQ(progress.last_submitted, 0U);
+    EXPECT_EQ(progress.last_completed, 0U);
+}
+
+TEST(RendererInterfaceTests,
+     ReturnsIndependentGraphicsSubmissionProgressSnapshotThroughBaseReference) {
+    constexpr std::uint64_t kLastSubmittedSubmissionId = 5U;
+    constexpr std::uint64_t kLastCompletedSubmissionId = 3U;
+    constexpr std::uint64_t kNextSubmittedSubmissionId = 6U;
+
+    TestRendererState state{};
+
+    state.submission_progress = {
+        .last_submitted = kLastSubmittedSubmissionId,
+        .last_completed = kLastCompletedSubmissionId,
+    };
+
+    TestRenderer concrete_renderer{state};
+    const Renderer::IRenderer &renderer = concrete_renderer;
+
+    const Renderer::GraphicsSubmissionProgress original_snapshot =
+        renderer.graphicsSubmissionProgress();
+
+    EXPECT_TRUE(state.submission_progress_queried);
+    EXPECT_EQ(original_snapshot.last_submitted, kLastSubmittedSubmissionId);
+    EXPECT_EQ(original_snapshot.last_completed, kLastCompletedSubmissionId);
+
+    state.submission_progress.last_submitted = kNextSubmittedSubmissionId;
+
+    const Renderer::GraphicsSubmissionProgress updated_snapshot =
+        renderer.graphicsSubmissionProgress();
+
+    EXPECT_EQ(updated_snapshot.last_submitted, kNextSubmittedSubmissionId);
+    EXPECT_EQ(updated_snapshot.last_completed, kLastCompletedSubmissionId);
+
+    EXPECT_EQ(original_snapshot.last_submitted, kLastSubmittedSubmissionId);
+    EXPECT_EQ(original_snapshot.last_completed, kLastCompletedSubmissionId);
 }
 
 TEST(RendererInterfaceTests, DestroysConcreteRendererThroughBasePointer) {

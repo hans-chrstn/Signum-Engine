@@ -9,6 +9,7 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/graphics_backend.hpp"
+#include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_instance_description.hpp"
@@ -45,7 +46,6 @@
 #include "engine/renderer/vulkan/synchronization/vulkan_semaphore.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
-#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include "vulkan_frame_resources.hpp"
 #include "vulkan_instance.hpp"
@@ -3506,7 +3506,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @note A snapshot does not account for future GPU submissions.
          */
         [[nodiscard]] auto graphicsSubmissionProgress() const noexcept
-            -> VulkanGraphicsSubmissionProgress;
+            -> GraphicsSubmissionProgress override;
 
         /**
          * @brief Returns Vulkan handles and configuration for external

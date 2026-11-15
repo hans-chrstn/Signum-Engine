@@ -5,6 +5,7 @@
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/gpu_memory_usage.hpp"
+#include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_resource_type.hpp"
@@ -15,7 +16,6 @@
 #include "engine/renderer/vulkan/texture/vulkan_texture_address_mode.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_filter.hpp"
 #include "engine/renderer/vulkan/texture/vulkan_texture_format.hpp"
-#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include "vulkan_renderer.hpp"
 #include <algorithm>
@@ -989,8 +989,8 @@ namespace SNE::Engine::Renderer::Vulkan {
     }
 
     auto VulkanRenderer::graphicsSubmissionProgress() const noexcept
-        -> VulkanGraphicsSubmissionProgress {
-        return VulkanGraphicsSubmissionProgress{
+        -> GraphicsSubmissionProgress {
+        return GraphicsSubmissionProgress{
             .last_submitted = m_GraphicsSubmissionState.lastSubmitted(),
             .last_completed = m_GraphicsSubmissionState.lastCompleted(),
         };

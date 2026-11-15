@@ -4,6 +4,7 @@
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_code.hpp"
 #include "engine/core/error/subsystem.hpp"
+#include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include <algorithm>
 #include <backends/imgui_impl_vulkan.h>
@@ -256,7 +257,7 @@ namespace SNE::Editor {
     }
 
     auto EditorImGuiVulkanBackend::collectRetiredSceneViewportTextures(
-        const Vulkan::VulkanGraphicsSubmissionProgress &submission_progress)
+        const Engine::Renderer::GraphicsSubmissionProgress &submission_progress)
         -> void {
         auto retired_it = m_RetiredSceneViewportTextureRegistrations.begin();
 

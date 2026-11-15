@@ -1,8 +1,8 @@
 #pragma once
 
+#include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/memory/vulkan_sampler.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
-#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstdint>
 #include <optional>
@@ -340,7 +340,7 @@ namespace SNE::Editor {
          * graphics submission stream used for descriptor tracking.
          */
         auto collectRetiredSceneViewportTextures(
-            const Vulkan::VulkanGraphicsSubmissionProgress &submission_progress)
-            -> void;
+            const Engine::Renderer::GraphicsSubmissionProgress
+                &submission_progress) -> void;
     };
 } // namespace SNE::Editor

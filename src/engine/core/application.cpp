@@ -9,8 +9,8 @@
 #include "engine/core/time/frame_clock.hpp"
 #include "engine/platform/window.hpp"
 #include "engine/renderer/graphics_backend.hpp"
+#include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
-#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstdint>
 #include <span>
@@ -123,7 +123,7 @@ namespace SNE::Engine::Core {
     }
 
     auto Application::graphicsSubmissionProgress() const noexcept
-        -> Renderer::Vulkan::VulkanGraphicsSubmissionProgress {
+        -> Renderer::GraphicsSubmissionProgress {
         return m_Renderer.graphicsSubmissionProgress();
     }
 

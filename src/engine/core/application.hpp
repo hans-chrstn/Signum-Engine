@@ -11,6 +11,7 @@
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
+#include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/material/material_buffer_update_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/render_target_extent.hpp"
@@ -18,7 +19,6 @@
 #include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
-#include "engine/renderer/vulkan/vulkan_graphics_submission_progress.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstddef>
@@ -369,7 +369,7 @@ namespace SNE::Engine::Core {
          * submissions recorded after the snapshot was obtained.
          */
         [[nodiscard]] auto graphicsSubmissionProgress() const noexcept
-            -> Renderer::Vulkan::VulkanGraphicsSubmissionProgress;
+            -> Renderer::GraphicsSubmissionProgress;
 
         /**
          * @brief Updates an existing material uniform or storage buffer.

@@ -5,6 +5,7 @@
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/graphics_backend.hpp"
+#include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
@@ -335,5 +336,39 @@ namespace SNE::Engine::Renderer {
          * trigger precondition assertions.
          */
         virtual auto unregisterMesh(GpuResourceHandle handle) -> void = 0;
+
+        /**
+         * @brief Returns the graphics submission and completion progress.
+         *
+         * Provides a backend-independent snapshot containing the latest
+         * submitted graphics work and the highest submission identifier
+         * confirmed complete.
+         *
+         * The snapshot allows external consumers to determine whether
+         * previously submitted graphics work has completed without
+         * accessing backend-specific synchronization objects.
+         *
+         * This operation reads existing submission bookkeeping and does
+         * not query the GPU, wait for execution, or submit new work.
+         *
+         * @return Current graphics submission and completion identifiers.
+         *
+         * @pre Access must be serialized with graphics submission and
+         * completion updates.
+         *
+         * @post Renderer submission state remains unchanged.
+         *
+         * @note Submission identifiers are meaningful only within their
+         * originating graphics submission stream.
+         *
+         * @note Completion information may lag behind actual GPU progress
+         * until the renderer processes the corresponding synchronization
+         * results.
+         *
+         * @note The returned snapshot does not account for future GPU
+         * submissions.
+         */
+        [[nodiscard]] virtual auto graphicsSubmissionProgress() const noexcept
+            -> GraphicsSubmissionProgress = 0;
     };
 } // namespace SNE::Engine::Renderer
