@@ -3176,7 +3176,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * operation completes.
          */
         auto setDrawInstances(std::span<const MeshDrawInstance> instances)
-            -> void;
+            -> void override;
 
         /**
          * @brief Returns a snapshot of the current mesh draw instances.

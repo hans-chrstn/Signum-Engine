@@ -1,6 +1,9 @@
 #pragma once
 
+#include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/graphics_backend.hpp"
+#include <span>
+
 namespace SNE::Engine::Renderer {
     /**
      * @brief Defines the backend-independent renderer ownership interface.
@@ -58,5 +61,36 @@ namespace SNE::Engine::Renderer {
          */
         [[nodiscard]] virtual auto graphicsBackend() const noexcept
             -> GraphicsBackend = 0;
+
+        /**
+         * @brief Replaces the mesh draw instances managed by the renderer.
+         *
+         * Validates the supplied draw instances and stores an independent
+         * copy for subsequent rendering operations.
+         *
+         * Each instance references registered mesh and optional material
+         * resources through non-owning renderer resource handles.
+         *
+         * An empty collection removes all currently configured instances.
+         *
+         * @param instances Borrowed mesh draw instances to configure.
+         *
+         * @pre Every referenced resource must belong to this renderer
+         * and remain registered.
+         * @pre Updates must be serialized with rendering and resource
+         * modification operations.
+         *
+         * @post On success, the renderer retains the supplied instances.
+         * @post On allocation failure, the previous instances remain unchanged.
+         *
+         * @throws std::bad_alloc if storing the instances fails.
+         *
+         * @note This function does not transfer ownership of GPU resources.
+         * @note The supplied span only needs to remain valid until the call
+         * completes.
+         */
+        virtual auto
+        setDrawInstances(std::span<const MeshDrawInstance> instances)
+            -> void = 0;
     };
 } // namespace SNE::Engine::Renderer

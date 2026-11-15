@@ -1,8 +1,11 @@
 #include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
+#include <array>
+#include <cstddef>
 #include <gtest/gtest.h>
 #include <memory>
+#include <span>
 #include <type_traits>
 #include <utility>
 
@@ -13,6 +16,8 @@ namespace {
     struct TestRendererState {
         bool queried{false};
         bool destroyed{false};
+        bool draw_instances_set{false};
+        std::size_t received_instance_count{0};
     };
 
     class TestRenderer final : public Renderer::IRenderer {
@@ -32,6 +37,13 @@ namespace {
             m_State.queried = true;
             return Renderer::GraphicsBackend::Vulkan;
         }
+
+        auto
+        setDrawInstances(std::span<const Renderer::MeshDrawInstance> instances)
+            -> void override {
+            m_State.draw_instances_set = true;
+            m_State.received_instance_count = instances.size();
+        }
     };
 
     static_assert(std::is_abstract_v<Renderer::IRenderer>);
@@ -45,6 +57,7 @@ namespace {
     static_assert(
         std::is_base_of_v<Renderer::IRenderer, Vulkan::VulkanRenderer>);
     static_assert(!std::is_abstract_v<Vulkan::VulkanRenderer>);
+    static_assert(!std::is_abstract_v<TestRenderer>);
 
     static_assert(
         std::is_same_v<decltype(std::declval<const Renderer::IRenderer &>()
@@ -69,6 +82,30 @@ TEST(RendererInterfaceTests, DispatchesBackendQueryThroughBaseReference) {
         EXPECT_EQ(renderer.graphicsBackend(),
                   Renderer::GraphicsBackend::Vulkan);
         EXPECT_TRUE(state.queried);
+        EXPECT_FALSE(state.destroyed);
+    }
+
+    EXPECT_TRUE(state.destroyed);
+}
+
+TEST(RendererInterfaceTests,
+     DispatchesDrawInstanceUpdatesThroughBaseReference) {
+    TestRendererState state{};
+
+    {
+        TestRenderer concrete_renderer{state};
+        Renderer::IRenderer &renderer = concrete_renderer;
+
+        const std::array<Renderer::MeshDrawInstance, 2> instances{};
+
+        renderer.setDrawInstances(instances);
+
+        EXPECT_TRUE(state.draw_instances_set);
+        EXPECT_EQ(state.received_instance_count, instances.size());
+
+        renderer.setDrawInstances({});
+
+        EXPECT_EQ(state.received_instance_count, 0U);
         EXPECT_FALSE(state.destroyed);
     }
 
