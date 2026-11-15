@@ -18,7 +18,6 @@
 #include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_stage_input.hpp"
-#include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <cstddef>
@@ -454,25 +453,6 @@ namespace SNE::Engine::Core {
          * @param captured true to capture the cursor; false to release it.
          */
         auto setCursorCaptured(bool captured) -> void;
-
-        /**
-         * @brief Returns Vulkan rendering information for external systems.
-         *
-         * Forwards the request to the application-owned Vulkan renderer.
-         *
-         * The returned information contains borrowed Vulkan handles and a
-         * snapshot of the current swapchain configuration.
-         *
-         * @return Vulkan initialization and swapchain information.
-         *
-         * @pre The renderer's swapchain resources must be initialized.
-         *
-         * @note The returned handles remain owned by the renderer.
-         * Swapchain-dependent information may become outdated following
-         * swapchain recreation.
-         */
-        [[nodiscard]] auto externalRenderingInfo() const
-            -> Renderer::Vulkan::VulkanExternalRenderingInfo;
 
         /**
          * @brief Requests that the application exit its main loop.

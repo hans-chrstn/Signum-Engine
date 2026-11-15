@@ -11,7 +11,6 @@
 #include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/renderer_interface.hpp"
-#include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include <cstdint>
 #include <span>
 #include <utility>
@@ -144,11 +143,6 @@ namespace SNE::Engine::Core {
 
     auto Application::setCursorCaptured(bool captured) -> void {
         m_Window.setCursorCaptured(captured);
-    }
-
-    auto Application::externalRenderingInfo() const
-        -> Renderer::Vulkan::VulkanExternalRenderingInfo {
-        return m_Renderer.externalRenderingInfo();
     }
 
     auto Application::requestClose() -> void {
