@@ -8,6 +8,7 @@
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
+#include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/material/material_buffer_binding_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/material/material_instance_description.hpp"
@@ -16,6 +17,7 @@
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/render_target_extent.hpp"
+#include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/resource/gpu_resource_dependency_tracker.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/resource/gpu_resource_registry.hpp"
@@ -83,7 +85,7 @@ namespace SNE::Engine::Renderer::Vulkan {
      * The type is non-copyable because it owns Vulkan resources with exclusive
      * lifetimes.
      */
-    class VulkanRenderer {
+    class VulkanRenderer : public IRenderer {
       private:
         /**
          * @brief Owns the Vulkan resources for a sampled texture.
@@ -2794,7 +2796,25 @@ namespace SNE::Engine::Renderer::Vulkan {
          * a fatal invariant assertion. Outstanding retired resources must
          * be collected before renderer members are destroyed.
          */
-        ~VulkanRenderer() noexcept;
+        ~VulkanRenderer() noexcept override;
+
+        /**
+         * @brief Identifies the graphics API implemented by the Vulkan
+         * renderer.
+         *
+         * Implements the backend-identification contract defined by IRenderer.
+         *
+         * Always reports Vulkan because this concrete renderer exclusively
+         * implements the Vulkan graphics API.
+         *
+         * @return GraphicsBackend::Vulkan.
+         *
+         * @note This query does not access Vulkan device state or perform
+         * any GPU operations.
+         */
+
+        [[nodiscard]] auto graphicsBackend() const noexcept
+            -> GraphicsBackend override;
 
         VulkanRenderer(const VulkanRenderer &) = delete;
 

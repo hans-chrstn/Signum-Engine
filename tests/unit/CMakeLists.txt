@@ -47,6 +47,7 @@ add_executable(
   platform/platform_event_tests.cpp
   platform/platform_event_queue_tests.cpp
   platform/input_state_tests.cpp
+  renderer/renderer_interface_tests.cpp
   renderer/camera/camera_relative_position_tests.cpp
   renderer/geometry/uv_sphere_mesh_tests.cpp
   renderer/geometry/vertex_format_tests.cpp

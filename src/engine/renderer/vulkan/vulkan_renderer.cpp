@@ -11,6 +11,7 @@
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
+#include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/material/material_resource_binding.hpp"
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
@@ -349,6 +350,10 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         m_GraphicsResourceRetirementQueue.collectCompleted(
             m_GraphicsSubmissionState);
+    }
+
+    auto VulkanRenderer::graphicsBackend() const noexcept -> GraphicsBackend {
+        return GraphicsBackend::Vulkan;
     }
 
     auto VulkanRenderer::initializeFrameResources() -> void {
