@@ -437,5 +437,4 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         m_MaterialBindings.bindings.push_back(material_binding);
     }
-
 } // namespace SNE::Engine::Renderer::Vulkan

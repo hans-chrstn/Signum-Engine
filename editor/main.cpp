@@ -1,9 +1,12 @@
 #include "editor_workspace.hpp"
 #include "engine/core/application.hpp"
 #include "engine/core/application_configuration.hpp"
+#include "engine/core/assert/assertion_handler.hpp"
+#include "engine/core/assert/assertion_type.hpp"
 #include "engine/core/error/engine_error.hpp"
 #include "engine/core/error/error_boundary.hpp"
 #include "engine/core/error/error_code.hpp"
+#include "engine/core/error/subsystem.hpp"
 #include "engine/core/math/matrix4.hpp"
 #include "engine/core/math/vector3.hpp"
 #include "engine/core/math/vector4.hpp"
@@ -35,6 +38,7 @@
 #include "engine/renderer/texture/rgba8_image.hpp"
 #include "engine/renderer/texture/texture_format.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
+#include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include "imgui/editor_imgui_context.hpp"
 #include "imgui/editor_imgui_style.hpp"
@@ -102,6 +106,22 @@ namespace {
     static_assert(alignof(EarthViewUniformData) == sizeof(Math::Vector4f));
     static_assert(offsetof(EarthViewUniformData, sphere_center_radius) ==
                   sizeof(Math::Vector4f));
+
+    [[nodiscard]] auto
+    requireEditorVulkanRenderer(const Core::Application &application)
+        -> const Vulkan::VulkanRenderer & {
+        const auto *renderer = dynamic_cast<const Vulkan::VulkanRenderer *>(
+            &application.renderer());
+
+        if (renderer == nullptr) {
+            Core::Assertion::failAssertion(
+                Core::Assertion::AssertionType::Precondition,
+                Core::Error::Subsystem::Renderer,
+                "Signum Editor requires the Vulkan rendering backend");
+        }
+
+        return *renderer;
+    }
 
     [[nodiscard]] auto isSrgbAttachmentFormat(VkFormat format) -> bool {
         switch (format) {
@@ -577,8 +597,11 @@ auto main() -> int {
             glfwGetWindowContentScale(application.window().nativeHandle(),
                                       &x_scale, &y_scale);
 
+            const Vulkan::VulkanRenderer &vulkan_renderer =
+                requireEditorVulkanRenderer(application);
+
             Vulkan::VulkanExternalRenderingInfo active_rendering_info =
-                application.externalRenderingInfo();
+                vulkan_renderer.externalRenderingInfo();
 
             const std::filesystem::path executable_path =
                 std::filesystem::read_symlink("/proc/self/exe");
@@ -609,8 +632,8 @@ auto main() -> int {
 
             application.run(
                 [&active_rendering_info, &editor_backend, &workspace, &x_scale,
-                 &scene_descriptor_this_frame, &camera_controller,
-                 &earth_data](Core::Application &app) -> void {
+                 &scene_descriptor_this_frame, &camera_controller, &earth_data,
+                 &vulkan_renderer](Core::Application &app) -> void {
                     scene_descriptor_this_frame.reset();
 
                     float current_x_scale{};
@@ -623,7 +646,8 @@ auto main() -> int {
                     const bool dpi_changed = current_x_scale != x_scale;
 
                     const Vulkan::VulkanExternalRenderingInfo
-                        new_rendering_info = app.externalRenderingInfo();
+                        new_rendering_info =
+                            vulkan_renderer.externalRenderingInfo();
 
                     const bool color_format_changed =
                         active_rendering_info.color_attachment_format !=
@@ -661,7 +685,7 @@ auto main() -> int {
 
                     if (workspace.draw(
                             [&app, &editor_backend,
-                             &scene_descriptor_this_frame](
+                             &scene_descriptor_this_frame, &vulkan_renderer](
                                 const Editor::Panels::SceneViewPanelState &
                                     panel_state) -> std::optional<ImTextureID> {
                                 app.setSceneViewportExtent(
@@ -672,7 +696,8 @@ auto main() -> int {
 
                                 const std::optional<
                                     Vulkan::VulkanSceneViewportImageInfo>
-                                    image_info = app.sceneViewportImageInfo();
+                                    image_info = vulkan_renderer
+                                                     .sceneViewportImageInfo();
 
                                 if (!image_info.has_value()) {
                                     return std::nullopt;

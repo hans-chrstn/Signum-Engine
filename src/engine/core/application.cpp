@@ -10,8 +10,8 @@
 #include "engine/platform/window.hpp"
 #include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/graphics_submission_progress.hpp"
+#include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
-#include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstdint>
 #include <span>
 #include <utility>
@@ -100,6 +100,14 @@ namespace SNE::Engine::Core {
         return m_Window;
     }
 
+    auto Application::renderer() noexcept -> Renderer::IRenderer & {
+        return m_Renderer;
+    }
+
+    auto Application::renderer() const noexcept -> const Renderer::IRenderer & {
+        return m_Renderer;
+    }
+
     auto
     Application::setDrawInstanceModelMatrix(std::size_t instance_index,
                                             const Math::Matrix4f &model_matrix)
@@ -115,11 +123,6 @@ namespace SNE::Engine::Core {
     auto Application::setSceneViewportExtent(
         std::optional<Renderer::RenderTargetExtent> extent) -> void {
         m_Renderer.setSceneViewportExtent(extent);
-    }
-
-    auto Application::sceneViewportImageInfo() const
-        -> std::optional<Renderer::Vulkan::VulkanSceneViewportImageInfo> {
-        return m_Renderer.sceneViewportImageInfo();
     }
 
     auto Application::graphicsSubmissionProgress() const noexcept

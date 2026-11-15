@@ -15,12 +15,12 @@
 #include "engine/renderer/material/material_buffer_update_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/render_target_extent.hpp"
+#include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/vulkan/vulkan_external_rendering_info.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
-#include "engine/renderer/vulkan/vulkan_scene_viewport_image_info.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -254,6 +254,50 @@ namespace SNE::Engine::Core {
         [[nodiscard]] auto window() const noexcept -> const Platform::Window &;
 
         /**
+         * @brief Provides mutable access to the application-owned renderer.
+         *
+         * Exposes the backend-independent renderer interface for rendering
+         * operations that are not directly forwarded by Application.
+         *
+         * The concrete renderer and its GPU resources remain owned by
+         * Application. The returned reference does not transfer ownership.
+         *
+         * @return Mutable reference to the application-owned renderer.
+         *
+         * @pre Access and renderer operations must be serialized with
+         * frame execution and resource modifications.
+         *
+         * @note The reference remains valid only while Application and
+         * its renderer are alive.
+         *
+         * @note Backend-specific operations require an explicit, validated
+         * backend extension or concrete renderer access.
+         */
+        [[nodiscard]] auto renderer() noexcept -> Renderer::IRenderer &;
+
+        /**
+         * @brief Provides read-only access to the application-owned renderer.
+         *
+         * Allows external systems to inspect renderer state through the
+         * backend-independent interface without modifying renderer state.
+         *
+         * The concrete renderer remains owned by Application.
+         *
+         * @return Const reference to the application-owned renderer.
+         *
+         * @pre Access must be serialized with renderer operations that
+         * modify the queried state.
+         *
+         * @note The reference remains valid only while Application and
+         * its renderer are alive.
+         *
+         * @note This function does not expose backend-native handles
+         * through the IRenderer contract.
+         */
+        [[nodiscard]] auto renderer() const noexcept
+            -> const Renderer::IRenderer &;
+
+        /**
          * @brief Updates the model transformation of a renderer draw instance.
          *
          * Forwards the supplied model matrix to the application's renderer
@@ -320,32 +364,6 @@ namespace SNE::Engine::Core {
          */
         auto setSceneViewportExtent(
             std::optional<Renderer::RenderTargetExtent> extent) -> void;
-
-        /**
-         * @brief Returns the current offscreen scene image information.
-         *
-         * Forwards the renderer's borrowed scene viewport image description
-         * to external rendering consumers.
-         *
-         * Returns std::nullopt when no suitable offscreen scene image
-         * is currently available.
-         *
-         * The returned information identifies the image view, sampling
-         * layout, dimensions, frame slot, and resource generation.
-         *
-         * @return Borrowed scene viewport image information, or
-         * std::nullopt when unavailable.
-         *
-         * @pre Access must be serialized with frame rendering and
-         * renderer resource replacement.
-         *
-         * @note The application does not transfer ownership of
-         * the underlying Vulkan image or image view.
-         * @note Consumers must coordinate synchronization and resource
-         * lifetimes before sampling the image.
-         */
-        [[nodiscard]] auto sceneViewportImageInfo() const
-            -> std::optional<Renderer::Vulkan::VulkanSceneViewportImageInfo>;
 
         /**
          * @brief Returns the renderer's graphics submission progress.
