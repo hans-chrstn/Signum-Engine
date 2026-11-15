@@ -2,6 +2,7 @@
 #include "engine/renderer/geometry/vertex_attribute_description.hpp"
 #include "engine/renderer/geometry/vertex_format.hpp"
 #include "engine/renderer/graphics_backend.hpp"
+#include "engine/renderer/pipeline/cull_mode.hpp"
 #include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <array>
@@ -20,14 +21,38 @@ namespace Renderer = SNE::Engine::Renderer;
 namespace Vulkan = SNE::Engine::Renderer::Vulkan;
 
 namespace {
-    constexpr std::uint32_t kTestMeshIndex = 0U;
-    constexpr std::uint32_t kTestMeshGeneration = 1U;
+    constexpr std::uint32_t kTestResourceIndex = 0U;
+    constexpr std::uint32_t kTestResourceGeneration = 1U;
+
     constexpr std::uint64_t kTestMeshRegistryId = 1U;
+    constexpr std::uint64_t kTestTextureRegistryId = 2U;
+    constexpr std::uint64_t kTestMaterialConfigurationRegistryId = 3U;
+
+    constexpr std::uint32_t kTextureWidth = 2U;
+    constexpr std::uint32_t kTextureHeight = 1U;
+    constexpr std::size_t kRgba8BytesPerPixel = 4U;
+
+    constexpr std::size_t kTextureByteCount =
+        static_cast<std::size_t>(kTextureWidth) *
+        static_cast<std::size_t>(kTextureHeight) * kRgba8BytesPerPixel;
 
     constexpr Renderer::GpuResourceHandle kTestRegisteredMeshHandle{
-        .index = kTestMeshIndex,
-        .generation = kTestMeshGeneration,
+        .index = kTestResourceIndex,
+        .generation = kTestResourceGeneration,
         .registry_id = kTestMeshRegistryId,
+    };
+
+    constexpr Renderer::GpuResourceHandle kTestRegisteredTextureHandle{
+        .index = kTestResourceIndex,
+        .generation = kTestResourceGeneration,
+        .registry_id = kTestTextureRegistryId,
+    };
+
+    constexpr Renderer::GpuResourceHandle
+        kTestRegisteredMaterialConfigurationHandle{
+            .index = kTestResourceIndex,
+            .generation = kTestResourceGeneration,
+            .registry_id = kTestMaterialConfigurationRegistryId,
     };
 
     struct TestRendererState {
@@ -39,14 +64,26 @@ namespace {
         bool model_matrix_set{false};
         bool viewport_extent_set{false};
         bool mesh_registered{false};
+        bool texture_registered{false};
+        bool material_configuration_registered{false};
+        bool material_configuration_unregistered{false};
+        bool mesh_unregistered{false};
 
         std::size_t received_instance_count{0};
         std::size_t received_instance_index{0};
         std::size_t received_vertex_byte_count{0};
         std::size_t received_index_count{0};
         std::size_t received_attribute_count{0};
+        std::size_t received_texture_pixel_count{0};
 
         std::uint32_t received_vertex_stride{0};
+        std::uint32_t received_texture_width{0};
+        std::uint32_t received_texture_height{0};
+        std::uint32_t received_texture_mip_levels{0};
+
+        Renderer::TextureFormat received_texture_format{
+            Renderer::TextureFormat::Rgba8Unorm,
+        };
 
         Math::Matrix4f received_camera_view{};
         Math::Matrix4f received_model_matrix{};
@@ -54,9 +91,24 @@ namespace {
         std::optional<Renderer::RenderTargetExtent> received_viewport_extent =
             std::nullopt;
 
+        std::optional<Renderer::MaterialDescription>
+            received_material_configuration = std::nullopt;
+
         Renderer::GpuResourceHandle registered_mesh_handle{
             kTestRegisteredMeshHandle,
         };
+
+        Renderer::GpuResourceHandle registered_texture_handle{
+            kTestRegisteredTextureHandle,
+        };
+
+        Renderer::GpuResourceHandle registered_material_configuration_handle{
+            kTestRegisteredMaterialConfigurationHandle,
+        };
+
+        Renderer::GpuResourceHandle
+            unregistered_material_configuration_handle{};
+        Renderer::GpuResourceHandle unregistered_mesh_handle{};
     };
 
     class TestRenderer final : public Renderer::IRenderer {
@@ -131,6 +183,43 @@ namespace {
 
             return m_State.registered_mesh_handle;
         }
+
+        [[nodiscard]] auto
+        registerTexture(const Renderer::TextureUploadData &texture)
+            -> Renderer::GpuResourceHandle override {
+            m_State.texture_registered = true;
+            m_State.received_texture_width = texture.width;
+            m_State.received_texture_height = texture.height;
+            m_State.received_texture_pixel_count = texture.pixels.size();
+            m_State.received_texture_format = texture.format;
+            m_State.received_texture_mip_levels = texture.mip_levels;
+
+            return m_State.registered_texture_handle;
+        }
+
+        [[nodiscard]] auto
+        registerMaterialConfiguration(Renderer::MaterialDescription description)
+            -> Renderer::GpuResourceHandle override {
+            m_State.received_material_configuration.emplace(
+                std::move(description));
+
+            m_State.material_configuration_registered = true;
+
+            return m_State.registered_material_configuration_handle;
+        }
+
+        auto unregisterMaterialConfiguration(Renderer::GpuResourceHandle handle)
+            -> void override {
+            m_State.material_configuration_unregistered = true;
+            m_State.unregistered_material_configuration_handle = handle;
+            m_State.received_material_configuration.reset();
+        }
+
+        auto unregisterMesh(Renderer::GpuResourceHandle handle)
+            -> void override {
+            m_State.mesh_unregistered = true;
+            m_State.unregistered_mesh_handle = handle;
+        }
     };
 
     static_assert(std::is_abstract_v<Renderer::IRenderer>);
@@ -162,6 +251,19 @@ namespace {
             decltype(std::declval<Renderer::IRenderer &>().registerMesh(
                 std::declval<const Renderer::MeshUploadData &>(),
                 std::declval<const Renderer::VertexLayoutDescription &>())),
+            Renderer::GpuResourceHandle>);
+
+    static_assert(
+        std::is_same_v<
+            decltype(std::declval<Renderer::IRenderer &>().registerTexture(
+                std::declval<const Renderer::TextureUploadData &>())),
+            Renderer::GpuResourceHandle>);
+
+    static_assert(
+        std::is_same_v<
+            decltype(std::declval<Renderer::IRenderer &>()
+                         .registerMaterialConfiguration(
+                             std::declval<Renderer::MaterialDescription>())),
             Renderer::GpuResourceHandle>);
 
     static_assert(noexcept(
@@ -356,6 +458,92 @@ TEST(RendererInterfaceTests, DispatchesMeshRegistrationThroughBaseReference) {
     EXPECT_EQ(state.received_index_count, indices.size());
     EXPECT_EQ(state.received_attribute_count, attributes.size());
     EXPECT_EQ(handle, state.registered_mesh_handle);
+}
+
+TEST(RendererInterfaceTests,
+     DispatchesTextureRegistrationThroughBaseReference) {
+    constexpr std::uint32_t kTextureMipLevels = 1U;
+
+    TestRendererState state{};
+
+    TestRenderer concrete_renderer{state};
+    Renderer::IRenderer &renderer = concrete_renderer;
+
+    const std::array<std::byte, kTextureByteCount> pixels{};
+
+    const Renderer::TextureUploadData texture{
+        .width = kTextureWidth,
+        .height = kTextureHeight,
+        .pixels = pixels,
+        .format = Renderer::TextureFormat::Rgba8Srgb,
+        .mip_levels = kTextureMipLevels,
+    };
+
+    const Renderer::GpuResourceHandle handle =
+        renderer.registerTexture(texture);
+
+    EXPECT_TRUE(state.texture_registered);
+    EXPECT_EQ(state.received_texture_width, texture.width);
+    EXPECT_EQ(state.received_texture_height, texture.height);
+    EXPECT_EQ(state.received_texture_pixel_count, pixels.size());
+    EXPECT_EQ(state.received_texture_format, texture.format);
+    EXPECT_EQ(state.received_texture_mip_levels, texture.mip_levels);
+    EXPECT_EQ(handle, state.registered_texture_handle);
+}
+
+TEST(RendererInterfaceTests,
+     DispatchesMaterialConfigurationRegistrationThroughBaseReference) {
+    TestRendererState state{};
+
+    TestRenderer concrete_renderer{state};
+    Renderer::IRenderer &renderer = concrete_renderer;
+
+    Renderer::MaterialDescription description{};
+    description.pipeline_state.cull_mode = Renderer::CullMode::Back;
+
+    const Renderer::GpuResourceHandle handle =
+        renderer.registerMaterialConfiguration(std::move(description));
+
+    EXPECT_TRUE(state.material_configuration_registered);
+    EXPECT_EQ(handle, state.registered_material_configuration_handle);
+
+    if (!state.received_material_configuration.has_value()) {
+        ADD_FAILURE() << "Renderer did not retain the material configuration";
+        return;
+    }
+
+    EXPECT_EQ(state.received_material_configuration->pipeline_state.cull_mode,
+              Renderer::CullMode::Back);
+}
+
+TEST(RendererInterfaceTests,
+     DispatchesMaterialConfigurationRemovalThroughBaseReference) {
+    TestRendererState state{};
+
+    TestRenderer concrete_renderer{state};
+    Renderer::IRenderer &renderer = concrete_renderer;
+
+    const Renderer::GpuResourceHandle handle =
+        renderer.registerMaterialConfiguration(Renderer::MaterialDescription{});
+
+    renderer.unregisterMaterialConfiguration(handle);
+
+    EXPECT_TRUE(state.material_configuration_registered);
+    EXPECT_TRUE(state.material_configuration_unregistered);
+    EXPECT_EQ(state.unregistered_material_configuration_handle, handle);
+    EXPECT_FALSE(state.received_material_configuration.has_value());
+}
+
+TEST(RendererInterfaceTests, DispatchesMeshRemovalThroughBaseReference) {
+    TestRendererState state{};
+
+    TestRenderer concrete_renderer{state};
+    Renderer::IRenderer &renderer = concrete_renderer;
+
+    renderer.unregisterMesh(kTestRegisteredMeshHandle);
+
+    EXPECT_TRUE(state.mesh_unregistered);
+    EXPECT_EQ(state.unregistered_mesh_handle, kTestRegisteredMeshHandle);
 }
 
 TEST(RendererInterfaceTests, DestroysConcreteRendererThroughBasePointer) {

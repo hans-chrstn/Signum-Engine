@@ -2937,7 +2937,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * outstanding GPU submissions reference them.
          */
         [[nodiscard]] auto registerTexture(const TextureUploadData &texture)
-            -> GpuResourceHandle;
+            -> GpuResourceHandle override;
 
         /**
          * @brief Creates and registers an independent material GPU buffer.
@@ -3055,7 +3055,7 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         [[nodiscard]] auto
         registerMaterialConfiguration(MaterialDescription description)
-            -> GpuResourceHandle;
+            -> GpuResourceHandle override;
 
         /**
          * @brief Unregisters an independent graphics material configuration.
@@ -3084,7 +3084,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @note Invalid, stale, foreign, or referenced configuration handles
          * trigger precondition assertions.
          */
-        auto unregisterMaterialConfiguration(GpuResourceHandle handle) -> void;
+        auto unregisterMaterialConfiguration(GpuResourceHandle handle)
+            -> void override;
 
         /**
          * @brief Unregisters an independent material instance.
@@ -3145,7 +3146,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @note Invalid, stale, foreign, active, or referenced mesh handles
          * trigger precondition assertions.
          */
-        auto unregisterMesh(GpuResourceHandle handle) -> void;
+        auto unregisterMesh(GpuResourceHandle handle) -> void override;
 
         /**
          * @brief Replaces the renderer's current mesh draw instances.

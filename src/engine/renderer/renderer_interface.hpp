@@ -5,8 +5,10 @@
 #include "engine/renderer/geometry/mesh_upload_data.hpp"
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/graphics_backend.hpp"
+#include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
+#include "engine/renderer/texture/texture_upload_data.hpp"
 #include <cstddef>
 #include <optional>
 #include <span>
@@ -222,5 +224,116 @@ namespace SNE::Engine::Renderer {
         registerMesh(const MeshUploadData &mesh,
                      const VertexLayoutDescription &layout)
             -> GpuResourceHandle = 0;
+
+        /**
+         * @brief Uploads and registers a sampled texture resource.
+         *
+         * Creates renderer-owned GPU texture resources from the supplied
+         * upload description and returns a non-owning resource handle.
+         *
+         * Registration does not modify existing material bindings or
+         * automatically select the texture for rendering.
+         *
+         * @param texture Borrowed texture data and sampler configuration.
+         *
+         * @return Handle identifying the registered texture.
+         *
+         * @pre Texture dimensions, format, mip levels, pixel data, and
+         * sampler configuration must satisfy upload requirements.
+         * @pre Registration must be serialized with rendering and resource
+         * modification operations.
+         *
+         * @post On success, the texture is registered and ready for use.
+         * @post On failure, no new texture remains registered.
+         *
+         * @throws Core::Error::EngineError if GPU allocation or upload fails.
+         * @throws std::bad_alloc if host allocation or registration fails.
+         *
+         * @note Invalid texture descriptions trigger precondition assertions.
+         * @note Referenced CPU storage must remain valid until upload
+         * completes.
+         * @note Registered resources remain owned by the renderer.
+         */
+        [[nodiscard]] virtual auto
+        registerTexture(const TextureUploadData &texture)
+            -> GpuResourceHandle = 0;
+
+        /**
+         * @brief Registers a graphics material configuration.
+         *
+         * Stores the supplied shader configuration and graphics pipeline
+         * state independently of existing draw instances.
+         *
+         * Registration does not immediately create a graphics pipeline.
+         *
+         * @param description Material configuration transferred into the
+         * renderer's resource registry.
+         *
+         * @return Handle identifying the registered configuration.
+         *
+         * @pre Shader inputs and graphics pipeline state must be valid.
+         * @pre Registration must be serialized with rendering and
+         * resource modification operations.
+         *
+         * @post On success, the configuration is registered.
+         * @post Existing material configurations remain unchanged.
+         *
+         * @throws std::bad_alloc if resource registration fails.
+         *
+         * @note The returned handle does not own the configuration.
+         */
+        [[nodiscard]] virtual auto
+        registerMaterialConfiguration(MaterialDescription description)
+            -> GpuResourceHandle = 0;
+
+        /**
+         * @brief Unregisters a graphics material configuration.
+         *
+         * Removes the specified configuration from renderer-owned storage
+         * and invalidates its resource handle.
+         *
+         * @param handle Registered material configuration to remove.
+         *
+         * @pre The handle must identify a registered configuration
+         * belonging to this renderer.
+         * @pre No active draw instance may reference the configuration.
+         * @pre Removal must be serialized with rendering and resource
+         * modification operations.
+         *
+         * @post The removed configuration handle becomes stale.
+         * @post Unrelated configurations remain unchanged.
+         *
+         * @note Invalid, stale, foreign, or referenced handles trigger
+         * precondition assertions.
+         * @note Cached graphics pipeline ownership is managed separately.
+         */
+        virtual auto unregisterMaterialConfiguration(GpuResourceHandle handle)
+            -> void = 0;
+
+        /**
+         * @brief Unregisters a renderer-managed mesh.
+         *
+         * Removes the mesh from its resource registry while preserving
+         * GPU resources still referenced by outstanding submissions.
+         *
+         * @param handle Registered mesh resource to remove.
+         *
+         * @pre The handle must identify a mesh belonging to this renderer.
+         * @pre The mesh must not be selected as the active mesh.
+         * @pre No current draw instance may reference the mesh.
+         * @pre Removal must be serialized with rendering and resource
+         * modification operations.
+         *
+         * @post On success, the mesh handle becomes stale.
+         * @post Previously submitted GPU work retains access to required
+         * resources until execution completes.
+         * @post On failure, mesh registration remains unchanged.
+         *
+         * @throws std::bad_alloc if resource retirement preparation fails.
+         *
+         * @note Invalid, stale, foreign, active, or referenced handles
+         * trigger precondition assertions.
+         */
+        virtual auto unregisterMesh(GpuResourceHandle handle) -> void = 0;
     };
 } // namespace SNE::Engine::Renderer
