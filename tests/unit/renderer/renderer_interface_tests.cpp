@@ -5,6 +5,7 @@
 #include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/pipeline/cull_mode.hpp"
 #include "engine/renderer/renderer_interface.hpp"
+#include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <array>
 #include <cstddef>
@@ -71,6 +72,7 @@ namespace {
         bool mesh_unregistered{false};
         bool submission_progress_queried{false};
 
+        std::size_t frames_rendered{0};
         std::size_t received_instance_count{0};
         std::size_t received_instance_index{0};
         std::size_t received_vertex_byte_count{0};
@@ -138,6 +140,10 @@ namespace {
             -> Renderer::GraphicsSubmissionProgress override {
             m_State.submission_progress_queried = true;
             return m_State.submission_progress;
+        }
+
+        auto renderFrame() -> void override {
+            ++m_State.frames_rendered;
         }
 
         auto
@@ -260,6 +266,21 @@ namespace {
         std::is_same_v<decltype(std::declval<const Vulkan::VulkanRenderer &>()
                                     .graphicsSubmissionProgress()),
                        Renderer::GraphicsSubmissionProgress>);
+
+    static_assert(std::is_same_v<
+                  decltype(std::declval<Renderer::IRenderer &>().renderFrame()),
+                  void>);
+
+    static_assert(
+        std::is_same_v<
+            decltype(std::declval<Vulkan::VulkanRenderer &>().renderFrame()),
+            void>);
+
+    static_assert(
+        std::is_same_v<
+            decltype(std::declval<Vulkan::VulkanRenderer &>().renderFrame(
+                std::declval<const Vulkan::VulkanFrameCommandRecorder &>())),
+            void>);
 
     static_assert(
         std::is_same_v<decltype(std::declval<const Renderer::IRenderer &>()
@@ -620,6 +641,39 @@ TEST(RendererInterfaceTests,
 
     EXPECT_EQ(original_snapshot.last_submitted, kLastSubmittedSubmissionId);
     EXPECT_EQ(original_snapshot.last_completed, kLastCompletedSubmissionId);
+}
+
+TEST(RendererInterfaceTests, DispatchesFrameExecutionThroughBaseReference) {
+    TestRendererState state{};
+
+    TestRenderer concrete_renderer{state};
+    Renderer::IRenderer &renderer = concrete_renderer;
+
+    EXPECT_EQ(state.frames_rendered, 0U);
+
+    renderer.renderFrame();
+
+    EXPECT_EQ(state.frames_rendered, 1U);
+
+    renderer.renderFrame();
+
+    EXPECT_EQ(state.frames_rendered, 2U);
+}
+
+TEST(RendererInterfaceTests, DispatchesFrameExecutionThroughBasePointer) {
+    TestRendererState state{};
+
+    {
+        std::unique_ptr<Renderer::IRenderer> renderer =
+            std::make_unique<TestRenderer>(state);
+
+        renderer->renderFrame();
+
+        EXPECT_EQ(state.frames_rendered, 1U);
+        EXPECT_FALSE(state.destroyed);
+    }
+
+    EXPECT_TRUE(state.destroyed);
 }
 
 TEST(RendererInterfaceTests, DestroysConcreteRendererThroughBasePointer) {
