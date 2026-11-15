@@ -1,7 +1,14 @@
 #pragma once
 
+#include "engine/core/math/matrix4.hpp"
 #include "engine/renderer/geometry/mesh_draw_instance.hpp"
+#include "engine/renderer/geometry/mesh_upload_data.hpp"
+#include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/graphics_backend.hpp"
+#include "engine/renderer/render_target_extent.hpp"
+#include "engine/renderer/resource/gpu_resource_handle.hpp"
+#include <cstddef>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -120,5 +127,100 @@ namespace SNE::Engine::Renderer {
          */
         [[nodiscard]] virtual auto drawInstances() const
             -> std::vector<MeshDrawInstance> = 0;
+
+        /**
+         * @brief Updates the camera view transformation.
+         *
+         * Sets the world-to-view matrix used during subsequent rendering
+         * operations while preserving the existing projection parameters.
+         *
+         * @param view_matrix Replacement world-to-view transformation.
+         *
+         * @pre An initial camera configuration must exist.
+         * @pre Every matrix element must be finite.
+         * @pre Updates must be serialized with frame recording.
+         *
+         * @post Subsequent frames use the supplied view matrix.
+         *
+         * @note This operation does not recreate GPU resources.
+         */
+        virtual auto
+        setCameraViewMatrix(const Core::Math::Matrix4f &view_matrix)
+            -> void = 0;
+
+        /**
+         * @brief Updates an existing draw instance's model transformation.
+         *
+         * Replaces the model matrix without changing the referenced mesh
+         * or material resources.
+         *
+         * @param instance_index Zero-based draw-instance index.
+         * @param model_matrix Replacement model transformation.
+         *
+         * @pre The index must identify an existing draw instance.
+         * @pre Updates must be serialized with rendering.
+         *
+         * @post The selected instance uses the supplied transformation.
+         * @post Other draw instances remain unchanged.
+         *
+         * @note Does not upload geometry or recreate GPU resources.
+         */
+        virtual auto
+        setDrawInstanceModelMatrix(std::size_t instance_index,
+                                   const Core::Math::Matrix4f &model_matrix)
+            -> void = 0;
+
+        /**
+         * @brief Updates the requested offscreen scene viewport dimensions.
+         *
+         * Stores the framebuffer-pixel extent used for subsequent scene
+         * rendering. An empty extent disables the viewport request.
+         *
+         * @param extent Requested viewport extent, or std::nullopt.
+         *
+         * @pre An engaged extent must have nonzero width and height.
+         * @pre Updates must be serialized with frame rendering.
+         *
+         * @post The requested extent matches the supplied value.
+         *
+         * @note GPU target allocation and synchronization occur separately
+         * during frame processing.
+         */
+        virtual auto
+        setSceneViewportExtent(std::optional<RenderTargetExtent> extent)
+            -> void = 0;
+
+        /**
+         * @brief Uploads and registers a mesh with an explicit vertex layout.
+         *
+         * Creates renderer-owned GPU resources from borrowed vertex and
+         * index data and registers the resulting mesh for subsequent draws.
+         *
+         * Registration does not change the active mesh or draw instances.
+         *
+         * @param mesh Borrowed CPU geometry data to upload.
+         * @param layout Borrowed vertex attribute layout.
+         *
+         * @return Handle identifying the registered mesh resource.
+         *
+         * @pre Mesh data and vertex layout must be valid and compatible.
+         * @pre Registration must be serialized with rendering and resource
+         * modification operations.
+         *
+         * @post On success, the returned handle resolves to the registered
+         * mesh.
+         * @post On failure, no new mesh remains registered.
+         *
+         * @throws Core::Error::EngineError if GPU allocation or upload fails.
+         * @throws std::bad_alloc if host allocation or registration fails.
+         *
+         * @note Invalid input descriptions trigger precondition assertions.
+         * @note The renderer owns GPU resources; the returned handle does not.
+         * @note Borrowed CPU storage must remain valid until upload completes.
+         */
+        [[nodiscard]] virtual auto
+        registerMesh(const MeshUploadData &mesh,
+                     const VertexLayoutDescription &layout)
+            -> GpuResourceHandle = 0;
     };
 } // namespace SNE::Engine::Renderer

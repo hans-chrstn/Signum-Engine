@@ -2899,7 +2899,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          */
         [[nodiscard]] auto registerMesh(const MeshUploadData &mesh,
                                         const VertexLayoutDescription &layout)
-            -> GpuResourceHandle;
+            -> GpuResourceHandle override;
 
         /**
          * @brief Uploads and registers an independent GPU texture.
@@ -3401,7 +3401,7 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto
         setDrawInstanceModelMatrix(std::size_t instance_index,
                                    const Core::Math::Matrix4f &model_matrix)
-            -> void;
+            -> void override;
 
         /**
          * @brief Updates the camera's world-to-view transformation.
@@ -3425,7 +3425,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * or modify swapchain resources.
          */
         auto setCameraViewMatrix(const Core::Math::Matrix4f &view_matrix)
-            -> void;
+            -> void override;
 
         /**
          * @brief Updates the requested offscreen scene viewport extent.
@@ -3450,7 +3450,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * @note Does not allocate or destroy Vulkan resources.
          */
         auto setSceneViewportExtent(std::optional<RenderTargetExtent> extent)
-            -> void;
+            -> void override;
 
         /**
          * @brief Returns the offscreen scene image selected for the current
