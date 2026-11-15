@@ -46,6 +46,7 @@ add_library(
     engine/renderer/resource/gpu_resource_registry_id.cpp
     engine/renderer/resource/gpu_resource_dependency_tracker.cpp
     engine/renderer/texture/image_loader.cpp
+    engine/renderer/renderer_factory.cpp
     engine/renderer/vulkan/vulkan_instance.cpp
     engine/renderer/vulkan/vulkan_renderer.cpp
     engine/renderer/vulkan/vulkan_frame_resources.cpp

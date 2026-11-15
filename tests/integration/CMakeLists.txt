@@ -10,6 +10,7 @@ add_executable(
   platform/window_scroll_integration_tests.cpp
   platform/window_mouse_events_integration_tests.cpp
   platform/window_lifecycle_events_integration_tests.cpp
+  renderer/renderer_factory_integration_tests.cpp
   renderer/vulkan/vulkan_integration_test_fixture.cpp
   renderer/vulkan/vulkan_renderer_mesh_replacement_integration_tests.cpp
   renderer/vulkan/vulkan_renderer_texture_replacement_integration_tests.cpp
