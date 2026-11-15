@@ -123,7 +123,7 @@ TEST(VulkanExternalRenderingInfoIntegrationTests,
 }
 
 TEST(VulkanExternalRenderingInfoIntegrationTests,
-     ApplicationForwardsRendererInformation) {
+     ApplicationExposesVulkanRendererInformation) {
     if (!hasDisplay()) {
         GTEST_SKIP() << "Requires an available window-system display";
     }
@@ -149,8 +149,13 @@ TEST(VulkanExternalRenderingInfoIntegrationTests,
 
     Core::Application application{std::move(configuration)};
 
+    const auto *renderer =
+        dynamic_cast<const Vulkan::VulkanRenderer *>(&application.renderer());
+
+    ASSERT_NE(renderer, nullptr);
+
     const Vulkan::VulkanExternalRenderingInfo info =
-        application.externalRenderingInfo();
+        renderer->externalRenderingInfo();
 
     EXPECT_NE(info.instance, VK_NULL_HANDLE);
     EXPECT_NE(info.physical_device, VK_NULL_HANDLE);
@@ -162,7 +167,7 @@ TEST(VulkanExternalRenderingInfoIntegrationTests,
     EXPECT_GT(info.swapchain_image_count, 0U);
 
     const Vulkan::VulkanExternalRenderingInfo second_snapshot =
-        application.externalRenderingInfo();
+        renderer->externalRenderingInfo();
 
     EXPECT_EQ(second_snapshot.instance, info.instance);
     EXPECT_EQ(second_snapshot.physical_device, info.physical_device);
