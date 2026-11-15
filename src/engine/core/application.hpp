@@ -19,10 +19,10 @@
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
-#include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <span>
 #include <vector>
@@ -131,21 +131,18 @@ namespace SNE::Engine::Core {
         Time::Duration m_FrameDelta{};
 
         /**
-         * @brief Owns the application's Vulkan rendering backend.
+         * @brief Owns the renderer selected by the application configuration.
          *
-         * Manages Vulkan rendering resources, frame execution,
-         * presentation, and renderer-specific resource lifetimes.
+         * The renderer is created through the renderer factory and accessed
+         * through the backend-independent IRenderer interface.
          *
-         * Initialized using the application configuration and
-         * previously constructed platform window.
+         * Declared after the window and logger so renderer destruction occurs
+         * before either dependency is released.
          *
-         * Declared after its dependencies so Vulkan resources
-         * are destroyed before the window and GLFW context.
-         *
-         * @note Vulkan resource management and synchronization
-         * remain the responsibility of the rendering backend.
+         * @note Backend-specific resources and synchronization remain owned
+         * and managed by the concrete renderer implementation.
          */
-        Renderer::Vulkan::VulkanRenderer m_Renderer;
+        std::unique_ptr<Renderer::IRenderer> m_Renderer;
 
       public:
         /**
@@ -228,6 +225,8 @@ namespace SNE::Engine::Core {
          * @note An empty callback skips application-specific updates.
          * @note A recorded submission is not necessarily complete.
          * Its GPU completion must be checked separately.
+         * @note An empty external command recorder uses backend-independent
+         * frame execution. A nonempty recorder requires the Vulkan backend.
          */
         auto
         run(const std::function<void(Application &)> &on_update = {},

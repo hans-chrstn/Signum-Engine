@@ -10,7 +10,10 @@
 #include "engine/platform/window.hpp"
 #include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/graphics_submission_progress.hpp"
+#include "engine/renderer/renderer_creation_info.hpp"
+#include "engine/renderer/renderer_factory.hpp"
 #include "engine/renderer/renderer_interface.hpp"
+#include "engine/renderer/vulkan/vulkan_renderer.hpp"
 #include <cstdint>
 #include <span>
 #include <utility>
@@ -40,15 +43,26 @@ namespace SNE::Engine::Core {
           m_GlfwContext(&m_Logger),
           m_Window(m_Configuration.initial_window_size,
                    m_Configuration.application_name),
-          m_Renderer(
-              m_Configuration.application_name, m_Window,
-              m_Configuration.presentation_preference,
-              m_Configuration.development_diagnostics_enabled,
-              m_Configuration.initial_mesh, m_Configuration.initial_texture,
-              m_Configuration.initial_camera,
-              std::move(m_Configuration.initial_graphics_shaders),
-              m_Configuration.initial_buffer_bindings,
-              m_Configuration.initial_texture_bindings, false, &m_Logger) {
+          m_Renderer(Renderer::createRenderer(Renderer::RendererCreationInfo{
+              .backend = m_Configuration.graphics_backend,
+              .application_name = m_Configuration.application_name,
+              .window = m_Window,
+              .presentation_preference =
+                  m_Configuration.presentation_preference,
+              .development_diagnostics_enabled =
+                  m_Configuration.development_diagnostics_enabled,
+              .initial_mesh = m_Configuration.initial_mesh,
+              .initial_texture = m_Configuration.initial_texture,
+              .initial_camera = m_Configuration.initial_camera,
+              .initial_graphics_shaders =
+                  std::move(m_Configuration.initial_graphics_shaders),
+              .initial_buffer_bindings =
+                  m_Configuration.initial_buffer_bindings,
+              .initial_texture_bindings =
+                  m_Configuration.initial_texture_bindings,
+              .require_swapchain_transfer_source = false,
+              .logger = &m_Logger,
+          })) {
         m_Logger.log(Logging::LogLevel::Info, Logging::Categories::Core,
                      "Application Initialized");
     }
@@ -61,6 +75,21 @@ namespace SNE::Engine::Core {
         const std::function<void(Application &,
                                  std::span<const Platform::PlatformEvent>)>
             &on_platform_events) -> void {
+        Renderer::Vulkan::VulkanRenderer *renderer = nullptr;
+
+        if (record_external_commands) {
+            renderer = dynamic_cast<Renderer::Vulkan::VulkanRenderer *>(
+                m_Renderer.get());
+
+            if (renderer == nullptr) {
+                Assertion::failAssertion(
+                    Assertion::AssertionType::Precondition,
+                    Error::Subsystem::Renderer,
+                    "Application::run external Vulkan command "
+                    "recording requires a Vulkan renderer");
+            }
+        }
+
         while (!m_Window.shouldClose()) {
             m_FrameDelta = m_FrameClock.sample(Time::Clock::now());
             m_InputState.beginFrame();
@@ -81,12 +110,16 @@ namespace SNE::Engine::Core {
             }
 
             const std::uint64_t previous_submission_id =
-                m_Renderer.graphicsSubmissionProgress().last_submitted;
+                m_Renderer->graphicsSubmissionProgress().last_submitted;
 
-            m_Renderer.renderFrame(record_external_commands);
+            if (!record_external_commands) {
+                m_Renderer->renderFrame();
+            } else {
+                renderer->renderFrame(record_external_commands);
+            }
 
             const std::uint64_t current_submission_id =
-                m_Renderer.graphicsSubmissionProgress().last_submitted;
+                m_Renderer->graphicsSubmissionProgress().last_submitted;
 
             if (on_graphics_submission &&
                 previous_submission_id != current_submission_id) {
@@ -100,45 +133,44 @@ namespace SNE::Engine::Core {
     }
 
     auto Application::renderer() noexcept -> Renderer::IRenderer & {
-        return m_Renderer;
+        return *m_Renderer;
     }
 
     auto Application::renderer() const noexcept -> const Renderer::IRenderer & {
-        return m_Renderer;
+        return *m_Renderer;
     }
 
     auto
     Application::setDrawInstanceModelMatrix(std::size_t instance_index,
                                             const Math::Matrix4f &model_matrix)
         -> void {
-        m_Renderer.setDrawInstanceModelMatrix(instance_index, model_matrix);
+        m_Renderer->setDrawInstanceModelMatrix(instance_index, model_matrix);
     }
 
     auto Application::setCameraViewMatrix(const Math::Matrix4f &view_matrix)
         -> void {
-        m_Renderer.setCameraViewMatrix(view_matrix);
+        m_Renderer->setCameraViewMatrix(view_matrix);
     }
 
     auto Application::setSceneViewportExtent(
         std::optional<Renderer::RenderTargetExtent> extent) -> void {
-        m_Renderer.setSceneViewportExtent(extent);
+        m_Renderer->setSceneViewportExtent(extent);
     }
 
     auto Application::graphicsSubmissionProgress() const noexcept
         -> Renderer::GraphicsSubmissionProgress {
-        return m_Renderer.graphicsSubmissionProgress();
+        return m_Renderer->graphicsSubmissionProgress();
     }
 
     auto
     Application::updateMaterialBuffer(Renderer::MaterialBufferUpdateInput input)
         -> void {
-        m_Renderer.updateMaterialBuffer(input.set, input.binding,
-                                        input.array_element, input.data);
+        m_Renderer->updateMaterialBuffer(input);
     }
 
     auto Application::replaceFragmentShader(
         Renderer::Shader::ShaderStageInput fragment_shader) -> void {
-        m_Renderer.replaceFragmentShader(std::move(fragment_shader));
+        m_Renderer->replaceFragmentShader(std::move(fragment_shader));
     }
 
     auto Application::setCursorCaptured(bool captured) -> void {
@@ -153,23 +185,24 @@ namespace SNE::Engine::Core {
     Application::registerMesh(const Renderer::MeshUploadData &mesh,
                               const Renderer::VertexLayoutDescription &layout)
         -> Renderer::GpuResourceHandle {
-        return m_Renderer.registerMesh(mesh, layout);
+        return m_Renderer->registerMesh(mesh, layout);
     }
 
     auto Application::registerMaterialConfiguration(
         Renderer::MaterialDescription description)
         -> Renderer::GpuResourceHandle {
-        return m_Renderer.registerMaterialConfiguration(std::move(description));
+        return m_Renderer->registerMaterialConfiguration(
+            std::move(description));
     }
 
     auto Application::setDrawInstances(
         std::span<const Renderer::MeshDrawInstance> instances) -> void {
-        m_Renderer.setDrawInstances(instances);
+        m_Renderer->setDrawInstances(instances);
     }
 
     auto Application::drawInstances() const
         -> std::vector<Renderer::MeshDrawInstance> {
-        return m_Renderer.drawInstances();
+        return m_Renderer->drawInstances();
     }
 
     auto Application::inputState() const noexcept

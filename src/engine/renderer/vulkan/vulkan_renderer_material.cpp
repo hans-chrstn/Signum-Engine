@@ -962,6 +962,12 @@ namespace SNE::Engine::Renderer::Vulkan {
         m_MaterialBindings.bindings[binding_index] = bindings[binding_index];
     }
 
+    auto VulkanRenderer::updateMaterialBuffer(MaterialBufferUpdateInput input)
+        -> void {
+        updateMaterialBuffer(input.set, input.binding, input.array_element,
+                             input.data);
+    }
+
     auto VulkanRenderer::registerMaterialBuffer(std::span<const std::byte> data,
                                                 Shader::ShaderResourceType type)
         -> GpuResourceHandle {

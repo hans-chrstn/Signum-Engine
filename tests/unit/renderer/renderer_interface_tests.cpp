@@ -32,8 +32,10 @@ namespace {
 
     constexpr std::uint32_t kTextureWidth = 2U;
     constexpr std::uint32_t kTextureHeight = 1U;
-    constexpr std::size_t kRgba8BytesPerPixel = 4U;
+    constexpr std::uint32_t kTestSpirvMagicNumber = 0x07230203U;
+    constexpr std::uint32_t kTestSpirvVersion = 0x00010000U;
 
+    constexpr std::size_t kRgba8BytesPerPixel = 4U;
     constexpr std::size_t kTextureByteCount =
         static_cast<std::size_t>(kTextureWidth) *
         static_cast<std::size_t>(kTextureHeight) * kRgba8BytesPerPixel;
@@ -71,6 +73,17 @@ namespace {
         bool material_configuration_unregistered{false};
         bool mesh_unregistered{false};
         bool submission_progress_queried{false};
+        bool material_buffer_updated{false};
+        bool fragment_shader_replaced{false};
+
+        std::uint32_t received_material_set{};
+        std::uint32_t received_material_binding{};
+        std::uint32_t received_material_array_element{};
+
+        std::vector<std::byte> received_material_buffer_data;
+
+        std::optional<Renderer::Shader::ShaderStageInput>
+            received_fragment_shader = std::nullopt;
 
         std::size_t frames_rendered{0};
         std::size_t received_instance_count{0};
@@ -235,6 +248,24 @@ namespace {
             -> void override {
             m_State.mesh_unregistered = true;
             m_State.unregistered_mesh_handle = handle;
+        }
+
+        auto updateMaterialBuffer(Renderer::MaterialBufferUpdateInput input)
+            -> void override {
+            m_State.material_buffer_updated = true;
+            m_State.received_material_set = input.set;
+            m_State.received_material_binding = input.binding;
+            m_State.received_material_array_element = input.array_element;
+
+            m_State.received_material_buffer_data.assign(input.data.begin(),
+                                                         input.data.end());
+        }
+
+        auto replaceFragmentShader(
+            Renderer::Shader::ShaderStageInput fragment_shader)
+            -> void override {
+            m_State.fragment_shader_replaced = true;
+            m_State.received_fragment_shader = std::move(fragment_shader);
         }
     };
 
@@ -690,4 +721,66 @@ TEST(RendererInterfaceTests, DestroysConcreteRendererThroughBasePointer) {
     }
 
     EXPECT_TRUE(state.destroyed);
+}
+
+TEST(RendererInterfaceTests,
+     DispatchesMaterialBufferUpdateThroughBaseReference) {
+    TestRendererState state{};
+    TestRenderer concrete_renderer{state};
+    Renderer::IRenderer &renderer = concrete_renderer;
+
+    const std::array<std::byte, 4> replacement_data{
+        std::byte{0x10},
+        std::byte{0x20},
+        std::byte{0x30},
+        std::byte{0x40},
+    };
+
+    renderer.updateMaterialBuffer({
+        .set = 2U,
+        .binding = 3U,
+        .array_element = 1U,
+        .data = replacement_data,
+    });
+
+    EXPECT_TRUE(state.material_buffer_updated);
+    EXPECT_EQ(state.received_material_set, 2U);
+    EXPECT_EQ(state.received_material_binding, 3U);
+    EXPECT_EQ(state.received_material_array_element, 1U);
+
+    EXPECT_EQ(state.received_material_buffer_data,
+              (std::vector<std::byte>{replacement_data.begin(),
+                                      replacement_data.end()}));
+}
+
+TEST(RendererInterfaceTests,
+     DispatchesFragmentShaderReplacementThroughBaseReference) {
+    TestRendererState state{};
+    TestRenderer concrete_renderer{state};
+    Renderer::IRenderer &renderer = concrete_renderer;
+
+    Renderer::Shader::ShaderStageInput input{
+        .artifact =
+            {
+                .words = {kTestSpirvMagicNumber, kTestSpirvVersion},
+            },
+        .selection =
+            {
+                .stage = Renderer::Shader::ShaderStage::Fragment,
+                .entry_point = "fragmentMain",
+            },
+    };
+
+    const Renderer::Shader::ShaderStageInput expected = input;
+
+    renderer.replaceFragmentShader(std::move(input));
+
+    EXPECT_TRUE(state.fragment_shader_replaced);
+
+    if (!state.received_fragment_shader.has_value()) {
+        FAIL() << "Expected fragment shader replacement to forward "
+                  "the supplied shader input";
+    }
+
+    EXPECT_EQ(*state.received_fragment_shader, expected);
 }

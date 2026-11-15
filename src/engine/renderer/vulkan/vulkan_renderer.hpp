@@ -3306,7 +3306,7 @@ namespace SNE::Engine::Renderer::Vulkan {
          * submissions referencing it have completed.
          */
         auto replaceFragmentShader(Shader::ShaderStageInput fragment_shader)
-            -> void;
+            -> void override;
 
         /**
          * @brief Updates an existing material uniform or storage buffer.
@@ -3347,6 +3347,18 @@ namespace SNE::Engine::Renderer::Vulkan {
         auto updateMaterialBuffer(std::uint32_t set, std::uint32_t binding,
                                   std::uint32_t array_element,
                                   std::span<const std::byte> data) -> void;
+
+        /**
+         * @brief Implements backend-independent material buffer updates.
+         *
+         * Delegates to the Vulkan material-buffer replacement implementation,
+         * preserving its validation, descriptor management, and GPU resource
+         * retirement behavior.
+         *
+         * @param input Descriptor location and borrowed replacement data.
+         */
+        auto updateMaterialBuffer(MaterialBufferUpdateInput input)
+            -> void override;
 
         /**
          * @brief Processes one Vulkan frame without external command recording.

@@ -6,9 +6,11 @@
 #include "engine/renderer/geometry/vertex_layout_description.hpp"
 #include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/graphics_submission_progress.hpp"
+#include "engine/renderer/material/material_buffer_update_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/render_target_extent.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
+#include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
 #include <cstddef>
 #include <optional>
@@ -406,5 +408,53 @@ namespace SNE::Engine::Renderer {
          * through explicit backend extensions rather than this interface.
          */
         virtual auto renderFrame() -> void = 0;
+
+        /**
+         * @brief Replaces the contents of an existing material buffer.
+         *
+         * Updates the specified uniform or storage buffer through the
+         * active rendering backend while preserving resources still used
+         * by outstanding GPU submissions.
+         *
+         * @param input Descriptor location and borrowed replacement data.
+         *
+         * @pre The binding must identify an existing uniform or storage buffer.
+         * @pre Replacement data must be nonempty and match the buffer size.
+         * @pre The operation must be serialized with rendering.
+         *
+         * @post On success, subsequent frames use the replacement data.
+         *
+         * @throws Core::Error::EngineError if GPU resource creation fails.
+         * @throws std::bad_alloc if host resource allocation fails.
+         *
+         * @note The supplied data must remain valid until this call completes.
+         */
+        virtual auto updateMaterialBuffer(MaterialBufferUpdateInput input)
+            -> void = 0;
+
+        /**
+         * @brief Replaces the active material's fragment shader.
+         *
+         * Validates the supplied shader and prepares a compatible graphics
+         * pipeline before activating the replacement.
+         *
+         * @param fragment_shader Compiled fragment shader and entry-point
+         * selection.
+         *
+         * @pre An active compatible material and graphics pipeline must exist.
+         * @pre The shader must select a valid fragment-stage entry point.
+         * @pre Replacement must be serialized with rendering.
+         *
+         * @post On success, subsequent frames use the replacement shader.
+         *
+         * @throws Core::Error::EngineError if validation, compatibility checks,
+         * or pipeline creation fails.
+         * @throws std::bad_alloc if host allocation fails.
+         *
+         * @note If preparation fails, the previous shader remains active.
+         */
+        virtual auto
+        replaceFragmentShader(Shader::ShaderStageInput fragment_shader)
+            -> void = 0;
     };
 } // namespace SNE::Engine::Renderer
