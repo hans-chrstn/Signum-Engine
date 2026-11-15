@@ -3349,6 +3349,33 @@ namespace SNE::Engine::Renderer::Vulkan {
                                   std::span<const std::byte> data) -> void;
 
         /**
+         * @brief Processes one Vulkan frame without external command recording.
+         *
+         * Implements the backend-independent IRenderer frame execution
+         * contract using the Vulkan renderer's existing frame-processing
+         * infrastructure.
+         *
+         * Executes the normal rendering path without injecting additional
+         * commands from an external Vulkan callback.
+         *
+         * @pre The renderer must be initialized.
+         * @pre Frame execution must be serialized with rendering resource
+         * modifications and other frame-processing operations.
+         *
+         * @post On successful submission, graphics submission tracking is
+         * updated through the renderer's existing synchronization system.
+         *
+         * @throws Core::Error::EngineError if Vulkan frame execution fails.
+         *
+         * @note Frame processing may return without submission when the
+         * presentation target is unavailable or requires recreation.
+         *
+         * @note This overload does not create a separate frame execution
+         * path or change the renderer's synchronization policy.
+         */
+        auto renderFrame() -> void override;
+
+        /**
          * @brief Processes one renderer frame.
          *
          * Coordinates synchronization, swapchain-image acquisition, command
@@ -3374,8 +3401,8 @@ namespace SNE::Engine::Renderer::Vulkan {
          * Subsequent renderFrame() calls throw rather than waiting
          * on potentially unsignaled synchronization objects.
          */
-        auto renderFrame(
-            const VulkanFrameCommandRecorder &record_external_commands = {})
+        auto
+        renderFrame(const VulkanFrameCommandRecorder &record_external_commands)
             -> void;
 
         /**

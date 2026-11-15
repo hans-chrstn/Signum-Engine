@@ -370,5 +370,41 @@ namespace SNE::Engine::Renderer {
          */
         [[nodiscard]] virtual auto graphicsSubmissionProgress() const noexcept
             -> GraphicsSubmissionProgress = 0;
+
+        /**
+         * @brief Processes one frame using the active rendering backend.
+         *
+         * Coordinates the renderer's frame execution, including required
+         * synchronization, rendering command recording, GPU submission,
+         * and presentation when a drawable target is available.
+         *
+         * Uses the renderer's currently configured camera, draw instances,
+         * materials, and render targets.
+         *
+         * The concrete renderer manages backend-specific command buffers,
+         * synchronization objects, and resource lifetimes internally.
+         *
+         * @pre Renderer initialization must have completed successfully.
+         * @pre Calls must be serialized with rendering and resource
+         * modification operations.
+         *
+         * @post On successful submission, the renderer's graphics submission
+         * progress reflects the newly recorded GPU work.
+         * @post The renderer retains ownership of its GPU resources.
+         *
+         * @throws Core::Error::EngineError if a required rendering backend
+         * operation fails.
+         *
+         * @note The function may return without recording a new submission
+         * when rendering cannot proceed, such as during swapchain recreation
+         * or application shutdown.
+         *
+         * @note A successful submission does not imply GPU execution has
+         * completed. Use graphicsSubmissionProgress() to observe completion.
+         *
+         * @note Backend-specific external command recording is managed
+         * through explicit backend extensions rather than this interface.
+         */
+        virtual auto renderFrame() -> void = 0;
     };
 } // namespace SNE::Engine::Renderer

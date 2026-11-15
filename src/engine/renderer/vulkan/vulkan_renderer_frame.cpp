@@ -659,6 +659,10 @@ namespace SNE::Engine::Renderer::Vulkan {
         }
     }
 
+    auto VulkanRenderer::renderFrame() -> void {
+        renderFrame({});
+    }
+
     auto VulkanRenderer::renderFrame(
         const VulkanFrameCommandRecorder &record_external_commands) -> void {
         if (m_SubmissionFailed) {
