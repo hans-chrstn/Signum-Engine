@@ -356,6 +356,11 @@ namespace SNE::Engine::Renderer::Vulkan {
         return GraphicsBackend::Vulkan;
     }
 
+    auto VulkanRenderer::capabilities() const noexcept -> RendererCapabilities {
+        return deriveRendererCapabilities(m_PhysicalDevice.capabilities,
+                                          m_LogicalDeviceFeatureConfiguration);
+    }
+
     auto VulkanRenderer::initializeFrameResources() -> void {
         const std::uint32_t graphics_queue_family_index =
             m_PhysicalDevice.queue_families.graphics_family.family_index;

@@ -4,6 +4,7 @@
 #include "engine/renderer/graphics_backend.hpp"
 #include "engine/renderer/graphics_submission_progress.hpp"
 #include "engine/renderer/pipeline/cull_mode.hpp"
+#include "engine/renderer/renderer_capabilities.hpp"
 #include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/vulkan/vulkan_frame_command_recorder.hpp"
 #include "engine/renderer/vulkan/vulkan_renderer.hpp"
@@ -75,6 +76,9 @@ namespace {
         bool submission_progress_queried{false};
         bool material_buffer_updated{false};
         bool fragment_shader_replaced{false};
+        bool capabilities_queried{false};
+
+        Renderer::RendererCapabilities reported_capabilities{};
 
         std::uint32_t received_material_set{};
         std::uint32_t received_material_binding{};
@@ -267,6 +271,12 @@ namespace {
             m_State.fragment_shader_replaced = true;
             m_State.received_fragment_shader = std::move(fragment_shader);
         }
+
+        [[nodiscard]] auto capabilities() const noexcept
+            -> Renderer::RendererCapabilities override {
+            m_State.capabilities_queried = true;
+            return m_State.reported_capabilities;
+        }
     };
 
     static_assert(std::is_abstract_v<Renderer::IRenderer>);
@@ -349,6 +359,22 @@ namespace {
 
     static_assert(noexcept(std::declval<const Vulkan::VulkanRenderer &>()
                                .graphicsSubmissionProgress()));
+
+    static_assert(
+        std::is_same_v<decltype(std::declval<const Renderer::IRenderer &>()
+                                    .capabilities()),
+                       Renderer::RendererCapabilities>);
+
+    static_assert(
+        std::is_same_v<decltype(std::declval<const Vulkan::VulkanRenderer &>()
+                                    .capabilities()),
+                       Renderer::RendererCapabilities>);
+
+    static_assert(
+        noexcept(std::declval<const Renderer::IRenderer &>().capabilities()));
+
+    static_assert(noexcept(
+        std::declval<const Vulkan::VulkanRenderer &>().capabilities()));
 } // namespace
 
 TEST(RendererInterfaceTests, DispatchesBackendQueryThroughBaseReference) {
@@ -783,4 +809,41 @@ TEST(RendererInterfaceTests,
     }
 
     EXPECT_EQ(*state.received_fragment_shader, expected);
+}
+
+TEST(RendererInterfaceTests, DispatchesCapabilityQueryThroughBaseReference) {
+    TestRendererState state{};
+
+    state.reported_capabilities.gpu_memory_budget = {
+        .device_supported = true,
+        .device_enabled = true,
+    };
+
+    state.reported_capabilities.latest_ready_presentation = {
+        .device_supported = true,
+        .device_enabled = false,
+    };
+
+    TestRenderer concrete_renderer{state};
+    const Renderer::IRenderer &renderer = concrete_renderer;
+
+    EXPECT_FALSE(state.capabilities_queried);
+
+    Renderer::RendererCapabilities capabilities = renderer.capabilities();
+
+    EXPECT_TRUE(state.capabilities_queried);
+
+    EXPECT_TRUE(capabilities.gpu_memory_budget.device_supported);
+    EXPECT_TRUE(capabilities.gpu_memory_budget.device_enabled);
+
+    EXPECT_TRUE(capabilities.latest_ready_presentation.device_supported);
+    EXPECT_FALSE(capabilities.latest_ready_presentation.device_enabled);
+
+    EXPECT_FALSE(capabilities.acceleration_structures.device_supported);
+    EXPECT_FALSE(capabilities.ray_tracing_pipelines.device_supported);
+    EXPECT_FALSE(capabilities.ray_queries.device_supported);
+
+    capabilities.gpu_memory_budget.device_enabled = false;
+
+    EXPECT_TRUE(state.reported_capabilities.gpu_memory_budget.device_enabled);
 }

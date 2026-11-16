@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/renderer/presentation_preference.hpp"
+#include "engine/renderer/renderer_capabilities.hpp"
 #include <vulkan/vulkan.h>
 
 namespace SNE::Engine::Renderer::Vulkan {
@@ -115,4 +116,35 @@ namespace SNE::Engine::Renderer::Vulkan {
         const LogicalDeviceFeatureRequest &request,
         const PhysicalDeviceCapabilities &capabilities)
         -> LogicalDeviceFeatureConfiguration;
+
+    /**
+     * @brief Derives backend-independent renderer capabilities from Vulkan
+     * state.
+     *
+     * Translates discovered physical-device support and negotiated
+     * logical-device features into renderer capability descriptions.
+     *
+     * Optional Vulkan functionality is reported as enabled only when
+     * the required device functionality is active.
+     *
+     * The current renderer enables memory-budget extension support when
+     * available but does not enable ray-tracing functionality.
+     *
+     * @param physical_capabilities Capabilities discovered for the
+     * selected Vulkan physical device.
+     * @param enabled_features Features negotiated for logical-device creation.
+     *
+     * @return Backend-independent capability support and enablement.
+     *
+     * @pre The supplied states must describe the same selected device.
+     *
+     * @post Input configurations remain unchanged.
+     *
+     * @note This function does not query Vulkan, enable device features,
+     * allocate GPU resources, or modify logical-device configuration.
+     */
+    [[nodiscard]] auto deriveRendererCapabilities(
+        const PhysicalDeviceCapabilities &physical_capabilities,
+        const LogicalDeviceFeatureConfiguration &enabled_features) noexcept
+        -> RendererCapabilities;
 } // namespace SNE::Engine::Renderer::Vulkan

@@ -18,6 +18,7 @@
 #include "engine/renderer/material/material_texture_binding_input.hpp"
 #include "engine/renderer/presentation_preference.hpp"
 #include "engine/renderer/render_target_extent.hpp"
+#include "engine/renderer/renderer_capabilities.hpp"
 #include "engine/renderer/renderer_interface.hpp"
 #include "engine/renderer/resource/gpu_resource_dependency_tracker.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
@@ -2815,6 +2816,23 @@ namespace SNE::Engine::Renderer::Vulkan {
 
         [[nodiscard]] auto graphicsBackend() const noexcept
             -> GraphicsBackend override;
+
+        /**
+         * @brief Returns the selected Vulkan device's renderer capabilities.
+         *
+         * Translates the renderer's stored physical-device capabilities
+         * and negotiated logical-device feature configuration into a
+         * backend-independent capability snapshot.
+         *
+         * @return Supported and enabled optional device functionality.
+         *
+         * @post Vulkan device and renderer state remain unchanged.
+         *
+         * @note This query does not call Vulkan, allocate resources,
+         * or enable additional device functionality.
+         */
+        [[nodiscard]] auto capabilities() const noexcept
+            -> RendererCapabilities override;
 
         VulkanRenderer(const VulkanRenderer &) = delete;
 

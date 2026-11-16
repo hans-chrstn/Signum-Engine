@@ -9,6 +9,7 @@
 #include "engine/renderer/material/material_buffer_update_input.hpp"
 #include "engine/renderer/material/material_description.hpp"
 #include "engine/renderer/render_target_extent.hpp"
+#include "engine/renderer/renderer_capabilities.hpp"
 #include "engine/renderer/resource/gpu_resource_handle.hpp"
 #include "engine/renderer/shader/shader_stage_input.hpp"
 #include "engine/renderer/texture/texture_upload_data.hpp"
@@ -456,5 +457,30 @@ namespace SNE::Engine::Renderer {
         virtual auto
         replaceFragmentShader(Shader::ShaderStageInput fragment_shader)
             -> void = 0;
+
+        /**
+         * @brief Returns the capabilities of the active rendering device.
+         *
+         * Provides a backend-independent snapshot of optional functionality
+         * supported by the selected physical device and enabled during
+         * logical-device initialization.
+         *
+         * The query uses previously discovered and negotiated capability
+         * information without performing additional GPU operations.
+         *
+         * @return Capability support and enablement for the active device.
+         *
+         * @pre Renderer initialization must have completed successfully.
+         *
+         * @post Renderer resources and device state remain unchanged.
+         *
+         * @note The snapshot does not indicate whether a higher-level
+         * rendering feature has been implemented or activated.
+         *
+         * @note The query does not allocate memory, wait for GPU work,
+         * or modify renderer state.
+         */
+        [[nodiscard]] virtual auto capabilities() const noexcept
+            -> RendererCapabilities = 0;
     };
 } // namespace SNE::Engine::Renderer
