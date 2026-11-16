@@ -1531,10 +1531,10 @@
 
 ### Design
 
-- [ ] Define minimum renderer API
-- [ ] Define backend-independent resource descriptions
-- [ ] Define renderer resource-handle requirements
-- [ ] Define renderer ownership model
+- [x] Define minimum renderer API
+- [x] Define backend-independent resource descriptions
+- [x] Define renderer resource-handle requirements
+- [x] Define renderer ownership model
 - [ ] Define renderer-core versus render-feature boundary
 - [ ] Define render-feature lifecycle and registration contract
 - [ ] Define render-feature dependency and ordering declarations
@@ -1555,7 +1555,7 @@
 
 ### Implement
 
-- [ ] Move normal rendering callers away from raw Vulkan
+- [x] Move normal rendering callers away from raw Vulkan
 - [x] Keep Vulkan as first backend
 - [x] Avoid premature additional graphics backends
 - [ ] Add render-feature registry when a real feature requires it
@@ -1563,7 +1563,7 @@
 - [ ] Add public custom render-pass registration path
 - [ ] Add public feature enable/disable/configuration path
 - [ ] Expose shader, pipeline, descriptor/binding, and material extension mechanisms through renderer APIs
-- [ ] Preserve explicit low-level Vulkan access for advanced extensions
+- [x] Preserve explicit low-level Vulkan access for advanced extensions
 - [ ] Keep abstraction measurable
 
 ### Test
@@ -1579,7 +1579,6 @@
 - [ ] Run the existing 3D reference workload entirely through backend-independent renderer APIs
 - [ ] Compare reference-workload correctness and basic performance with the pre-abstraction Vulkan path
 - [ ] Benchmark abstraction where useful
-
 - [ ] Verify feature registration reports unmet GPU capabilities instead of silently enabling unsupported paths
 - [ ] Verify the conventional rendering path remains usable when advanced GPU capabilities are unavailable
 
@@ -1592,11 +1591,11 @@
 - [ ] Give built-in render features no privileged architectural shortcuts unavailable to custom features
 - [ ] Allow built-in rendering modules to be enabled, disabled, configured, replaced, and extended
 - [ ] Keep game rendering API independent from Vulkan
-- [ ] Keep explicit low-level backend access for advanced extensions
+- [x] Keep explicit low-level backend access for advanced extensions
 - [ ] Keep unused optional render features uninitialized and unallocated
-- [ ] Avoid freezing Vulkan-specific queue counts, command-buffer layouts, descriptor strategies, or submission topology into backend-independent APIs
-- [ ] Let backend implementations expose specialized capabilities without forcing every backend into a least-common-denominator interface
-- [ ] Leave frame-graph scheduling and graph compilation to Phase 13.5
+- [x] Avoid freezing Vulkan-specific queue counts, command-buffer layouts, descriptor strategies, or submission topology into backend-independent APIs
+- [x] Let backend implementations expose specialized capabilities without forcing every backend into a least-common-denominator interface
+- [x] Leave frame-graph scheduling and graph compilation to Phase 13.5
 
 ---
 
