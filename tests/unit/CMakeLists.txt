@@ -67,6 +67,7 @@ add_executable(
   renderer/resource/gpu_resource_dependency_tests.cpp
   renderer/resource/gpu_resource_dependency_tracker_tests.cpp
   renderer/texture/image_loader_tests.cpp
+  renderer/feature/renderer_feature_requirements_tests.cpp
   renderer/vulkan/common/vulkan_result_tests.cpp
   renderer/vulkan/common/vulkan_extension_support_tests.cpp
   renderer/vulkan/common/vulkan_api_version_tests.cpp
